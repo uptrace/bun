@@ -247,6 +247,12 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewSelect().Model(new(Model)).ExcludeColumn("id")
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			type User struct {
+				Name string `bun:",nullzero,notnull,default:\\'unknown\\'"`
+			}
+			return db.NewCreateTable().Model(new(User))
+		},
 	}
 
 	for _, db := range dbs(t) {

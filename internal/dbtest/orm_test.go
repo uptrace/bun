@@ -25,7 +25,7 @@ func TestORM(t *testing.T) {
 
 	for _, db := range dbs(t) {
 		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			// defer db.Close()
+			defer db.Close()
 
 			createTestSchema(t, db)
 			loadTestData(t, db)
@@ -274,7 +274,7 @@ type Book struct {
 
 	Genres       []Genre       `bun:"m2m:book_genres"` // many to many relation
 	Translations []Translation `bun:"rel:has-many"`
-	Comments     []Comment     `bun:"rel:has-many,join:'id=trackable_id,type=trackable_type',polymorphic"`
+	Comments     []Comment     `bun:"rel:has-many,join:\"id=trackable_id,type=trackable_type\",polymorphic"`
 }
 
 func (b Book) String() string {
@@ -298,12 +298,12 @@ type Translation struct {
 	Book   *Book  `bun:"rel:has-one"`
 	Lang   string `bun:"unique:book_id_lang"`
 
-	Comments []Comment `bun:"rel:has-many,join:'id=trackable_id,type=trackable_type',polymorphic"`
+	Comments []Comment `bun:"rel:has-many,join:\"id=trackable_id,type=trackable_type\",polymorphic"`
 }
 
 type Comment struct {
 	TrackableID   int    // Book.ID or Translation.ID
-	TrackableType string // "Book" or "Translation"
+	TrackableType string // "book" or "translation"
 	Text          string
 }
 

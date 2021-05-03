@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/uptrace/bun/internal/tagparser"
 	"github.com/uptrace/bun/sqlfmt"
-	"github.com/vmihailenco/tagparser/v2"
 )
 
 type Field struct {
 	StructField reflect.StructField
 
-	Tag   *tagparser.Tag
+	Tag   tagparser.Tag
 	Type  reflect.Type
 	Index []int
 

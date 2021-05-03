@@ -11,8 +11,8 @@ import (
 	"github.com/jinzhu/inflection"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
+	"github.com/uptrace/bun/internal/tagparser"
 	"github.com/uptrace/bun/sqlfmt"
-	"github.com/vmihailenco/tagparser/v2"
 )
 
 var (
@@ -438,18 +438,16 @@ func (t *Table) initRelations() {
 }
 
 func (t *Table) tryRelation(field *Field) bool {
-	tag := tagparser.Parse(field.StructField.Tag.Get("bun"))
-
-	if rel, ok := tag.Options["rel"]; ok {
+	if rel, ok := field.Tag.Options["rel"]; ok {
 		t.initRelation(field, rel)
 		return true
 	}
-	if _, ok := tag.Options["m2m"]; ok {
-		t.addRelation(t.m2mRelation(field, tag))
+	if field.Tag.HasOption("m2m") {
+		t.addRelation(t.m2mRelation(field))
 		return true
 	}
 
-	if _, ok := tag.Options["join"]; ok {
+	if field.Tag.HasOption("join") {
 		internal.Warn.Printf(
 			`%s.%s option "join" requires a relation type`,
 			t.TypeName, field.GoName,
@@ -697,7 +695,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 	return rel
 }
 
-func (t *Table) m2mRelation(field *Field, tag *tagparser.Tag) *Relation {
+func (t *Table) m2mRelation(field *Field) *Relation {
 	if field.Type.Kind() != reflect.Slice {
 		panic(fmt.Errorf(
 			"bun: %s.%s m2m relation requires slice, got %q",
@@ -713,7 +711,7 @@ func (t *Table) m2mRelation(field *Field, tag *tagparser.Tag) *Relation {
 		panic(err)
 	}
 
-	m2mTableName, ok := tag.Options["m2m"]
+	m2mTableName, ok := field.Tag.Options["m2m"]
 	if !ok {
 		panic(fmt.Errorf("bun: %s must have m2m tag option", field.GoName))
 	}
@@ -734,7 +732,7 @@ func (t *Table) m2mRelation(field *Field, tag *tagparser.Tag) *Relation {
 	}
 	var leftColumn, rightColumn string
 
-	if join, ok := tag.Options["join"]; ok {
+	if join, ok := field.Tag.Options["join"]; ok {
 		left, right := parseRelationJoin(join)
 		leftColumn = left[0]
 		rightColumn = right[0]
