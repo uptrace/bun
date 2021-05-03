@@ -1,0 +1,1 @@
+WITH `_data` (`id`, `str`) AS (VALUES ROW(42::BIGINT, 'hello'::VARCHAR(255)), (43::BIGINT, 'world'::VARCHAR(255))) UPDATE `models` AS `model` SET model.str = _data.str WHERE (model.id = _data.id)

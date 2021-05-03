@@ -1,0 +1,104 @@
+package pgdialect
+
+import (
+	"encoding/json"
+	"net"
+	"reflect"
+	"time"
+
+	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/schema"
+)
+
+const (
+	// Date / Time
+	pgTypeTimestampTz = "TIMESTAMPTZ"         // Timestamp with a time zone
+	pgTypeDate        = "DATE"                // Date
+	pgTypeTime        = "TIME"                // Time without a time zone
+	pgTypeTimeTz      = "TIME WITH TIME ZONE" // Time with a time zone
+	pgTypeInterval    = "INTERVAL"            // Time Interval
+
+	// Network Addresses
+	pgTypeInet    = "INET"    // IPv4 or IPv6 hosts and networks
+	pgTypeCidr    = "CIDR"    // IPv4 or IPv6 networks
+	pgTypeMacaddr = "MACADDR" // MAC addresses
+
+	// Serial Types
+	pgTypeSmallSerial = "SMALLSERIAL" // 2 byte autoincrementing integer
+	pgTypeSerial      = "SERIAL"      // 4 byte autoincrementing integer
+	pgTypeBigSerial   = "BIGSERIAL"   // 8 byte autoincrementing integer
+
+	// Character Types
+	pgTypeChar = "CHAR" // fixed length string (blank padded)
+	pgTypeText = "TEXT" // variable length string without limit
+
+	// JSON Types
+	pgTypeJSON  = "JSON"  // text representation of json data
+	pgTypeJSONB = "JSONB" // binary representation of json data
+
+	// Binary Data Types
+	pgTypeBytea = "BYTEA" // binary string
+)
+
+var (
+	timeType           = reflect.TypeOf((*time.Time)(nil)).Elem()
+	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
+	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
+	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
+)
+
+func fieldSQLType(field *schema.Field) string {
+	if field.UserSQLType != "" {
+		return field.UserSQLType
+	}
+
+	if v, ok := field.Tag.Options["composite"]; ok {
+		return v
+	}
+
+	if _, ok := field.Tag.Options["hstore"]; ok {
+		return "hstore"
+	}
+
+	if _, ok := field.Tag.Options["array"]; ok {
+		switch field.Type.Kind() {
+		case reflect.Slice, reflect.Array:
+			sqlType := sqlType(field.Type.Elem())
+			return sqlType + "[]"
+		}
+	}
+
+	return sqlType(field.Type)
+}
+
+func sqlType(typ reflect.Type) string {
+	switch typ {
+	case timeType:
+		return pgTypeTimestampTz
+	case ipType:
+		return pgTypeInet
+	case ipNetType:
+		return pgTypeCidr
+	case jsonRawMessageType:
+		return pgTypeJSONB
+	}
+
+	switch typ.Kind() {
+	case reflect.Map, reflect.Struct:
+		return pgTypeJSONB
+	case reflect.Array, reflect.Slice:
+		if typ.Elem().Kind() == reflect.Uint8 {
+			return pgTypeBytea
+		}
+		return pgTypeJSONB
+	}
+
+	sqlType := sqltype.Detect(typ)
+
+	switch sqlType {
+	case sqltype.Timestamp:
+		return pgTypeTimestampTz
+	}
+
+	return sqlType
+}

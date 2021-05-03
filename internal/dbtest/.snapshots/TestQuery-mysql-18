@@ -1,0 +1,1 @@
+SELECT `model`.`id`, `model`.`str` FROM `models` AS `model`, (VALUES ROW(42::BIGINT, 'hello'::VARCHAR(255), 0), (43::BIGINT, 'world'::VARCHAR(255), 1)) AS (`id`, `str`, _order) WHERE (model.id = _data.id) ORDER BY _data._order
