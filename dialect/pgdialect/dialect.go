@@ -35,13 +35,15 @@ func (d *Dialect) Append(fmter sqlfmt.QueryFormatter, b []byte, value interface{
 func (d *Dialect) OnField(field *schema.Field) {
 	field.DiscoveredSQLType = fieldSQLType(field)
 
-	switch field.DiscoveredSQLType {
-	case sqltype.SmallInt:
-		field.CreateTableSQLType = pgTypeSmallSerial
-	case sqltype.Integer:
-		field.CreateTableSQLType = pgTypeSerial
-	case sqltype.BigInt:
-		field.CreateTableSQLType = pgTypeBigSerial
+	if field.AutoIncrement {
+		switch field.DiscoveredSQLType {
+		case sqltype.SmallInt:
+			field.CreateTableSQLType = pgTypeSmallSerial
+		case sqltype.Integer:
+			field.CreateTableSQLType = pgTypeSerial
+		case sqltype.BigInt:
+			field.CreateTableSQLType = pgTypeBigSerial
+		}
 	}
 
 	if field.Tag.HasOption("array") {

@@ -12,7 +12,7 @@ import (
 
 func TestQuery(t *testing.T) {
 	type Model struct {
-		ID  int
+		ID  int `bun:",autoincrement"`
 		Str string
 	}
 
@@ -217,7 +217,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			type Model struct {
-				ID     uint64
+				ID     uint64 `bun:",autoincrement"`
 				Struct struct{}
 				Map    map[string]interface{}
 				Slice  []string
