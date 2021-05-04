@@ -37,6 +37,25 @@ func (q *DropTableQuery) Model(model interface{}) *DropTableQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *DropTableQuery) Table(tables ...string) *DropTableQuery {
+	for _, table := range tables {
+		q.addTable(sqlfmt.UnsafeIdent(table))
+	}
+	return q
+}
+
+func (q *DropTableQuery) TableExpr(query string, args ...interface{}) *DropTableQuery {
+	q.addTable(sqlfmt.SafeQuery(query, args))
+	return q
+}
+
+func (q *DropTableQuery) ModelTableExpr(query string, args ...interface{}) *DropTableQuery {
+	q.modelTable = sqlfmt.SafeQuery(query, args)
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *DropTableQuery) IfExists() *DropTableQuery {
 	q.ifExists = true
 	return q

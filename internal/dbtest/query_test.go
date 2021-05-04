@@ -273,6 +273,9 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewDropIndex().Concurrently().IfExists().Index("title_idx").Cascade()
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewAddColumn().Model(new(Model)).ColumnExpr("column_name VARCHAR(123)")
+		},
 	}
 
 	for _, db := range dbs(t) {

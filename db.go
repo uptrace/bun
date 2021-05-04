@@ -87,6 +87,10 @@ func (db *DB) NewDropIndex() *DropIndexQuery {
 	return NewDropIndexQuery(db)
 }
 
+func (db *DB) NewAddColumn() *AddColumnQuery {
+	return NewAddColumnQuery(db)
+}
+
 func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
