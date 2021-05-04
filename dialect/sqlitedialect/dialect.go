@@ -5,7 +5,6 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type Dialect struct {
@@ -24,12 +23,12 @@ func (d *Dialect) Name() string {
 	return dialect.SQLite
 }
 
-func (d *Dialect) Tables() *schema.Tables {
-	return d.tables
+func (d *Dialect) Features() feature.Feature {
+	return d.features
 }
 
-func (d *Dialect) Append(fmter sqlfmt.QueryFormatter, b []byte, value interface{}) []byte {
-	return sqlfmt.Append(fmter, b, value)
+func (d *Dialect) Tables() *schema.Tables {
+	return d.tables
 }
 
 func (d *Dialect) OnField(field *schema.Field) {
@@ -42,7 +41,3 @@ func (d *Dialect) OnField(field *schema.Field) {
 }
 
 func (d *Dialect) OnTable(table *schema.Table) {}
-
-func (d *Dialect) Features() feature.Feature {
-	return d.features
-}
