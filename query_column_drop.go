@@ -6,12 +6,12 @@ import (
 	"github.com/uptrace/bun/sqlfmt"
 )
 
-type AddColumnQuery struct {
+type DropColumnQuery struct {
 	baseQuery
 }
 
-func NewAddColumnQuery(db *DB) *AddColumnQuery {
-	q := &AddColumnQuery{
+func NewDropColumnQuery(db *DB) *DropColumnQuery {
+	q := &DropColumnQuery{
 		baseQuery: baseQuery{
 			db:  db,
 			dbi: db.DB,
@@ -20,50 +20,57 @@ func NewAddColumnQuery(db *DB) *AddColumnQuery {
 	return q
 }
 
-func (q *AddColumnQuery) DB(db DBI) *AddColumnQuery {
+func (q *DropColumnQuery) DB(db DBI) *DropColumnQuery {
 	q.dbi = db
 	return q
 }
 
-func (q *AddColumnQuery) Model(model interface{}) *AddColumnQuery {
+func (q *DropColumnQuery) Model(model interface{}) *DropColumnQuery {
 	q.setTableModel(model)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) Table(tables ...string) *AddColumnQuery {
+func (q *DropColumnQuery) Table(tables ...string) *DropColumnQuery {
 	for _, table := range tables {
 		q.addTable(sqlfmt.UnsafeIdent(table))
 	}
 	return q
 }
 
-func (q *AddColumnQuery) TableExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *DropColumnQuery) TableExpr(query string, args ...interface{}) *DropColumnQuery {
 	q.addTable(sqlfmt.SafeQuery(query, args))
 	return q
 }
 
-func (q *AddColumnQuery) ModelTableExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *DropColumnQuery) ModelTableExpr(query string, args ...interface{}) *DropColumnQuery {
 	q.modelTable = sqlfmt.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *DropColumnQuery) Column(columns ...string) *DropColumnQuery {
+	for _, column := range columns {
+		q.addColumn(sqlfmt.UnsafeIdent(column))
+	}
+	return q
+}
+
+func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropColumnQuery {
 	q.addColumn(sqlfmt.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *DropColumnQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 	if len(q.columns) != 1 {
-		return nil, fmt.Errorf("bun: AddColumnQuery requires exactly one column")
+		return nil, fmt.Errorf("bun: DropColumnQuery requires exactly one column")
 	}
 
 	b = append(b, "ALTER TABLE "...)
@@ -73,7 +80,7 @@ func (q *AddColumnQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 		return nil, err
 	}
 
-	b = append(b, " ADD "...)
+	b = append(b, " DROP COLUMN "...)
 
 	b, err = q.columns[0].AppendQuery(fmter, b)
 	if err != nil {

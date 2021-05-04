@@ -91,6 +91,10 @@ func (db *DB) NewAddColumn() *AddColumnQuery {
 	return NewAddColumnQuery(db)
 }
 
+func (db *DB) NewDropColumn() *DropColumnQuery {
+	return NewDropColumnQuery(db)
+}
+
 func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }

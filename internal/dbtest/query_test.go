@@ -276,6 +276,9 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewAddColumn().Model(new(Model)).ColumnExpr("column_name VARCHAR(123)")
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewDropColumn().Model(new(Model)).Column("str")
+		},
 	}
 
 	for _, db := range dbs(t) {
