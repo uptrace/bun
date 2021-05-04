@@ -70,6 +70,7 @@ func TestSelectScan(t *testing.T) {
 		{"testSelectMultiSlice", testSelectMultiSlice},
 		{"testSelectJSON", testSelectJSON},
 		{"testScanRows", testScanRows},
+		{"testScanRowByRow", testScanRowByRow},
 	}
 
 	for _, db := range dbs(t) {
@@ -293,8 +294,40 @@ func testScanRows(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	defer rows.Close()
 
+	if !rows.Next() {
+		t.Fail()
+	}
+
 	var num int
-	err = db.ScanRows(ctx, rows, &num)
+	err = db.ScanRow(ctx, rows, &num)
 	require.NoError(t, err)
 	require.Equal(t, 42, num)
+}
+
+func testScanRowByRow(t *testing.T, db *bun.DB) {
+	values := db.NewValues(&[]map[string]interface{}{
+		{"num": 1},
+		{"num": 2},
+		{"num": 3},
+	})
+
+	rows, err := db.NewSelect().
+		With("t", values).
+		TableExpr("t").
+		OrderExpr("t.num DESC").
+		Rows(ctx)
+	require.NoError(t, err)
+
+	var nums []int
+
+	for rows.Next() {
+		var num int
+
+		err := db.ScanRow(ctx, rows, &num)
+		require.NoError(t, err)
+
+		nums = append(nums, num)
+	}
+
+	require.Equal(t, []int{3, 2, 1}, nums)
 }

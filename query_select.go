@@ -3,6 +3,7 @@ package bun
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -624,6 +625,16 @@ func (q *SelectQuery) appendOrder(fmter sqlfmt.QueryFormatter, b []byte) (_ []by
 }
 
 //------------------------------------------------------------------------------
+
+func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
+	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	if err != nil {
+		return nil, err
+	}
+	query := internal.String(queryBytes)
+
+	return q.dbi.QueryContext(ctx, query)
+}
 
 func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
 	if err := q.beforeSelectQueryHook(ctx); err != nil {

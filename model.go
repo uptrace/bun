@@ -19,6 +19,10 @@ type hooklessModel interface {
 	ScanRows(ctx context.Context, rows *sql.Rows) (int, error)
 }
 
+type rowScanner interface {
+	ScanRow(ctx context.Context, rows *sql.Rows) error
+}
+
 type model interface {
 	hooklessModel
 

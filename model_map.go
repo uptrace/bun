@@ -34,28 +34,35 @@ func newMapModel(db *DB, ptr *map[string]interface{}) *mapModel {
 }
 
 func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
+	if !rows.Next() {
+		return 0, sql.ErrNoRows
+	}
+
+	if err := m.ScanRow(ctx, rows); err != nil {
+		return 0, err
+	}
+
+	return 1, nil
+}
+
+func (m *mapModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
 	columns, err := rows.Columns()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	m.columns = columns
 	dest := makeDest(m, len(columns))
 
-	if !rows.Next() {
-		return 0, sql.ErrNoRows
-	}
-
 	if m.m == nil {
-		m.m = make(map[string]interface{}, len(columns))
+		m.m = make(map[string]interface{}, len(m.columns))
 	}
-
 	if err := rows.Scan(dest...); err != nil {
-		return 0, err
+		return err
 	}
-
 	*m.ptr = m.m
-	return 1, nil
+
+	return nil
 }
 
 func (m *mapModel) Scan(src interface{}) error {

@@ -30,3 +30,7 @@ func (m scanModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 
 	return 1, nil
 }
+
+func (m scanModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
+	return rows.Scan(m.dest...)
+}

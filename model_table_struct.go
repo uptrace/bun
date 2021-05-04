@@ -287,23 +287,27 @@ func (m *structTableModel) updateSoftDeleteField() error {
 }
 
 func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
+	if !rows.Next() {
+		return 0, sql.ErrNoRows
+	}
+
+	if err := m.ScanRow(ctx, rows); err != nil {
+		return 0, err
+	}
+
+	return 1, nil
+}
+
+func (m *structTableModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
 	columns, err := rows.Columns()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	m.columns = columns
 	dest := makeDest(m, len(columns))
 
-	if !rows.Next() {
-		return 0, sql.ErrNoRows
-	}
-
-	if err := m.scanRow(ctx, rows, dest); err != nil {
-		return 0, err
-	}
-
-	return 1, nil
+	return m.scanRow(ctx, rows, dest)
 }
 
 func (m *structTableModel) scanRow(ctx context.Context, rows *sql.Rows, dest []interface{}) error {

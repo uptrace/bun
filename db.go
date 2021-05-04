@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -99,16 +100,18 @@ func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
 
-func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
-	defer rows.Close()
-
+func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
 	model, err := newModel(db, dest)
 	if err != nil {
 		return err
 	}
 
-	_, err = model.ScanRows(ctx, rows)
-	return err
+	rs, ok := model.(rowScanner)
+	if !ok {
+		return fmt.Errorf("bun: %T does not support ScanRow", model)
+	}
+
+	return rs.ScanRow(ctx, rows)
 }
 
 func (db *DB) AddQueryHook(hook QueryHook) {
