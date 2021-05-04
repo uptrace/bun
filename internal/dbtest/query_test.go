@@ -270,6 +270,9 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewSelect().Where("(id1, id2) IN (?)", bun.In([][]int{{1, 2}, {3, 4}}))
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewDropIndex().Concurrently().IfExists().Index("title_idx").Cascade()
+		},
 	}
 
 	for _, db := range dbs(t) {

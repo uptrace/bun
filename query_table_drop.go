@@ -35,6 +35,8 @@ func (q *DropTableQuery) Model(model interface{}) *DropTableQuery {
 	return q
 }
 
+//------------------------------------------------------------------------------
+
 func (q *DropTableQuery) IfExists() *DropTableQuery {
 	q.ifExists = true
 	return q
@@ -44,6 +46,8 @@ func (q *DropTableQuery) Cascade() *DropTableQuery {
 	q.cascade = true
 	return q
 }
+
+//------------------------------------------------------------------------------
 
 func (q *DropTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
@@ -57,10 +61,12 @@ func (q *DropTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 	if q.ifExists {
 		b = append(b, "IF EXISTS "...)
 	}
+
 	b, err = q.appendFirstTable(fmter, b)
 	if err != nil {
 		return nil, err
 	}
+
 	if q.cascade && q.db.features.Has(feature.DropTableCascade) {
 		b = append(b, " CASCADE"...)
 	}

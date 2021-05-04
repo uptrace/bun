@@ -83,6 +83,10 @@ func (db *DB) NewCreateIndex() *CreateIndexQuery {
 	return NewCreateIndexQuery(db)
 }
 
+func (db *DB) NewDropIndex() *DropIndexQuery {
+	return NewDropIndexQuery(db)
+}
+
 func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
