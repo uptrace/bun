@@ -264,6 +264,12 @@ func TestQuery(t *testing.T) {
 				Column("title").
 				Include("director", "rating")
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().Where("id IN (?)", bun.In([]int{1, 2, 3}))
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().Where("(id1, id2) IN (?)", bun.In([][]int{{1, 2}, {3, 4}}))
+		},
 	}
 
 	for _, db := range dbs(t) {

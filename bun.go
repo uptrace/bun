@@ -12,6 +12,10 @@ type (
 	Ident = sqlfmt.Ident
 )
 
+func In(slice interface{}) sqlfmt.InValues {
+	return sqlfmt.In(slice)
+}
+
 type (
 	BeforeScanHook   = schema.BeforeScanHook
 	AfterScanHook    = schema.AfterScanHook
