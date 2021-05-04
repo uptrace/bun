@@ -247,7 +247,11 @@ func (q *InsertQuery) appendStructValues(
 		case isTemplate:
 			b = append(b, '?')
 		case f.SQLDefault != "" && f.HasZeroValue(strct):
-			b = append(b, f.SQLDefault...)
+			if q.db.features.Has(feature.DefaultPlaceholder) {
+				b = append(b, "DEFAULT"...)
+			} else {
+				b = append(b, f.SQLDefault...)
+			}
 			q.addReturningField(f)
 		case f.NullZero && f.HasZeroValue(strct):
 			if q.db.features.Has(feature.DefaultPlaceholder) {
