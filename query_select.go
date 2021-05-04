@@ -626,6 +626,10 @@ func (q *SelectQuery) appendOrder(fmter sqlfmt.QueryFormatter, b []byte) (_ []by
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+	if err := q.beforeSelectQueryHook(ctx); err != nil {
+		return res, err
+	}
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
 	if err != nil {
 		return res, err
@@ -637,16 +641,18 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 		return res, err
 	}
 
-	if q.tableModel != nil {
-		if err := q.tableModel.AfterSelect(ctx); err != nil {
-			return res, err
-		}
+	if err := q.afterSelectQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	return res, nil
 }
 
 func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
+	if err := q.beforeSelectQueryHook(ctx); err != nil {
+		return err
+	}
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
 	if err != nil {
 		return err
@@ -664,13 +670,33 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		}
 	}
 
-	if q.tableModel != nil {
-		if err := q.tableModel.AfterSelect(ctx); err != nil {
-			return err
-		}
+	if err := q.afterSelectQueryHook(ctx); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func (q *SelectQuery) beforeSelectQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(BeforeSelectQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.BeforeSelectQuery(ctx, q)
+}
+
+func (q *SelectQuery) afterSelectQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(AfterSelectQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.AfterSelectQuery(ctx, q)
 }
 
 func (q *SelectQuery) Count(ctx context.Context) (int, error) {

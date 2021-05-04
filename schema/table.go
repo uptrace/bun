@@ -48,6 +48,7 @@ type Table struct {
 
 	Type      reflect.Type
 	ZeroValue reflect.Value // reflect.Struct
+	ZeroIface interface{}   // struct pointer
 
 	TypeName  string
 	ModelName string
@@ -81,6 +82,7 @@ func newTable(dialect Dialect, typ reflect.Type) *Table {
 	t.dialect = dialect
 	t.Type = typ
 	t.ZeroValue = reflect.New(t.Type).Elem()
+	t.ZeroIface = reflect.New(t.Type).Interface()
 	t.TypeName = internal.ToExported(t.Type.Name())
 	t.ModelName = internal.Underscore(t.Type.Name())
 	tableName := tableNameInflector(t.ModelName)

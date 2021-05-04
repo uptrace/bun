@@ -294,11 +294,8 @@ func (q *UpdateQuery) appendOtherTables(
 //------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
-	if q.tableModel != nil {
-		ctx, err = q.tableModel.BeforeUpdate(ctx)
-		if err != nil {
-			return res, err
-		}
+	if err := q.beforeUpdateQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
@@ -316,11 +313,31 @@ func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 		return res, err
 	}
 
-	if q.tableModel != nil {
-		if err := q.tableModel.AfterUpdate(ctx); err != nil {
-			return res, err
-		}
+	if err := q.afterUpdateQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	return res, nil
+}
+
+func (q *UpdateQuery) beforeUpdateQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(BeforeUpdateQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.BeforeUpdateQuery(ctx, q)
+}
+
+func (q *UpdateQuery) afterUpdateQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(AfterUpdateQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.AfterUpdateQuery(ctx, q)
 }

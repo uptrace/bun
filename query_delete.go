@@ -180,11 +180,8 @@ func (q *DeleteQuery) ForceDelete(ctx context.Context, dest ...interface{}) (res
 		q = q.WhereAllWithDeleted()
 	}
 
-	if q.tableModel != nil {
-		ctx, err = q.tableModel.BeforeDelete(ctx)
-		if err != nil {
-			return res, err
-		}
+	if err := q.beforeDeleteQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
@@ -202,11 +199,31 @@ func (q *DeleteQuery) ForceDelete(ctx context.Context, dest ...interface{}) (res
 		return res, err
 	}
 
-	if q.tableModel != nil {
-		if err := q.tableModel.AfterDelete(ctx); err != nil {
-			return res, err
-		}
+	if err := q.afterDeleteQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	return res, nil
+}
+
+func (q *DeleteQuery) beforeDeleteQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(BeforeDeleteQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.BeforeDeleteQuery(ctx, q)
+}
+
+func (q *DeleteQuery) afterDeleteQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(AfterDeleteQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.AfterDeleteQuery(ctx, q)
 }

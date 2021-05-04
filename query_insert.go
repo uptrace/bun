@@ -426,11 +426,8 @@ func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte
 //------------------------------------------------------------------------------
 
 func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
-	if q.tableModel != nil {
-		ctx, err = q.tableModel.BeforeInsert(ctx)
-		if err != nil {
-			return res, err
-		}
+	if err := q.beforeInsertQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
@@ -455,13 +452,33 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 		}
 	}
 
-	if q.tableModel != nil {
-		if err := q.tableModel.AfterInsert(ctx); err != nil {
-			return res, err
-		}
+	if err := q.afterInsertQueryHook(ctx); err != nil {
+		return res, err
 	}
 
 	return res, nil
+}
+
+func (q *InsertQuery) beforeInsertQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(BeforeInsertQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.BeforeInsertQuery(ctx, q)
+}
+
+func (q *InsertQuery) afterInsertQueryHook(ctx context.Context) error {
+	if q.table == nil {
+		return nil
+	}
+	hook, ok := q.table.ZeroIface.(AfterInsertQueryHook)
+	if !ok {
+		return nil
+	}
+	return hook.AfterInsertQuery(ctx, q)
 }
 
 func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {
