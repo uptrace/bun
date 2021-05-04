@@ -79,6 +79,10 @@ func (db *DB) NewDropTable() *DropTableQuery {
 	return NewDropTableQuery(db)
 }
 
+func (db *DB) NewCreateIndex() *CreateIndexQuery {
+	return NewCreateIndexQuery(db)
+}
+
 func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }

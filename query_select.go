@@ -74,6 +74,8 @@ func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery
 	return q
 }
 
+//------------------------------------------------------------------------------
+
 func (q *SelectQuery) Table(tables ...string) *SelectQuery {
 	for _, table := range tables {
 		q.addTable(sqlfmt.UnsafeIdent(table))
@@ -90,6 +92,8 @@ func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQ
 	q.modelTable = sqlfmt.SafeQuery(query, args)
 	return q
 }
+
+//------------------------------------------------------------------------------
 
 func (q *SelectQuery) Column(columns ...string) *SelectQuery {
 	for _, column := range columns {

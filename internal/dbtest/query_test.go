@@ -253,6 +253,17 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewCreateTable().Model(new(User))
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewCreateIndex().Unique().Index("title_idx").Table("films").Column("title")
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewCreateIndex().
+				Unique().
+				Index("title_idx").
+				Table("films").
+				Column("title").
+				Include("director", "rating")
+		},
 	}
 
 	for _, db := range dbs(t) {
