@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"context"
 	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/uptrace/bun"
@@ -10,7 +11,6 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 
-	//_ "github.com/go-sql-driver/mysql"
 	_ "github.com/go-mysql-org/go-mysql/driver"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/mattn/go-sqlite3"
@@ -20,27 +20,37 @@ import (
 var ctx = context.TODO()
 
 func pg(t *testing.T) *bun.DB {
-	pg, err := sql.Open("pgx", "postgres://postgres:@localhost:5432/test?sslmode=disable")
+	dsn := os.Getenv("PG")
+	if dsn == "" {
+		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
+	}
+
+	sqldb, err := sql.Open("pgx", dsn)
 	require.NoError(t, err)
 
-	return bun.Open(pg, pgdialect.New())
+	return bun.Open(sqldb, pgdialect.New())
 }
 
 func sqlite(t *testing.T) *bun.DB {
-	sqlite, err := sql.Open("sqlite3", ":memory:?cache=shared")
+	sqldb, err := sql.Open("sqlite3", ":memory:?cache=shared")
 	require.NoError(t, err)
 
-	sqlite.SetMaxIdleConns(1000)
-	sqlite.SetConnMaxLifetime(0)
+	sqldb.SetMaxIdleConns(1000)
+	sqldb.SetConnMaxLifetime(0)
 
-	return bun.Open(sqlite, sqlitedialect.New())
+	return bun.Open(sqldb, sqlitedialect.New())
 }
 
 func mysql(t *testing.T) *bun.DB {
-	mysql, err := sql.Open("mysql", "root:pass@127.0.0.1:3306?test") //"root:pass@/test")
+	dsn := os.Getenv("MYSQL")
+	if dsn == "" {
+		dsn = "root:pass@127.0.0.1:3306?test"
+	}
+
+	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(t, err)
 
-	return bun.Open(mysql, mysqldialect.New())
+	return bun.Open(sqldb, mysqldialect.New())
 }
 
 func dbs(t *testing.T) []*bun.DB {

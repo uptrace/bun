@@ -180,7 +180,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
 	if err := m.Lock(ctx, db); err != nil {
 		return err
 	}
-	defer m.Unlock(ctx, db)
+	defer m.Unlock(ctx, db) //nolint:errcheck
 
 	completed, lastBatchID, err := m.selectMigrations(ctx, db)
 	if err != nil {
@@ -225,7 +225,7 @@ func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
 	if err := m.Lock(ctx, db); err != nil {
 		return err
 	}
-	defer m.Unlock(ctx, db)
+	defer m.Unlock(ctx, db) //nolint:errcheck
 
 	completed, lastBatchID, err := m.selectMigrations(ctx, db)
 	if err != nil {

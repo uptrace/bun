@@ -144,13 +144,6 @@ func (t *Table) CheckPKs() error {
 	return nil
 }
 
-func (t *Table) mustSoftDelete() error {
-	if t.SoftDeleteField == nil {
-		return fmt.Errorf("bun: %s does not support soft deletes", t)
-	}
-	return nil
-}
-
 func (t *Table) addField(field *Field) {
 	t.Fields = append(t.Fields, field)
 	if field.IsPK {

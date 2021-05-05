@@ -1,5 +1,9 @@
 # Tasty ORM for Go
 
+![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
+[![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
+
 bun is a DB-agnostic ORM for `*sql.DB`.
 
 ## Installation

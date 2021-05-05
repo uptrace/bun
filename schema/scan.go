@@ -90,7 +90,7 @@ func scanBool(dest reflect.Value, src interface{}) error {
 		dest.SetBool(src != 0)
 		return nil
 	}
-	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type(), dest)
+	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
 
 func scanInt64(dest reflect.Value, src interface{}) error {
