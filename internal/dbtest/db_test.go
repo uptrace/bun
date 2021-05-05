@@ -317,6 +317,7 @@ func testScanRowByRow(t *testing.T, db *bun.DB) {
 		OrderExpr("t.num DESC").
 		Rows(ctx)
 	require.NoError(t, err)
+	defer rows.Close()
 
 	var nums []int
 
