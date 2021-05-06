@@ -52,6 +52,12 @@ func NewTables(dialect Dialect) *Tables {
 	}
 }
 
+func (t *Tables) Register(models ...interface{}) {
+	for _, model := range models {
+		_ = t.Get(reflect.TypeOf(model).Elem())
+	}
+}
+
 func (t *Tables) Get(typ reflect.Type) *Table {
 	return t.table(typ, false)
 }
@@ -104,6 +110,19 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 	t.dialect.OnTable(table)
 
 	return table
+}
+
+func (t *Tables) ByModel(name string) *Table {
+	var found *Table
+	t.tables.Range(func(key, value interface{}) bool {
+		t := value.(*Table)
+		if t.TypeName == name {
+			found = t
+			return false
+		}
+		return true
+	})
+	return found
 }
 
 func (t *Tables) ByName(name string) *Table {

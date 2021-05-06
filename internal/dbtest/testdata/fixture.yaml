@@ -1,0 +1,82 @@
+- model: Genre
+  rows:
+    - id: 1
+      name: genre 1
+    - id: 2
+      name: genre 2
+    - id: 3
+      name: subgenre 1
+    - id: 4
+      name: subgenre 2
+
+- model: Image
+  rows:
+    - id: 1
+      path: /path/to/1.jpg
+    - id: 2
+      path: /path/to/2.jpg
+    - id: 3
+      path: /path/to/3.jpg
+
+- model: Author
+  rows:
+    - id: 10
+      name: author 1
+      avatar_id: "{{ $.Image.pk1.ID }}"
+    - id: 11
+      name: author 2
+      avatar_id: "{{ $.Image.pk2.ID }}"
+    - id: 12
+      name: author 3
+      avatar_id: "{{ $.Image.pk3.ID }}"
+
+- model: Book
+  rows:
+    - id: 100
+      title: book 1
+      author_id: "{{ $.Author.pk10.ID }}"
+      editor_id: "{{ $.Author.pk11.ID }}"
+    - id: 101
+      title: book 2
+      author_id: "{{ $.Author.pk10.ID }}"
+      editor_id: "{{ $.Author.pk12.ID }}"
+    - id: 102
+      title: book 3
+      author_id: "{{ $.Author.pk11.ID }}"
+      editor_id: "{{ $.Author.pk11.ID }}"
+
+- model: BookGenre
+  rows:
+    - book_id: 100
+      genre_id: 1
+      genre__rating: 999
+    - book_id: 100
+      genre_id: 2
+      genre__rating: 9999
+    - book_id: 101
+      genre_id: 1
+      genre__rating: 99990
+
+- model: Translation
+  rows:
+    - id: 1000
+      book_id: 100
+      lang: ru
+    - id: 1001
+      book_id: 100
+      lang: md
+    - id: 1002
+      book_id: 101
+      lang: ua
+
+- model: Comment
+  rows:
+    - trackable_id: 100
+      trackable_type: book
+      text: comment1
+    - trackable_id: 100
+      trackable_type: book
+      text: comment2
+    - trackable_id: 1000
+      trackable_type: translation
+      text: comment3

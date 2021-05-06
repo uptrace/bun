@@ -714,7 +714,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	m2mTable := t.dialect.Tables().ByName(m2mTableName)
 	if m2mTable == nil {
 		panic(fmt.Errorf(
-			"bun: can't find m2m %s table (use db.Table to register the model)",
+			"bun: can't find m2m %s table (use db.RegisterTable to register the model)",
 			m2mTableName,
 		))
 	}

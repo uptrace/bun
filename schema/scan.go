@@ -111,6 +111,13 @@ func scanInt64(dest reflect.Value, src interface{}) error {
 		}
 		dest.SetInt(n)
 		return nil
+	case string:
+		n, err := strconv.ParseInt(src, 10, 64)
+		if err != nil {
+			return err
+		}
+		dest.SetInt(n)
+		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }

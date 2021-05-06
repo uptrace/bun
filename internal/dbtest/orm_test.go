@@ -1,13 +1,16 @@
 package dbtest_test
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/testfixture"
 )
 
 func TestORM(t *testing.T) {
@@ -329,117 +332,7 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 }
 
 func loadTestData(t *testing.T, db *bun.DB) {
-	genres := []Genre{{
-		ID:   1,
-		Name: "genre 1",
-	}, {
-		ID:   2,
-		Name: "genre 2",
-	}, {
-		ID:       3,
-		Name:     "subgenre 1",
-		ParentID: 1,
-	}, {
-		ID:       4,
-		Name:     "subgenre 2",
-		ParentID: 1,
-	}}
-	_, err := db.NewInsert().Model(&genres).Exec(ctx)
-	require.NoError(t, err)
-
-	images := []Image{{
-		ID:   1,
-		Path: "/path/to/1.jpg",
-	}, {
-		ID:   2,
-		Path: "/path/to/2.jpg",
-	}, {
-		ID:   3,
-		Path: "/path/to/3.jpg",
-	}}
-	_, err = db.NewInsert().Model(&images).Exec(ctx)
-	require.NoError(t, err)
-
-	authors := []Author{{
-		ID:       10,
-		Name:     "author 1",
-		AvatarID: images[0].ID,
-	}, {
-		ID:       11,
-		Name:     "author 2",
-		AvatarID: images[1].ID,
-	}, {
-		ID:       12,
-		Name:     "author 3",
-		AvatarID: images[2].ID,
-	}}
-	_, err = db.NewInsert().Model(&authors).Exec(ctx)
-	require.NoError(t, err)
-
-	books := []Book{{
-		ID:       100,
-		Title:    "book 1",
-		AuthorID: 10,
-		EditorID: 11,
-	}, {
-		ID:       101,
-		Title:    "book 2",
-		AuthorID: 10,
-		EditorID: 12,
-	}, {
-		ID:       102,
-		Title:    "book 3",
-		AuthorID: 11,
-		EditorID: 11,
-	}}
-	_, err = db.NewInsert().Model(&books).Exec(ctx)
-	require.NoError(t, err)
-
-	bookGenres := []BookGenre{{
-		BookID:       100,
-		GenreID:      1,
-		Genre_Rating: 999,
-	}, {
-		BookID:       100,
-		GenreID:      2,
-		Genre_Rating: 9999,
-	}, {
-		BookID:       101,
-		GenreID:      1,
-		Genre_Rating: 99999,
-	}}
-	_, err = db.NewInsert().Model(&bookGenres).Exec(ctx)
-	require.NoError(t, err)
-
-	translations := []Translation{{
-		ID:     1000,
-		BookID: 100,
-		Lang:   "ru",
-	}, {
-		ID:     1001,
-		BookID: 100,
-		Lang:   "md",
-	}, {
-		ID:     1002,
-		BookID: 101,
-		Lang:   "ua",
-	}}
-	_, err = db.NewInsert().Model(&translations).Exec(ctx)
-	require.NoError(t, err)
-
-	comments := []Comment{{
-		TrackableID:   100,
-		TrackableType: "book",
-		Text:          "comment1",
-	}, {
-		TrackableID:   100,
-		TrackableType: "book",
-		Text:          "comment2",
-	}, {
-		TrackableID:   1000,
-		TrackableType: "translation",
-		Text:          "comment3",
-	}}
-	_, err = db.NewInsert().Model(&comments).Exec(ctx)
+	loader := testfixture.NewLoader(db)
+	err := loader.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
 	require.NoError(t, err)
 }
