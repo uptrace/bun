@@ -34,6 +34,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 		return 0, err
 	}
 
+	m.rows = rows
 	m.columns = columns
 	dest := makeDest(m, len(columns))
 
@@ -45,7 +46,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	var n int
 
 	for rows.Next() {
-		m.m = make(map[string]interface{}, len(columns))
+		m.m = make(map[string]interface{}, len(m.columns))
 
 		m.scanIndex = 0
 		if err := rows.Scan(dest...); err != nil {

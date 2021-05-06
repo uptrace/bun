@@ -80,19 +80,6 @@ func appendFloat(b []byte, v float64, bitSize int) []byte {
 	}
 }
 
-func appendFloat2(b []byte, v float64) []byte {
-	switch {
-	case math.IsNaN(v):
-		return append(b, "NaN"...)
-	case math.IsInf(v, 1):
-		return append(b, "Infinity"...)
-	case math.IsInf(v, -1):
-		return append(b, "-Infinity"...)
-	default:
-		return strconv.AppendFloat(b, v, 'f', -1, 64)
-	}
-}
-
 func AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
 	for _, c := range s {
