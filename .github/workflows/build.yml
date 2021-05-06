@@ -54,4 +54,4 @@ jobs:
         run: make test
         env:
           PG: postgres://postgres:postgres@localhost/postgres
-          MYSQL: user:pass@localhost:3306?test
+          MYSQL: user:pass@/test

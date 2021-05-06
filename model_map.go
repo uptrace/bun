@@ -3,8 +3,10 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"sort"
 
+	"github.com/uptrace/bun/schema"
 	"github.com/uptrace/bun/sqlfmt"
 )
 
@@ -16,8 +18,10 @@ type mapModel struct {
 	ptr *map[string]interface{}
 	m   map[string]interface{}
 
-	columns   []string
-	scanIndex int
+	rows         *sql.Rows
+	columns      []string
+	_columnTypes []*sql.ColumnType
+	scanIndex    int
 }
 
 var _ model = (*mapModel)(nil)
@@ -38,34 +42,64 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 		return 0, sql.ErrNoRows
 	}
 
-	if err := m.ScanRow(ctx, rows); err != nil {
+	columns, err := rows.Columns()
+	if err != nil {
 		return 0, err
 	}
 
-	return 1, nil
-}
-
-func (m *mapModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-
+	m.rows = rows
 	m.columns = columns
 	dest := makeDest(m, len(columns))
 
 	if m.m == nil {
 		m.m = make(map[string]interface{}, len(m.columns))
 	}
+
+	m.scanIndex = 0
 	if err := rows.Scan(dest...); err != nil {
-		return err
+		return 0, err
 	}
+
 	*m.ptr = m.m
 
-	return nil
+	return 1, nil
 }
 
 func (m *mapModel) Scan(src interface{}) error {
+	if _, ok := src.([]byte); !ok {
+		return m.scanRaw(src)
+	}
+
+	columnTypes, err := m.columnTypes()
+	if err != nil {
+		return err
+	}
+
+	scanType := columnTypes[m.scanIndex].ScanType()
+	if scanType.Kind() == reflect.Slice && scanType.Elem().Kind() == reflect.Uint8 {
+		return m.scanRaw(src)
+	}
+
+	dest := reflect.New(scanType).Elem()
+	if err := schema.Scanner(scanType)(dest, src); err != nil {
+		return err
+	}
+
+	return m.scanRaw(dest.Interface())
+}
+
+func (m *mapModel) columnTypes() ([]*sql.ColumnType, error) {
+	if m._columnTypes == nil {
+		columnTypes, err := m.rows.ColumnTypes()
+		if err != nil {
+			return nil, err
+		}
+		m._columnTypes = columnTypes
+	}
+	return m._columnTypes, nil
+}
+
+func (m *mapModel) scanRaw(src interface{}) error {
 	columnName := m.columns[m.scanIndex]
 	m.scanIndex++
 	m.m[columnName] = src

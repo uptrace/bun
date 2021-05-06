@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 
-	_ "github.com/go-mysql-org/go-mysql/driver"
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
@@ -44,7 +44,7 @@ func sqlite(t *testing.T) *bun.DB {
 func mysql(t *testing.T) *bun.DB {
 	dsn := os.Getenv("MYSQL")
 	if dsn == "" {
-		dsn = "root:pass@127.0.0.1:3306?test"
+		dsn = "root:pass@/test"
 	}
 
 	sqldb, err := sql.Open("mysql", dsn)
