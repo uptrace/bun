@@ -1,4 +1,4 @@
-package main
+package migrations
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	migrator.MustRegister(func(ctx context.Context, db *bun.DB) error {
+	Migrator.MustRegister(func(ctx context.Context, db *bun.DB) error {
 		fmt.Print(" [up migration] ")
 		return nil
 	}, func(ctx context.Context, db *bun.DB) error {

@@ -6,21 +6,21 @@ import (
 	"os"
 
 	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/example/migrate/migrations"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/migrate"
 	"github.com/urfave/cli/v2"
 )
-
-var migrator = migrate.NewMigrator(migrate.AutoDiscover())
 
 func main() {
 	sqldb, err := sql.Open("sqlite3", "file:test.s3db?cache=shared")
 	if err != nil {
 		panic(err)
 	}
+
 	db := bun.Open(sqldb, sqlitedialect.New())
+	migrator := migrations.Migrator
 
 	app := &cli.App{
 		Name: "bun",
