@@ -70,6 +70,17 @@ func (q *TruncateTableQuery) AppendQuery(
 		return nil, q.err
 	}
 
+	if !fmter.HasFeature(feature.TableTruncate) {
+		b = append(b, "DELETE FROM "...)
+
+		b, err = q.appendTables(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+
+		return b, nil
+	}
+
 	b = append(b, "TRUNCATE TABLE "...)
 
 	b, err = q.appendTables(fmter, b)

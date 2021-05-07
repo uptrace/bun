@@ -17,16 +17,18 @@ import (
 
 type ConfigOption func(f *Loader)
 
-func WithTruncateTable() ConfigOption {
+func WithTruncate() ConfigOption {
 	return func(f *Loader) {
 		f.truncateTable = true
+		f.truncatedTables = make(map[string]struct{})
 	}
 }
 
 type Loader struct {
 	db *bun.DB
 
-	truncateTable bool
+	truncateTable   bool
+	truncatedTables map[string]struct{}
 
 	modelRows map[string]map[string]interface{}
 }
@@ -145,6 +147,17 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 		fv := field.Value(strct)
 		if err := value.Decode(fv.Addr().Interface()); err != nil {
 			return err
+		}
+	}
+
+	if f.truncateTable {
+		if _, ok := f.truncatedTables[table.Name]; !ok {
+			if _, err := f.db.NewTruncateTable().
+				TableExpr(string(table.SQLName)).
+				Exec(ctx); err != nil {
+				return err
+			}
+			f.truncatedTables[table.Name] = struct{}{}
 		}
 	}
 

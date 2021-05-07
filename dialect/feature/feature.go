@@ -14,4 +14,5 @@ const (
 	AutoIncrement
 	TableCascade
 	TableIdentity
+	TableTruncate
 )
