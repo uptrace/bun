@@ -1,6 +1,8 @@
 package bun
 
 import (
+	"context"
+
 	"github.com/uptrace/bun/schema"
 	"github.com/uptrace/bun/sqlfmt"
 )
@@ -57,5 +59,21 @@ type (
 // type AfterDeleteQueryHook interface {
 // 	AfterDeleteQuery(ctx context.Context, query *DeleteQuery) error
 // }
+
+type BeforeCreateTableQueryHook interface {
+	BeforeCreateTableQuery(ctx context.Context, query *CreateTableQuery) error
+}
+
+type AfterCreateTableQueryHook interface {
+	AfterCreateTableQuery(ctx context.Context, query *CreateTableQuery) error
+}
+
+type BeforeDropTableQueryHook interface {
+	BeforeDropTableQuery(ctx context.Context, query *DropTableQuery) error
+}
+
+type AfterDropTableQueryHook interface {
+	AfterDropTableQuery(ctx context.Context, query *DropTableQuery) error
+}
 
 type BaseTable struct{}

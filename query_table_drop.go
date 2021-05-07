@@ -96,11 +96,52 @@ func (q *DropTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 //------------------------------------------------------------------------------
 
 func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+	if err := q.beforeDropTableQueryHook(ctx); err != nil {
+		return res, err
+	}
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
 	if err != nil {
 		return res, err
 	}
 	query := internal.String(queryBytes)
 
-	return q.exec(ctx, q, query)
+	res, err = q.exec(ctx, q, query)
+	if err != nil {
+		return res, err
+	}
+
+	if err := q.afterDropTableQueryHook(ctx); err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (q *DropTableQuery) beforeDropTableQueryHook(ctx context.Context) error {
+	if q.tableModel == nil {
+		return nil
+	}
+
+	if hook, ok := q.table.ZeroIface.(BeforeDropTableQueryHook); ok {
+		if err := hook.BeforeDropTableQuery(ctx, q); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (q *DropTableQuery) afterDropTableQueryHook(ctx context.Context) error {
+	if q.tableModel == nil {
+		return nil
+	}
+
+	if hook, ok := q.table.ZeroIface.(AfterDropTableQueryHook); ok {
+		if err := hook.AfterDropTableQuery(ctx, q); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

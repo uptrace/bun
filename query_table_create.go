@@ -229,11 +229,52 @@ func (q *CreateTableQuery) appendFKConstraint(
 //------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+	if err := q.beforeCreateTableQueryHook(ctx); err != nil {
+		return res, err
+	}
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
 	if err != nil {
 		return res, err
 	}
 	query := internal.String(queryBytes)
 
-	return q.exec(ctx, q, query)
+	res, err = q.exec(ctx, q, query)
+	if err != nil {
+		return res, err
+	}
+
+	if err := q.afterCreateTableQueryHook(ctx); err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (q *CreateTableQuery) beforeCreateTableQueryHook(ctx context.Context) error {
+	if q.tableModel == nil {
+		return nil
+	}
+
+	if hook, ok := q.table.ZeroIface.(BeforeCreateTableQueryHook); ok {
+		if err := hook.BeforeCreateTableQuery(ctx, q); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (q *CreateTableQuery) afterCreateTableQueryHook(ctx context.Context) error {
+	if q.tableModel == nil {
+		return nil
+	}
+
+	if hook, ok := q.table.ZeroIface.(AfterCreateTableQueryHook); ok {
+		if err := hook.AfterCreateTableQuery(ctx, q); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
