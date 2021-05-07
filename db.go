@@ -88,6 +88,10 @@ func (db *DB) NewDropIndex() *DropIndexQuery {
 	return NewDropIndexQuery(db)
 }
 
+func (db *DB) NewTruncateTable() *TruncateTableQuery {
+	return NewTruncateTableQuery(db)
+}
+
 func (db *DB) NewAddColumn() *AddColumnQuery {
 	return NewAddColumnQuery(db)
 }

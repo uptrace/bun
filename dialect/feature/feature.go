@@ -4,7 +4,7 @@ import "github.com/uptrace/bun/internal"
 
 type Feature = internal.Flag
 
-const DefaultFeatures = Returning | DropTableCascade
+const DefaultFeatures = Returning | TableCascade
 
 const (
 	Returning Feature = 1 << iota
@@ -12,5 +12,6 @@ const (
 	ValuesRow
 	Backticks
 	AutoIncrement
-	DropTableCascade
+	TableCascade
+	TableIdentity
 )

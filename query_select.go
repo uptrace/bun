@@ -575,34 +575,7 @@ func (q *SelectQuery) appendHasOneColumns(
 
 func (q *SelectQuery) appendTables(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
-	startLen := len(b)
-
-	if q.modelHasTableName() {
-		if !q.modelTable.IsZero() {
-			b, err = q.modelTable.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b = fmter.FormatQuery(b, string(q.table.SQLNameForSelects))
-			if q.table.Alias != q.table.SQLNameForSelects {
-				b = append(b, " AS "...)
-				b = append(b, q.table.Alias...)
-			}
-		}
-	}
-
-	for _, table := range q.tables {
-		if len(b) > startLen {
-			b = append(b, ", "...)
-		}
-		b, err = table.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b, nil
+	return q.baseQuery.appendTablesWithAlias(fmter, b)
 }
 
 func (q *SelectQuery) appendOrder(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {

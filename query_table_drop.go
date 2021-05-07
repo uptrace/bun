@@ -3,16 +3,15 @@ package bun
 import (
 	"context"
 
-	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/sqlfmt"
 )
 
 type DropTableQuery struct {
 	baseQuery
+	cascadeQuery
 
 	ifExists bool
-	cascade  bool
 }
 
 func NewDropTableQuery(db *DB) *DropTableQuery {
@@ -49,11 +48,6 @@ func (q *DropTableQuery) TableExpr(query string, args ...interface{}) *DropTable
 	return q
 }
 
-func (q *DropTableQuery) ModelTableExpr(query string, args ...interface{}) *DropTableQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
-	return q
-}
-
 //------------------------------------------------------------------------------
 
 func (q *DropTableQuery) IfExists() *DropTableQuery {
@@ -61,8 +55,8 @@ func (q *DropTableQuery) IfExists() *DropTableQuery {
 	return q
 }
 
-func (q *DropTableQuery) Cascade() *DropTableQuery {
-	q.cascade = true
+func (q *DropTableQuery) Restrict() *DropTableQuery {
+	q.restrict = true
 	return q
 }
 
@@ -72,23 +66,18 @@ func (q *DropTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 	if q.err != nil {
 		return nil, q.err
 	}
-	if q.table == nil {
-		return nil, errModelNil
-	}
 
 	b = append(b, "DROP TABLE "...)
 	if q.ifExists {
 		b = append(b, "IF EXISTS "...)
 	}
 
-	b, err = q.appendFirstTable(fmter, b)
+	b, err = q.appendTables(fmter, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if q.cascade && q.db.features.Has(feature.DropTableCascade) {
-		b = append(b, " CASCADE"...)
-	}
+	b = q.appendCascade(fmter, b)
 
 	return b, nil
 }

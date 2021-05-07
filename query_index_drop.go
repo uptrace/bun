@@ -1,17 +1,15 @@
 package bun
 
 import (
-	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/sqlfmt"
 )
 
 type DropIndexQuery struct {
 	baseQuery
+	cascadeQuery
 
 	concurrently bool
 	ifExists     bool
-	cascade      bool
-	restrict     bool
 
 	index sqlfmt.QueryWithArgs
 }
@@ -48,11 +46,6 @@ func (q *DropIndexQuery) IfExists() *DropIndexQuery {
 	return q
 }
 
-func (q *DropIndexQuery) Cascade() *DropIndexQuery {
-	q.cascade = true
-	return q
-}
-
 func (q *DropIndexQuery) Restrict() *DropIndexQuery {
 	q.restrict = true
 	return q
@@ -84,12 +77,7 @@ func (q *DropIndexQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 		return nil, err
 	}
 
-	if q.cascade && q.db.features.Has(feature.DropTableCascade) {
-		b = append(b, " CASCADE"...)
-	}
-	if q.restrict {
-		b = append(b, " RESTRICT"...)
-	}
+	b = q.appendCascade(fmter, b)
 
 	return b, nil
 }

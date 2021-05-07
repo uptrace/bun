@@ -323,7 +323,7 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 		(*Comment)(nil),
 	}
 	for _, model := range models {
-		_, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx)
+		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
 		require.NoError(t, err)
 
 		_, err = db.NewCreateTable().Model(model).Exec(ctx)

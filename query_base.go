@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 	"github.com/uptrace/bun/sqlfmt"
@@ -200,6 +201,51 @@ func (q *baseQuery) modelHasTableName() bool {
 
 func (q *baseQuery) hasTables() bool {
 	return q.modelHasTableName() || len(q.tables) > 0
+}
+
+func (q *baseQuery) appendTables(
+	fmter sqlfmt.QueryFormatter, b []byte,
+) (_ []byte, err error) {
+	return q._appendTables(fmter, b, false)
+}
+
+func (q *baseQuery) appendTablesWithAlias(
+	fmter sqlfmt.QueryFormatter, b []byte,
+) (_ []byte, err error) {
+	return q._appendTables(fmter, b, true)
+}
+
+func (q *baseQuery) _appendTables(
+	fmter sqlfmt.QueryFormatter, b []byte, withAlias bool,
+) (_ []byte, err error) {
+	startLen := len(b)
+
+	if q.modelHasTableName() {
+		if !q.modelTable.IsZero() {
+			b, err = q.modelTable.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b = fmter.FormatQuery(b, string(q.table.SQLNameForSelects))
+			if withAlias && q.table.Alias != q.table.SQLNameForSelects {
+				b = append(b, " AS "...)
+				b = append(b, q.table.Alias...)
+			}
+		}
+	}
+
+	for _, table := range q.tables {
+		if len(b) > startLen {
+			b = append(b, ", "...)
+		}
+		b, err = table.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
 }
 
 func (q *baseQuery) appendFirstTable(fmter sqlfmt.QueryFormatter, b []byte) ([]byte, error) {
@@ -744,4 +790,22 @@ func (q setQuery) appendSet(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, er
 		}
 	}
 	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+type cascadeQuery struct {
+	restrict bool
+}
+
+func (q cascadeQuery) appendCascade(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+	if !fmter.HasFeature(feature.TableCascade) {
+		return b
+	}
+	if q.restrict {
+		b = append(b, " RESTRICT"...)
+	} else {
+		b = append(b, " CASCADE"...)
+	}
+	return b
 }

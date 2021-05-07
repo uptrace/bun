@@ -271,13 +271,16 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Where("(id1, id2) IN (?)", bun.In([][]int{{1, 2}, {3, 4}}))
 		},
 		func(db *bun.DB) sqlfmt.QueryAppender {
-			return db.NewDropIndex().Concurrently().IfExists().Index("title_idx").Cascade()
+			return db.NewDropIndex().Concurrently().IfExists().Index("title_idx")
 		},
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewAddColumn().Model(new(Model)).ColumnExpr("column_name VARCHAR(123)")
 		},
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewDropColumn().Model(new(Model)).Column("str")
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewTruncateTable().Model(new(Model))
 		},
 	}
 

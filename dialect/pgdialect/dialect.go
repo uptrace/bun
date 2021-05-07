@@ -15,7 +15,7 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Returning | feature.DropTableCascade
+	d.features = feature.Returning | feature.TableCascade | feature.TableIdentity
 	return d
 }
 

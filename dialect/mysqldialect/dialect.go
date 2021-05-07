@@ -18,8 +18,7 @@ func New() *Dialect {
 	d.features = feature.Backticks |
 		feature.AutoIncrement |
 		feature.DefaultPlaceholder |
-		feature.ValuesRow |
-		feature.DropTableCascade
+		feature.ValuesRow
 	return d
 }
 
