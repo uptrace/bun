@@ -15,6 +15,6 @@ go_mod_tidy:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
-	    go get -u ./... && \
+	    go get -d ./... && \
 	    go mod tidy); \
 	done

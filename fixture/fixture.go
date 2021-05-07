@@ -1,4 +1,4 @@
-package testfixture
+package fixture
 
 import (
 	"bytes"
@@ -48,12 +48,12 @@ func NewLoader(db *bun.DB, opts ...ConfigOption) *Loader {
 func (f *Loader) Get(model, rowID string) (interface{}, error) {
 	rows, ok := f.modelRows[model]
 	if !ok {
-		return nil, fmt.Errorf("testfixture: unknown model=%q", model)
+		return nil, fmt.Errorf("fixture: unknown model=%q", model)
 	}
 
 	row, ok := rows[rowID]
 	if !ok {
-		return nil, fmt.Errorf("testfixture: unknown row=%q in model=%q", row, model)
+		return nil, fmt.Errorf("fixture: unknown row=%q in model=%q", row, model)
 	}
 
 	return row, nil
@@ -101,7 +101,7 @@ func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 	table := f.db.Dialect().Tables().ByModel(fixture.Model)
 	if table == nil {
-		return fmt.Errorf("testfixture: can't find model=%q", fixture.Model)
+		return fmt.Errorf("fixture: can't find model=%q", fixture.Model)
 	}
 
 	for _, row := range fixture.Rows {

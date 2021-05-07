@@ -4,7 +4,7 @@ go 1.16
 
 replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/testfixture => ../../testfixture
+replace github.com/uptrace/bun/fixture => ../../fixture
 
 replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
@@ -18,9 +18,9 @@ require (
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/mattn/go-sqlite3 v1.14.7
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v0.0.0-00010101000000-000000000000
+	github.com/uptrace/bun v0.0.0-20210507075305-2e91d2c5c8de
 	github.com/uptrace/bun/dialect/mysqldialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/pgdialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/sqlitedialect v0.0.0-00010101000000-000000000000
-	github.com/uptrace/bun/testfixture v0.0.0-00010101000000-000000000000
+	github.com/uptrace/bun/fixture v0.0.0-00010101000000-000000000000
 )
