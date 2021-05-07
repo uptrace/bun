@@ -321,23 +321,37 @@ func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 }
 
 func (q *UpdateQuery) beforeUpdateQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(BeforeUpdateQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.BeforeUpdate(ctx); err != nil {
+		return err
 	}
-	return hook.BeforeUpdateQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(BeforeUpdateQueryHook); ok {
+	// 	if err := hook.BeforeUpdateQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *UpdateQuery) afterUpdateQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(AfterUpdateQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.AfterUpdate(ctx); err != nil {
+		return err
 	}
-	return hook.AfterUpdateQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(AfterUpdateQueryHook); ok {
+	// 	if err := hook.AfterUpdateQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }

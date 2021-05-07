@@ -464,25 +464,39 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 }
 
 func (q *InsertQuery) beforeInsertQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(BeforeInsertQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.BeforeInsert(ctx); err != nil {
+		return err
 	}
-	return hook.BeforeInsertQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(BeforeInsertQueryHook); ok {
+	// 	if err := hook.BeforeInsertQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *InsertQuery) afterInsertQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(AfterInsertQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.AfterInsert(ctx); err != nil {
+		return err
 	}
-	return hook.AfterInsertQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(AfterInsertQueryHook); ok {
+	// 	if err := hook.AfterInsertQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {

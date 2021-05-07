@@ -165,11 +165,11 @@ func (m *structTableModel) AfterSelect(ctx context.Context) error {
 	return nil
 }
 
-func (m *structTableModel) BeforeInsert(ctx context.Context) (context.Context, error) {
+func (m *structTableModel) BeforeInsert(ctx context.Context) error {
 	if m.table.HasBeforeInsertHook() {
 		return callBeforeInsertHook(ctx, m.strct.Addr())
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *structTableModel) AfterInsert(ctx context.Context) error {
@@ -179,11 +179,11 @@ func (m *structTableModel) AfterInsert(ctx context.Context) error {
 	return nil
 }
 
-func (m *structTableModel) BeforeUpdate(ctx context.Context) (context.Context, error) {
+func (m *structTableModel) BeforeUpdate(ctx context.Context) error {
 	if m.table.HasBeforeUpdateHook() && !m.IsNil() {
 		return callBeforeUpdateHook(ctx, m.strct.Addr())
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *structTableModel) AfterUpdate(ctx context.Context) error {
@@ -193,11 +193,11 @@ func (m *structTableModel) AfterUpdate(ctx context.Context) error {
 	return nil
 }
 
-func (m *structTableModel) BeforeDelete(ctx context.Context) (context.Context, error) {
+func (m *structTableModel) BeforeDelete(ctx context.Context) error {
 	if m.table.HasBeforeDeleteHook() && !m.IsNil() {
 		return callBeforeDeleteHook(ctx, m.strct.Addr())
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *structTableModel) AfterDelete(ctx context.Context) error {

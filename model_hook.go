@@ -19,20 +19,20 @@ var (
 	_ AfterDeleteHook  = (*hookStubs)(nil)
 )
 
-func (hookStubs) AfterSelect(ctx context.Context) error                     { return nil }
-func (hookStubs) BeforeInsert(ctx context.Context) (context.Context, error) { return ctx, nil }
-func (hookStubs) AfterInsert(ctx context.Context) error                     { return nil }
-func (hookStubs) BeforeUpdate(ctx context.Context) (context.Context, error) { return ctx, nil }
-func (hookStubs) AfterUpdate(ctx context.Context) error                     { return nil }
-func (hookStubs) BeforeDelete(ctx context.Context) (context.Context, error) { return ctx, nil }
-func (hookStubs) AfterDelete(ctx context.Context) error                     { return nil }
+func (hookStubs) AfterSelect(ctx context.Context) error  { return nil }
+func (hookStubs) BeforeInsert(ctx context.Context) error { return nil }
+func (hookStubs) AfterInsert(ctx context.Context) error  { return nil }
+func (hookStubs) BeforeUpdate(ctx context.Context) error { return nil }
+func (hookStubs) AfterUpdate(ctx context.Context) error  { return nil }
+func (hookStubs) BeforeDelete(ctx context.Context) error { return nil }
+func (hookStubs) AfterDelete(ctx context.Context) error  { return nil }
 
 func callHookSlice(
 	ctx context.Context,
 	slice reflect.Value,
 	ptr bool,
-	hook func(context.Context, reflect.Value) (context.Context, error),
-) (context.Context, error) {
+	hook func(context.Context, reflect.Value) error,
+) error {
 	var firstErr error
 	sliceLen := slice.Len()
 	for i := 0; i < sliceLen; i++ {
@@ -41,13 +41,11 @@ func callHookSlice(
 			v = v.Addr()
 		}
 
-		var err error
-		ctx, err = hook(ctx, v)
-		if err != nil && firstErr == nil {
+		if err := hook(ctx, v); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
-	return ctx, firstErr
+	return firstErr
 }
 
 func callHookSlice2(
@@ -94,13 +92,11 @@ func callAfterSelectHookSlice(
 	return callHookSlice2(ctx, slice, ptr, callAfterSelectHook)
 }
 
-func callBeforeInsertHook(ctx context.Context, v reflect.Value) (context.Context, error) {
+func callBeforeInsertHook(ctx context.Context, v reflect.Value) error {
 	return v.Interface().(schema.BeforeInsertHook).BeforeInsert(ctx)
 }
 
-func callBeforeInsertHookSlice(
-	ctx context.Context, slice reflect.Value, ptr bool,
-) (context.Context, error) {
+func callBeforeInsertHookSlice(ctx context.Context, slice reflect.Value, ptr bool) error {
 	return callHookSlice(ctx, slice, ptr, callBeforeInsertHook)
 }
 
@@ -108,19 +104,15 @@ func callAfterInsertHook(ctx context.Context, v reflect.Value) error {
 	return v.Interface().(schema.AfterInsertHook).AfterInsert(ctx)
 }
 
-func callAfterInsertHookSlice(
-	ctx context.Context, slice reflect.Value, ptr bool,
-) error {
+func callAfterInsertHookSlice(ctx context.Context, slice reflect.Value, ptr bool) error {
 	return callHookSlice2(ctx, slice, ptr, callAfterInsertHook)
 }
 
-func callBeforeUpdateHook(ctx context.Context, v reflect.Value) (context.Context, error) {
+func callBeforeUpdateHook(ctx context.Context, v reflect.Value) error {
 	return v.Interface().(schema.BeforeUpdateHook).BeforeUpdate(ctx)
 }
 
-func callBeforeUpdateHookSlice(
-	ctx context.Context, slice reflect.Value, ptr bool,
-) (context.Context, error) {
+func callBeforeUpdateHookSlice(ctx context.Context, slice reflect.Value, ptr bool) error {
 	return callHookSlice(ctx, slice, ptr, callBeforeUpdateHook)
 }
 
@@ -128,19 +120,15 @@ func callAfterUpdateHook(ctx context.Context, v reflect.Value) error {
 	return v.Interface().(schema.AfterUpdateHook).AfterUpdate(ctx)
 }
 
-func callAfterUpdateHookSlice(
-	ctx context.Context, slice reflect.Value, ptr bool,
-) error {
+func callAfterUpdateHookSlice(ctx context.Context, slice reflect.Value, ptr bool) error {
 	return callHookSlice2(ctx, slice, ptr, callAfterUpdateHook)
 }
 
-func callBeforeDeleteHook(ctx context.Context, v reflect.Value) (context.Context, error) {
+func callBeforeDeleteHook(ctx context.Context, v reflect.Value) error {
 	return v.Interface().(schema.BeforeDeleteHook).BeforeDelete(ctx)
 }
 
-func callBeforeDeleteHookSlice(
-	ctx context.Context, slice reflect.Value, ptr bool,
-) (context.Context, error) {
+func callBeforeDeleteHookSlice(ctx context.Context, slice reflect.Value, ptr bool) error {
 	return callHookSlice(ctx, slice, ptr, callBeforeDeleteHook)
 }
 

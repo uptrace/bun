@@ -207,23 +207,37 @@ func (q *DeleteQuery) ForceDelete(ctx context.Context, dest ...interface{}) (res
 }
 
 func (q *DeleteQuery) beforeDeleteQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(BeforeDeleteQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.BeforeDelete(ctx); err != nil {
+		return err
 	}
-	return hook.BeforeDeleteQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(BeforeDeleteQueryHook); ok {
+	// 	if err := hook.BeforeDeleteQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *DeleteQuery) afterDeleteQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(AfterDeleteQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.AfterDelete(ctx); err != nil {
+		return err
 	}
-	return hook.AfterDeleteQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(AfterDeleteQueryHook); ok {
+	// 	if err := hook.AfterDeleteQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }

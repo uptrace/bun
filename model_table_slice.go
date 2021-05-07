@@ -106,11 +106,11 @@ func (m *sliceTableModel) AfterSelect(ctx context.Context) error {
 	return nil
 }
 
-func (m *sliceTableModel) BeforeInsert(ctx context.Context) (context.Context, error) {
+func (m *sliceTableModel) BeforeInsert(ctx context.Context) error {
 	if m.table.HasBeforeInsertHook() {
 		return callBeforeInsertHookSlice(ctx, m.slice, m.sliceOfPtr)
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *sliceTableModel) AfterInsert(ctx context.Context) error {
@@ -120,11 +120,11 @@ func (m *sliceTableModel) AfterInsert(ctx context.Context) error {
 	return nil
 }
 
-func (m *sliceTableModel) BeforeUpdate(ctx context.Context) (context.Context, error) {
+func (m *sliceTableModel) BeforeUpdate(ctx context.Context) error {
 	if m.table.HasBeforeUpdateHook() && !m.IsNil() {
 		return callBeforeUpdateHookSlice(ctx, m.slice, m.sliceOfPtr)
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *sliceTableModel) AfterUpdate(ctx context.Context) error {
@@ -134,11 +134,11 @@ func (m *sliceTableModel) AfterUpdate(ctx context.Context) error {
 	return nil
 }
 
-func (m *sliceTableModel) BeforeDelete(ctx context.Context) (context.Context, error) {
+func (m *sliceTableModel) BeforeDelete(ctx context.Context) error {
 	if m.table.HasBeforeDeleteHook() && !m.IsNil() {
 		return callBeforeDeleteHookSlice(ctx, m.slice, m.sliceOfPtr)
 	}
-	return ctx, nil
+	return nil
 }
 
 func (m *sliceTableModel) AfterDelete(ctx context.Context) error {

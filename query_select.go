@@ -692,22 +692,33 @@ func (q *SelectQuery) beforeSelectQueryHook(ctx context.Context) error {
 	if q.table == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(BeforeSelectQueryHook)
-	if !ok {
-		return nil
-	}
-	return hook.BeforeSelectQuery(ctx, q)
+
+	// hook, ok := q.table.ZeroIface.(BeforeSelectQueryHook)
+	// if ok {
+	// 	if err := hook.BeforeSelectQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *SelectQuery) afterSelectQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
-	hook, ok := q.table.ZeroIface.(AfterSelectQueryHook)
-	if !ok {
-		return nil
+
+	if err := q.tableModel.AfterSelect(ctx); err != nil {
+		return err
 	}
-	return hook.AfterSelectQuery(ctx, q)
+
+	// if hook, ok := q.table.ZeroIface.(AfterSelectQueryHook); ok {
+	// 	if err := hook.AfterSelectQuery(ctx, q); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	return nil
 }
 
 func (q *SelectQuery) Count(ctx context.Context) (int, error) {

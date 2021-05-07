@@ -30,7 +30,7 @@ var afterSelectHookType = reflect.TypeOf((*AfterSelectHook)(nil)).Elem()
 //------------------------------------------------------------------------------
 
 type BeforeInsertHook interface {
-	BeforeInsert(context.Context) (context.Context, error)
+	BeforeInsert(context.Context) error
 }
 
 var beforeInsertHookType = reflect.TypeOf((*BeforeInsertHook)(nil)).Elem()
@@ -46,7 +46,7 @@ var afterInsertHookType = reflect.TypeOf((*AfterInsertHook)(nil)).Elem()
 //------------------------------------------------------------------------------
 
 type BeforeUpdateHook interface {
-	BeforeUpdate(context.Context) (context.Context, error)
+	BeforeUpdate(context.Context) error
 }
 
 var beforeUpdateHookType = reflect.TypeOf((*BeforeUpdateHook)(nil)).Elem()
@@ -62,7 +62,7 @@ var afterUpdateHookType = reflect.TypeOf((*AfterUpdateHook)(nil)).Elem()
 //------------------------------------------------------------------------------
 
 type BeforeDeleteHook interface {
-	BeforeDelete(context.Context) (context.Context, error)
+	BeforeDelete(context.Context) error
 }
 
 var beforeDeleteHookType = reflect.TypeOf((*BeforeDeleteHook)(nil)).Elem()
