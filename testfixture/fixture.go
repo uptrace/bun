@@ -46,7 +46,7 @@ func NewLoader(db *bun.DB, opts ...ConfigOption) *Loader {
 func (f *Loader) Get(model, rowID string) (interface{}, error) {
 	rows, ok := f.modelRows[model]
 	if !ok {
-		return nil, fmt.Errorf("testfixture: unknown model=%q")
+		return nil, fmt.Errorf("testfixture: unknown model=%q", model)
 	}
 
 	row, ok := rows[rowID]
