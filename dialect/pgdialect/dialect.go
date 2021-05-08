@@ -15,7 +15,10 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Returning | feature.TableCascade | feature.TableIdentity
+	d.features = feature.Returning |
+		feature.TableCascade |
+		feature.TableIdentity |
+		feature.TableTruncate
 	return d
 }
 

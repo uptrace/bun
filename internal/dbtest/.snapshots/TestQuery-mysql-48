@@ -1,1 +1,1 @@
-DELETE FROM `models`
+TRUNCATE TABLE `models`
