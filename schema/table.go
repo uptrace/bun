@@ -225,7 +225,7 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 			if f.Tag.Get("bun") == "-" {
 				continue
 			}
-			if f.Name == "BaseTable" && len(index) == 0 {
+			if f.Name == "BaseModel" && len(index) == 0 {
 				t.processBaseModelField(f)
 				continue
 			}
@@ -714,7 +714,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	m2mTable := t.dialect.Tables().ByName(m2mTableName)
 	if m2mTable == nil {
 		panic(fmt.Errorf(
-			"bun: can't find m2m %s table (use db.RegisterTable to register the model)",
+			"bun: can't find m2m %s table (use db.RegisterModel)",
 			m2mTableName,
 		))
 	}

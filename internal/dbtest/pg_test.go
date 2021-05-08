@@ -36,21 +36,21 @@ func TestPGArray(t *testing.T) {
 }
 
 type Recipe struct {
-	bun.BaseTable `bun:"?tenant.recipes"`
+	bun.BaseModel `bun:"?tenant.recipes"`
 
 	ID          int
 	Ingredients []*Ingredient `bun:"m2m:?tenant.ingredients_recipes"`
 }
 
 type Ingredient struct {
-	bun.BaseTable `bun:"?tenant.ingredients"`
+	bun.BaseModel `bun:"?tenant.ingredients"`
 
 	ID      int
 	Recipes []*Recipe `bun:"m2m:?tenant.ingredients_recipes"`
 }
 
 type IngredientRecipe struct {
-	bun.BaseTable `bun:"?tenant.ingredients_recipes"`
+	bun.BaseModel `bun:"?tenant.ingredients_recipes"`
 
 	Recipe       *Recipe     `bun:"rel:has-one"`
 	RecipeID     int         `bun:",pk"`

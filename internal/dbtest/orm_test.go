@@ -255,7 +255,7 @@ func (a Author) String() string {
 }
 
 type BookGenre struct {
-	bun.BaseTable `bun:"alias:bg"` // custom table alias
+	bun.BaseModel `bun:"alias:bg"` // custom table alias
 
 	BookID  int    `bun:",pk"`
 	Book    *Book  `bun:"rel:has-one"`
@@ -294,7 +294,7 @@ type BookWithCommentCount struct {
 }
 
 type Translation struct {
-	bun.BaseTable `bun:"alias:tr"`
+	bun.BaseModel `bun:"alias:tr"`
 
 	ID     int
 	BookID int    `bun:"unique:book_id_lang"`

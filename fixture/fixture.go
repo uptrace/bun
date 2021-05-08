@@ -17,20 +17,20 @@ import (
 
 type LoaderOption func(f *Loader)
 
-func WithDrop() LoaderOption {
+func WithDropTables() LoaderOption {
 	return func(f *Loader) {
 		if f.truncateTables {
-			panic("don't use WithDrop together with WithTruncate")
+			panic("don't use WithDropTables together with WithTruncateTables")
 		}
 		f.dropTables = true
 		f.seenTables = make(map[string]struct{})
 	}
 }
 
-func WithTruncate() LoaderOption {
+func WithTruncateTables() LoaderOption {
 	return func(f *Loader) {
 		if f.truncateTables {
-			panic("don't use WithTruncate together with WithDrop")
+			panic("don't use WithTruncateTables together with WithDropTables")
 		}
 		f.truncateTables = true
 		f.seenTables = make(map[string]struct{})
@@ -115,7 +115,7 @@ func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 	table := f.db.Dialect().Tables().ByModel(fixture.Model)
 	if table == nil {
-		return fmt.Errorf("fixture: can't find table=%q (use db.RegisterTable)", fixture.Model)
+		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", fixture.Model)
 	}
 
 	if f.dropTables {

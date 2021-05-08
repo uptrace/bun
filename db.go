@@ -126,7 +126,7 @@ func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
 
-func (db *DB) RegisterTable(models ...interface{}) {
+func (db *DB) RegisterModel(models ...interface{}) {
 	db.dialect.Tables().Register(models...)
 }
 

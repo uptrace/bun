@@ -182,7 +182,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
 	}
 	defer m.Unlock(ctx, db) //nolint:errcheck
 
-	completed, lastBatchID, err := m.selectMigrations(ctx, db)
+	completed, lastGroupID, err := m.selectMigrations(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -200,12 +200,12 @@ func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
 		return nil
 	}
 
-	batchID := lastBatchID + 1
-	fmt.Printf("running batch #%d with %d migrations...\n", batchID, len(migrations))
+	groupID := lastGroupID + 1
+	fmt.Printf("running group #%d with %d migrations...\n", groupID, len(migrations))
 
 	for i := range migrations {
 		migration := &migrations[i]
-		migration.BatchID = batchID
+		migration.GroupID = groupID
 		if err := m.runUp(ctx, db, migration); err != nil {
 			return err
 		}
@@ -227,21 +227,21 @@ func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
 	}
 	defer m.Unlock(ctx, db) //nolint:errcheck
 
-	completed, lastBatchID, err := m.selectMigrations(ctx, db)
+	completed, lastGroupID, err := m.selectMigrations(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	if lastBatchID == 0 {
+	if lastGroupID == 0 {
 		return errors.New("there are no any migrations to rollback")
 	}
 
-	var batch []*Migration
+	var group []*Migration
 
 	migrationMap := migrationMap(m.ms)
 	for i := range completed {
 		migration := &completed[i]
-		if migration.BatchID != lastBatchID {
+		if migration.GroupID != lastGroupID {
 			continue
 		}
 
@@ -254,12 +254,12 @@ func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
 		}
 
 		migration.ID = id
-		batch = append(batch, migration)
+		group = append(group, migration)
 	}
 
-	fmt.Printf("rolling back batch #%d with %d migrations...\n", lastBatchID, len(batch))
+	fmt.Printf("rolling back group #%d with %d migrations...\n", lastGroupID, len(group))
 
-	for _, migration := range batch {
+	for _, migration := range group {
 		if err := m.runDown(ctx, db, migration); err != nil {
 			return err
 		}
@@ -352,16 +352,16 @@ func (m *Migrator) selectMigrations(
 		return nil, 0, err
 	}
 
-	var lastBatchID int64
+	var lastGroupID int64
 
 	for i := range ms {
-		batchID := ms[i].BatchID
-		if batchID > lastBatchID {
-			lastBatchID = batchID
+		groupID := ms[i].GroupID
+		if groupID > lastGroupID {
+			lastGroupID = groupID
 		}
 	}
 
-	return ms, lastBatchID, nil
+	return ms, lastGroupID, nil
 }
 
 type migrationLock struct {

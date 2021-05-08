@@ -64,7 +64,7 @@ if err != nil {
 }
 
 user := new(User)
-if err := db.ScanRows(ctx, rows, user); err != nil {
+if err := db.ScanRow(ctx, rows, user); err != nil {
 	panic(err)
 }
 ```

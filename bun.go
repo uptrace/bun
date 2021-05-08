@@ -76,4 +76,4 @@ type AfterDropTableQueryHook interface {
 	AfterDropTableQuery(ctx context.Context, query *DropTableQuery) error
 }
 
-type BaseTable struct{}
+type BaseModel struct{}

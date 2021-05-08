@@ -16,7 +16,7 @@ import (
 type Migration struct {
 	ID         int64 `bun:",autoincrement"`
 	Name       string
-	BatchID    int64
+	GroupID    int64
 	MigratedAt time.Time `bun:"default:current_timestamp"`
 
 	Up   MigrationFunc `bun:"-"`
