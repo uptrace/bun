@@ -263,6 +263,11 @@ func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *Selec
 //   - RelationName.column_name,
 //   - RelationName._ to join relation without selecting relation columns.
 func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQuery) *SelectQuery {
+	if q.tableModel == nil {
+		q.setErr(errModelNil)
+		return q
+	}
+
 	var fn func(*SelectQuery) *SelectQuery
 
 	if len(apply) == 1 {

@@ -23,7 +23,7 @@ type Command struct {
 
 type MigratorOption func(m *Migrator)
 
-func AutoDiscover() MigratorOption {
+func WithAutoDiscover() MigratorOption {
 	return func(m *Migrator) {
 		m.autoDiscover = true
 	}

@@ -15,25 +15,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ConfigOption func(f *Loader)
+type LoaderOption func(f *Loader)
 
-func WithTruncate() ConfigOption {
+func WithDrop() LoaderOption {
 	return func(f *Loader) {
-		f.truncateTable = true
-		f.truncatedTables = make(map[string]struct{})
+		if f.truncateTables {
+			panic("don't use WithDrop together with WithTruncate")
+		}
+		f.dropTables = true
+		f.seenTables = make(map[string]struct{})
+	}
+}
+
+func WithTruncate() LoaderOption {
+	return func(f *Loader) {
+		if f.truncateTables {
+			panic("don't use WithTruncate together with WithDrop")
+		}
+		f.truncateTables = true
+		f.seenTables = make(map[string]struct{})
 	}
 }
 
 type Loader struct {
 	db *bun.DB
 
-	truncateTable   bool
-	truncatedTables map[string]struct{}
+	dropTables     bool
+	truncateTables bool
+	seenTables     map[string]struct{}
 
 	modelRows map[string]map[string]interface{}
 }
 
-func NewLoader(db *bun.DB, opts ...ConfigOption) *Loader {
+func NewLoader(db *bun.DB, opts ...LoaderOption) *Loader {
 	f := &Loader{
 		db: db,
 
@@ -53,7 +67,7 @@ func (f *Loader) Get(model, rowID string) (interface{}, error) {
 
 	row, ok := rows[rowID]
 	if !ok {
-		return nil, fmt.Errorf("fixture: unknown row=%q in model=%q", row, model)
+		return nil, fmt.Errorf("fixture: unknown row=%q for model=%q", row, model)
 	}
 
 	return row, nil
@@ -101,7 +115,17 @@ func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 	table := f.db.Dialect().Tables().ByModel(fixture.Model)
 	if table == nil {
-		return fmt.Errorf("fixture: can't find model=%q", fixture.Model)
+		return fmt.Errorf("fixture: can't find table=%q (use db.RegisterTable)", fixture.Model)
+	}
+
+	if f.dropTables {
+		if err := f.dropTable(ctx, table); err != nil {
+			return err
+		}
+	} else if f.truncateTables {
+		if err := f.truncateTable(ctx, table); err != nil {
+			return err
+		}
 	}
 
 	for _, row := range fixture.Rows {
@@ -150,17 +174,6 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 		}
 	}
 
-	if f.truncateTable {
-		if _, ok := f.truncatedTables[table.Name]; !ok {
-			if _, err := f.db.NewTruncateTable().
-				TableExpr(string(table.SQLName)).
-				Exec(ctx); err != nil {
-				return err
-			}
-			f.truncatedTables[table.Name] = struct{}{}
-		}
-	}
-
 	iface := strct.Addr().Interface()
 	if _, err := f.db.NewInsert().
 		Model(iface).
@@ -181,6 +194,43 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 			f.modelRows[table.TypeName] = rows
 		}
 		rows[rowID] = iface
+	}
+
+	return nil
+}
+
+func (f *Loader) dropTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := f.seenTables[table.Name]; ok {
+		return nil
+	}
+	f.seenTables[table.Name] = struct{}{}
+
+	if _, err := f.db.NewDropTable().
+		Model(table.ZeroIface).
+		IfExists().
+		Exec(ctx); err != nil {
+		return err
+	}
+
+	if _, err := f.db.NewCreateTable().
+		Model(table.ZeroIface).
+		Exec(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := f.seenTables[table.Name]; ok {
+		return nil
+	}
+	f.seenTables[table.Name] = struct{}{}
+
+	if _, err := f.db.NewTruncateTable().
+		Model(table.ZeroIface).
+		Exec(ctx); err != nil {
+		return err
 	}
 
 	return nil

@@ -332,7 +332,7 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 }
 
 func loadTestData(t *testing.T, db *bun.DB) {
-	loader := fixture.NewLoader(db, fixture.WithTruncate())
+	loader := fixture.NewLoader(db)
 	err := loader.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
 	require.NoError(t, err)
 }
