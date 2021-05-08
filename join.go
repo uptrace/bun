@@ -24,14 +24,17 @@ func (j *join) applyQuery(q *SelectQuery) {
 		return
 	}
 
+	var table *schema.Table
 	var columns []sqlfmt.QueryWithArgs
 
-	// Save columns.
+	// Save state.
+	table, q.table = q.table, j.JoinModel.Table()
 	columns, q.columns = q.columns, nil
 
 	q = j.ApplyQueryFunc(q)
 
-	// Restore columns.
+	// Restore state.
+	q.table = table
 	j.columns, q.columns = q.columns, columns
 }
 

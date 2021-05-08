@@ -16,6 +16,18 @@ func TestQuery(t *testing.T) {
 		Str string
 	}
 
+	type User struct {
+		ID   int64
+		Name string
+	}
+
+	type Story struct {
+		ID     int64
+		Name   string
+		UserID int64
+		User   *User `bun:"rel:has-one"`
+	}
+
 	queries := []func(db *bun.DB) sqlfmt.QueryAppender{
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewValues(&Model{42, "hello"})
@@ -281,6 +293,25 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) sqlfmt.QueryAppender {
 			return db.NewTruncateTable().Model(new(Model))
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().Model(new(Story)).Relation("User")
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().
+				Model(new(Story)).
+				Relation("User", func(q *bun.SelectQuery) *bun.SelectQuery {
+					q = q.ExcludeColumn("*")
+					return q
+				})
+		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().
+				Model(new(Story)).
+				Relation("User", func(q *bun.SelectQuery) *bun.SelectQuery {
+					q = q.ExcludeColumn("id")
+					return q
+				})
 		},
 	}
 

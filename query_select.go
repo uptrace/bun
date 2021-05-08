@@ -278,20 +278,11 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 
 	join := q.tableModel.Join(name, fn)
 	if join == nil {
-		q.err = fmt.Errorf("%s does not have relation=%q", q.table, name)
+		q.setErr(fmt.Errorf("%s does not have relation=%q", q.table, name))
 		return q
 	}
 
-	if fn == nil {
-		return q
-	}
-
-	switch join.Relation.Type {
-	case schema.HasOneRelation, schema.BelongsToRelation:
-		return q
-	default:
-		return q
-	}
+	return q
 }
 
 func (q *SelectQuery) forEachHasOneJoin(fn func(*join) error) error {
@@ -395,12 +386,11 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
-	err = q.forEachHasOneJoin(func(j *join) error {
+	if err := q.forEachHasOneJoin(func(j *join) error {
 		b = append(b, ' ')
 		b, err = j.appendHasOneJoin(fmter, b, q)
 		return err
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -494,7 +484,7 @@ func (q SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []b
 	start := len(b)
 
 	switch {
-	case len(q.columns) > 0:
+	case q.columns != nil:
 		for i, col := range q.columns {
 			if i > 0 {
 				b = append(b, ", "...)
@@ -552,11 +542,23 @@ func (q *SelectQuery) appendHasOneColumns(
 ) (_ []byte, err error) {
 	join.applyQuery(q)
 
-	if len(join.columns) > 0 {
+	if join.columns != nil {
 		for i, col := range join.columns {
 			if i > 0 {
 				b = append(b, ", "...)
 			}
+
+			if col.Args == nil {
+				if field, ok := q.table.FieldMap[col.Query]; ok {
+					b = join.appendAlias(fmter, b)
+					b = append(b, '.')
+					b = append(b, field.SQLName...)
+					b = append(b, " AS "...)
+					b = join.appendAliasColumn(fmter, b, field.Name)
+					continue
+				}
+			}
+
 			b, err = col.AppendQuery(fmter, b)
 			if err != nil {
 				return nil, err
@@ -565,15 +567,15 @@ func (q *SelectQuery) appendHasOneColumns(
 		return b, nil
 	}
 
-	for i, f := range join.JoinModel.Table().Fields {
+	for i, field := range join.JoinModel.Table().Fields {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
 		b = join.appendAlias(fmter, b)
 		b = append(b, '.')
-		b = append(b, f.SQLName...)
+		b = append(b, field.SQLName...)
 		b = append(b, " AS "...)
-		b = join.appendAliasColumn(fmter, b, f.Name)
+		b = join.appendAliasColumn(fmter, b, field.Name)
 	}
 	return b, nil
 }

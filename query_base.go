@@ -175,10 +175,15 @@ func (q *baseQuery) excludeColumn(columns []string) {
 		}
 	}
 
+	if len(columns) == 1 && columns[0] == "*" {
+		q.columns = make([]sqlfmt.QueryWithArgs, 0)
+		return
+	}
+
 	for _, column := range columns {
 		if !q._excludeColumn(column) {
 			q.setErr(fmt.Errorf("bun: can't find column=%q", column))
-			break
+			return
 		}
 	}
 }
