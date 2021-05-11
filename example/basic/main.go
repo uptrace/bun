@@ -40,7 +40,7 @@ func main() {
 
 	db := bun.Open(sqlite, sqlitedialect.New())
 	if false {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.Verbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 	}
 
 	// Drop and create tables.
