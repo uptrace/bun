@@ -313,6 +313,9 @@ func TestQuery(t *testing.T) {
 					return q
 				})
 		},
+		func(db *bun.DB) sqlfmt.QueryAppender {
+			return db.NewSelect().Model(new(Model)).Where("id = ?", 1).For("UPDATE")
+		},
 	}
 
 	for _, db := range dbs(t) {

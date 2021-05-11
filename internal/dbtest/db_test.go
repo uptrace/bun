@@ -79,8 +79,8 @@ func TestSelectScan(t *testing.T) {
 		{"testSelectSingleSlice", testSelectSingleSlice},
 		{"testSelectMultiSlice", testSelectMultiSlice},
 		{"testSelectJSON", testSelectJSON},
-		{"testScanRows", testScanRows},
-		{"testScanRowByRow", testScanRowByRow},
+		{"testScanSingleRow", testScanSingleRow},
+		{"testScanSingleRowByRow", testScanSingleRowByRow},
 	}
 
 	for _, db := range dbs(t) {
@@ -299,7 +299,7 @@ func testSelectJSON(t *testing.T, db *bun.DB) {
 	require.Equal(t, map[string]string{"hello": "world"}, model.Map)
 }
 
-func testScanRows(t *testing.T, db *bun.DB) {
+func testScanSingleRow(t *testing.T, db *bun.DB) {
 	rows, err := db.QueryContext(ctx, "SELECT 42")
 	require.NoError(t, err)
 	defer rows.Close()
@@ -314,7 +314,7 @@ func testScanRows(t *testing.T, db *bun.DB) {
 	require.Equal(t, 42, num)
 }
 
-func testScanRowByRow(t *testing.T, db *bun.DB) {
+func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
