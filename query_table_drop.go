@@ -89,10 +89,15 @@ func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Res
 		return res, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return res, err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)

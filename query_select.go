@@ -621,10 +621,15 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 		return res, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return res, err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)
@@ -644,10 +649,15 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	res, err := q.scan(ctx, q, query, dest)
@@ -669,7 +679,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 }
 
 func (q *SelectQuery) beforeSelectQueryHook(ctx context.Context) error {
-	if q.table == nil {
+	if q.tableModel == nil {
 		return nil
 	}
 

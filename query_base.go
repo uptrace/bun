@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -813,4 +814,27 @@ func (q cascadeQuery) appendCascade(fmter sqlfmt.QueryFormatter, b []byte) []byt
 		b = append(b, " CASCADE"...)
 	}
 	return b
+}
+
+//------------------------------------------------------------------------------
+
+var byteSlicePool = sync.Pool{
+	New: func() interface{} {
+		return &byteSlice{
+			b: make([]byte, 0, 4096),
+		}
+	},
+}
+
+type byteSlice struct {
+	b []byte
+}
+
+func getByteSlice() *byteSlice {
+	return byteSlicePool.Get().(*byteSlice)
+}
+
+func putByteSlice(b *byteSlice) {
+	b.b = b.b[:0]
+	byteSlicePool.Put(b)
 }

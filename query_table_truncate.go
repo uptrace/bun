@@ -104,10 +104,15 @@ func (q *TruncateTableQuery) AppendQuery(
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return res, err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)

@@ -298,10 +298,15 @@ func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 		return res, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return res, err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	if q.hasReturning() {
