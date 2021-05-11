@@ -1,6 +1,9 @@
 package bun
 
 import (
+	"context"
+
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/sqlfmt"
 )
 
@@ -80,4 +83,26 @@ func (q *DropIndexQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 	b = q.appendCascade(fmter, b)
 
 	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+func (q *DropIndexQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
+	if err != nil {
+		return res, err
+	}
+
+	bs.b = queryBytes
+	query := internal.String(queryBytes)
+
+	res, err = q.exec(ctx, q, query)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
 }
