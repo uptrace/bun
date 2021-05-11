@@ -6,5 +6,5 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/fatih/color v1.10.0
-	github.com/uptrace/bun v0.0.0-00010101000000-000000000000
+	github.com/uptrace/bun v0.0.0-20210507075305-2e91d2c5c8de
 )
