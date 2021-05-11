@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
 func TestPGArray(t *testing.T) {
@@ -33,6 +34,11 @@ func TestPGArray(t *testing.T) {
 	err = db.NewSelect().Model(model2).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, model1, model2)
+
+	var strs []string
+	err = db.NewSelect().Model((*Model)(nil)).Column("array").Scan(ctx, pgdialect.Array(&strs))
+	require.NoError(t, err)
+	require.Equal(t, []string{"one", "two", "three"}, strs)
 }
 
 type Recipe struct {

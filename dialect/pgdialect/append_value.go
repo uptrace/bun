@@ -54,10 +54,6 @@ var (
 	sliceFloat64Type = reflect.TypeOf([]float64(nil))
 )
 
-func arrayElemAppender(typ reflect.Type) sqlfmt.AppenderFunc {
-	return nil
-}
-
 func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
 	kind := typ.Kind()
 	if kind == reflect.Ptr {
