@@ -104,6 +104,16 @@ func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
 
+func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
+	model, err := newModel(db, dest)
+	if err != nil {
+		return err
+	}
+
+	_, err = model.ScanRows(ctx, rows)
+	return err
+}
+
 func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
 	model, err := newModel(db, dest)
 	if err != nil {

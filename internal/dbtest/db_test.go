@@ -81,6 +81,7 @@ func TestSelectScan(t *testing.T) {
 		{"testSelectJSON", testSelectJSON},
 		{"testScanSingleRow", testScanSingleRow},
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
+		{"testScanRows", testScanRows},
 	}
 
 	for _, db := range dbs(t) {
@@ -340,5 +341,26 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 		nums = append(nums, num)
 	}
 
+	require.Equal(t, []int{3, 2, 1}, nums)
+}
+
+func testScanRows(t *testing.T, db *bun.DB) {
+	values := db.NewValues(&[]map[string]interface{}{
+		{"num": 1},
+		{"num": 2},
+		{"num": 3},
+	})
+
+	rows, err := db.NewSelect().
+		With("t", values).
+		TableExpr("t").
+		OrderExpr("t.num DESC").
+		Rows(ctx)
+	require.NoError(t, err)
+	defer rows.Close()
+
+	var nums []int
+	err = db.ScanRows(ctx, rows, &nums)
+	require.NoError(t, err)
 	require.Equal(t, []int{3, 2, 1}, nums)
 }
