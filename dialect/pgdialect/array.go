@@ -25,7 +25,7 @@ type ArrayValue struct {
 func Array(vi interface{}) *ArrayValue {
 	v := reflect.ValueOf(vi)
 	if !v.IsValid() {
-		panic(fmt.Errorf("pg: Array(nil)"))
+		panic(fmt.Errorf("bun: Array(nil)"))
 	}
 
 	return &ArrayValue{

@@ -1,10 +1,10 @@
 package bundebug
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -89,14 +89,14 @@ func eventOperation(event *bun.QueryEvent) string {
 	return queryOperation(event.Query)
 }
 
-func queryOperation(name string) string {
-	if idx := strings.IndexByte(name, ' '); idx > 0 {
+func queryOperation(name []byte) string {
+	if idx := bytes.IndexByte(name, ' '); idx > 0 {
 		name = name[:idx]
 	}
 	if len(name) > 16 {
 		name = name[:16]
 	}
-	return name
+	return string(name)
 }
 
 func operationColor(operation string) *color.Color {

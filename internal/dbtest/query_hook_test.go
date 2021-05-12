@@ -29,7 +29,7 @@ func testQueryHook(t *testing.T, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
-			require.Equal(t, "SELECT 1 WHERE ('foo' = 'bar')", event.Query)
+			require.Equal(t, "SELECT 1 WHERE ('foo' = 'bar')", string(event.Query))
 
 			b, err := event.QueryAppender.AppendQuery(sqlfmt.NewNopFormatter(), nil)
 			require.NoError(t, err)
@@ -48,7 +48,7 @@ func testQueryHook(t *testing.T, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
-			require.Equal(t, "SELECT 1", event.Query)
+			require.Equal(t, "SELECT 1", string(event.Query))
 			return ctx
 		}
 
@@ -62,7 +62,7 @@ func testQueryHook(t *testing.T, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
-			require.Equal(t, "SELECT 1", event.Query)
+			require.Equal(t, "SELECT 1", string(event.Query))
 			return ctx
 		}
 

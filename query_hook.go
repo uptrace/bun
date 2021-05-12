@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/sqlfmt"
 )
 
 type QueryEvent struct {
+	DB *DB
+
 	QueryAppender sqlfmt.QueryAppender
-	Query         string
+	Query         []byte
 	QueryArgs     []interface{}
 
 	StartTime time.Time
@@ -36,8 +39,10 @@ func (db *DB) beforeQuery(
 	}
 
 	event := &QueryEvent{
+		DB: db,
+
 		QueryAppender: queryApp,
-		Query:         query,
+		Query:         internal.Bytes(query),
 		QueryArgs:     queryArgs,
 
 		StartTime: time.Now(),

@@ -2,7 +2,7 @@
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
-[![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/go/)
+[![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
 ## Installation
@@ -48,14 +48,14 @@ err := db.NewSelect().
 	Model(user).
 	Where("name != ?", "").
 	OrderExpr("id ASC").
-	Limit(100).
+	Limit(1).
 	Scan(ctx)
 ```
 
 The code above is equivalent to:
 
 ```go
-query := "SELECT id, name FROM users AS user WHERE name != '' ORDER BY id ASC LIMIT 100"
+query := "SELECT id, name FROM users AS user WHERE name != '' ORDER BY id ASC LIMIT 1"
 
 rows, err := sqldb.QueryRows(ctx, query)
 if err != nil {
