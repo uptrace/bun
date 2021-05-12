@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/uptrace/bun/internal"
@@ -168,9 +169,31 @@ func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) Order(columns ...string) *SelectQuery {
-	for _, column := range columns {
-		q.order = append(q.order, sqlfmt.UnsafeIdent(column))
+func (q *SelectQuery) Order(orders ...string) *SelectQuery {
+	for _, order := range orders {
+		if order == "" {
+			continue
+		}
+
+		index := strings.IndexByte(order, ' ')
+		if index == -1 {
+			q.order = append(q.order, sqlfmt.UnsafeIdent(order))
+			continue
+		}
+
+		field := order[:index]
+		sort := order[index+1:]
+
+		switch strings.ToUpper(sort) {
+		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
+			"ASC NULLS LAST", "DESC NULLS LAST":
+			q.order = append(q.order, sqlfmt.SafeQuery("? ?", []interface{}{
+				Ident(field),
+				Safe(sort),
+			}))
+		default:
+			q.order = append(q.order, sqlfmt.UnsafeIdent(order))
+		}
 	}
 	return q
 }
