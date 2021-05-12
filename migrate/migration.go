@@ -14,6 +14,8 @@ import (
 )
 
 type Migration struct {
+	bun.BaseModel `bun:"alias:m"`
+
 	ID         int64 `bun:",autoincrement"`
 	Name       string
 	GroupID    int64

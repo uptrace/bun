@@ -7,6 +7,7 @@ import (
 
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/example/migrate/migrations"
+	"github.com/uptrace/bun/extra/bundebug"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/uptrace/bun"
@@ -20,6 +21,8 @@ func main() {
 	}
 
 	db := bun.Open(sqldb, sqlitedialect.New())
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+
 	migrator := migrations.Migrator
 
 	app := &cli.App{
@@ -27,7 +30,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "db",
-				Usage: "database commands",
+				Usage: "database migrations",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "init",
@@ -51,6 +54,13 @@ func main() {
 						},
 					},
 					{
+						Name:  "lock",
+						Usage: "lock migrations",
+						Action: func(c *cli.Context) error {
+							return migrator.Lock(c.Context, db)
+						},
+					},
+					{
 						Name:  "unlock",
 						Usage: "unlock migrations",
 						Action: func(c *cli.Context) error {
@@ -59,14 +69,14 @@ func main() {
 					},
 					{
 						Name:  "create_go",
-						Usage: "create a Go migration",
+						Usage: "create Go migration",
 						Action: func(c *cli.Context) error {
 							return migrator.CreateGo(c.Context, db, c.Args().Get(0))
 						},
 					},
 					{
 						Name:  "create_sql",
-						Usage: "create a SQL migration",
+						Usage: "create SQL migration",
 						Action: func(c *cli.Context) error {
 							return migrator.CreateSQL(c.Context, db, c.Args().Get(0))
 						},

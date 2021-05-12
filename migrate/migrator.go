@@ -29,15 +29,25 @@ func WithAutoDiscover() MigratorOption {
 	}
 }
 
+func WithTableName(table string) MigratorOption {
+	return func(m *Migrator) {
+		m.table = table
+	}
+}
+
 type Migrator struct {
 	ms []Migration
+
+	table string
 
 	autoDiscover   bool
 	discoveredDirs map[string]struct{}
 }
 
 func NewMigrator(opts ...MigratorOption) *Migrator {
-	m := new(Migrator)
+	m := &Migrator{
+		table: "migrations",
+	}
 	for _, opt := range opts {
 		opt(m)
 	}
@@ -323,7 +333,9 @@ func (m *Migrator) runUp(ctx context.Context, db *bun.DB, migration *Migration) 
 		fmt.Printf("nothing to run\n")
 	}
 
-	_, err := db.NewInsert().Model(migration).Exec(ctx)
+	_, err := db.NewInsert().Model(migration).
+		ModelTableExpr(m.tableNameWithAlias()).
+		Exec(ctx)
 	return err
 }
 
@@ -340,7 +352,11 @@ func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration
 		fmt.Printf("nothing to run\n")
 	}
 
-	_, err := db.NewDelete().Model(migration).WherePK().Exec(ctx)
+	_, err := db.NewDelete().
+		Model(migration).
+		ModelTableExpr(m.tableNameWithAlias()).
+		WherePK().
+		Exec(ctx)
 	return err
 }
 
@@ -348,7 +364,11 @@ func (m *Migrator) selectMigrations(
 	ctx context.Context, db *bun.DB,
 ) ([]Migration, int64, error) {
 	var ms []Migration
-	if err := db.NewSelect().Model(&ms).OrderExpr("id DESC").Scan(ctx); err != nil {
+	if err := db.NewSelect().
+		Model(&ms).
+		ModelTableExpr(m.tableNameWithAlias()).
+		OrderExpr("m.id DESC").
+		Scan(ctx); err != nil {
 		return nil, 0, err
 	}
 
@@ -364,23 +384,31 @@ func (m *Migrator) selectMigrations(
 	return ms, lastGroupID, nil
 }
 
+func (m *Migrator) tableNameWithAlias() string {
+	return m.table + " AS m"
+}
+
+//------------------------------------------------------------------------------
+
 type migrationLock struct {
-	ID int64
+	ID        int64
+	TableName string `bun:",unique"`
 }
 
 func (m *Migrator) Lock(ctx context.Context, db *bun.DB) error {
-	n, err := db.NewSelect().Model((*migrationLock)(nil)).Count(ctx)
-	if err != nil {
-		return err
+	lock := &migrationLock{
+		TableName: m.table,
 	}
-	if n != 0 {
-		return errors.New("migrations table is already locked")
+	if _, err := db.NewInsert().Model(lock).Exec(ctx); err != nil {
+		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
 	}
 	return nil
 }
 
 func (m *Migrator) Unlock(ctx context.Context, db *bun.DB) error {
-	_, err := db.NewDelete().Model((*migrationLock)(nil)).Where("TRUE").Exec(ctx)
+	_, err := db.NewDelete().Model((*migrationLock)(nil)).
+		Where("? = ?", bun.Ident("table_name"), m.table).
+		Exec(ctx)
 	return err
 }
 
