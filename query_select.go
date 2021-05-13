@@ -184,7 +184,7 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 		field := order[:index]
 		sort := order[index+1:]
 
-		switch strings.ToUpper(sort) {
+		switch internal.UpperString(sort) {
 		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
 			"ASC NULLS LAST", "DESC NULLS LAST":
 			q.order = append(q.order, sqlfmt.SafeQuery("? ?", []interface{}{
@@ -503,7 +503,7 @@ func (q *SelectQuery) appendQuery(
 	return b, nil
 }
 
-func (q SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
 	start := len(b)
 
 	switch {

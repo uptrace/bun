@@ -13,7 +13,7 @@ go get github.com/uptrace/bun
 
 ## Quickstart
 
-First you need to create a `*sql.DB`. Here we using a SQLite3 driver.
+First you need to create a `*sql.DB`. Here we using the SQLite3 driver.
 
 ```go
 import _ "github.com/mattn/go-sqlite3"

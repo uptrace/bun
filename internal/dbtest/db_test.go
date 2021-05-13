@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/driver/pgdriver"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -20,14 +21,7 @@ import (
 var ctx = context.TODO()
 
 func pg(t *testing.T) *bun.DB {
-	dsn := os.Getenv("PG")
-	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
-	}
-
-	sqldb, err := sql.Open("pgx", dsn)
-	require.NoError(t, err)
-
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDatabase("test")))
 	return bun.Open(sqldb, pgdialect.New())
 }
 
