@@ -76,8 +76,13 @@ func (m *mapModel) Scan(src interface{}) error {
 	}
 
 	scanType := columnTypes[m.scanIndex].ScanType()
-	if scanType.Kind() == reflect.Slice && scanType.Elem().Kind() == reflect.Uint8 {
+	switch scanType.Kind() {
+	case reflect.Interface:
 		return m.scanRaw(src)
+	case reflect.Slice:
+		if scanType.Elem().Kind() == reflect.Uint8 {
+			return m.scanRaw(src)
+		}
 	}
 
 	dest := reflect.New(scanType).Elem()

@@ -21,7 +21,12 @@ import (
 var ctx = context.TODO()
 
 func pg() *bun.DB {
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDatabase("test")))
+	dsn := os.Getenv("PG")
+	if dsn == "" {
+		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
+	}
+
+	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 	return bun.Open(sqldb, pgdialect.New())
 }
 

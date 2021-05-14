@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 type DriverOption func(*driverConnector)
@@ -38,6 +39,18 @@ func WithApplicationName(appName string) DriverOption {
 	}
 }
 
+func WithDSN(dsn string) DriverOption {
+	return func(d *driverConnector) {
+		opts, err := parseDSN(dsn)
+		if err != nil {
+			panic(err)
+		}
+		for _, opt := range opts {
+			opt(d)
+		}
+	}
+}
+
 func parseDSN(dsn string) ([]DriverOption, error) {
 	u, err := url.Parse(dsn)
 	if err != nil {
@@ -56,7 +69,11 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 	var opts []DriverOption
 
 	if u.Host != "" {
-		opts = append(opts, WithAddr(u.Host))
+		addr := u.Host
+		if !strings.Contains(addr, ":") {
+			addr += ":5432"
+		}
+		opts = append(opts, WithAddr(addr))
 	}
 	if u.User != nil {
 		opts = append(opts, WithUser(u.User.Username()))
@@ -68,10 +85,15 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 		opts = append(opts, WithDatabase(u.Path[1:]))
 	}
 
-	if appName, ok := query["application_name"]; ok {
-		opts = append(opts, WithApplicationName(appName[0]))
+	if appName := query.Get("application_name"); appName != "" {
+		opts = append(opts, WithApplicationName(appName))
 	}
 	delete(query, "application_name")
+
+	if sslMode := query.Get("sslmode"); sslMode != "" { //nolint:staticcheck
+		// TODO: implement
+	}
+	delete(query, "sslmode")
 
 	for key := range query {
 		return nil, fmt.Errorf("pgdialect: unsupported option=%q", key)

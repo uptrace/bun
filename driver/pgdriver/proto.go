@@ -278,6 +278,10 @@ func (d *rowDescription) reset(numCol int) {
 }
 
 func (d *rowDescription) addName(name []byte) {
+	if len(d.buf)+len(name) > cap(d.buf) {
+		d.buf = make([]byte, 0, cap(d.buf))
+	}
+
 	i := len(d.buf)
 	d.buf = append(d.buf, name...)
 	d.names = append(d.names, bytesToString(d.buf[i:]))

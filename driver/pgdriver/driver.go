@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"time"
 )
@@ -58,13 +59,15 @@ type driverConnector struct {
 }
 
 func NewConnector(opts ...DriverOption) driver.Connector {
+	host := env("PGHOST", "localhost")
+	port := env("PGPORT", "5432")
 	d := &driverConnector{
 		network:     "tcp",
-		addr:        "localhost:5432",
+		addr:        net.JoinHostPort(host, port),
 		dialTimeout: 5 * time.Second,
 
-		user:     "postgres",
-		database: "postgres",
+		user:     env("PGUSER", "postgres"),
+		database: env("PGDATABASE", "postgres"),
 	}
 	d.dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
@@ -81,13 +84,19 @@ func NewConnector(opts ...DriverOption) driver.Connector {
 	return d
 }
 
+func env(key, defValue string) string {
+	if s := os.Getenv(key); s != "" {
+		return s
+	}
+	return defValue
+}
+
 var _ driver.Connector = (*driverConnector)(nil)
 
 func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	if d.user == "" {
 		return nil, errors.New("pgdriver: user name is required")
 	}
-	// fmt.Println("hello\n")
 	return newConn(ctx, d)
 }
 
