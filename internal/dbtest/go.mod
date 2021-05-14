@@ -8,6 +8,8 @@ replace github.com/uptrace/bun/fixture => ../../fixture
 
 replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
+replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
+
 replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialect
 
 replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
@@ -22,5 +24,6 @@ require (
 	github.com/uptrace/bun/dialect/mysqldialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/pgdialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/sqlitedialect v0.0.0-00010101000000-000000000000
+	github.com/uptrace/bun/driver/pgdriver v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/fixture v0.0.0-00010101000000-000000000000
 )

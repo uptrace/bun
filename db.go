@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -169,7 +170,7 @@ func (db *DB) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
 	ctx, event := db.beforeQuery(ctx, nil, query, args)
-	res, err := db.DB.ExecContext(ctx, query, args...)
+	res, err := db.DB.ExecContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, res, err)
 
 	return res, err
@@ -183,7 +184,7 @@ func (db *DB) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
 	ctx, event := db.beforeQuery(ctx, nil, query, args)
-	rows, err := db.DB.QueryContext(ctx, query, args...)
+	rows, err := db.DB.QueryContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, nil, err)
 
 	return rows, err
@@ -195,9 +196,16 @@ func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	ctx, event := db.beforeQuery(ctx, nil, query, args)
-	row := db.DB.QueryRowContext(ctx, query, args...)
+	row := db.DB.QueryRowContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, nil, row.Err())
 	return row
+}
+
+func (db *DB) format(query string, args []interface{}) string {
+	if len(args) == 0 || strings.IndexByte(query, '?') == -1 {
+		return query
+	}
+	return internal.String(db.fmter.FormatQuery(nil, query, args...))
 }
 
 type Conn struct {

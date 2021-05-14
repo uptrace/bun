@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,7 +20,27 @@ func init() {
 	sql.Register("pg", NewDriver())
 }
 
-type Driver struct{}
+type logging interface {
+	Printf(ctx context.Context, format string, v ...interface{})
+}
+
+type logger struct {
+	log *log.Logger
+}
+
+func (l *logger) Printf(ctx context.Context, format string, v ...interface{}) {
+	_ = l.log.Output(2, fmt.Sprintf(format, v...))
+}
+
+var Logger logging = &logger{
+	log: log.New(os.Stderr, "pgdriver: ", log.LstdFlags|log.Lshortfile),
+}
+
+//------------------------------------------------------------------------------
+
+type Driver struct {
+	connector *driverConnector
+}
 
 var _ driver.DriverContext = (*Driver)(nil)
 
@@ -44,9 +66,12 @@ func (d Driver) Open(name string) (driver.Conn, error) {
 
 //------------------------------------------------------------------------------
 
-type driverConnector struct {
-	driver Driver
+type DriverStats struct {
+	Queries uint64
+	Errors  uint64
+}
 
+type driverConnector struct {
 	network     string
 	addr        string
 	dialTimeout time.Duration
@@ -56,6 +81,11 @@ type driverConnector struct {
 	password string
 	database string
 	appName  string
+
+	readTimeout  time.Duration
+	writeTimeout time.Duration
+
+	stats DriverStats
 }
 
 func NewConnector(opts ...DriverOption) driver.Connector {
@@ -68,6 +98,9 @@ func NewConnector(opts ...DriverOption) driver.Connector {
 
 		user:     env("PGUSER", "postgres"),
 		database: env("PGDATABASE", "postgres"),
+
+		readTimeout:  10 * time.Second,
+		writeTimeout: 5 * time.Second,
 	}
 	d.dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
@@ -101,7 +134,14 @@ func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (d *driverConnector) Driver() driver.Driver {
-	return &d.driver
+	return Driver{connector: d}
+}
+
+func (d *driverConnector) Stats() DriverStats {
+	return DriverStats{
+		Queries: atomic.LoadUint64(&d.stats.Queries),
+		Errors:  atomic.LoadUint64(&d.stats.Errors),
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -131,18 +171,26 @@ func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
 		rd:  bufio.NewReader(netConn),
 		buf: make([]byte, 64),
 	}
-	if err := startup(cn); err != nil {
+	if err := startup(ctx, cn); err != nil {
 		return nil, err
 	}
 
 	return cn, nil
 }
 
-func (cn *Conn) withWriter(fn func(wr *bufio.Writer) error) error {
+func (cn *Conn) withWriter(
+	ctx context.Context,
+	timeout time.Duration,
+	fn func(wr *bufio.Writer) error,
+) error {
 	wr := getBufioWriter()
+
+	cn.setWriteDeadline(ctx, timeout)
 	wr.Reset(cn.netConn)
 	err := fn(wr)
+
 	putBufioWriter(wr)
+
 	return err
 }
 
@@ -165,7 +213,7 @@ var _ driver.ExecerContext = (*Conn)(nil)
 func (cn *Conn) ExecContext(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Result, error) {
-	if err := writeQuery(cn, query); err != nil {
+	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
 
@@ -215,10 +263,42 @@ var _ driver.QueryerContext = (*Conn)(nil)
 func (cn *Conn) QueryContext(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Rows, error) {
-	if err := writeQuery(cn, query); err != nil {
+	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
 	return newRows(cn)
+}
+
+func (cn *Conn) setReadDeadline(ctx context.Context, timeout time.Duration) {
+	if timeout == -1 {
+		timeout = cn.driver.readTimeout
+	}
+	_ = cn.netConn.SetReadDeadline(cn.deadline(ctx, timeout))
+}
+
+func (cn *Conn) setWriteDeadline(ctx context.Context, timeout time.Duration) {
+	if timeout == -1 {
+		timeout = cn.driver.writeTimeout
+	}
+	_ = cn.netConn.SetWriteDeadline(cn.deadline(ctx, timeout))
+}
+
+func (cn *Conn) deadline(ctx context.Context, timeout time.Duration) time.Time {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		if timeout == 0 {
+			return time.Time{}
+		}
+		return time.Now().Add(timeout)
+	}
+
+	if timeout == 0 {
+		return deadline
+	}
+	if tm := time.Now().Add(timeout); tm.Before(deadline) {
+		return tm
+	}
+	return deadline
 }
 
 //------------------------------------------------------------------------------

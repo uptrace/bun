@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"bufio"
+	"context"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
@@ -67,8 +68,8 @@ const (
 
 var errEmptyQuery = errors.New("pgdriver: query is empty")
 
-func startup(cn *Conn) error {
-	if err := writeStartup(cn); err != nil {
+func startup(ctx context.Context, cn *Conn) error {
+	if err := writeStartup(ctx, cn); err != nil {
 		return err
 	}
 
@@ -91,7 +92,7 @@ func startup(cn *Conn) error {
 			cn.processID = processID
 			cn.secretKey = secretKey
 		case authenticationOKMsg:
-			if err := auth(cn); err != nil {
+			if err := auth(ctx, cn); err != nil {
 				return err
 			}
 		case readyForQueryMsg:
@@ -112,7 +113,7 @@ func startup(cn *Conn) error {
 	}
 }
 
-func writeStartup(cn *Conn) error {
+func writeStartup(ctx context.Context, cn *Conn) error {
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
@@ -129,7 +130,7 @@ func writeStartup(cn *Conn) error {
 	wb.WriteString("")
 	wb.FinishMessage()
 
-	return cn.withWriter(func(wr *bufio.Writer) error {
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
 		if _, err := wr.Write(wb.Bytes); err != nil {
 			return err
 		}
@@ -139,7 +140,7 @@ func writeStartup(cn *Conn) error {
 
 //------------------------------------------------------------------------------
 
-func auth(cn *Conn) error {
+func auth(ctx context.Context, cn *Conn) error {
 	num, err := readInt32(cn)
 	if err != nil {
 		return err
@@ -149,9 +150,9 @@ func auth(cn *Conn) error {
 	case authenticationOK:
 		return nil
 	case authenticationCleartextPassword:
-		return authCleartext(cn)
+		return authCleartext(ctx, cn)
 	case authenticationMD5Password:
-		return authMD5(cn)
+		return authMD5(ctx, cn)
 	case authenticationSASL:
 		panic("not reached")
 		// return authSASL(cn)
@@ -160,27 +161,28 @@ func auth(cn *Conn) error {
 	}
 }
 
-func authCleartext(cn *Conn) error {
-	if err := writePassword(cn, cn.driver.password); err != nil {
+func authCleartext(ctx context.Context, cn *Conn) error {
+	if err := writePassword(ctx, cn, cn.driver.password); err != nil {
 		return err
 	}
 	return readAuthOK(cn)
 }
 
-func authMD5(cn *Conn) error {
+func authMD5(ctx context.Context, cn *Conn) error {
 	b, err := readN(cn, 4)
 	if err != nil {
 		return err
 	}
 
 	secret := "md5" + md5s(md5s(cn.driver.password+cn.driver.user)+string(b))
-	if err := writePassword(cn, secret); err != nil {
+	if err := writePassword(ctx, cn, secret); err != nil {
 		return err
 	}
+
 	return readAuthOK(cn)
 }
 
-func writePassword(cn *Conn, password string) error {
+func writePassword(ctx context.Context, cn *Conn, password string) error {
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
@@ -188,7 +190,7 @@ func writePassword(cn *Conn, password string) error {
 	wb.WriteString(password)
 	wb.FinishMessage()
 
-	return cn.withWriter(func(wr *bufio.Writer) error {
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
 		if _, err := wr.Write(wb.Bytes); err != nil {
 			return err
 		}
@@ -230,8 +232,8 @@ func md5s(s string) string {
 
 //------------------------------------------------------------------------------
 
-func writeQuery(cn *Conn, query string) error {
-	return cn.withWriter(func(wr *bufio.Writer) error {
+func writeQuery(ctx context.Context, cn *Conn, query string) error {
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
 		if err := wr.WriteByte(queryMsg); err != nil {
 			return err
 		}
@@ -331,6 +333,45 @@ func readRowDescription(cn *Conn) (*rowDescription, error) {
 
 //------------------------------------------------------------------------------
 
+func readNotification(cn *Conn) (channel, payload string, err error) {
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return "", "", err
+		}
+
+		switch c {
+		case commandCompleteMsg, readyForQueryMsg, noticeResponseMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return "", "", err
+			}
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return "", "", err
+			}
+			return "", "", e
+		case notificationResponseMsg:
+			if err := discard(cn, 4); err != nil {
+				return "", "", err
+			}
+			channel, err = readString(cn)
+			if err != nil {
+				return "", "", err
+			}
+			payload, err = readString(cn)
+			if err != nil {
+				return "", "", err
+			}
+			return channel, payload, nil
+		default:
+			return "", "", fmt.Errorf("pgdriver: readNotification: unexpected message %q", c)
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+
 func readMessageType(cn *Conn) (byte, int, error) {
 	c, err := cn.rd.ReadByte()
 	if err != nil {
@@ -383,7 +424,7 @@ func readError(cn *Conn) (error, error) {
 		}
 		m[c] = s
 	}
-	return pgError{m: m}, nil
+	return Error{m: m}, nil
 }
 
 func readN(cn *Conn, n int) ([]byte, error) {

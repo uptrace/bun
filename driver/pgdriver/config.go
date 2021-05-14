@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type DriverOption func(*driverConnector)
@@ -36,6 +37,32 @@ func WithDatabase(database string) DriverOption {
 func WithApplicationName(appName string) DriverOption {
 	return func(d *driverConnector) {
 		d.appName = appName
+	}
+}
+
+func WithTimeout(timeout time.Duration) DriverOption {
+	return func(d *driverConnector) {
+		d.dialTimeout = timeout
+		d.readTimeout = timeout
+		d.writeTimeout = timeout
+	}
+}
+
+func WithDialTimeout(dialTimeout time.Duration) DriverOption {
+	return func(d *driverConnector) {
+		d.dialTimeout = dialTimeout
+	}
+}
+
+func WithReadTimeout(readTimeout time.Duration) DriverOption {
+	return func(d *driverConnector) {
+		d.readTimeout = readTimeout
+	}
+}
+
+func WithWriteTimeout(writeTimeout time.Duration) DriverOption {
+	return func(d *driverConnector) {
+		d.writeTimeout = writeTimeout
 	}
 }
 
