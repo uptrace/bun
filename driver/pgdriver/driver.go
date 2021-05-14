@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -11,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -239,8 +241,20 @@ func (cn *Conn) ExecContext(
 			if firstErr == nil {
 				firstErr = errEmptyQuery
 			}
+		case commandCompleteMsg:
+			tmp, err := readN(cn, msgLen)
+			if err != nil {
+				firstErr = err
+				break
+			}
+
+			r, err := newResult(tmp)
+			if err != nil {
+				firstErr = err
+			} else {
+				res = r
+			}
 		case describeMsg,
-			commandCompleteMsg,
 			rowDescriptionMsg,
 			noticeResponseMsg,
 			parameterStatusMsg:
@@ -443,6 +457,37 @@ func (r *rows) readDataRow(dest []driver.Value) error {
 	}
 
 	return nil
+}
+
+//------------------------------------------------------------------------------
+
+type result struct {
+	affected uint32
+}
+
+var _ driver.Result = (*result)(nil)
+
+func newResult(b []byte) (result, error) {
+	i := bytes.LastIndexByte(b, ' ')
+	if i == -1 {
+		return result{}, nil
+	}
+
+	b = b[i+1 : len(b)-1]
+	affected, err := strconv.ParseUint(bytesToString(b), 10, 32)
+	if err != nil {
+		return result{}, nil
+	}
+
+	return result{affected: uint32(affected)}, nil
+}
+
+func (r result) RowsAffected() (int64, error) {
+	return int64(r.affected), nil
+}
+
+func (r result) LastInsertId() (int64, error) {
+	return 0, nil
 }
 
 //------------------------------------------------------------------------------

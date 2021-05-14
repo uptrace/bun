@@ -92,8 +92,12 @@ func TestPGMultiTenant(t *testing.T) {
 		},
 	}
 	for _, model := range models {
-		_, err := db.NewInsert().Model(model).Exec(ctx)
+		res, err := db.NewInsert().Model(model).Exec(ctx)
 		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1), n)
 	}
 
 	recipe := new(Recipe)
