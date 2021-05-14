@@ -15,7 +15,7 @@ func TestPGArray(t *testing.T) {
 		Array []string `bun:",array"`
 	}
 
-	db := pg(t)
+	db := pg()
 
 	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ type IngredientRecipe struct {
 }
 
 func TestPGMultiTenant(t *testing.T) {
-	db := pg(t)
+	db := pg()
 
 	db = db.WithArg("tenant", bun.Safe("public"))
 	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())

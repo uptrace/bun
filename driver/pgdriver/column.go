@@ -79,7 +79,7 @@ func readInt64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseInt(string(tmp), 10, bitSize)
+	return strconv.ParseInt(bytesToString(tmp), 10, bitSize)
 }
 
 func readFloat64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
@@ -92,7 +92,7 @@ func readFloat64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseFloat(string(tmp), 32)
+	return strconv.ParseFloat(bytesToString(tmp), 32)
 }
 
 func readStringCol(cn *Conn, n int) (interface{}, error) {
@@ -106,7 +106,7 @@ func readStringCol(cn *Conn, n int) (interface{}, error) {
 		return nil, err
 	}
 
-	return string(b), nil
+	return bytesToString(b), nil
 }
 
 func readBytesCol(cn *Conn, n int) (interface{}, error) {
@@ -141,7 +141,7 @@ func readTimeCol(cn *Conn, n int) (interface{}, error) {
 		return time.Time{}, err
 	}
 
-	tm, err := parseTime(string(tmp))
+	tm, err := parseTime(bytesToString(tmp))
 	if err != nil {
 		return time.Time{}, err
 	}

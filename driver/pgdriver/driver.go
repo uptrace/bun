@@ -87,6 +87,7 @@ func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	if d.user == "" {
 		return nil, errors.New("pgdriver: user name is required")
 	}
+	// fmt.Println("hello\n")
 	return newConn(ctx, d)
 }
 
@@ -143,7 +144,7 @@ func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (cn *Conn) Close() error {
-	return nil
+	return cn.netConn.Close()
 }
 
 func (cn *Conn) Begin() (driver.Tx, error) {
@@ -152,7 +153,9 @@ func (cn *Conn) Begin() (driver.Tx, error) {
 
 var _ driver.ExecerContext = (*Conn)(nil)
 
-func (cn *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+func (cn *Conn) ExecContext(
+	ctx context.Context, query string, args []driver.NamedValue,
+) (driver.Result, error) {
 	if err := writeQuery(cn, query); err != nil {
 		return nil, err
 	}

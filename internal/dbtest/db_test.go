@@ -20,7 +20,7 @@ import (
 
 var ctx = context.TODO()
 
-func pg(t *testing.T) *bun.DB {
+func pg() *bun.DB {
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDatabase("test")))
 	return bun.Open(sqldb, pgdialect.New())
 }
@@ -49,7 +49,7 @@ func mysql(t *testing.T) *bun.DB {
 
 func dbs(t *testing.T) []*bun.DB {
 	return []*bun.DB{
-		pg(t),
+		pg(),
 		sqlite(t),
 		mysql(t),
 	}
