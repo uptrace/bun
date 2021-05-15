@@ -61,7 +61,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	return n, nil
 }
 
-func (m *mapSliceModel) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (m *mapSliceModel) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ 
 	return b, nil
 }
 
-func (m *mapSliceModel) appendValues(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendValues(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (m *mapSliceModel) appendValues(fmter sqlfmt.QueryFormatter, b []byte) (_ [
 		b = append(b, '(')
 	}
 
-	if sqlfmt.IsNopFormatter(fmter) {
+	if fmter.IsNop() {
 		for i := range m.keys {
 			if i > 0 {
 				b = append(b, ", "...)

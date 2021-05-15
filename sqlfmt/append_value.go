@@ -24,7 +24,7 @@ var (
 	queryAppenderType = reflect.TypeOf((*QueryAppender)(nil)).Elem()
 )
 
-type AppenderFunc func(fmter QueryFormatter, b []byte, v reflect.Value) []byte
+type AppenderFunc func(fmter Formatter, b []byte, v reflect.Value) []byte
 
 var (
 	appenders   []AppenderFunc
@@ -120,7 +120,7 @@ func appender(typ reflect.Type) AppenderFunc {
 
 func ptrAppenderFunc(typ reflect.Type) AppenderFunc {
 	appender := Appender(typ.Elem())
-	return func(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
 			return AppendNull(b)
 		}
@@ -128,7 +128,7 @@ func ptrAppenderFunc(typ reflect.Type) AppenderFunc {
 	}
 }
 
-func appendValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return AppendNull(b)
 	}
@@ -136,35 +136,35 @@ func appendValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
 	return appender(fmter, b, v)
 }
 
-func appendIfaceValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendIfaceValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return Append(fmter, b, v.Interface())
 }
 
-func appendBoolValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendBoolValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return AppendBool(b, v.Bool())
 }
 
-func appendIntValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendIntValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return strconv.AppendInt(b, v.Int(), 10)
 }
 
-func appendUintValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendUintValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return strconv.AppendUint(b, v.Uint(), 10)
 }
 
-func appendFloat32Value(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendFloat32Value(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return appendFloat(b, v.Float(), 32)
 }
 
-func appendFloat64Value(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendFloat64Value(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return appendFloat(b, v.Float(), 64)
 }
 
-func appendBytesValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendBytesValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return AppendBytes(b, v.Bytes())
 }
 
-func appendArrayBytesValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendArrayBytesValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	if v.CanAddr() {
 		return AppendBytes(b, v.Slice(0, v.Len()).Bytes())
 	}
@@ -175,15 +175,15 @@ func appendArrayBytesValue(fmter QueryFormatter, b []byte, v reflect.Value) []by
 	return b
 }
 
-func appendStringValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendStringValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return AppendString(b, v.String())
 }
 
-func appendStructValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendStructValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return appendJSONValue(fmter, b, v)
 }
 
-func appendJSONValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(v.Interface()); err != nil {
 		return AppendError(b, err)
@@ -197,34 +197,34 @@ func appendJSONValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
 	return AppendJSON(b, bb)
 }
 
-func appendTimeValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	tm := v.Interface().(time.Time)
 	return AppendTime(b, tm)
 }
 
-func appendIPValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	ip := v.Interface().(net.IP)
 	return AppendString(b, ip.String())
 }
 
-func appendIPNetValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	ipnet := v.Interface().(net.IPNet)
 	return AppendString(b, ipnet.String())
 }
 
-func appendJSONRawMessageValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return AppendString(b, internal.String(v.Bytes()))
 }
 
-func appendQueryAppenderValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return appendQueryAppender(fmter, b, v.Interface().(QueryAppender))
 }
 
-func appendDriverValuerValue(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendDriverValuerValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return appendDriverValuer(fmter, b, v.Interface().(driver.Valuer))
 }
 
-func appendDriverValuer(fmter QueryFormatter, b []byte, v driver.Valuer) []byte {
+func appendDriverValuer(fmter Formatter, b []byte, v driver.Valuer) []byte {
 	value, err := v.Value()
 	if err != nil {
 		return AppendError(b, err)
@@ -233,7 +233,7 @@ func appendDriverValuer(fmter QueryFormatter, b []byte, v driver.Valuer) []byte 
 }
 
 func addrAppender(fn AppenderFunc) AppenderFunc {
-	return func(fmter QueryFormatter, b []byte, v reflect.Value) []byte {
+	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
 		if !v.CanAddr() {
 			err := fmt.Errorf("bun: Append(nonaddressable %T)", v.Interface())
 			return AppendError(b, err)

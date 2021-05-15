@@ -187,7 +187,7 @@ func (j *join) hasParent() bool {
 	return false
 }
 
-func (j *join) appendAlias(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+func (j *join) appendAlias(fmter sqlfmt.Formatter, b []byte) []byte {
 	quote := sqlfmt.IdentQuote(fmter)
 
 	b = append(b, quote)
@@ -196,7 +196,7 @@ func (j *join) appendAlias(fmter sqlfmt.QueryFormatter, b []byte) []byte {
 	return b
 }
 
-func (j *join) appendAliasColumn(fmter sqlfmt.QueryFormatter, b []byte, column string) []byte {
+func (j *join) appendAliasColumn(fmter sqlfmt.Formatter, b []byte, column string) []byte {
 	quote := sqlfmt.IdentQuote(fmter)
 
 	b = append(b, quote)
@@ -207,7 +207,7 @@ func (j *join) appendAliasColumn(fmter sqlfmt.QueryFormatter, b []byte, column s
 	return b
 }
 
-func (j *join) appendBaseAlias(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+func (j *join) appendBaseAlias(fmter sqlfmt.Formatter, b []byte) []byte {
 	quote := sqlfmt.IdentQuote(fmter)
 
 	if j.hasParent() {
@@ -240,7 +240,7 @@ func appendAlias(b []byte, j *join) []byte {
 }
 
 func (j *join) appendHasOneJoin(
-	fmter sqlfmt.QueryFormatter, b []byte, q *SelectQuery,
+	fmter sqlfmt.Formatter, b []byte, q *SelectQuery,
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
@@ -276,7 +276,7 @@ func (j *join) appendHasOneJoin(
 }
 
 func appendChildValues(
-	fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value, index []int, fields []*schema.Field,
+	fmter sqlfmt.Formatter, b []byte, v reflect.Value, index []int, fields []*schema.Field,
 ) []byte {
 	seen := make(map[string]struct{})
 	walk(v, index, func(v reflect.Value) {

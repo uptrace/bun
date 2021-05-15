@@ -64,7 +64,7 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	return f.IsZero(v)
 }
 
-func (f *Field) AppendValue(fmter sqlfmt.QueryFormatter, b []byte, strct reflect.Value) []byte {
+func (f *Field) AppendValue(fmter sqlfmt.Formatter, b []byte, strct reflect.Value) []byte {
 	fv, ok := fieldByIndex(strct, f.Index)
 	if !ok {
 		return sqlfmt.AppendNull(b)

@@ -62,7 +62,7 @@ func (q *DropTableQuery) Restrict() *DropTableQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *DropTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *DropTableQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

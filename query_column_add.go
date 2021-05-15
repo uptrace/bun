@@ -60,7 +60,7 @@ func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColum
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *AddColumnQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

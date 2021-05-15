@@ -121,7 +121,7 @@ func (q *InsertQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -163,7 +163,7 @@ func (q *InsertQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []by
 }
 
 func (q *InsertQuery) appendColumnsValues(
-	fmter sqlfmt.QueryFormatter, b []byte,
+	fmter sqlfmt.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if q.hasMultiTables() {
 		if q.columns != nil {
@@ -225,9 +225,9 @@ func (q *InsertQuery) appendColumnsValues(
 }
 
 func (q *InsertQuery) appendStructValues(
-	fmter sqlfmt.QueryFormatter, b []byte, fields []*schema.Field, strct reflect.Value,
+	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
 ) (_ []byte, err error) {
-	isTemplate := sqlfmt.IsNopFormatter(fmter)
+	isTemplate := fmter.IsNop()
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -280,9 +280,9 @@ func (q *InsertQuery) appendStructValues(
 }
 
 func (q *InsertQuery) appendSliceValues(
-	fmter sqlfmt.QueryFormatter, b []byte, fields []*schema.Field, slice reflect.Value,
+	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, slice reflect.Value,
 ) (_ []byte, err error) {
-	if sqlfmt.IsNopFormatter(fmter) {
+	if fmter.IsNop() {
 		return q.appendStructValues(fmter, b, fields, reflect.Value{})
 	}
 
@@ -343,7 +343,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 }
 
 func (q *InsertQuery) appendFields(
-	fmter sqlfmt.QueryFormatter, b []byte, fields []*schema.Field,
+	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field,
 ) []byte {
 	b = appendColumns(b, "", fields)
 	for i, v := range q.extraValues {
@@ -373,7 +373,7 @@ func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) appendOnConflict(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) appendOnConflict(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.onConflict.IsZero() {
 		return b, nil
 	}

@@ -24,14 +24,14 @@ func In(slice interface{}) InValues {
 	}
 }
 
-func (in InValues) AppendQuery(fmter QueryFormatter, b []byte) (_ []byte, err error) {
+func (in InValues) AppendQuery(fmter Formatter, b []byte) (_ []byte, err error) {
 	if in.err != nil {
 		return nil, in.err
 	}
 	return appendIn(fmter, b, in.slice), nil
 }
 
-func appendIn(fmter QueryFormatter, b []byte, slice reflect.Value) []byte {
+func appendIn(fmter Formatter, b []byte, slice reflect.Value) []byte {
 	sliceLen := slice.Len()
 	for i := 0; i < sliceLen; i++ {
 		if i > 0 {

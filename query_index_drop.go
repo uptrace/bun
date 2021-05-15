@@ -61,7 +61,7 @@ func (q *DropIndexQuery) Index(query string, args ...interface{}) *DropIndexQuer
 
 //------------------------------------------------------------------------------
 
-func (q *DropIndexQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *DropIndexQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

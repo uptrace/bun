@@ -141,7 +141,7 @@ func (q *CreateIndexQuery) WhereGroup(sep string, fn func(*WhereQuery)) *CreateI
 
 //------------------------------------------------------------------------------
 
-func (q *CreateIndexQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *CreateIndexQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

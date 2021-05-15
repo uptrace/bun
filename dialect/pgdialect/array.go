@@ -41,7 +41,7 @@ var (
 	_ sql.Scanner          = (*ArrayValue)(nil)
 )
 
-func (a *ArrayValue) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) ([]byte, error) {
+func (a *ArrayValue) AppendQuery(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
 	if a.append == nil {
 		panic(fmt.Errorf("bun: Array(unsupported %s)", a.v.Type()))
 	}

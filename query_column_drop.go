@@ -67,7 +67,7 @@ func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropCol
 
 //------------------------------------------------------------------------------
 
-func (q *DropColumnQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *DropColumnQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

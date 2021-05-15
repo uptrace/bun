@@ -6,11 +6,11 @@ import (
 )
 
 type QueryAppender interface {
-	AppendQuery(fmter QueryFormatter, b []byte) ([]byte, error)
+	AppendQuery(fmter Formatter, b []byte) ([]byte, error)
 }
 
 type ColumnsAppender interface {
-	AppendColumns(fmter QueryFormatter, b []byte) ([]byte, error)
+	AppendColumns(fmter Formatter, b []byte) ([]byte, error)
 }
 
 //------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ type Safe string
 
 var _ QueryAppender = (*Safe)(nil)
 
-func (s Safe) AppendQuery(fmter QueryFormatter, b []byte) ([]byte, error) {
+func (s Safe) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return append(b, s...), nil
 }
 
@@ -31,7 +31,7 @@ type Ident string
 
 var _ QueryAppender = (*Ident)(nil)
 
-func (s Ident) AppendQuery(fmter QueryFormatter, b []byte) ([]byte, error) {
+func (s Ident) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return AppendIdent(fmter, b, string(s)), nil
 }
 
@@ -59,7 +59,7 @@ func (q QueryWithArgs) IsZero() bool {
 	return q.Query == "" && q.Args == nil
 }
 
-func (q QueryWithArgs) AppendQuery(fmter QueryFormatter, b []byte) ([]byte, error) {
+func (q QueryWithArgs) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	if q.Args == nil {
 		return AppendIdent(fmter, b, q.Query), nil
 	}
@@ -90,18 +90,18 @@ func SafeQueryWithSep(query string, args []interface{}, sep string) QueryWithSep
 
 //------------------------------------------------------------------------------
 
-func AppendIdent(fmter QueryFormatter, b []byte, field string) []byte {
+func AppendIdent(fmter Formatter, b []byte, field string) []byte {
 	return appendIdent(fmter, b, internal.Bytes(field))
 }
 
-func IdentQuote(fmter QueryFormatter) byte {
+func IdentQuote(fmter Formatter) byte {
 	if fmter.HasFeature(feature.Backticks) {
 		return '`'
 	}
 	return '"'
 }
 
-func appendIdent(fmter QueryFormatter, b, src []byte) []byte {
+func appendIdent(fmter Formatter, b, src []byte) []byte {
 	quote := IdentQuote(fmter)
 
 	var quoted bool

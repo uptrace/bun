@@ -64,7 +64,7 @@ func (q *TruncateTableQuery) Restrict() *TruncateTableQuery {
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) AppendQuery(
-	fmter sqlfmt.QueryFormatter, b []byte,
+	fmter sqlfmt.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

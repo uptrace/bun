@@ -148,7 +148,7 @@ func (q *UpdateQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -190,7 +190,7 @@ func (q *UpdateQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []by
 	return b, nil
 }
 
-func (q *UpdateQuery) mustAppendSet(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) mustAppendSet(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.set) > 0 {
 		return q.appendSet(fmter, b)
 	}
@@ -219,14 +219,14 @@ func (q *UpdateQuery) mustAppendSet(fmter sqlfmt.QueryFormatter, b []byte) (_ []
 }
 
 func (q *UpdateQuery) appendSetStruct(
-	fmter sqlfmt.QueryFormatter, b []byte, model *structTableModel,
+	fmter sqlfmt.Formatter, b []byte, model *structTableModel,
 ) ([]byte, error) {
 	fields, err := q.getDataFields()
 	if err != nil {
 		return nil, err
 	}
 
-	isTemplate := sqlfmt.IsNopFormatter(fmter)
+	isTemplate := fmter.IsNop()
 	pos := len(b)
 	for _, f := range fields {
 		if q.omitZero && f.NullZero && f.HasZeroValue(model.strct) {
@@ -275,7 +275,7 @@ func (q *UpdateQuery) appendSetStruct(
 }
 
 func (q *UpdateQuery) appendOtherTables(
-	fmter sqlfmt.QueryFormatter, b []byte,
+	fmter sqlfmt.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if !q.hasMultiTables() {
 		return b, nil

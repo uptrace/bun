@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
-func Append(fmter QueryFormatter, b []byte, v interface{}) []byte {
+func Append(fmter Formatter, b []byte, v interface{}) []byte {
 	switch v := v.(type) {
 	case nil:
 		return AppendNull(b)
@@ -130,7 +130,7 @@ func AppendBytes(b []byte, bytes []byte) []byte {
 	return b
 }
 
-func appendQueryAppender(fmter QueryFormatter, b []byte, app QueryAppender) []byte {
+func appendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
 	bb, err := app.AppendQuery(fmter, b)
 	if err != nil {
 		return AppendError(b, err)

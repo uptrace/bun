@@ -115,7 +115,7 @@ func (tm *NullTime) UnmarshalJSON(b []byte) error {
 	return tm.Time.UnmarshalJSON(b)
 }
 
-func (tm NullTime) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) ([]byte, error) {
+func (tm NullTime) AppendQuery(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
 	if tm.IsZero() {
 		return sqlfmt.AppendNull(b), nil
 	}

@@ -350,12 +350,12 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []join) error {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	return q.appendQuery(formatterWithModel(fmter, q), b, false)
 }
 
 func (q *SelectQuery) appendQuery(
-	fmter sqlfmt.QueryFormatter, b []byte, count bool,
+	fmter sqlfmt.Formatter, b []byte, count bool,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -503,7 +503,7 @@ func (q *SelectQuery) appendQuery(
 	return b, nil
 }
 
-func (q *SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	start := len(b)
 
 	switch {
@@ -528,7 +528,7 @@ func (q *SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []
 			}
 		}
 	case q.table != nil:
-		if len(q.table.Fields) > 10 && sqlfmt.IsNopFormatter(fmter) {
+		if len(q.table.Fields) > 10 && fmter.IsNop() {
 			b = append(b, q.table.Alias...)
 			b = append(b, '.')
 			b = sqlfmt.AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
@@ -561,7 +561,7 @@ func (q *SelectQuery) appendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []
 }
 
 func (q *SelectQuery) appendHasOneColumns(
-	fmter sqlfmt.QueryFormatter, b []byte, join *join,
+	fmter sqlfmt.Formatter, b []byte, join *join,
 ) (_ []byte, err error) {
 	join.applyQuery(q)
 
@@ -603,12 +603,12 @@ func (q *SelectQuery) appendHasOneColumns(
 	return b, nil
 }
 
-func (q *SelectQuery) appendTables(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendTables(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
 	return q.baseQuery.appendTablesWithAlias(fmter, b)
 }
 
-func (q *SelectQuery) appendOrder(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendOrder(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.order) > 0 {
 		b = append(b, " ORDER BY "...)
 
@@ -796,7 +796,7 @@ type joinQuery struct {
 	on   []sqlfmt.QueryWithSep
 }
 
-func (j *joinQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (j *joinQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, ' ')
 
 	b, err = j.join.AppendQuery(fmter, b)

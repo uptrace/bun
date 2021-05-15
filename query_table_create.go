@@ -65,7 +65,7 @@ func (q *CreateTableQuery) WithFKConstraints() *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *CreateTableQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -153,7 +153,7 @@ func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
 	return append(b, field.CreateTableSQLType...)
 }
 
-func (q *CreateTableQuery) appendUniqueConstraints(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+func (q *CreateTableQuery) appendUniqueConstraints(fmter sqlfmt.Formatter, b []byte) []byte {
 	unique := q.table.Unique
 
 	keys := make([]string, 0, len(unique))
@@ -170,7 +170,7 @@ func (q *CreateTableQuery) appendUniqueConstraints(fmter sqlfmt.QueryFormatter, 
 }
 
 func (q *CreateTableQuery) appendUniqueConstraint(
-	fmter sqlfmt.QueryFormatter, b []byte, name string, fields []*schema.Field,
+	fmter sqlfmt.Formatter, b []byte, name string, fields []*schema.Field,
 ) []byte {
 	if name != "" {
 		b = append(b, ", CONSTRAINT "...)
@@ -197,7 +197,7 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 }
 
 func (q *CreateTableQuery) appendFKConstraint(
-	fmter sqlfmt.QueryFormatter, b []byte, rel *schema.Relation,
+	fmter sqlfmt.Formatter, b []byte, rel *schema.Relation,
 ) []byte {
 	if rel.Type != schema.HasOneRelation {
 		return b

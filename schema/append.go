@@ -14,7 +14,7 @@ func FieldAppender(field *Field) sqlfmt.AppenderFunc {
 	return sqlfmt.Appender(field.Type)
 }
 
-func appendMsgpack(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendMsgpack(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	hexEnc := sqlfmt.NewHexEncoder(b)
 
 	enc := msgpack.GetEncoder()

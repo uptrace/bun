@@ -38,7 +38,7 @@ func (q *ValuesQuery) WithOrder() *ValuesQuery {
 	return q
 }
 
-func (q *ValuesQuery) AppendArg(fmter sqlfmt.QueryFormatter, b []byte, name string) ([]byte, bool) {
+func (q *ValuesQuery) AppendArg(fmter sqlfmt.Formatter, b []byte, name string) ([]byte, bool) {
 	switch name {
 	case "Columns":
 		bb, err := q.AppendColumns(fmter, b)
@@ -52,7 +52,7 @@ func (q *ValuesQuery) AppendArg(fmter sqlfmt.QueryFormatter, b []byte, name stri
 }
 
 // AppendColumns appends the table columns. It is used by CTE.
-func (q *ValuesQuery) AppendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *ValuesQuery) AppendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -83,7 +83,7 @@ func (q *ValuesQuery) AppendColumns(fmter sqlfmt.QueryFormatter, b []byte) (_ []
 	return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 }
 
-func (q *ValuesQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []byte, err error) {
+func (q *ValuesQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -110,7 +110,7 @@ func (q *ValuesQuery) AppendQuery(fmter sqlfmt.QueryFormatter, b []byte) (_ []by
 }
 
 func (q *ValuesQuery) appendQuery(
-	fmter sqlfmt.QueryFormatter,
+	fmter sqlfmt.Formatter,
 	b []byte,
 	fields []*schema.Field,
 ) (_ []byte, err error) {
@@ -160,9 +160,9 @@ func (q *ValuesQuery) appendQuery(
 }
 
 func (q *ValuesQuery) appendValues(
-	fmter sqlfmt.QueryFormatter, b []byte, fields []*schema.Field, strct reflect.Value,
+	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
 ) (_ []byte, err error) {
-	isTemplate := sqlfmt.IsNopFormatter(fmter)
+	isTemplate := fmter.IsNop()
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)

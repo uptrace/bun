@@ -3,7 +3,7 @@ package sqlfmt
 import (
 	"bytes"
 	"fmt"
-	"sort"
+	"math"
 	"strconv"
 	"strings"
 
@@ -13,49 +13,41 @@ import (
 
 var defaultFmter = NewFormatter(feature.DefaultFeatures)
 
-type QueryFormatter interface {
-	HasFeature(v feature.Feature) bool
-	FormatQuery(b []byte, query string, args ...interface{}) []byte
-}
-
-//------------------------------------------------------------------------------
-
-type NopFormatter struct{}
-
-func NewNopFormatter() NopFormatter {
-	return NopFormatter{}
-}
-
-func (f NopFormatter) HasFeature(v feature.Feature) bool {
-	return feature.DefaultFeatures.Has(v)
-}
-
-func (f NopFormatter) FormatQuery(b []byte, query string, args ...interface{}) []byte {
-	return append(b, query...)
-}
-
-func IsNopFormatter(fmter QueryFormatter) bool {
-	_, ok := fmter.(NopFormatter)
-	return ok
-}
-
-//------------------------------------------------------------------------------
-
 type ArgAppender interface {
-	AppendArg(fmter QueryFormatter, b []byte, name string) ([]byte, bool)
+	AppendArg(fmter Formatter, b []byte, name string) ([]byte, bool)
+}
+
+type namedArg struct {
+	name  string
+	value interface{}
+}
+
+type namedArgs []namedArg
+
+func (args namedArgs) Get(name string) (interface{}, bool) {
+	for _, arg := range args {
+		if arg.name == name {
+			return arg.value, true
+		}
+	}
+	return nil, false
 }
 
 type Formatter struct {
 	features  feature.Feature
 	model     ArgAppender
-	namedArgs map[string]interface{}
+	namedArgs namedArgs
 }
-
-var _ QueryFormatter = (*Formatter)(nil)
 
 func NewFormatter(features feature.Feature) Formatter {
 	return Formatter{
 		features: features,
+	}
+}
+
+func NewNopFormatter() Formatter {
+	return Formatter{
+		features: math.MaxUint64,
 	}
 }
 
@@ -64,39 +56,21 @@ func (f Formatter) String() string {
 		return ""
 	}
 
-	keys := make([]string, 0, len(f.namedArgs))
-	for key := range f.namedArgs {
-		keys = append(keys, key)
+	ss := make([]string, len(f.namedArgs))
+	for i, arg := range f.namedArgs {
+		ss[i] = fmt.Sprintf("%s=%v", arg.name, arg.value)
 	}
-
-	ss := make([]string, len(keys))
-
-	sort.Strings(keys)
-	for i, k := range keys {
-		ss[i] = fmt.Sprintf("%s=%v", k, f.namedArgs[k])
-	}
-
 	return " " + strings.Join(ss, " ")
+}
+
+func (f Formatter) IsNop() bool {
+	return f.features == math.MaxUint64
 }
 
 func (f Formatter) clone() Formatter {
 	clone := f
-
-	if len(f.namedArgs) > 0 {
-		clone.namedArgs = make(map[string]interface{}, len(f.namedArgs))
-	}
-	for name, value := range f.namedArgs {
-		clone.namedArgs[name] = value
-	}
-
+	clone.namedArgs = clone.namedArgs[:len(clone.namedArgs):len(clone.namedArgs)]
 	return clone
-}
-
-func (f *Formatter) setArg(arg string, value interface{}) {
-	if f.namedArgs == nil {
-		f.namedArgs = make(map[string]interface{})
-	}
-	f.namedArgs[arg] = value
 }
 
 func (f Formatter) WithModel(model ArgAppender) Formatter {
@@ -105,38 +79,38 @@ func (f Formatter) WithModel(model ArgAppender) Formatter {
 	return clone
 }
 
-func (f Formatter) WithArg(arg string, value interface{}) Formatter {
+func (f Formatter) WithArg(name string, value interface{}) Formatter {
 	clone := f.clone()
-	clone.setArg(arg, value)
+	clone.namedArgs = append(clone.namedArgs, namedArg{name: name, value: value})
 	return clone
 }
 
-func (f Formatter) Arg(arg string) interface{} {
-	return f.namedArgs[arg]
+func (f Formatter) Arg(name string) interface{} {
+	value, _ := f.namedArgs.Get(name)
+	return value
 }
 
 func (f Formatter) FormatQueryBytes(dst, query []byte, args ...interface{}) []byte {
-	if (args == nil && f.namedArgs == nil) || bytes.IndexByte(query, '?') == -1 {
+	if f.IsNop() || (args == nil && f.namedArgs == nil) || bytes.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.New(query), args)
 }
 
 func (f Formatter) FormatQuery(dst []byte, query string, args ...interface{}) []byte {
-	if (args == nil && f.namedArgs == nil) || strings.IndexByte(query, '?') == -1 {
+	if f.IsNop() || (args == nil && f.namedArgs == nil) || strings.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.NewString(query), args)
 }
 
 func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []byte {
-	var argsIndex int
-
 	var model ArgAppender
 	if len(args) > 0 {
 		model, _ = args[0].(ArgAppender)
 	}
 
+	var argsIndex int
 	for p.Valid() {
 		b, ok := p.ReadSep('?')
 		if !ok {
@@ -167,8 +141,8 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []by
 			}
 
 			if f.namedArgs != nil {
-				if arg, ok := f.namedArgs[name]; ok {
-					dst = f.appendArg(dst, arg)
+				if value, ok := f.namedArgs.Get(name); ok {
+					dst = f.appendArg(dst, value)
 					continue
 				}
 			}

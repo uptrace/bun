@@ -111,7 +111,7 @@ func (m *mapModel) scanRaw(src interface{}) error {
 	return nil
 }
 
-func (m *mapModel) appendColumnsValues(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+func (m *mapModel) appendColumnsValues(fmter sqlfmt.Formatter, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -130,7 +130,7 @@ func (m *mapModel) appendColumnsValues(fmter sqlfmt.QueryFormatter, b []byte) []
 
 	b = append(b, ") VALUES ("...)
 
-	isTemplate := sqlfmt.IsNopFormatter(fmter)
+	isTemplate := fmter.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -147,7 +147,7 @@ func (m *mapModel) appendColumnsValues(fmter sqlfmt.QueryFormatter, b []byte) []
 	return b
 }
 
-func (m *mapModel) appendSet(fmter sqlfmt.QueryFormatter, b []byte) []byte {
+func (m *mapModel) appendSet(fmter sqlfmt.Formatter, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -155,7 +155,7 @@ func (m *mapModel) appendSet(fmter sqlfmt.QueryFormatter, b []byte) []byte {
 	}
 	sort.Strings(keys)
 
-	isTemplate := sqlfmt.IsNopFormatter(fmter)
+	isTemplate := fmter.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)

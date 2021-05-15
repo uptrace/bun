@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun/sqlfmt"
 )
 
-func appendValue(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return sqlfmt.AppendNull(b)
 	}
@@ -30,7 +30,7 @@ func appender(typ reflect.Type, pgArray bool) sqlfmt.AppenderFunc {
 
 func ptrAppenderFunc(typ reflect.Type, pgArray bool) sqlfmt.AppenderFunc {
 	appender := appender(typ.Elem(), pgArray)
-	return func(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+	return func(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
 			return sqlfmt.AppendNull(b)
 		}
@@ -84,7 +84,7 @@ func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
 	}
 
 	appendElem := sqlfmt.Appender(elemType)
-	return func(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+	return func(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 		kind := v.Kind()
 		switch kind {
 		case reflect.Ptr, reflect.Slice:
@@ -117,7 +117,7 @@ func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
 	}
 }
 
-func appendStringSliceValue(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendStringSliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	ss := v.Convert(sliceStringType).Interface().([]string)
 	return appendStringSlice(b, ss)
 }
@@ -145,7 +145,7 @@ func appendStringSlice(b []byte, ss []string) []byte {
 	return b
 }
 
-func appendIntSliceValue(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendIntSliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	ints := v.Convert(sliceIntType).Interface().([]int)
 	return appendIntSlice(b, ints)
 }
@@ -173,7 +173,7 @@ func appendIntSlice(b []byte, ints []int) []byte {
 	return b
 }
 
-func appendInt64SliceValue(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendInt64SliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	ints := v.Convert(sliceInt64Type).Interface().([]int64)
 	return appendInt64Slice(b, ints)
 }
@@ -201,7 +201,7 @@ func appendInt64Slice(b []byte, ints []int64) []byte {
 	return b
 }
 
-func appendFloat64SliceValue(fmter sqlfmt.QueryFormatter, b []byte, v reflect.Value) []byte {
+func appendFloat64SliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
 	floats := v.Convert(sliceFloat64Type).Interface().([]float64)
 	return appendFloat64Slice(b, floats)
 }
