@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync/atomic"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -18,20 +19,27 @@ const (
 	discardUnknownColumns internal.Flag = 1 << iota
 )
 
-type config struct{}
+type DBStats struct {
+	Queries uint64
+	Errors  uint64
+}
 
-type ConfigOption func(cfg *config)
+type Config struct{}
+
+type ConfigOption func(cfg *Config)
 
 type DB struct {
 	*sql.DB
 	dialect  schema.Dialect
 	features feature.Feature
-	cfg      config
+	cfg      Config
 
 	queryHooks []QueryHook
 
 	fmter sqlfmt.Formatter
 	flags internal.Flag
+
+	stats DBStats
 }
 
 func Open(sqldb *sql.DB, dialect schema.Dialect, opts ...ConfigOption) *DB {
@@ -47,6 +55,13 @@ func Open(sqldb *sql.DB, dialect schema.Dialect, opts ...ConfigOption) *DB {
 	}
 
 	return db
+}
+
+func (db *DB) Stats() DBStats {
+	return DBStats{
+		Queries: atomic.LoadUint64(&db.stats.Queries),
+		Errors:  atomic.LoadUint64(&db.stats.Errors),
+	}
 }
 
 func (db *DB) DiscardUnknownColumns() {
@@ -141,10 +156,14 @@ func (db *DB) RegisterModel(models ...interface{}) {
 	db.dialect.Tables().Register(models...)
 }
 
-func (db *DB) WithArg(name string, value interface{}) *DB {
+func (db *DB) WithNamedArg(name string, value interface{}) *DB {
 	clone := db.clone()
 	clone.fmter = clone.fmter.WithArg(name, value)
 	return clone
+}
+
+func (db *DB) NamedArg(name string) interface{} {
+	return db.fmter.Arg(name)
 }
 
 func (db *DB) clone() *DB {
@@ -202,7 +221,7 @@ func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interfa
 }
 
 func (db *DB) format(query string, args []interface{}) string {
-	if len(args) == 0 || strings.IndexByte(query, '?') == -1 {
+	if len(args) == 0 && strings.IndexByte(query, '?') == -1 {
 		return query
 	}
 	return internal.String(db.fmter.FormatQuery(nil, query, args...))

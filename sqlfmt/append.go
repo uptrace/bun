@@ -8,8 +8,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/uptrace/bun/dialect/feature"
-	"github.com/uptrace/bun/internal"
+	"github.com/uptrace/bun/internal/parser"
 )
 
 func Append(fmter QueryFormatter, b []byte, v interface{}) []byte {
@@ -18,12 +17,18 @@ func Append(fmter QueryFormatter, b []byte, v interface{}) []byte {
 		return AppendNull(b)
 	case bool:
 		return AppendBool(b, v)
+	case int:
+		return strconv.AppendInt(b, int64(v), 10)
 	case int32:
 		return strconv.AppendInt(b, int64(v), 10)
 	case int64:
 		return strconv.AppendInt(b, v, 10)
-	case int:
-		return strconv.AppendInt(b, int64(v), 10)
+	case uint:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint32:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint64:
+		return strconv.AppendUint(b, v, 10)
 	case float32:
 		return AppendFloat32(b, v)
 	case float64:
@@ -140,52 +145,34 @@ func AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
-//------------------------------------------------------------------------------
+func AppendJSON(b, jsonb []byte) []byte {
+	b = append(b, '\'')
 
-func AppendIdent(fmter QueryFormatter, b []byte, field string) []byte {
-	return appendIdent(fmter, b, internal.Bytes(field))
-}
-
-func IdentQuote(fmter QueryFormatter) byte {
-	if fmter.HasFeature(feature.Backticks) {
-		return '`'
-	}
-	return '"'
-}
-
-func appendIdent(fmter QueryFormatter, b, src []byte) []byte {
-	quote := IdentQuote(fmter)
-
-	var quoted bool
-loop:
-	for _, c := range src {
+	p := parser.New(jsonb)
+	for p.Valid() {
+		c := p.Read()
 		switch c {
-		case '*':
-			if !quoted {
-				b = append(b, '*')
-				continue loop
+		case '"':
+			b = append(b, '"')
+		case '\'':
+			b = append(b, "''"...)
+		case '\000':
+			continue
+		case '\\':
+			if p.SkipBytes([]byte("u0000")) {
+				b = append(b, "\\\\u0000"...)
+			} else {
+				b = append(b, '\\')
+				if p.Valid() {
+					b = append(b, p.Read())
+				}
 			}
-		case '.':
-			if quoted {
-				b = append(b, quote)
-				quoted = false
-			}
-			b = append(b, '.')
-			continue loop
-		}
-
-		if !quoted {
-			b = append(b, quote)
-			quoted = true
-		}
-		if c == quote {
-			b = append(b, quote, quote)
-		} else {
+		default:
 			b = append(b, c)
 		}
 	}
-	if quoted {
-		b = append(b, quote)
-	}
+
+	b = append(b, '\'')
+
 	return b
 }

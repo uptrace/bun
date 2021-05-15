@@ -67,7 +67,7 @@ type IngredientRecipe struct {
 func TestPGMultiTenant(t *testing.T) {
 	db := pg()
 
-	db = db.WithArg("tenant", bun.Safe("public"))
+	db = db.WithNamedArg("tenant", bun.Safe("public"))
 	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())
 
 	models := []interface{}{

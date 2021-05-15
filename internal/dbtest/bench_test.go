@@ -14,7 +14,7 @@ type Bench struct {
 	CreatedAt time.Time
 }
 
-func BenchmarkNativeBun(b *testing.B) {
+func BenchmarkSelect(b *testing.B) {
 	db := benchDB()
 
 	b.ResetTimer()

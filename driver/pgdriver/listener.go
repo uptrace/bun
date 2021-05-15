@@ -259,7 +259,7 @@ func newChannel(ln *Listener, opts []ChannelOption) *Channel {
 		ln:  ln,
 
 		size:            100,
-		pingTimeout:     time.Second,
+		pingTimeout:     5 * time.Second,
 		chanSendTimeout: time.Minute,
 	}
 

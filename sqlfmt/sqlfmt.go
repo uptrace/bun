@@ -1,6 +1,7 @@
 package sqlfmt
 
 import (
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 )
 
@@ -85,4 +86,54 @@ func SafeQueryWithSep(query string, args []interface{}, sep string) QueryWithSep
 		QueryWithArgs: SafeQuery(query, args),
 		Sep:           sep,
 	}
+}
+
+//------------------------------------------------------------------------------
+
+func AppendIdent(fmter QueryFormatter, b []byte, field string) []byte {
+	return appendIdent(fmter, b, internal.Bytes(field))
+}
+
+func IdentQuote(fmter QueryFormatter) byte {
+	if fmter.HasFeature(feature.Backticks) {
+		return '`'
+	}
+	return '"'
+}
+
+func appendIdent(fmter QueryFormatter, b, src []byte) []byte {
+	quote := IdentQuote(fmter)
+
+	var quoted bool
+loop:
+	for _, c := range src {
+		switch c {
+		case '*':
+			if !quoted {
+				b = append(b, '*')
+				continue loop
+			}
+		case '.':
+			if quoted {
+				b = append(b, quote)
+				quoted = false
+			}
+			b = append(b, '.')
+			continue loop
+		}
+
+		if !quoted {
+			b = append(b, quote)
+			quoted = true
+		}
+		if c == quote {
+			b = append(b, quote, quote)
+		} else {
+			b = append(b, c)
+		}
+	}
+	if quoted {
+		b = append(b, quote)
+	}
+	return b
 }

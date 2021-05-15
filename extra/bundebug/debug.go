@@ -52,7 +52,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		now.Format(" 15:04:05.000 "),
 		formatOperation(event),
 		fmt.Sprintf(" %10s ", dur.Round(time.Microsecond)),
-		event.Query,
+		string(event.Query),
 	}
 
 	if event.Err != nil {

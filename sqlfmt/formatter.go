@@ -115,19 +115,15 @@ func (f Formatter) Arg(arg string) interface{} {
 	return f.namedArgs[arg]
 }
 
-func (f Formatter) hasArgs() bool {
-	return len(f.namedArgs) > 0
-}
-
 func (f Formatter) FormatQueryBytes(dst, query []byte, args ...interface{}) []byte {
-	if (args == nil && !f.hasArgs()) || bytes.IndexByte(query, '?') == -1 {
+	if (args == nil && f.namedArgs == nil) || bytes.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.New(query), args)
 }
 
 func (f Formatter) FormatQuery(dst []byte, query string, args ...interface{}) []byte {
-	if (args == nil && !f.hasArgs()) || strings.IndexByte(query, '?') == -1 {
+	if (args == nil && f.namedArgs == nil) || strings.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.NewString(query), args)
