@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/uptrace/bun/dialect/feature"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type mapSliceModel struct {
@@ -61,7 +61,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	return n, nil
 }
 
-func (m *mapSliceModel) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -70,13 +70,13 @@ func (m *mapSliceModel) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byt
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = sqlfmt.AppendIdent(fmter, b, k)
+		b = fmter.AppendIdent(b, k)
 	}
 
 	return b, nil
 }
 
-func (m *mapSliceModel) appendValues(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (m *mapSliceModel) appendValues(fmter sqlfmt.Formatter, b []byte) (_ []byte
 			if j > 0 {
 				b = append(b, ", "...)
 			}
-			b = sqlfmt.Append(fmter, b, el[key])
+			b = schema.Append(fmter, b, el[key])
 		}
 	}
 

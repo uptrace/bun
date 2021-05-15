@@ -9,7 +9,6 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type CreateTableQuery struct {
@@ -21,8 +20,8 @@ type CreateTableQuery struct {
 
 	withFKConstraints bool
 
-	partitionBy sqlfmt.QueryWithArgs
-	tablespace  sqlfmt.QueryWithArgs
+	partitionBy schema.QueryWithArgs
+	tablespace  schema.QueryWithArgs
 }
 
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
@@ -65,7 +64,7 @@ func (q *CreateTableQuery) WithFKConstraints() *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -153,7 +152,7 @@ func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
 	return append(b, field.CreateTableSQLType...)
 }
 
-func (q *CreateTableQuery) appendUniqueConstraints(fmter sqlfmt.Formatter, b []byte) []byte {
+func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []byte) []byte {
 	unique := q.table.Unique
 
 	keys := make([]string, 0, len(unique))
@@ -170,11 +169,11 @@ func (q *CreateTableQuery) appendUniqueConstraints(fmter sqlfmt.Formatter, b []b
 }
 
 func (q *CreateTableQuery) appendUniqueConstraint(
-	fmter sqlfmt.Formatter, b []byte, name string, fields []*schema.Field,
+	fmter schema.Formatter, b []byte, name string, fields []*schema.Field,
 ) []byte {
 	if name != "" {
 		b = append(b, ", CONSTRAINT "...)
-		b = sqlfmt.AppendIdent(fmter, b, name)
+		b = fmter.AppendIdent(b, name)
 	} else {
 		b = append(b, ","...)
 	}
@@ -197,7 +196,7 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 }
 
 func (q *CreateTableQuery) appendFKConstraint(
-	fmter sqlfmt.Formatter, b []byte, rel *schema.Relation,
+	fmter schema.Formatter, b []byte, rel *schema.Relation,
 ) []byte {
 	if rel.Type != schema.HasOneRelation {
 		return b

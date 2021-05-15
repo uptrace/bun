@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type DropIndexQuery struct {
@@ -14,7 +14,7 @@ type DropIndexQuery struct {
 	concurrently bool
 	ifExists     bool
 
-	index sqlfmt.QueryWithArgs
+	index schema.QueryWithArgs
 }
 
 func NewDropIndexQuery(db *DB) *DropIndexQuery {
@@ -55,13 +55,13 @@ func (q *DropIndexQuery) Restrict() *DropIndexQuery {
 }
 
 func (q *DropIndexQuery) Index(query string, args ...interface{}) *DropIndexQuery {
-	q.index = sqlfmt.SafeQuery(query, args)
+	q.index = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *DropIndexQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

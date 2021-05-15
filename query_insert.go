@@ -10,7 +10,6 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type InsertQuery struct {
@@ -18,7 +17,7 @@ type InsertQuery struct {
 	returningQuery
 	customValueQuery
 
-	onConflict sqlfmt.QueryWithArgs
+	onConflict schema.QueryWithArgs
 	setQuery
 }
 
@@ -49,7 +48,7 @@ func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
 	return fn(q)
 }
 
-func (q *InsertQuery) With(name string, query sqlfmt.QueryAppender) *InsertQuery {
+func (q *InsertQuery) With(name string, query schema.QueryAppender) *InsertQuery {
 	q.addWith(name, query)
 	return q
 }
@@ -58,18 +57,18 @@ func (q *InsertQuery) With(name string, query sqlfmt.QueryAppender) *InsertQuery
 
 func (q *InsertQuery) Table(tables ...string) *InsertQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *InsertQuery) TableExpr(query string, args ...interface{}) *InsertQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *InsertQuery) ModelTableExpr(query string, args ...interface{}) *InsertQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -77,7 +76,7 @@ func (q *InsertQuery) ModelTableExpr(query string, args ...interface{}) *InsertQ
 
 func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	for _, column := range columns {
-		q.addColumn(sqlfmt.UnsafeIdent(column))
+		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
@@ -93,12 +92,12 @@ func (q *InsertQuery) Value(column string, value string, args ...interface{}) *I
 }
 
 func (q *InsertQuery) Where(query string, args ...interface{}) *InsertQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *InsertQuery) WhereOr(query string, args ...interface{}) *InsertQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
@@ -108,7 +107,7 @@ func (q *InsertQuery) WhereOr(query string, args ...interface{}) *InsertQuery {
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery {
-	q.addReturning(sqlfmt.SafeQuery(query, args))
+	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -121,7 +120,7 @@ func (q *InsertQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -163,7 +162,7 @@ func (q *InsertQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *InsertQuery) appendColumnsValues(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if q.hasMultiTables() {
 		if q.columns != nil {
@@ -225,7 +224,7 @@ func (q *InsertQuery) appendColumnsValues(
 }
 
 func (q *InsertQuery) appendStructValues(
-	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
+	fmter schema.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
 ) (_ []byte, err error) {
 	isTemplate := fmter.IsNop()
 	for i, f := range fields {
@@ -280,7 +279,7 @@ func (q *InsertQuery) appendStructValues(
 }
 
 func (q *InsertQuery) appendSliceValues(
-	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, slice reflect.Value,
+	fmter schema.Formatter, b []byte, fields []*schema.Field, slice reflect.Value,
 ) (_ []byte, err error) {
 	if fmter.IsNop() {
 		return q.appendStructValues(fmter, b, fields, reflect.Value{})
@@ -343,14 +342,14 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 }
 
 func (q *InsertQuery) appendFields(
-	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field,
+	fmter schema.Formatter, b []byte, fields []*schema.Field,
 ) []byte {
 	b = appendColumns(b, "", fields)
 	for i, v := range q.extraValues {
 		if i > 0 || len(fields) > 0 {
 			b = append(b, ", "...)
 		}
-		b = sqlfmt.AppendIdent(fmter, b, v.column)
+		b = fmter.AppendIdent(b, v.column)
 	}
 	return b
 }
@@ -358,7 +357,7 @@ func (q *InsertQuery) appendFields(
 //------------------------------------------------------------------------------
 
 func (q *InsertQuery) OnConflict(s string, args ...interface{}) *InsertQuery {
-	q.onConflict = sqlfmt.SafeQuery(s, args)
+	q.onConflict = schema.SafeQuery(s, args)
 	return q
 }
 
@@ -369,11 +368,11 @@ func (q *InsertQuery) onConflictDoUpdate() bool {
 }
 
 func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
-	q.addSet(sqlfmt.SafeQuery(query, args))
+	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *InsertQuery) appendOnConflict(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) appendOnConflict(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.onConflict.IsZero() {
 		return b, nil
 	}

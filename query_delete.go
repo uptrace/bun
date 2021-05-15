@@ -5,7 +5,7 @@ import (
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type DeleteQuery struct {
@@ -40,37 +40,37 @@ func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
 	return fn(q)
 }
 
-func (q *DeleteQuery) With(name string, query sqlfmt.QueryAppender) *DeleteQuery {
+func (q *DeleteQuery) With(name string, query schema.QueryAppender) *DeleteQuery {
 	q.addWith(name, query)
 	return q
 }
 
 func (q *DeleteQuery) Table(tables ...string) *DeleteQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *DeleteQuery) TableExpr(query string, args ...interface{}) *DeleteQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *DeleteQuery) ModelTableExpr(query string, args ...interface{}) *DeleteQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
 func (q *DeleteQuery) Where(query string, args ...interface{}) *DeleteQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *DeleteQuery) WhereOr(query string, args ...interface{}) *DeleteQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
@@ -104,7 +104,7 @@ func (q *DeleteQuery) WhereAllWithDeleted() *DeleteQuery {
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery {
-	q.addReturning(sqlfmt.SafeQuery(query, args))
+	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -117,7 +117,7 @@ func (q *DeleteQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *DeleteQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

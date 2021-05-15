@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal/tagparser"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type Field struct {
@@ -15,9 +15,9 @@ type Field struct {
 	Type  reflect.Type
 	Index []int
 
-	Name    string      // SQL name, .e.g. id
-	SQLName sqlfmt.Safe // escaped SQL name, e.g. "id"
-	GoName  string      // struct field name, e.g. Id
+	Name    string // SQL name, .e.g. id
+	SQLName Safe   // escaped SQL name, e.g. "id"
+	GoName  string // struct field name, e.g. Id
 
 	DiscoveredSQLType  string
 	UserSQLType        string
@@ -32,7 +32,7 @@ type Field struct {
 	NullZero      bool
 	AutoIncrement bool
 
-	Append sqlfmt.AppenderFunc
+	Append AppenderFunc
 	Scan   ScannerFunc
 	IsZero IsZeroerFunc
 }
@@ -64,14 +64,14 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	return f.IsZero(v)
 }
 
-func (f *Field) AppendValue(fmter sqlfmt.Formatter, b []byte, strct reflect.Value) []byte {
+func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []byte {
 	fv, ok := fieldByIndex(strct, f.Index)
 	if !ok {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 
 	if f.NullZero && f.IsZero(fv) {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 	if f.Append == nil {
 		panic(fmt.Errorf("bun: AppendValue(unsupported %s)", fv.Type()))

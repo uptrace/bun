@@ -9,7 +9,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -152,7 +152,7 @@ func eventQuery(event *bun.QueryEvent, operation string) string {
 }
 
 func unformattedQuery(event *bun.QueryEvent) string {
-	if b, err := event.QueryAppender.AppendQuery(sqlfmt.NewNopFormatter(), nil); err == nil {
+	if b, err := event.QueryAppender.AppendQuery(schema.NewNopFormatter(), nil); err == nil {
 		return bytesToString(b)
 	}
 	return string(event.Query)

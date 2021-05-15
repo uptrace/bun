@@ -6,13 +6,12 @@ import (
 	"reflect"
 
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type ArrayValue struct {
 	v reflect.Value
 
-	append sqlfmt.AppenderFunc
+	append schema.AppenderFunc
 	scan   schema.ScannerFunc
 }
 
@@ -37,11 +36,11 @@ func Array(vi interface{}) *ArrayValue {
 }
 
 var (
-	_ sqlfmt.QueryAppender = (*ArrayValue)(nil)
+	_ schema.QueryAppender = (*ArrayValue)(nil)
 	_ sql.Scanner          = (*ArrayValue)(nil)
 )
 
-func (a *ArrayValue) AppendQuery(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
+func (a *ArrayValue) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
 	if a.append == nil {
 		panic(fmt.Errorf("bun: Array(unsupported %s)", a.v.Type()))
 	}

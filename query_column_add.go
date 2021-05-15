@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type AddColumnQuery struct {
@@ -36,31 +36,31 @@ func (q *AddColumnQuery) Model(model interface{}) *AddColumnQuery {
 
 func (q *AddColumnQuery) Table(tables ...string) *AddColumnQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *AddColumnQuery) TableExpr(query string, args ...interface{}) *AddColumnQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *AddColumnQuery) ModelTableExpr(query string, args ...interface{}) *AddColumnQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
 func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColumnQuery {
-	q.addColumn(sqlfmt.SafeQuery(query, args))
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

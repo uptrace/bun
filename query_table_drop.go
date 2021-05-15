@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type DropTableQuery struct {
@@ -38,13 +38,13 @@ func (q *DropTableQuery) Model(model interface{}) *DropTableQuery {
 
 func (q *DropTableQuery) Table(tables ...string) *DropTableQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *DropTableQuery) TableExpr(query string, args ...interface{}) *DropTableQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -62,7 +62,7 @@ func (q *DropTableQuery) Restrict() *DropTableQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *DropTableQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

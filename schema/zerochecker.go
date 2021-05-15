@@ -5,10 +5,7 @@ import (
 	"reflect"
 )
 
-var (
-	driverValuerType = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
-	isZeroerType     = reflect.TypeOf((*isZeroer)(nil)).Elem()
-)
+var isZeroerType = reflect.TypeOf((*isZeroer)(nil)).Elem()
 
 type isZeroer interface {
 	IsZero() bool

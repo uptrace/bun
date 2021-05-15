@@ -1,17 +1,16 @@
-package sqlfmt
+package schema
 
 import (
 	"bytes"
 	"fmt"
-	"math"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal/parser"
 )
-
-var defaultFmter = NewFormatter(feature.DefaultFeatures)
 
 type ArgAppender interface {
 	AppendArg(fmter Formatter, b []byte, name string) ([]byte, bool)
@@ -22,6 +21,7 @@ type namedArg struct {
 	value interface{}
 }
 
+// TODO: try linked list
 type namedArgs []namedArg
 
 func (args namedArgs) Get(name string) (interface{}, bool) {
@@ -34,21 +34,19 @@ func (args namedArgs) Get(name string) (interface{}, bool) {
 }
 
 type Formatter struct {
-	features  feature.Feature
+	dialect   Dialect
 	model     ArgAppender
 	namedArgs namedArgs
 }
 
-func NewFormatter(features feature.Feature) Formatter {
+func NewFormatter(dialect Dialect) Formatter {
 	return Formatter{
-		features: features,
+		dialect: dialect,
 	}
 }
 
 func NewNopFormatter() Formatter {
-	return Formatter{
-		features: math.MaxUint64,
-	}
+	return Formatter{}
 }
 
 func (f Formatter) String() string {
@@ -64,7 +62,31 @@ func (f Formatter) String() string {
 }
 
 func (f Formatter) IsNop() bool {
-	return f.features == math.MaxUint64
+	return f.dialect == nil
+}
+
+func (f Formatter) Dialect() Dialect {
+	return f.dialect
+}
+
+func (f Formatter) IdentQuote() byte {
+	return f.dialect.IdentQuote()
+}
+
+func (f Formatter) AppendIdent(b []byte, ident string) []byte {
+	return dialect.AppendIdent(b, ident, f.IdentQuote())
+}
+
+func (f Formatter) AppendValue(b []byte, v reflect.Value) []byte {
+	if v.Kind() == reflect.Ptr && v.IsNil() {
+		return dialect.AppendNull(b)
+	}
+	appender := f.dialect.Appender(v.Type())
+	return appender(f, b, v)
+}
+
+func (f Formatter) HasFeature(feature feature.Feature) bool {
+	return f.dialect.Features().Has(feature)
 }
 
 func (f Formatter) clone() Formatter {
@@ -188,14 +210,10 @@ func (f Formatter) appendArg(b []byte, arg interface{}) []byte {
 	case QueryAppender:
 		bb, err := arg.AppendQuery(f, b)
 		if err != nil {
-			return AppendError(b, err)
+			return dialect.AppendError(b, err)
 		}
 		return bb
 	default:
 		return Append(f, b, arg)
 	}
-}
-
-func (f Formatter) HasFeature(v feature.Feature) bool {
-	return f.features.Has(v)
 }

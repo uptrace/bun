@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type mapModel struct {
@@ -111,7 +110,7 @@ func (m *mapModel) scanRaw(src interface{}) error {
 	return nil
 }
 
-func (m *mapModel) appendColumnsValues(fmter sqlfmt.Formatter, b []byte) []byte {
+func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -125,7 +124,7 @@ func (m *mapModel) appendColumnsValues(fmter sqlfmt.Formatter, b []byte) []byte 
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = sqlfmt.AppendIdent(fmter, b, k)
+		b = fmter.AppendIdent(b, k)
 	}
 
 	b = append(b, ") VALUES ("...)
@@ -138,7 +137,7 @@ func (m *mapModel) appendColumnsValues(fmter sqlfmt.Formatter, b []byte) []byte 
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = sqlfmt.Append(fmter, b, m.m[k])
+			b = schema.Append(fmter, b, m.m[k])
 		}
 	}
 
@@ -147,7 +146,7 @@ func (m *mapModel) appendColumnsValues(fmter sqlfmt.Formatter, b []byte) []byte 
 	return b
 }
 
-func (m *mapModel) appendSet(fmter sqlfmt.Formatter, b []byte) []byte {
+func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -161,12 +160,12 @@ func (m *mapModel) appendSet(fmter sqlfmt.Formatter, b []byte) []byte {
 			b = append(b, ", "...)
 		}
 
-		b = sqlfmt.AppendIdent(fmter, b, k)
+		b = fmter.AppendIdent(b, k)
 		b = append(b, " = "...)
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = sqlfmt.Append(fmter, b, m.m[k])
+			b = schema.Append(fmter, b, m.m[k])
 		}
 	}
 

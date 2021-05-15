@@ -6,7 +6,7 @@ import (
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type UpdateQuery struct {
@@ -45,7 +45,7 @@ func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
 	return fn(q)
 }
 
-func (q *UpdateQuery) With(name string, query sqlfmt.QueryAppender) *UpdateQuery {
+func (q *UpdateQuery) With(name string, query schema.QueryAppender) *UpdateQuery {
 	q.addWith(name, query)
 	return q
 }
@@ -54,18 +54,18 @@ func (q *UpdateQuery) With(name string, query sqlfmt.QueryAppender) *UpdateQuery
 
 func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *UpdateQuery) TableExpr(query string, args ...interface{}) *UpdateQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *UpdateQuery) ModelTableExpr(query string, args ...interface{}) *UpdateQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -73,13 +73,13 @@ func (q *UpdateQuery) ModelTableExpr(query string, args ...interface{}) *UpdateQ
 
 func (q *UpdateQuery) Column(columns ...string) *UpdateQuery {
 	for _, column := range columns {
-		q.addColumn(sqlfmt.UnsafeIdent(column))
+		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
-	q.addSet(sqlfmt.SafeQuery(query, args))
+	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -96,12 +96,12 @@ func (q *UpdateQuery) Value(column string, value string, args ...interface{}) *U
 //------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Where(query string, args ...interface{}) *UpdateQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *UpdateQuery) WhereOr(query string, args ...interface{}) *UpdateQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
@@ -135,7 +135,7 @@ func (q *UpdateQuery) WhereAllWithDeleted() *UpdateQuery {
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *UpdateQuery) Returning(query string, args ...interface{}) *UpdateQuery {
-	q.addReturning(sqlfmt.SafeQuery(query, args))
+	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -148,7 +148,7 @@ func (q *UpdateQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -190,7 +190,7 @@ func (q *UpdateQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, e
 	return b, nil
 }
 
-func (q *UpdateQuery) mustAppendSet(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.set) > 0 {
 		return q.appendSet(fmter, b)
 	}
@@ -219,7 +219,7 @@ func (q *UpdateQuery) mustAppendSet(fmter sqlfmt.Formatter, b []byte) (_ []byte,
 }
 
 func (q *UpdateQuery) appendSetStruct(
-	fmter sqlfmt.Formatter, b []byte, model *structTableModel,
+	fmter schema.Formatter, b []byte, model *structTableModel,
 ) ([]byte, error) {
 	fields, err := q.getDataFields()
 	if err != nil {
@@ -274,9 +274,7 @@ func (q *UpdateQuery) appendSetStruct(
 	return b, nil
 }
 
-func (q *UpdateQuery) appendOtherTables(
-	fmter sqlfmt.Formatter, b []byte,
-) (_ []byte, err error) {
+func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if !q.hasMultiTables() {
 		return b, nil
 	}

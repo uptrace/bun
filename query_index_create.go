@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type CreateIndexQuery struct {
@@ -16,9 +16,9 @@ type CreateIndexQuery struct {
 	concurrently bool
 	ifNotExists  bool
 
-	index   sqlfmt.QueryWithArgs
-	using   sqlfmt.QueryWithArgs
-	include []sqlfmt.QueryWithArgs
+	index   schema.QueryWithArgs
+	using   schema.QueryWithArgs
+	include []schema.QueryWithArgs
 }
 
 func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
@@ -61,7 +61,7 @@ func (q *CreateIndexQuery) IfNotExists() *CreateIndexQuery {
 //------------------------------------------------------------------------------
 
 func (q *CreateIndexQuery) Index(query string, args ...interface{}) *CreateIndexQuery {
-	q.index = sqlfmt.SafeQuery(query, args)
+	q.index = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -69,23 +69,23 @@ func (q *CreateIndexQuery) Index(query string, args ...interface{}) *CreateIndex
 
 func (q *CreateIndexQuery) Table(tables ...string) *CreateIndexQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *CreateIndexQuery) TableExpr(query string, args ...interface{}) *CreateIndexQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *CreateIndexQuery) ModelTableExpr(query string, args ...interface{}) *CreateIndexQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
 func (q *CreateIndexQuery) Using(query string, args ...interface{}) *CreateIndexQuery {
-	q.using = sqlfmt.SafeQuery(query, args)
+	q.using = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -93,13 +93,13 @@ func (q *CreateIndexQuery) Using(query string, args ...interface{}) *CreateIndex
 
 func (q *CreateIndexQuery) Column(columns ...string) *CreateIndexQuery {
 	for _, column := range columns {
-		q.addColumn(sqlfmt.UnsafeIdent(column))
+		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *CreateIndexQuery) ColumnExpr(query string, args ...interface{}) *CreateIndexQuery {
-	q.addColumn(sqlfmt.SafeQuery(query, args))
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -112,25 +112,25 @@ func (q *CreateIndexQuery) ExcludeColumn(columns ...string) *CreateIndexQuery {
 
 func (q *CreateIndexQuery) Include(columns ...string) *CreateIndexQuery {
 	for _, column := range columns {
-		q.include = append(q.include, sqlfmt.UnsafeIdent(column))
+		q.include = append(q.include, schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *CreateIndexQuery) IncludeExpr(query string, args ...interface{}) *CreateIndexQuery {
-	q.include = append(q.include, sqlfmt.SafeQuery(query, args))
+	q.include = append(q.include, schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
 func (q *CreateIndexQuery) Where(query string, args ...interface{}) *CreateIndexQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *CreateIndexQuery) WhereOr(query string, args ...interface{}) *CreateIndexQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
@@ -141,7 +141,7 @@ func (q *CreateIndexQuery) WhereGroup(sep string, fn func(*WhereQuery)) *CreateI
 
 //------------------------------------------------------------------------------
 
-func (q *CreateIndexQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

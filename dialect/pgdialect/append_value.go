@@ -5,19 +5,22 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/schema"
 )
 
-func appendValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+func appendValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 	appender := appender(v.Type(), false)
 	return appender(fmter, b, v)
 }
 
-func appender(typ reflect.Type, pgArray bool) sqlfmt.AppenderFunc {
+func appender(typ reflect.Type, pgArray bool) schema.AppenderFunc {
 	switch typ.Kind() {
+	case reflect.Uint32, reflect.Uint64:
+		return schema.AppendIntValue
 	case reflect.Ptr:
 		return ptrAppenderFunc(typ, pgArray)
 	case reflect.Slice:
@@ -25,14 +28,14 @@ func appender(typ reflect.Type, pgArray bool) sqlfmt.AppenderFunc {
 			return arrayAppender(typ)
 		}
 	}
-	return sqlfmt.Appender(typ)
+	return schema.Appender(typ)
 }
 
-func ptrAppenderFunc(typ reflect.Type, pgArray bool) sqlfmt.AppenderFunc {
+func ptrAppenderFunc(typ reflect.Type, pgArray bool) schema.AppenderFunc {
 	appender := appender(typ.Elem(), pgArray)
-	return func(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
-			return sqlfmt.AppendNull(b)
+			return dialect.AppendNull(b)
 		}
 		return appender(fmter, b, v.Elem())
 	}
@@ -54,7 +57,7 @@ var (
 	sliceFloat64Type = reflect.TypeOf([]float64(nil))
 )
 
-func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
+func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()
 	if kind == reflect.Ptr {
 		typ = typ.Elem()
@@ -83,13 +86,13 @@ func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
 		}
 	}
 
-	appendElem := sqlfmt.Appender(elemType)
-	return func(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+	appendElem := schema.Appender(elemType)
+	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 		kind := v.Kind()
 		switch kind {
 		case reflect.Ptr, reflect.Slice:
 			if v.IsNil() {
-				return sqlfmt.AppendNull(b)
+				return dialect.AppendNull(b)
 			}
 		}
 
@@ -117,14 +120,14 @@ func arrayAppender(typ reflect.Type) sqlfmt.AppenderFunc {
 	}
 }
 
-func appendStringSliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+func appendStringSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	ss := v.Convert(sliceStringType).Interface().([]string)
 	return appendStringSlice(b, ss)
 }
 
 func appendStringSlice(b []byte, ss []string) []byte {
 	if ss == nil {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 
 	b = append(b, '\'')
@@ -145,14 +148,14 @@ func appendStringSlice(b []byte, ss []string) []byte {
 	return b
 }
 
-func appendIntSliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+func appendIntSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	ints := v.Convert(sliceIntType).Interface().([]int)
 	return appendIntSlice(b, ints)
 }
 
 func appendIntSlice(b []byte, ints []int) []byte {
 	if ints == nil {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 
 	b = append(b, '\'')
@@ -173,14 +176,14 @@ func appendIntSlice(b []byte, ints []int) []byte {
 	return b
 }
 
-func appendInt64SliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+func appendInt64SliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	ints := v.Convert(sliceInt64Type).Interface().([]int64)
 	return appendInt64Slice(b, ints)
 }
 
 func appendInt64Slice(b []byte, ints []int64) []byte {
 	if ints == nil {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 
 	b = append(b, '\'')
@@ -201,21 +204,21 @@ func appendInt64Slice(b []byte, ints []int64) []byte {
 	return b
 }
 
-func appendFloat64SliceValue(fmter sqlfmt.Formatter, b []byte, v reflect.Value) []byte {
+func appendFloat64SliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	floats := v.Convert(sliceFloat64Type).Interface().([]float64)
 	return appendFloat64Slice(b, floats)
 }
 
 func appendFloat64Slice(b []byte, floats []float64) []byte {
 	if floats == nil {
-		return sqlfmt.AppendNull(b)
+		return dialect.AppendNull(b)
 	}
 
 	b = append(b, '\'')
 
 	b = append(b, '{')
 	for _, n := range floats {
-		b = sqlfmt.AppendFloat64(b, n)
+		b = dialect.AppendFloat64(b, n)
 		b = append(b, ',')
 	}
 	if len(floats) > 0 {

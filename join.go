@@ -6,7 +6,6 @@ import (
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type join struct {
@@ -16,7 +15,7 @@ type join struct {
 	Relation  *schema.Relation
 
 	ApplyQueryFunc func(*SelectQuery) *SelectQuery
-	columns        []sqlfmt.QueryWithArgs
+	columns        []schema.QueryWithArgs
 }
 
 func (j *join) applyQuery(q *SelectQuery) {
@@ -25,7 +24,7 @@ func (j *join) applyQuery(q *SelectQuery) {
 	}
 
 	var table *schema.Table
-	var columns []sqlfmt.QueryWithArgs
+	var columns []schema.QueryWithArgs
 
 	// Save state.
 	table, q.table = q.table, j.JoinModel.Table()
@@ -187,8 +186,8 @@ func (j *join) hasParent() bool {
 	return false
 }
 
-func (j *join) appendAlias(fmter sqlfmt.Formatter, b []byte) []byte {
-	quote := sqlfmt.IdentQuote(fmter)
+func (j *join) appendAlias(fmter schema.Formatter, b []byte) []byte {
+	quote := fmter.IdentQuote()
 
 	b = append(b, quote)
 	b = appendAlias(b, j)
@@ -196,8 +195,8 @@ func (j *join) appendAlias(fmter sqlfmt.Formatter, b []byte) []byte {
 	return b
 }
 
-func (j *join) appendAliasColumn(fmter sqlfmt.Formatter, b []byte, column string) []byte {
-	quote := sqlfmt.IdentQuote(fmter)
+func (j *join) appendAliasColumn(fmter schema.Formatter, b []byte, column string) []byte {
+	quote := fmter.IdentQuote()
 
 	b = append(b, quote)
 	b = appendAlias(b, j)
@@ -207,8 +206,8 @@ func (j *join) appendAliasColumn(fmter sqlfmt.Formatter, b []byte, column string
 	return b
 }
 
-func (j *join) appendBaseAlias(fmter sqlfmt.Formatter, b []byte) []byte {
-	quote := sqlfmt.IdentQuote(fmter)
+func (j *join) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
+	quote := fmter.IdentQuote()
 
 	if j.hasParent() {
 		b = append(b, quote)
@@ -240,7 +239,7 @@ func appendAlias(b []byte, j *join) []byte {
 }
 
 func (j *join) appendHasOneJoin(
-	fmter sqlfmt.Formatter, b []byte, q *SelectQuery,
+	fmter schema.Formatter, b []byte, q *SelectQuery,
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
@@ -276,7 +275,7 @@ func (j *join) appendHasOneJoin(
 }
 
 func appendChildValues(
-	fmter sqlfmt.Formatter, b []byte, v reflect.Value, index []int, fields []*schema.Field,
+	fmter schema.Formatter, b []byte, v reflect.Value, index []int, fields []*schema.Field,
 ) []byte {
 	seen := make(map[string]struct{})
 	walk(v, index, func(v reflect.Value) {

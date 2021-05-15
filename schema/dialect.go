@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"reflect"
+
 	"github.com/uptrace/bun/dialect/feature"
 )
 
@@ -12,4 +14,7 @@ type Dialect interface {
 
 	OnField(field *Field)
 	OnTable(table *Table)
+
+	IdentQuote() byte
+	Appender(typ reflect.Type) AppenderFunc
 }

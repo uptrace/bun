@@ -10,7 +10,6 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 const (
@@ -21,7 +20,7 @@ const (
 
 type withQuery struct {
 	name  string
-	query sqlfmt.QueryAppender
+	query schema.QueryAppender
 }
 
 type DBI interface {
@@ -40,9 +39,9 @@ type baseQuery struct {
 	table      *schema.Table
 
 	with       []withQuery
-	modelTable sqlfmt.QueryWithArgs
-	tables     []sqlfmt.QueryWithArgs
-	columns    []sqlfmt.QueryWithArgs
+	modelTable schema.QueryWithArgs
+	tables     []schema.QueryWithArgs
+	columns    []schema.QueryWithArgs
 
 	flags internal.Flag
 }
@@ -118,14 +117,14 @@ func (q *baseQuery) isSoftDelete() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) addWith(name string, query sqlfmt.QueryAppender) {
+func (q *baseQuery) addWith(name string, query schema.QueryAppender) {
 	q.with = append(q.with, withQuery{
 		name:  name,
 		query: query,
 	})
 }
 
-func (q *baseQuery) appendWith(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *baseQuery) appendWith(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.with) == 0 {
 		return b, nil
 	}
@@ -136,8 +135,8 @@ func (q *baseQuery) appendWith(fmter sqlfmt.Formatter, b []byte) (_ []byte, err 
 			b = append(b, ", "...)
 		}
 
-		b = sqlfmt.AppendIdent(fmter, b, with.name)
-		if q, ok := with.query.(sqlfmt.ColumnsAppender); ok {
+		b = fmter.AppendIdent(b, with.name)
+		if q, ok := with.query.(schema.ColumnsAppender); ok {
 			b = append(b, " ("...)
 			b, err = q.AppendColumns(fmter, b)
 			if err != nil {
@@ -161,23 +160,23 @@ func (q *baseQuery) appendWith(fmter sqlfmt.Formatter, b []byte) (_ []byte, err 
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) addTable(table sqlfmt.QueryWithArgs) {
+func (q *baseQuery) addTable(table schema.QueryWithArgs) {
 	q.tables = append(q.tables, table)
 }
 
-func (q *baseQuery) addColumn(column sqlfmt.QueryWithArgs) {
+func (q *baseQuery) addColumn(column schema.QueryWithArgs) {
 	q.columns = append(q.columns, column)
 }
 
 func (q *baseQuery) excludeColumn(columns []string) {
 	if q.columns == nil {
 		for _, f := range q.table.Fields {
-			q.columns = append(q.columns, sqlfmt.UnsafeIdent(f.Name))
+			q.columns = append(q.columns, schema.UnsafeIdent(f.Name))
 		}
 	}
 
 	if len(columns) == 1 && columns[0] == "*" {
-		q.columns = make([]sqlfmt.QueryWithArgs, 0)
+		q.columns = make([]schema.QueryWithArgs, 0)
 		return
 	}
 
@@ -210,19 +209,19 @@ func (q *baseQuery) hasTables() bool {
 }
 
 func (q *baseQuery) appendTables(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	return q._appendTables(fmter, b, false)
 }
 
 func (q *baseQuery) appendTablesWithAlias(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	return q._appendTables(fmter, b, true)
 }
 
 func (q *baseQuery) _appendTables(
-	fmter sqlfmt.Formatter, b []byte, withAlias bool,
+	fmter schema.Formatter, b []byte, withAlias bool,
 ) (_ []byte, err error) {
 	startLen := len(b)
 
@@ -254,18 +253,18 @@ func (q *baseQuery) _appendTables(
 	return b, nil
 }
 
-func (q *baseQuery) appendFirstTable(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
+func (q *baseQuery) appendFirstTable(fmter schema.Formatter, b []byte) ([]byte, error) {
 	return q._appendFirstTable(fmter, b, false)
 }
 
 func (q *baseQuery) appendFirstTableWithAlias(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) ([]byte, error) {
 	return q._appendFirstTable(fmter, b, true)
 }
 
 func (q *baseQuery) _appendFirstTable(
-	fmter sqlfmt.Formatter, b []byte, withAlias bool,
+	fmter schema.Formatter, b []byte, withAlias bool,
 ) ([]byte, error) {
 	if !q.modelTable.IsZero() {
 		return q.modelTable.AppendQuery(fmter, b)
@@ -294,7 +293,7 @@ func (q *baseQuery) hasMultiTables() bool {
 	return len(q.tables) >= 2
 }
 
-func (q *baseQuery) appendOtherTables(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *baseQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	tables := q.tables
 	if !q.modelHasTableName() {
 		tables = tables[1:]
@@ -313,7 +312,7 @@ func (q *baseQuery) appendOtherTables(fmter sqlfmt.Formatter, b []byte) (_ []byt
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *baseQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	for i, f := range q.columns {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -371,7 +370,7 @@ func (q *baseQuery) _getFields(omitPK bool) ([]*schema.Field, error) {
 
 func (q *baseQuery) scan(
 	ctx context.Context,
-	queryApp sqlfmt.QueryAppender,
+	queryApp schema.QueryAppender,
 	query string,
 	dest []interface{},
 ) (res Result, _ error) {
@@ -403,7 +402,7 @@ func (q *baseQuery) scan(
 
 func (q *baseQuery) exec(
 	ctx context.Context,
-	queryApp sqlfmt.QueryAppender,
+	queryApp schema.QueryAppender,
 	query string,
 ) (res Result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
@@ -422,7 +421,7 @@ func (q *baseQuery) exec(
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) AppendArg(fmter sqlfmt.Formatter, b []byte, name string) ([]byte, bool) {
+func (q *baseQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
 	if q.table == nil {
 		return b, false
 	}
@@ -451,7 +450,7 @@ func (q *baseQuery) AppendArg(fmter sqlfmt.Formatter, b []byte, name string) ([]
 	return b, false
 }
 
-func appendColumns(b []byte, table sqlfmt.Safe, fields []*schema.Field) []byte {
+func appendColumns(b []byte, table schema.Safe, fields []*schema.Field) []byte {
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -467,8 +466,8 @@ func appendColumns(b []byte, table sqlfmt.Safe, fields []*schema.Field) []byte {
 }
 
 func formatterWithModel(
-	fmter sqlfmt.Formatter, model sqlfmt.ArgAppender,
-) sqlfmt.Formatter {
+	fmter schema.Formatter, model schema.ArgAppender,
+) schema.Formatter {
 	if fmter.IsNop() {
 		return fmter
 	}
@@ -478,20 +477,20 @@ func formatterWithModel(
 //------------------------------------------------------------------------------
 
 type WhereQuery struct {
-	where []sqlfmt.QueryWithSep
+	where []schema.QueryWithSep
 }
 
 func (q *WhereQuery) Where(query string, args ...interface{}) *WhereQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *WhereQuery) WhereOr(query string, args ...interface{}) *WhereQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
-func (q *WhereQuery) addWhere(where sqlfmt.QueryWithSep) {
+func (q *WhereQuery) addWhere(where schema.QueryWithSep) {
 	q.where = append(q.where, where)
 }
 
@@ -506,9 +505,9 @@ func (q *WhereQuery) addWhereGroup(sep string, fn func(*WhereQuery)) {
 	if len(q2.where) > 0 {
 		q2.where[0].Sep = ""
 
-		q.addWhere(sqlfmt.SafeQueryWithSep("", nil, sep+"("))
+		q.addWhere(schema.SafeQueryWithSep("", nil, sep+"("))
 		q.where = append(q.where, q2.where...)
-		q.addWhere(sqlfmt.SafeQueryWithSep("", nil, ")"))
+		q.addWhere(schema.SafeQueryWithSep("", nil, ")"))
 	}
 }
 
@@ -519,7 +518,7 @@ type whereBaseQuery struct {
 	WhereQuery
 }
 
-func (q *whereBaseQuery) mustAppendWhere(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
+func (q *whereBaseQuery) mustAppendWhere(fmter schema.Formatter, b []byte) ([]byte, error) {
 	if len(q.where) == 0 && !q.flags.Has(wherePKFlag) {
 		err := errors.New(
 			"bun: Update and Delete queries require Where clause (try WherePK)")
@@ -528,7 +527,7 @@ func (q *whereBaseQuery) mustAppendWhere(fmter sqlfmt.Formatter, b []byte) ([]by
 	return q.appendWhere(fmter, b)
 }
 
-func (q *whereBaseQuery) appendWhere(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.where) == 0 && !q.isSoftDelete() && !q.flags.Has(wherePKFlag) {
 		return b, nil
 	}
@@ -565,7 +564,7 @@ func (q *whereBaseQuery) appendWhere(fmter sqlfmt.Formatter, b []byte) (_ []byte
 }
 
 func (q *whereBaseQuery) _appendWhere(
-	fmter sqlfmt.Formatter, b []byte, where []sqlfmt.QueryWithSep,
+	fmter schema.Formatter, b []byte, where []schema.QueryWithSep,
 ) (_ []byte, err error) {
 	for i, where := range where {
 		if i > 0 {
@@ -598,7 +597,7 @@ func (q *whereBaseQuery) appendWhereSoftDelete(b []byte) []byte {
 }
 
 func (q *whereBaseQuery) appendWherePK(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if err := q.table.CheckPKs(); err != nil {
 		return nil, err
@@ -615,7 +614,7 @@ func (q *whereBaseQuery) appendWherePK(
 }
 
 func (q *whereBaseQuery) appendWherePKStruct(
-	fmter sqlfmt.Formatter, b []byte, model *structTableModel,
+	fmter schema.Formatter, b []byte, model *structTableModel,
 ) (_ []byte, err error) {
 	isTemplate := fmter.IsNop()
 	b = append(b, '(')
@@ -638,7 +637,7 @@ func (q *whereBaseQuery) appendWherePKStruct(
 }
 
 func (q *whereBaseQuery) appendWherePKSlice(
-	fmter sqlfmt.Formatter, b []byte, model *sliceTableModel,
+	fmter schema.Formatter, b []byte, model *sliceTableModel,
 ) (_ []byte, err error) {
 	if len(q.table.PKs) > 1 {
 		b = append(b, '(')
@@ -689,11 +688,11 @@ func (q *whereBaseQuery) appendWherePKSlice(
 //------------------------------------------------------------------------------
 
 type returningQuery struct {
-	returning       []sqlfmt.QueryWithArgs
+	returning       []schema.QueryWithArgs
 	returningFields []*schema.Field
 }
 
-func (q *returningQuery) addReturning(ret sqlfmt.QueryWithArgs) {
+func (q *returningQuery) addReturning(ret schema.QueryWithArgs) {
 	q.returning = append(q.returning, ret)
 }
 
@@ -720,7 +719,7 @@ func (q *returningQuery) hasReturning() bool {
 }
 
 func (q *returningQuery) appendReturning(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if !q.hasReturning() {
 		return b, nil
@@ -750,11 +749,11 @@ func (q *returningQuery) appendReturning(
 
 type columnValue struct {
 	column string
-	value  sqlfmt.QueryWithArgs
+	value  schema.QueryWithArgs
 }
 
 type customValueQuery struct {
-	modelValues map[string]sqlfmt.QueryWithArgs
+	modelValues map[string]schema.QueryWithArgs
 	extraValues []columnValue
 }
 
@@ -763,13 +762,13 @@ func (q *customValueQuery) addValue(
 ) {
 	if _, ok := table.FieldMap[column]; ok {
 		if q.modelValues == nil {
-			q.modelValues = make(map[string]sqlfmt.QueryWithArgs)
+			q.modelValues = make(map[string]schema.QueryWithArgs)
 		}
-		q.modelValues[column] = sqlfmt.SafeQuery(value, args)
+		q.modelValues[column] = schema.SafeQuery(value, args)
 	} else {
 		q.extraValues = append(q.extraValues, columnValue{
 			column: column,
-			value:  sqlfmt.SafeQuery(value, args),
+			value:  schema.SafeQuery(value, args),
 		})
 	}
 }
@@ -777,14 +776,14 @@ func (q *customValueQuery) addValue(
 //------------------------------------------------------------------------------
 
 type setQuery struct {
-	set []sqlfmt.QueryWithArgs
+	set []schema.QueryWithArgs
 }
 
-func (q *setQuery) addSet(set sqlfmt.QueryWithArgs) {
+func (q *setQuery) addSet(set schema.QueryWithArgs) {
 	q.set = append(q.set, set)
 }
 
-func (q setQuery) appendSet(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " SET "...)
 	for i, f := range q.set {
 		if i > 0 {
@@ -804,7 +803,7 @@ type cascadeQuery struct {
 	restrict bool
 }
 
-func (q cascadeQuery) appendCascade(fmter sqlfmt.Formatter, b []byte) []byte {
+func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 	if !fmter.HasFeature(feature.TableCascade) {
 		return b
 	}

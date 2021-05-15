@@ -1,50 +1,15 @@
-package sqlfmt
+package dialect
 
 import (
 	"encoding/hex"
 	"math"
-	"reflect"
 	"strconv"
 	"time"
 	"unicode/utf8"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/parser"
 )
-
-func Append(fmter Formatter, b []byte, v interface{}) []byte {
-	switch v := v.(type) {
-	case nil:
-		return AppendNull(b)
-	case bool:
-		return AppendBool(b, v)
-	case int:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int32:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int64:
-		return strconv.AppendInt(b, v, 10)
-	case uint:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint32:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint64:
-		return strconv.AppendUint(b, v, 10)
-	case float32:
-		return AppendFloat32(b, v)
-	case float64:
-		return AppendFloat64(b, v)
-	case string:
-		return AppendString(b, v)
-	case time.Time:
-		return AppendTime(b, v)
-	case []byte:
-		return AppendBytes(b, v)
-	case QueryAppender:
-		return appendQueryAppender(fmter, b, v)
-	default:
-		return appendValue(fmter, b, reflect.ValueOf(v))
-	}
-}
 
 func AppendError(b []byte, err error) []byte {
 	b = append(b, "?!("...)
@@ -130,14 +95,6 @@ func AppendBytes(b []byte, bytes []byte) []byte {
 	return b
 }
 
-func appendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
-	bb, err := app.AppendQuery(fmter, b)
-	if err != nil {
-		return AppendError(b, err)
-	}
-	return bb
-}
-
 func AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
 	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
@@ -174,5 +131,46 @@ func AppendJSON(b, jsonb []byte) []byte {
 
 	b = append(b, '\'')
 
+	return b
+}
+
+//------------------------------------------------------------------------------
+
+func AppendIdent(b []byte, field string, quote byte) []byte {
+	return appendIdent(b, internal.Bytes(field), quote)
+}
+
+func appendIdent(b, src []byte, quote byte) []byte {
+	var quoted bool
+loop:
+	for _, c := range src {
+		switch c {
+		case '*':
+			if !quoted {
+				b = append(b, '*')
+				continue loop
+			}
+		case '.':
+			if quoted {
+				b = append(b, quote)
+				quoted = false
+			}
+			b = append(b, '.')
+			continue loop
+		}
+
+		if !quoted {
+			b = append(b, quote)
+			quoted = true
+		}
+		if c == quote {
+			b = append(b, quote, quote)
+		} else {
+			b = append(b, c)
+		}
+	}
+	if quoted {
+		b = append(b, quote)
+	}
 	return b
 }

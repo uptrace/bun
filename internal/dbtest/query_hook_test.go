@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 func TestQueryHook(t *testing.T) {
@@ -31,7 +31,7 @@ func testQueryHook(t *testing.T, db *bun.DB) {
 		) context.Context {
 			require.Equal(t, "SELECT 1 WHERE ('foo' = 'bar')", string(event.Query))
 
-			b, err := event.QueryAppender.AppendQuery(sqlfmt.NewNopFormatter(), nil)
+			b, err := event.QueryAppender.AppendQuery(schema.NewNopFormatter(), nil)
 			require.NoError(t, err)
 			require.Equal(t, "SELECT 1 WHERE (? = ?)", string(b))
 

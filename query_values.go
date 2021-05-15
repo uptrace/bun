@@ -7,7 +7,6 @@ import (
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type ValuesQuery struct {
@@ -38,7 +37,7 @@ func (q *ValuesQuery) WithOrder() *ValuesQuery {
 	return q
 }
 
-func (q *ValuesQuery) AppendArg(fmter sqlfmt.Formatter, b []byte, name string) ([]byte, bool) {
+func (q *ValuesQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
 	switch name {
 	case "Columns":
 		bb, err := q.AppendColumns(fmter, b)
@@ -52,7 +51,7 @@ func (q *ValuesQuery) AppendArg(fmter sqlfmt.Formatter, b []byte, name string) (
 }
 
 // AppendColumns appends the table columns. It is used by CTE.
-func (q *ValuesQuery) AppendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *ValuesQuery) AppendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -83,7 +82,7 @@ func (q *ValuesQuery) AppendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte,
 	return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 }
 
-func (q *ValuesQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -110,7 +109,7 @@ func (q *ValuesQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *ValuesQuery) appendQuery(
-	fmter sqlfmt.Formatter,
+	fmter schema.Formatter,
 	b []byte,
 	fields []*schema.Field,
 ) (_ []byte, err error) {
@@ -160,7 +159,7 @@ func (q *ValuesQuery) appendQuery(
 }
 
 func (q *ValuesQuery) appendValues(
-	fmter sqlfmt.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
+	fmter schema.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
 ) (_ []byte, err error) {
 	isTemplate := fmter.IsNop()
 	for i, f := range fields {

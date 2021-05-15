@@ -12,7 +12,6 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 const (
@@ -36,7 +35,7 @@ type DB struct {
 
 	queryHooks []QueryHook
 
-	fmter sqlfmt.Formatter
+	fmter schema.Formatter
 	flags internal.Flag
 
 	stats DBStats
@@ -47,7 +46,7 @@ func Open(sqldb *sql.DB, dialect schema.Dialect, opts ...ConfigOption) *DB {
 		DB:       sqldb,
 		dialect:  dialect,
 		features: dialect.Features(),
-		fmter:    sqlfmt.NewFormatter(dialect.Features()),
+		fmter:    schema.NewFormatter(dialect),
 	}
 
 	for _, opt := range opts {
@@ -175,7 +174,7 @@ func (db *DB) clone() *DB {
 	return &clone
 }
 
-func (db *DB) Formatter() sqlfmt.Formatter {
+func (db *DB) Formatter() schema.Formatter {
 	return db.fmter
 }
 

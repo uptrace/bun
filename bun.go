@@ -6,23 +6,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type (
-	Safe  = sqlfmt.Safe
-	Ident = sqlfmt.Ident
+	Safe  = schema.Safe
+	Ident = schema.Ident
 )
 
 type BaseModel struct{}
-
-func In(slice interface{}) sqlfmt.InValues {
-	return sqlfmt.In(slice)
-}
 
 type (
 	BeforeScanHook   = schema.BeforeScanHook
@@ -97,7 +94,7 @@ var (
 	_ json.Marshaler       = (*NullTime)(nil)
 	_ json.Unmarshaler     = (*NullTime)(nil)
 	_ sql.Scanner          = (*NullTime)(nil)
-	_ sqlfmt.QueryAppender = (*NullTime)(nil)
+	_ schema.QueryAppender = (*NullTime)(nil)
 )
 
 func (tm NullTime) MarshalJSON() ([]byte, error) {
@@ -115,11 +112,11 @@ func (tm *NullTime) UnmarshalJSON(b []byte) error {
 	return tm.Time.UnmarshalJSON(b)
 }
 
-func (tm NullTime) AppendQuery(fmter sqlfmt.Formatter, b []byte) ([]byte, error) {
+func (tm NullTime) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
 	if tm.IsZero() {
-		return sqlfmt.AppendNull(b), nil
+		return dialect.AppendNull(b), nil
 	}
-	return sqlfmt.AppendTime(b, tm.Time), nil
+	return dialect.AppendTime(b, tm.Time), nil
 }
 
 func (tm *NullTime) Scan(src interface{}) error {
@@ -143,4 +140,55 @@ func (tm *NullTime) Scan(src interface{}) error {
 	default:
 		return fmt.Errorf("bun: can't scan %#v into NullTime", src)
 	}
+}
+
+//------------------------------------------------------------------------------
+
+type InValues struct {
+	slice reflect.Value
+	err   error
+}
+
+var _ schema.QueryAppender = InValues{}
+
+func In(slice interface{}) InValues {
+	v := reflect.ValueOf(slice)
+	if v.Kind() != reflect.Slice {
+		return InValues{
+			err: fmt.Errorf("bun: In(non-slice %T)", slice),
+		}
+	}
+	return InValues{
+		slice: v,
+	}
+}
+
+func (in InValues) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if in.err != nil {
+		return nil, in.err
+	}
+	return appendIn(fmter, b, in.slice), nil
+}
+
+func appendIn(fmter schema.Formatter, b []byte, slice reflect.Value) []byte {
+	sliceLen := slice.Len()
+	for i := 0; i < sliceLen; i++ {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+
+		elem := slice.Index(i)
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		if elem.Kind() == reflect.Slice {
+			b = append(b, '(')
+			b = appendIn(fmter, b, elem)
+			b = append(b, ')')
+		} else {
+			b = fmter.AppendValue(b, elem)
+		}
+	}
+	return b
 }

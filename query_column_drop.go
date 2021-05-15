@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type DropColumnQuery struct {
@@ -36,18 +36,18 @@ func (q *DropColumnQuery) Model(model interface{}) *DropColumnQuery {
 
 func (q *DropColumnQuery) Table(tables ...string) *DropColumnQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *DropColumnQuery) TableExpr(query string, args ...interface{}) *DropColumnQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *DropColumnQuery) ModelTableExpr(query string, args ...interface{}) *DropColumnQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -55,19 +55,19 @@ func (q *DropColumnQuery) ModelTableExpr(query string, args ...interface{}) *Dro
 
 func (q *DropColumnQuery) Column(columns ...string) *DropColumnQuery {
 	for _, column := range columns {
-		q.addColumn(sqlfmt.UnsafeIdent(column))
+		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropColumnQuery {
-	q.addColumn(sqlfmt.SafeQuery(query, args))
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *DropColumnQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}

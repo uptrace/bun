@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender sqlfmt.QueryAppender
+	QueryAppender schema.QueryAppender
 	Query         []byte
 	QueryArgs     []interface{}
 
@@ -30,7 +30,7 @@ type QueryHook interface {
 
 func (db *DB) beforeQuery(
 	ctx context.Context,
-	queryApp sqlfmt.QueryAppender,
+	queryApp schema.QueryAppender,
 	query string,
 	queryArgs []interface{},
 ) (context.Context, *QueryEvent) {

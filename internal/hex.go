@@ -1,4 +1,4 @@
-package sqlfmt
+package internal
 
 import (
 	fasthex "github.com/tmthrgd/go-hex"
@@ -37,7 +37,7 @@ func (enc *HexEncoder) Close() error {
 	if enc.written {
 		enc.b = append(enc.b, '\'')
 	} else {
-		enc.b = AppendNull(enc.b)
+		enc.b = append(enc.b, "NULL"...)
 	}
 	return nil
 }

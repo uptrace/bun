@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 type union struct {
@@ -23,14 +23,14 @@ type union struct {
 type SelectQuery struct {
 	whereBaseQuery
 
-	distinctOn []sqlfmt.QueryWithArgs
+	distinctOn []schema.QueryWithArgs
 	joins      []joinQuery
-	group      []sqlfmt.QueryWithArgs
-	having     []sqlfmt.QueryWithArgs
-	order      []sqlfmt.QueryWithArgs
+	group      []schema.QueryWithArgs
+	having     []schema.QueryWithArgs
+	order      []schema.QueryWithArgs
 	limit      int32
 	offset     int32
-	selFor     sqlfmt.QueryWithArgs
+	selFor     schema.QueryWithArgs
 
 	union []union
 }
@@ -61,18 +61,18 @@ func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	return fn(q)
 }
 
-func (q *SelectQuery) With(name string, query sqlfmt.QueryAppender) *SelectQuery {
+func (q *SelectQuery) With(name string, query schema.QueryAppender) *SelectQuery {
 	q.addWith(name, query)
 	return q
 }
 
 func (q *SelectQuery) Distinct() *SelectQuery {
-	q.distinctOn = make([]sqlfmt.QueryWithArgs, 0)
+	q.distinctOn = make([]schema.QueryWithArgs, 0)
 	return q
 }
 
 func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery {
-	q.distinctOn = append(q.distinctOn, sqlfmt.SafeQuery(query, args))
+	q.distinctOn = append(q.distinctOn, schema.SafeQuery(query, args))
 	return q
 }
 
@@ -80,18 +80,18 @@ func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery
 
 func (q *SelectQuery) Table(tables ...string) *SelectQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
 func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
-	q.modelTable = sqlfmt.SafeQuery(query, args)
+	q.modelTable = schema.SafeQuery(query, args)
 	return q
 }
 
@@ -99,13 +99,13 @@ func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQ
 
 func (q *SelectQuery) Column(columns ...string) *SelectQuery {
 	for _, column := range columns {
-		q.addColumn(sqlfmt.UnsafeIdent(column))
+		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *SelectQuery) ColumnExpr(query string, args ...interface{}) *SelectQuery {
-	q.addColumn(sqlfmt.SafeQuery(query, args))
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -117,12 +117,12 @@ func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " AND "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
 func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
-	q.addWhere(sqlfmt.SafeQueryWithSep(query, args, " OR "))
+	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
@@ -154,18 +154,18 @@ func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 
 func (q *SelectQuery) Group(columns ...string) *SelectQuery {
 	for _, column := range columns {
-		q.group = append(q.group, sqlfmt.UnsafeIdent(column))
+		q.group = append(q.group, schema.UnsafeIdent(column))
 	}
 	return q
 }
 
 func (q *SelectQuery) GroupExpr(group string, args ...interface{}) *SelectQuery {
-	q.group = append(q.group, sqlfmt.SafeQuery(group, args))
+	q.group = append(q.group, schema.SafeQuery(group, args))
 	return q
 }
 
 func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
-	q.having = append(q.having, sqlfmt.SafeQuery(having, args))
+	q.having = append(q.having, schema.SafeQuery(having, args))
 	return q
 }
 
@@ -177,7 +177,7 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 
 		index := strings.IndexByte(order, ' ')
 		if index == -1 {
-			q.order = append(q.order, sqlfmt.UnsafeIdent(order))
+			q.order = append(q.order, schema.UnsafeIdent(order))
 			continue
 		}
 
@@ -187,19 +187,19 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 		switch internal.UpperString(sort) {
 		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
 			"ASC NULLS LAST", "DESC NULLS LAST":
-			q.order = append(q.order, sqlfmt.SafeQuery("? ?", []interface{}{
+			q.order = append(q.order, schema.SafeQuery("? ?", []interface{}{
 				Ident(field),
 				Safe(sort),
 			}))
 		default:
-			q.order = append(q.order, sqlfmt.UnsafeIdent(order))
+			q.order = append(q.order, schema.UnsafeIdent(order))
 		}
 	}
 	return q
 }
 
 func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery {
-	q.order = append(q.order, sqlfmt.SafeQuery(query, args))
+	q.order = append(q.order, schema.SafeQuery(query, args))
 	return q
 }
 
@@ -214,7 +214,7 @@ func (q *SelectQuery) Offset(n int) *SelectQuery {
 }
 
 func (q *SelectQuery) For(s string, args ...interface{}) *SelectQuery {
-	q.selFor = sqlfmt.SafeQuery(s, args)
+	q.selFor = schema.SafeQuery(s, args)
 	return q
 }
 
@@ -256,7 +256,7 @@ func (q *SelectQuery) addUnion(expr string, other *SelectQuery) *SelectQuery {
 
 func (q *SelectQuery) Join(join string, args ...interface{}) *SelectQuery {
 	q.joins = append(q.joins, joinQuery{
-		join: sqlfmt.SafeQuery(join, args),
+		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
@@ -275,7 +275,7 @@ func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *Selec
 		return q
 	}
 	j := &q.joins[len(q.joins)-1]
-	j.on = append(j.on, sqlfmt.SafeQueryWithSep(cond, args, sep))
+	j.on = append(j.on, schema.SafeQueryWithSep(cond, args, sep))
 	return q
 }
 
@@ -350,12 +350,12 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []join) error {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	return q.appendQuery(formatterWithModel(fmter, q), b, false)
 }
 
 func (q *SelectQuery) appendQuery(
-	fmter sqlfmt.Formatter, b []byte, count bool,
+	fmter schema.Formatter, b []byte, count bool,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -503,7 +503,7 @@ func (q *SelectQuery) appendQuery(
 	return b, nil
 }
 
-func (q *SelectQuery) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	start := len(b)
 
 	switch {
@@ -531,7 +531,7 @@ func (q *SelectQuery) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte,
 		if len(q.table.Fields) > 10 && fmter.IsNop() {
 			b = append(b, q.table.Alias...)
 			b = append(b, '.')
-			b = sqlfmt.AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
+			b = dialect.AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
 		} else {
 			b = appendColumns(b, q.table.Alias, q.table.Fields)
 		}
@@ -561,7 +561,7 @@ func (q *SelectQuery) appendColumns(fmter sqlfmt.Formatter, b []byte) (_ []byte,
 }
 
 func (q *SelectQuery) appendHasOneColumns(
-	fmter sqlfmt.Formatter, b []byte, join *join,
+	fmter schema.Formatter, b []byte, join *join,
 ) (_ []byte, err error) {
 	join.applyQuery(q)
 
@@ -603,12 +603,12 @@ func (q *SelectQuery) appendHasOneColumns(
 	return b, nil
 }
 
-func (q *SelectQuery) appendTables(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
 	return q.baseQuery.appendTablesWithAlias(fmter, b)
 }
 
-func (q *SelectQuery) appendOrder(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if len(q.order) > 0 {
 		b = append(b, " ORDER BY "...)
 
@@ -792,11 +792,11 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (in
 //------------------------------------------------------------------------------
 
 type joinQuery struct {
-	join sqlfmt.QueryWithArgs
-	on   []sqlfmt.QueryWithSep
+	join schema.QueryWithArgs
+	on   []schema.QueryWithSep
 }
 
-func (j *joinQuery) AppendQuery(fmter sqlfmt.Formatter, b []byte) (_ []byte, err error) {
+func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, ' ')
 
 	b, err = j.join.AppendQuery(fmter, b)

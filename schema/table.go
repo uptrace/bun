@@ -12,11 +12,9 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
-	"github.com/uptrace/bun/sqlfmt"
 )
 
 var (
-	timeType     = reflect.TypeOf((*time.Time)(nil)).Elem()
 	nullTimeType = reflect.TypeOf((*sql.NullTime)(nil)).Elem()
 	nullIntType  = reflect.TypeOf((*sql.NullInt64)(nil)).Elem()
 )
@@ -54,9 +52,9 @@ type Table struct {
 	ModelName string
 
 	Name              string
-	SQLName           sqlfmt.Safe
-	SQLNameForSelects sqlfmt.Safe
-	Alias             sqlfmt.Safe
+	SQLName           Safe
+	SQLNameForSelects Safe
+	Alias             Safe
 
 	Fields     []*Field // PKs + DataFields
 	PKs        []*Field
@@ -819,19 +817,18 @@ func (t *Table) HasAfterDeleteHook() bool  { return t.flags.Has(afterDeleteHookF
 
 //------------------------------------------------------------------------------
 
-func (t *Table) quoteTableName(s string) sqlfmt.Safe {
+func (t *Table) quoteTableName(s string) Safe {
 	// Don't quote if table name contains placeholder (?) or parentheses.
 	if strings.IndexByte(s, '?') >= 0 ||
 		strings.IndexByte(s, '(') >= 0 ||
 		strings.IndexByte(s, ')') >= 0 {
-		return sqlfmt.Safe(s)
+		return Safe(s)
 	}
 	return t.quoteIdent(s)
 }
 
-func (t *Table) quoteIdent(s string) sqlfmt.Safe {
-	fmter := sqlfmt.NewFormatter(t.dialect.Features())
-	return sqlfmt.Safe(sqlfmt.AppendIdent(fmter, nil, s))
+func (t *Table) quoteIdent(s string) Safe {
+	return Safe(NewFormatter(t.dialect).AppendIdent(nil, s))
 }
 
 func appendNew(dst []int, src ...int) []int {

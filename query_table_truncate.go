@@ -5,7 +5,7 @@ import (
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/sqlfmt"
+	"github.com/uptrace/bun/schema"
 )
 
 type TruncateTableQuery struct {
@@ -39,13 +39,13 @@ func (q *TruncateTableQuery) Model(model interface{}) *TruncateTableQuery {
 
 func (q *TruncateTableQuery) Table(tables ...string) *TruncateTableQuery {
 	for _, table := range tables {
-		q.addTable(sqlfmt.UnsafeIdent(table))
+		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
 func (q *TruncateTableQuery) TableExpr(query string, args ...interface{}) *TruncateTableQuery {
-	q.addTable(sqlfmt.SafeQuery(query, args))
+	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -64,7 +64,7 @@ func (q *TruncateTableQuery) Restrict() *TruncateTableQuery {
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) AppendQuery(
-	fmter sqlfmt.Formatter, b []byte,
+	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
