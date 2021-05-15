@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/parser"
 )
 
@@ -91,7 +91,8 @@ func (f Formatter) HasFeature(feature feature.Feature) bool {
 
 func (f Formatter) clone() Formatter {
 	clone := f
-	clone.namedArgs = clone.namedArgs[:len(clone.namedArgs):len(clone.namedArgs)]
+	l := len(clone.namedArgs)
+	clone.namedArgs = clone.namedArgs[:l:l]
 	return clone
 }
 
@@ -112,18 +113,22 @@ func (f Formatter) Arg(name string) interface{} {
 	return value
 }
 
-func (f Formatter) FormatQueryBytes(dst, query []byte, args ...interface{}) []byte {
-	if f.IsNop() || (args == nil && f.namedArgs == nil) || bytes.IndexByte(query, '?') == -1 {
-		return append(dst, query...)
+func (f Formatter) FormatQuery(query string, args ...interface{}) string {
+	if f.IsNop() || (args == nil && f.hasNoArgs()) || strings.IndexByte(query, '?') == -1 {
+		return query
 	}
-	return f.append(dst, parser.New(query), args)
+	return internal.String(f.AppendQuery(nil, query, args...))
 }
 
-func (f Formatter) FormatQuery(dst []byte, query string, args ...interface{}) []byte {
-	if f.IsNop() || (args == nil && f.namedArgs == nil) || strings.IndexByte(query, '?') == -1 {
+func (f Formatter) AppendQuery(dst []byte, query string, args ...interface{}) []byte {
+	if f.IsNop() || (args == nil && f.hasNoArgs()) || strings.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.NewString(query), args)
+}
+
+func (f Formatter) hasNoArgs() bool {
+	return f.namedArgs == nil && f.model == nil
 }
 
 func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []byte {

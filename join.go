@@ -145,7 +145,7 @@ func (j *join) m2mQuery(q *SelectQuery) *SelectQuery {
 	//nolint
 	var join []byte
 	join = append(join, "JOIN "...)
-	join = fmter.FormatQuery(join, string(j.Relation.M2MTable.Name))
+	join = fmter.AppendQuery(join, string(j.Relation.M2MTable.Name))
 	join = append(join, " AS "...)
 	join = append(join, j.Relation.M2MTable.Alias...)
 	join = append(join, " ON ("...)
@@ -244,7 +244,7 @@ func (j *join) appendHasOneJoin(
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
 	b = append(b, "LEFT JOIN "...)
-	b = fmter.FormatQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
+	b = fmter.AppendQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
 	b = append(b, " AS "...)
 	b = j.appendAlias(fmter, b)
 

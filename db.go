@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"sync/atomic"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -155,6 +154,15 @@ func (db *DB) RegisterModel(models ...interface{}) {
 	db.dialect.Tables().Register(models...)
 }
 
+func (db *DB) clone() *DB {
+	clone := *db
+
+	l := len(clone.queryHooks)
+	clone.queryHooks = clone.queryHooks[:l:l]
+
+	return &clone
+}
+
 func (db *DB) WithNamedArg(name string, value interface{}) *DB {
 	clone := db.clone()
 	clone.fmter = clone.fmter.WithArg(name, value)
@@ -163,15 +171,6 @@ func (db *DB) WithNamedArg(name string, value interface{}) *DB {
 
 func (db *DB) NamedArg(name string) interface{} {
 	return db.fmter.Arg(name)
-}
-
-func (db *DB) clone() *DB {
-	clone := *db
-
-	l := len(clone.queryHooks)
-	clone.queryHooks = clone.queryHooks[:l:l]
-
-	return &clone
 }
 
 func (db *DB) Formatter() schema.Formatter {
@@ -220,13 +219,13 @@ func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interfa
 }
 
 func (db *DB) format(query string, args []interface{}) string {
-	if len(args) == 0 && strings.IndexByte(query, '?') == -1 {
-		return query
-	}
-	return internal.String(db.fmter.FormatQuery(nil, query, args...))
+	return db.fmter.FormatQuery(query, args...)
 }
 
+//------------------------------------------------------------------------------
+
 type Conn struct {
+	db *DB
 	*sql.Conn
 }
 
@@ -235,8 +234,29 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 	if err != nil {
 		return Conn{}, err
 	}
-	return Conn{Conn: conn}, nil
+	return Conn{
+		db:   db,
+		Conn: conn,
+	}, nil
 }
+
+func (c Conn) ExecContext(
+	ctx context.Context, query string, args ...interface{},
+) (sql.Result, error) {
+	return c.Conn.ExecContext(ctx, c.db.format(query, args))
+}
+
+func (c Conn) QueryContext(
+	ctx context.Context, query string, args ...interface{},
+) (*sql.Rows, error) {
+	return c.Conn.QueryContext(ctx, c.db.format(query, args))
+}
+
+func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return c.Conn.QueryRowContext(ctx, c.db.format(query, args))
+}
+
+//------------------------------------------------------------------------------
 
 type Stmt struct {
 	*sql.Stmt

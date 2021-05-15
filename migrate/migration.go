@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -88,13 +87,13 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 			}
 		}
 
-		if tx, ok := dbi.(*sql.Tx); ok {
+		if tx, ok := dbi.(bun.Tx); ok {
 			return tx.Commit()
-		}
-		if conn, ok := dbi.(*sql.Conn); ok {
+		} else if conn, ok := dbi.(bun.Conn); ok {
 			return conn.Close()
 		}
-		return nil
+
+		panic("not reached")
 	}
 }
 

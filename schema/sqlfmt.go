@@ -58,7 +58,7 @@ func (q QueryWithArgs) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	if q.Args == nil {
 		return fmter.AppendIdent(b, q.Query), nil
 	}
-	return fmter.FormatQuery(b, q.Query, q.Args...), nil
+	return fmter.AppendQuery(b, q.Query, q.Args...), nil
 }
 
 //------------------------------------------------------------------------------

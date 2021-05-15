@@ -23,30 +23,29 @@ type Command struct {
 
 type MigratorOption func(m *Migrator)
 
-func WithAutoDiscover() MigratorOption {
-	return func(m *Migrator) {
-		m.autoDiscover = true
-	}
-}
-
 func WithTableName(table string) MigratorOption {
 	return func(m *Migrator) {
 		m.table = table
 	}
 }
 
+func WithLocksTableName(table string) MigratorOption {
+	return func(m *Migrator) {
+		m.locksTable = table
+	}
+}
+
 type Migrator struct {
 	ms []Migration
 
-	table string
-
-	autoDiscover   bool
-	discoveredDirs map[string]struct{}
+	table      string
+	locksTable string
 }
 
 func NewMigrator(opts ...MigratorOption) *Migrator {
 	m := &Migrator{
-		table: "migrations",
+		table:      "migrations",
+		locksTable: "migration_locks",
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -54,13 +53,8 @@ func NewMigrator(opts ...MigratorOption) *Migrator {
 	return m
 }
 
-func (m *Migrator) init() error {
-	if m.autoDiscover {
-		if err := m.autoDiscoverFile(migrationFile()); err != nil {
-			return err
-		}
-	}
-	return nil
+func (m *Migrator) Migrations() []Migration {
+	return m.ms
 }
 
 func (m *Migrator) MustRegister(up, down MigrationFunc) {
@@ -82,28 +76,11 @@ func (m *Migrator) Register(up, down MigrationFunc) error {
 		Down: down,
 	})
 
-	if m.autoDiscover {
-		return m.autoDiscoverFile(fpath)
-	}
 	return nil
 }
 
-func (m *Migrator) autoDiscoverFile(fpath string) error {
-	fpath, err := filepath.Abs(fpath)
-	if err != nil {
-		return err
-	}
-	dir := filepath.Dir(fpath)
-
-	if _, ok := m.discoveredDirs[dir]; ok {
-		return nil
-	}
-
-	if m.discoveredDirs == nil {
-		m.discoveredDirs = make(map[string]struct{})
-	}
-	m.discoveredDirs[dir] = struct{}{}
-
+func (m *Migrator) DiscoverCaller() error {
+	dir := filepath.Dir(migrationFile())
 	return m.Discover(os.DirFS(dir))
 }
 
@@ -157,25 +134,24 @@ func (m *Migrator) getOrCreateMigration(name string) *Migration {
 }
 
 func (m *Migrator) Init(ctx context.Context, db *bun.DB) error {
-	models := []interface{}{
-		(*Migration)(nil),
-		(*migrationLock)(nil),
+	if _, err := db.NewCreateTable().
+		Model((*Migration)(nil)).
+		ModelTableExpr(m.table).
+		IfNotExists().
+		Exec(ctx); err != nil {
+		return err
 	}
-	for _, model := range models {
-		if _, err := db.NewCreateTable().
-			Model(model).
-			IfNotExists().
-			Exec(ctx); err != nil {
-			return err
-		}
+	if _, err := db.NewCreateTable().
+		Model((*migrationLock)(nil)).
+		ModelTableExpr(m.locksTable).
+		IfNotExists().
+		Exec(ctx); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
-	if err := m.init(); err != nil {
-		return err
-	}
 	if len(m.ms) == 0 {
 		return errors.New("there are no any migrations")
 	}
@@ -225,9 +201,6 @@ func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
 }
 
 func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
-	if err := m.init(); err != nil {
-		return err
-	}
 	if len(m.ms) == 0 {
 		return errors.New("there are no any migrations")
 	}
@@ -384,30 +357,44 @@ func (m *Migrator) selectMigrations(
 	return ms, lastGroupID, nil
 }
 
+func (m *Migrator) formattedTableName(db *bun.DB) string {
+	return db.Formatter().FormatQuery(m.table)
+}
+
 func (m *Migrator) tableNameWithAlias() string {
 	return m.table + " AS m"
+}
+
+func (m *Migrator) locksTableNameWithAlias() string {
+	return m.locksTable + " AS l"
 }
 
 //------------------------------------------------------------------------------
 
 type migrationLock struct {
-	ID        int64
+	ID        int64  `bun:"alias:l,autoincrement"`
 	TableName string `bun:",unique"`
 }
 
 func (m *Migrator) Lock(ctx context.Context, db *bun.DB) error {
 	lock := &migrationLock{
-		TableName: m.table,
+		TableName: m.formattedTableName(db),
 	}
-	if _, err := db.NewInsert().Model(lock).Exec(ctx); err != nil {
+	if _, err := db.NewInsert().
+		Model(lock).
+		ModelTableExpr(m.locksTableNameWithAlias()).
+		Exec(ctx); err != nil {
 		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
 	}
 	return nil
 }
 
 func (m *Migrator) Unlock(ctx context.Context, db *bun.DB) error {
-	_, err := db.NewDelete().Model((*migrationLock)(nil)).
-		Where("? = ?", bun.Ident("table_name"), m.table).
+	tableName := m.formattedTableName(db)
+	_, err := db.NewDelete().
+		Model((*migrationLock)(nil)).
+		ModelTableExpr(m.locksTableNameWithAlias()).
+		Where("? = ?", bun.Ident("table_name"), tableName).
 		Exec(ctx)
 	return err
 }
@@ -432,7 +419,7 @@ func migrationFile() string {
 		if !ok {
 			break
 		}
-		if !strings.Contains(f.Function, "/bun/migrate") {
+		if !strings.Contains(f.Function, "/bun/migrate.") {
 			return f.File
 		}
 	}

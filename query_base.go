@@ -232,7 +232,7 @@ func (q *baseQuery) _appendTables(
 				return nil, err
 			}
 		} else {
-			b = fmter.FormatQuery(b, string(q.table.SQLNameForSelects))
+			b = fmter.AppendQuery(b, string(q.table.SQLNameForSelects))
 			if withAlias && q.table.Alias != q.table.SQLNameForSelects {
 				b = append(b, " AS "...)
 				b = append(b, q.table.Alias...)
@@ -271,7 +271,7 @@ func (q *baseQuery) _appendFirstTable(
 	}
 
 	if q.table != nil {
-		b = fmter.FormatQuery(b, string(q.table.SQLName))
+		b = fmter.AppendQuery(b, string(q.table.SQLName))
 		if withAlias && q.table.Alias != q.table.SQLName {
 			b = append(b, " AS "...)
 			b = append(b, q.table.Alias...)
@@ -428,10 +428,10 @@ func (q *baseQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]
 
 	switch name {
 	case "TableName":
-		b = fmter.FormatQuery(b, string(q.table.SQLName))
+		b = fmter.AppendQuery(b, string(q.table.SQLName))
 		return b, true
 	case "TableAlias":
-		b = fmter.FormatQuery(b, string(q.table.Alias))
+		b = fmter.AppendQuery(b, string(q.table.Alias))
 		return b, true
 	case "PKs":
 		b = appendColumns(b, "", q.table.PKs)

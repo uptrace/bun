@@ -44,6 +44,27 @@ func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
 	return q
 }
 
+//------------------------------------------------------------------------------
+
+func (q *CreateTableQuery) Table(tables ...string) *CreateTableQuery {
+	for _, table := range tables {
+		q.addTable(schema.UnsafeIdent(table))
+	}
+	return q
+}
+
+func (q *CreateTableQuery) TableExpr(query string, args ...interface{}) *CreateTableQuery {
+	q.addTable(schema.SafeQuery(query, args))
+	return q
+}
+
+func (q *CreateTableQuery) ModelTableExpr(query string, args ...interface{}) *CreateTableQuery {
+	q.modelTable = schema.SafeQuery(query, args)
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *CreateTableQuery) Temp() *CreateTableQuery {
 	q.temp = true
 	return q
@@ -207,7 +228,7 @@ func (q *CreateTableQuery) appendFKConstraint(
 	b = append(b, ")"...)
 
 	b = append(b, " REFERENCES "...)
-	b = fmter.FormatQuery(b, string(rel.JoinTable.SQLName))
+	b = fmter.AppendQuery(b, string(rel.JoinTable.SQLName))
 	b = append(b, " ("...)
 	b = appendColumns(b, "", rel.JoinFields)
 	b = append(b, ")"...)
