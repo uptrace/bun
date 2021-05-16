@@ -17,12 +17,12 @@ import (
 
 type LoaderOption func(f *Loader)
 
-func WithDropTables() LoaderOption {
+func WithRecreateTables() LoaderOption {
 	return func(f *Loader) {
 		if f.truncateTables {
 			panic("don't use WithDropTables together with WithTruncateTables")
 		}
-		f.dropTables = true
+		f.recreateTables = true
 		f.seenTables = make(map[string]struct{})
 	}
 }
@@ -30,7 +30,7 @@ func WithDropTables() LoaderOption {
 func WithTruncateTables() LoaderOption {
 	return func(f *Loader) {
 		if f.truncateTables {
-			panic("don't use WithTruncateTables together with WithDropTables")
+			panic("don't use WithTruncateTables together with WithRecreateTables")
 		}
 		f.truncateTables = true
 		f.seenTables = make(map[string]struct{})
@@ -40,7 +40,7 @@ func WithTruncateTables() LoaderOption {
 type Loader struct {
 	db *bun.DB
 
-	dropTables     bool
+	recreateTables bool
 	truncateTables bool
 	seenTables     map[string]struct{}
 
@@ -118,7 +118,7 @@ func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", fixture.Model)
 	}
 
-	if f.dropTables {
+	if f.recreateTables {
 		if err := f.dropTable(ctx, table); err != nil {
 			return err
 		}

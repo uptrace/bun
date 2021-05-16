@@ -3,6 +3,7 @@ package bundebug
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"time"
@@ -40,8 +41,11 @@ func (h *QueryHook) BeforeQuery(
 }
 
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
-	if !h.verbose && event.Err == nil {
-		return
+	if !h.verbose {
+		switch event.Err {
+		case nil, sql.ErrNoRows:
+			return
+		}
 	}
 
 	now := time.Now()
