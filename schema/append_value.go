@@ -218,7 +218,7 @@ func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byt
 }
 
 func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return appendQueryAppender(fmter, b, v.Interface().(QueryAppender))
+	return AppendQueryAppender(fmter, b, v.Interface().(QueryAppender))
 }
 
 func appendDriverValuerValue(fmter Formatter, b []byte, v reflect.Value) []byte {

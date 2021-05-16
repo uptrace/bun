@@ -10,11 +10,11 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func FieldAppender(field *Field) AppenderFunc {
+func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	if field.Tag.HasOption("msgpack") {
 		return appendMsgpack
 	}
-	return Appender(field.Type)
+	return dialect.Appender(field.Type)
 }
 
 func Append(fmter Formatter, b []byte, v interface{}) []byte {
@@ -46,7 +46,7 @@ func Append(fmter Formatter, b []byte, v interface{}) []byte {
 	case []byte:
 		return dialect.AppendBytes(b, v)
 	case QueryAppender:
-		return appendQueryAppender(fmter, b, v)
+		return AppendQueryAppender(fmter, b, v)
 	default:
 		return appendValue(fmter, b, reflect.ValueOf(v))
 	}
@@ -70,7 +70,7 @@ func appendMsgpack(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return hexEnc.Bytes()
 }
 
-func appendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
+func AppendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
 	bb, err := app.AppendQuery(fmter, b)
 	if err != nil {
 		return dialect.AppendError(b, err)

@@ -2,7 +2,9 @@ package pgdialect
 
 import (
 	"reflect"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -63,6 +65,43 @@ func (d *Dialect) OnTable(table *schema.Table) {}
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'
+}
+
+func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
+	switch v := v.(type) {
+	case nil:
+		return dialect.AppendNull(b)
+	case bool:
+		return dialect.AppendBool(b, v)
+	case int:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int32:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int64:
+		return strconv.AppendInt(b, v, 10)
+	case uint:
+		return strconv.AppendInt(b, int64(v), 10)
+	case uint32:
+		return strconv.AppendInt(b, int64(v), 10)
+	case uint64:
+		return strconv.AppendInt(b, int64(v), 10)
+	case float32:
+		return dialect.AppendFloat32(b, v)
+	case float64:
+		return dialect.AppendFloat64(b, v)
+	case string:
+		return dialect.AppendString(b, v)
+	case time.Time:
+		return dialect.AppendTime(b, v)
+	case []byte:
+		return dialect.AppendBytes(b, v)
+	case schema.QueryAppender:
+		return schema.AppendQueryAppender(fmter, b, v)
+	default:
+		vv := reflect.ValueOf(v)
+		appender := d.Appender(vv.Type())
+		return appender(fmter, b, vv)
+	}
 }
 
 func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {

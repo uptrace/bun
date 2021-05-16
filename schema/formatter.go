@@ -33,6 +33,12 @@ func (args namedArgs) Get(name string) (interface{}, bool) {
 	return nil, false
 }
 
+//------------------------------------------------------------------------------
+
+var nopFormatter = Formatter{
+	dialect: newNopDialect(),
+}
+
 type Formatter struct {
 	dialect   Dialect
 	model     ArgAppender
@@ -46,7 +52,7 @@ func NewFormatter(dialect Dialect) Formatter {
 }
 
 func NewNopFormatter() Formatter {
-	return Formatter{}
+	return nopFormatter
 }
 
 func (f Formatter) String() string {
@@ -62,7 +68,7 @@ func (f Formatter) String() string {
 }
 
 func (f Formatter) IsNop() bool {
-	return f.dialect == nil
+	return f.dialect.Name() == ""
 }
 
 func (f Formatter) Dialect() Dialect {
@@ -219,6 +225,6 @@ func (f Formatter) appendArg(b []byte, arg interface{}) []byte {
 		}
 		return bb
 	default:
-		return Append(f, b, arg)
+		return f.dialect.Append(f, b, arg)
 	}
 }

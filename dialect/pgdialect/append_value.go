@@ -9,18 +9,12 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func appendValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return dialect.AppendNull(b)
-	}
-	appender := appender(v.Type(), false)
-	return appender(fmter, b, v)
-}
-
 func appender(typ reflect.Type, pgArray bool) schema.AppenderFunc {
 	switch typ.Kind() {
-	case reflect.Uint32, reflect.Uint64:
-		return schema.AppendIntValue
+	case reflect.Uint32:
+		return appendUint32ValueAsInt
+	case reflect.Uint, reflect.Uint64:
+		return appendUint64ValueAsInt
 	case reflect.Ptr:
 		return ptrAppenderFunc(typ, pgArray)
 	case reflect.Slice:
@@ -39,6 +33,14 @@ func ptrAppenderFunc(typ reflect.Type, pgArray bool) schema.AppenderFunc {
 		}
 		return appender(fmter, b, v.Elem())
 	}
+}
+
+func appendUint32ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return strconv.AppendInt(b, int64(int32(v.Uint())), 10)
+}
+
+func appendUint64ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return strconv.AppendInt(b, int64(v.Uint()), 10)
 }
 
 //------------------------------------------------------------------------------

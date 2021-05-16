@@ -29,7 +29,6 @@ const (
 	afterUpdateHookFlag
 	beforeDeleteHookFlag
 	afterDeleteHookFlag
-	discardUnknownColumnsFlag
 )
 
 var tableNameInflector = inflection.Plural
@@ -223,8 +222,10 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 			if f.Tag.Get("bun") == "-" {
 				continue
 			}
-			if f.Name == "BaseModel" && len(index) == 0 {
-				t.processBaseModelField(f)
+			if f.Name == "BaseModel" {
+				if len(index) == 0 {
+					t.processBaseModelField(f)
+				}
 				continue
 			}
 
@@ -282,10 +283,6 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 
 	if v, ok := tag.Options["alias"]; ok {
 		t.Alias = t.quoteIdent(v)
-	}
-
-	if _, ok := tag.Options["discard_unknown_columns"]; ok {
-		t.flags = t.flags.Set(discardUnknownColumnsFlag)
 	}
 }
 
@@ -371,7 +368,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		field.UserSQLType = v
 	}
 	field.DiscoveredSQLType = sqltype.Detect(field.Type)
-	field.Append = FieldAppender(field)
+	field.Append = FieldAppender(t.dialect, field)
 	field.Scan = FieldScanner(field)
 	field.IsZero = FieldZeroChecker(field)
 

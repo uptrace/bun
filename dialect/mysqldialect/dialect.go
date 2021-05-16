@@ -50,6 +50,10 @@ func (d *Dialect) IdentQuote() byte {
 	return '`'
 }
 
+func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
+	return schema.Append(fmter, b, v)
+}
+
 func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 	if v, ok := d.appenderMap.Load(typ); ok {
 		return v.(schema.AppenderFunc)
