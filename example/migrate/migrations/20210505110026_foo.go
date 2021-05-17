@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	Migrator.MustRegister(func(ctx context.Context, db *bun.DB) error {
+	Migrations.MustRegister(func(ctx context.Context, db *bun.DB) error {
 		fmt.Print(" [up migration] ")
 		return nil
 	}, func(ctx context.Context, db *bun.DB) error {

@@ -21,29 +21,29 @@ type Command struct {
 	Name string
 }
 
-type MigratorOption func(m *Migrator)
+type MigrationsOption func(m *Migrations)
 
-func WithTableName(table string) MigratorOption {
-	return func(m *Migrator) {
+func WithTableName(table string) MigrationsOption {
+	return func(m *Migrations) {
 		m.table = table
 	}
 }
 
-func WithLocksTableName(table string) MigratorOption {
-	return func(m *Migrator) {
+func WithLocksTableName(table string) MigrationsOption {
+	return func(m *Migrations) {
 		m.locksTable = table
 	}
 }
 
-type Migrator struct {
+type Migrations struct {
 	ms []Migration
 
 	table      string
 	locksTable string
 }
 
-func NewMigrator(opts ...MigratorOption) *Migrator {
-	m := &Migrator{
+func NewMigrations(opts ...MigrationsOption) *Migrations {
+	m := &Migrations{
 		table:      "migrations",
 		locksTable: "migration_locks",
 	}
@@ -53,17 +53,17 @@ func NewMigrator(opts ...MigratorOption) *Migrator {
 	return m
 }
 
-func (m *Migrator) Migrations() []Migration {
+func (m *Migrations) Migrations() []Migration {
 	return m.ms
 }
 
-func (m *Migrator) MustRegister(up, down MigrationFunc) {
+func (m *Migrations) MustRegister(up, down MigrationFunc) {
 	if err := m.Register(up, down); err != nil {
 		panic(err)
 	}
 }
 
-func (m *Migrator) Register(up, down MigrationFunc) error {
+func (m *Migrations) Register(up, down MigrationFunc) error {
 	fpath := migrationFile()
 	name, err := extractMigrationName(fpath)
 	if err != nil {
@@ -79,12 +79,12 @@ func (m *Migrator) Register(up, down MigrationFunc) error {
 	return nil
 }
 
-func (m *Migrator) DiscoverCaller() error {
+func (m *Migrations) DiscoverCaller() error {
 	dir := filepath.Dir(migrationFile())
 	return m.Discover(os.DirFS(dir))
 }
 
-func (m *Migrator) Discover(fsys fs.FS) error {
+func (m *Migrations) Discover(fsys fs.FS) error {
 	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -121,7 +121,7 @@ func (m *Migrator) Discover(fsys fs.FS) error {
 	})
 }
 
-func (m *Migrator) getOrCreateMigration(name string) *Migration {
+func (m *Migrations) getOrCreateMigration(name string) *Migration {
 	for i := range m.ms {
 		m := &m.ms[i]
 		if m.Name == name {
@@ -133,7 +133,7 @@ func (m *Migrator) getOrCreateMigration(name string) *Migration {
 	return &m.ms[len(m.ms)-1]
 }
 
-func (m *Migrator) Init(ctx context.Context, db *bun.DB) error {
+func (m *Migrations) Init(ctx context.Context, db *bun.DB) error {
 	if _, err := db.NewCreateTable().
 		Model((*Migration)(nil)).
 		ModelTableExpr(m.table).
@@ -151,7 +151,7 @@ func (m *Migrator) Init(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
+func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
 		return errors.New("there are no any migrations")
 	}
@@ -200,7 +200,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
+func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
 		return errors.New("there are no any migrations")
 	}
@@ -251,7 +251,7 @@ func (m *Migrator) Rollback(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-func (m *Migrator) CreateGo(ctx context.Context, db *bun.DB, name string) error {
+func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) error {
 	name, err := m.genMigrationName(name)
 	if err != nil {
 		return err
@@ -264,7 +264,7 @@ func (m *Migrator) CreateGo(ctx context.Context, db *bun.DB, name string) error 
 	return ioutil.WriteFile(fpath, []byte(goTemplate), 0o644)
 }
 
-func (m *Migrator) CreateSQL(ctx context.Context, db *bun.DB, name string) error {
+func (m *Migrations) CreateSQL(ctx context.Context, db *bun.DB, name string) error {
 	name, err := m.genMigrationName(name)
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func (m *Migrator) CreateSQL(ctx context.Context, db *bun.DB, name string) error
 
 var nameRE = regexp.MustCompile(`^[0-9a-z_\-]+$`)
 
-func (m *Migrator) genMigrationName(name string) (string, error) {
+func (m *Migrations) genMigrationName(name string) (string, error) {
 	const timeFormat = "20060102150405"
 
 	if name == "" {
@@ -293,7 +293,7 @@ func (m *Migrator) genMigrationName(name string) (string, error) {
 	return fmt.Sprintf("%s_%s", version, name), nil
 }
 
-func (m *Migrator) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
+func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
 	fmt.Printf("\trunning migration %s... ", migration.Name)
 	if migration.Up != nil {
 		if err := migration.Up(ctx, db); err != nil {
@@ -312,7 +312,7 @@ func (m *Migrator) runUp(ctx context.Context, db *bun.DB, migration *Migration) 
 	return err
 }
 
-func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
+func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
 	fmt.Printf("\trolling back migration %s... ", migration.Name)
 	if migration.Down != nil {
 		if err := migration.Down(ctx, db); err != nil {
@@ -333,7 +333,7 @@ func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration
 	return err
 }
 
-func (m *Migrator) selectMigrations(
+func (m *Migrations) selectMigrations(
 	ctx context.Context, db *bun.DB,
 ) ([]Migration, int64, error) {
 	var ms []Migration
@@ -357,15 +357,15 @@ func (m *Migrator) selectMigrations(
 	return ms, lastGroupID, nil
 }
 
-func (m *Migrator) formattedTableName(db *bun.DB) string {
+func (m *Migrations) formattedTableName(db *bun.DB) string {
 	return db.Formatter().FormatQuery(m.table)
 }
 
-func (m *Migrator) tableNameWithAlias() string {
+func (m *Migrations) tableNameWithAlias() string {
 	return m.table + " AS m"
 }
 
-func (m *Migrator) locksTableNameWithAlias() string {
+func (m *Migrations) locksTableNameWithAlias() string {
 	return m.locksTable + " AS l"
 }
 
@@ -376,7 +376,7 @@ type migrationLock struct {
 	TableName string `bun:",unique"`
 }
 
-func (m *Migrator) Lock(ctx context.Context, db *bun.DB) error {
+func (m *Migrations) Lock(ctx context.Context, db *bun.DB) error {
 	lock := &migrationLock{
 		TableName: m.formattedTableName(db),
 	}
@@ -389,7 +389,7 @@ func (m *Migrator) Lock(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-func (m *Migrator) Unlock(ctx context.Context, db *bun.DB) error {
+func (m *Migrations) Unlock(ctx context.Context, db *bun.DB) error {
 	tableName := m.formattedTableName(db)
 	_, err := db.NewDelete().
 		Model((*migrationLock)(nil)).

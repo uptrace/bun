@@ -3,7 +3,7 @@
 To get help:
 
 ```shell
-go run *.go db
+go run main.go db
 
 NAME:
    bun db - database commands

@@ -23,10 +23,11 @@ func main() {
 	db := bun.Open(sqldb, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 
-	migrator := migrations.Migrator
+	migrations := migrations.Migrations
 
 	app := &cli.App{
 		Name: "bun",
+
 		Commands: []*cli.Command{
 			{
 				Name:  "db",
@@ -36,49 +37,49 @@ func main() {
 						Name:  "init",
 						Usage: "create migration tables",
 						Action: func(c *cli.Context) error {
-							return migrator.Init(c.Context, db)
+							return migrations.Init(c.Context, db)
 						},
 					},
 					{
 						Name:  "migrate",
 						Usage: "migrate database",
 						Action: func(c *cli.Context) error {
-							return migrator.Migrate(c.Context, db)
+							return migrations.Migrate(c.Context, db)
 						},
 					},
 					{
 						Name:  "rollback",
 						Usage: "rollback the last migration batch",
 						Action: func(c *cli.Context) error {
-							return migrator.Rollback(c.Context, db)
+							return migrations.Rollback(c.Context, db)
 						},
 					},
 					{
 						Name:  "lock",
 						Usage: "lock migrations",
 						Action: func(c *cli.Context) error {
-							return migrator.Lock(c.Context, db)
+							return migrations.Lock(c.Context, db)
 						},
 					},
 					{
 						Name:  "unlock",
 						Usage: "unlock migrations",
 						Action: func(c *cli.Context) error {
-							return migrator.Unlock(c.Context, db)
+							return migrations.Unlock(c.Context, db)
 						},
 					},
 					{
 						Name:  "create_go",
 						Usage: "create Go migration",
 						Action: func(c *cli.Context) error {
-							return migrator.CreateGo(c.Context, db, c.Args().Get(0))
+							return migrations.CreateGo(c.Context, db, c.Args().Get(0))
 						},
 					},
 					{
 						Name:  "create_sql",
 						Usage: "create SQL migration",
 						Action: func(c *cli.Context) error {
-							return migrator.CreateSQL(c.Context, db, c.Args().Get(0))
+							return migrations.CreateSQL(c.Context, db, c.Args().Get(0))
 						},
 					},
 				},
