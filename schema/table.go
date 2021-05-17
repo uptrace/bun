@@ -199,14 +199,15 @@ func (t *Table) initFields() {
 		return
 	}
 	for _, name := range []string{"id", "uuid", "pk_" + t.ModelName} {
-		if pk, ok := t.FieldMap[name]; ok {
-			pk.IsPK = true
-			pk.NotNull = true
-			pk.NullZero = true
-			t.PKs = []*Field{pk}
-			t.DataFields = removeField(t.DataFields, pk)
+		if field, ok := t.FieldMap[name]; ok {
+			field.markAsPK()
+			t.PKs = []*Field{field}
+			t.DataFields = removeField(t.DataFields, field)
 			break
 		}
+	}
+	if len(t.PKs) == 1 {
+		t.PKs[0].AutoIncrement = true
 	}
 }
 
@@ -338,9 +339,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	field.NullZero = tag.HasOption("nullzero")
 	field.AutoIncrement = tag.HasOption("autoincrement")
 	if tag.HasOption("pk") {
-		field.IsPK = true
-		field.NotNull = true
-		field.NullZero = true
+		field.markAsPK()
 	}
 
 	if v, ok := tag.Options["unique"]; ok {
@@ -861,10 +860,8 @@ func isKnownFieldOption(name string) bool {
 		"on_update",
 
 		"pk",
-		"nopk",
 		"autoincrement",
 		"rel",
-		"fk",
 		"join",
 		"m2m",
 		"polymorphic":
