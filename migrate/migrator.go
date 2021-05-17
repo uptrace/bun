@@ -372,7 +372,7 @@ func (m *Migrations) locksTableNameWithAlias() string {
 //------------------------------------------------------------------------------
 
 type migrationLock struct {
-	ID        int64  `bun:"alias:l,autoincrement"`
+	ID        int64  `bun:"alias:l"`
 	TableName string `bun:",unique"`
 }
 

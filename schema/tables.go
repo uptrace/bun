@@ -109,6 +109,15 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 
 	t.dialect.OnTable(table)
 
+	for _, field := range table.Fields {
+		if field.UserSQLType == "" {
+			field.UserSQLType = field.DiscoveredSQLType
+		}
+		if field.CreateTableSQLType == "" {
+			field.CreateTableSQLType = field.UserSQLType
+		}
+	}
+
 	return table
 }
 

@@ -1,4 +1,4 @@
-# Migrations example
+# Basic example
 
 To run this example:
 
@@ -6,4 +6,4 @@ To run this example:
 go run main.go
 ```
 
-See [docs](https://bun.uptrace.dev/guide/migrations.html#migration-names) for details.
+See [docs](https://bun.uptrace.dev/) for details.

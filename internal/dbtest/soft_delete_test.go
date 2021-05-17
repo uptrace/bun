@@ -48,7 +48,7 @@ func (tm *CustomTime) IsZero() bool {
 }
 
 type Video struct {
-	ID        int `bun:",autoincrement"`
+	ID        int64
 	Name      string
 	DeletedAt CustomTime `bun:"type:timestamp,soft_delete"`
 }

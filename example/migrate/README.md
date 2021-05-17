@@ -23,3 +23,5 @@ COMMANDS:
 OPTIONS:
    --help, -h  show help (default: false)
 ```
+
+See [docs](https://bun.uptrace.dev/guide/migrations.html) for details.

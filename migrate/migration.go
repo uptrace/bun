@@ -15,7 +15,7 @@ import (
 type Migration struct {
 	bun.BaseModel `bun:"alias:m"`
 
-	ID         int64 `bun:",autoincrement"`
+	ID         int64
 	Name       string
 	GroupID    int64
 	MigratedAt time.Time `bun:"default:current_timestamp"`

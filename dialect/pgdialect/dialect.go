@@ -41,7 +41,13 @@ func (d *Dialect) Tables() *schema.Tables {
 	return d.tables
 }
 
-func (d *Dialect) OnField(field *schema.Field) {
+func (d *Dialect) OnTable(table *schema.Table) {
+	for _, field := range table.Fields {
+		d.onField(field)
+	}
+}
+
+func (d *Dialect) onField(field *schema.Field) {
 	field.DiscoveredSQLType = fieldSQLType(field)
 
 	if field.AutoIncrement {
@@ -60,8 +66,6 @@ func (d *Dialect) OnField(field *schema.Field) {
 		field.Scan = arrayScanner(field.Type)
 	}
 }
-
-func (d *Dialect) OnTable(table *schema.Table) {}
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'

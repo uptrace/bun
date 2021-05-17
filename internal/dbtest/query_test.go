@@ -12,7 +12,7 @@ import (
 
 func TestQuery(t *testing.T) {
 	type Model struct {
-		ID  int `bun:",autoincrement"`
+		ID  int64
 		Str string
 	}
 
@@ -229,7 +229,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID     uint64 `bun:",autoincrement"`
+				ID     uint64
 				Struct struct{}
 				Map    map[string]interface{}
 				Slice  []string

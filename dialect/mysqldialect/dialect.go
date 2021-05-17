@@ -40,11 +40,11 @@ func (d *Dialect) Tables() *schema.Tables {
 	return d.tables
 }
 
-func (d *Dialect) OnField(field *schema.Field) {
-	field.DiscoveredSQLType = sqlType(field)
+func (d *Dialect) OnTable(table *schema.Table) {
+	for _, field := range table.Fields {
+		field.DiscoveredSQLType = sqlType(field)
+	}
 }
-
-func (d *Dialect) OnTable(table *schema.Table) {}
 
 func (d *Dialect) IdentQuote() byte {
 	return '`'

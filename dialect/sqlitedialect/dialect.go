@@ -36,7 +36,13 @@ func (d *Dialect) Tables() *schema.Tables {
 	return d.tables
 }
 
-func (d *Dialect) OnField(field *schema.Field) {
+func (d *Dialect) OnTable(table *schema.Table) {
+	for _, field := range table.Fields {
+		d.onField(field)
+	}
+}
+
+func (d *Dialect) onField(field *schema.Field) {
 	// INTEGER PRIMARY KEY is an alias for the ROWID.
 	// It is safe to convert all ints to INTEGER, because SQLite types don't have size.
 	switch field.DiscoveredSQLType {
@@ -44,8 +50,6 @@ func (d *Dialect) OnField(field *schema.Field) {
 		field.DiscoveredSQLType = sqltype.Integer
 	}
 }
-
-func (d *Dialect) OnTable(table *schema.Table) {}
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'

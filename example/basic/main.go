@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/go-mysql-org/go-mysql/driver"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -13,7 +12,7 @@ import (
 )
 
 type User struct {
-	ID     int64 `bun:",autoincrement"`
+	ID     int64
 	Name   string
 	Emails []string
 }
@@ -23,7 +22,7 @@ func (u User) String() string {
 }
 
 type Story struct {
-	ID       int64 `bun:",autoincrement"`
+	ID       int64
 	Title    string
 	AuthorID int64
 	Author   *User `bun:"rel:has-one"`

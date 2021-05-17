@@ -12,8 +12,6 @@ type Dialect interface {
 	Features() feature.Feature
 
 	Tables() *Tables
-
-	OnField(field *Field)
 	OnTable(table *Table)
 
 	IdentQuote() byte

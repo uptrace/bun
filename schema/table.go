@@ -371,15 +371,6 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	field.Scan = FieldScanner(field)
 	field.IsZero = FieldZeroChecker(field)
 
-	t.dialect.OnField(field)
-
-	if field.UserSQLType == "" {
-		field.UserSQLType = field.DiscoveredSQLType
-	}
-	if field.CreateTableSQLType == "" {
-		field.CreateTableSQLType = field.UserSQLType
-	}
-
 	if v, ok := tag.Options["alias"]; ok {
 		t.FieldMap[v] = field
 	}
