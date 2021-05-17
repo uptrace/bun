@@ -68,6 +68,10 @@ if rows.Next() {
 		panic(err)
 	}
 }
+
+if err := rows.Err(); err != nil {
+    panic(err)
+}
 ```
 
 For more details, please check [basic](example/basic) example.

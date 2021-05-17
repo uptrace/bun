@@ -46,6 +46,10 @@ type baseQuery struct {
 	flags internal.Flag
 }
 
+func (q *baseQuery) GetDB() *DB {
+	return q.db
+}
+
 func (q *baseQuery) setTableModel(modeli interface{}) {
 	model, err := newSingleModel(q.db, modeli)
 	if err != nil {
@@ -836,4 +840,13 @@ func getByteSlice() *byteSlice {
 func putByteSlice(b *byteSlice) {
 	b.b = b.b[:0]
 	byteSlicePool.Put(b)
+}
+
+//------------------------------------------------------------------------------
+
+func errNoRows(rows *sql.Rows) error {
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	return sql.ErrNoRows
 }

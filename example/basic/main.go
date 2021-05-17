@@ -38,9 +38,7 @@ func main() {
 	sqlite.SetMaxOpenConns(1)
 
 	db := bun.NewDB(sqlite, sqlitedialect.New())
-	if false {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
-	}
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 
 	// Drop and create tables.
 	models := []interface{}{

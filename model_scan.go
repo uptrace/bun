@@ -21,7 +21,7 @@ func newScanModel(dest []interface{}) scanModel {
 
 func (m scanModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
-		return 0, sql.ErrNoRows
+		return 0, errNoRows(rows)
 	}
 
 	if err := rows.Scan(m.dest...); err != nil {

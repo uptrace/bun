@@ -61,7 +61,12 @@ func (q *CreateIndexQuery) IfNotExists() *CreateIndexQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *CreateIndexQuery) Index(query string, args ...interface{}) *CreateIndexQuery {
+func (q *CreateIndexQuery) Index(query string) *CreateIndexQuery {
+	q.index = schema.UnsafeIdent(query)
+	return q
+}
+
+func (q *CreateIndexQuery) IndexExpr(query string, args ...interface{}) *CreateIndexQuery {
 	q.index = schema.SafeQuery(query, args)
 	return q
 }
