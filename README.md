@@ -1,4 +1,4 @@
-# DB-agnostic ORM for sql.DB
+# Tasty ORM for sql.DB
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
@@ -32,7 +32,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 )
 
-db := bun.Open(sqldb, sqlitedialect.New())
+db := bun.NewDB(sqldb, sqlitedialect.New())
 ```
 
 Now you are ready to issue some queries:

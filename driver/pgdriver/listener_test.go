@@ -61,5 +61,5 @@ func db() *bun.DB {
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	return bun.Open(sqldb, pgdialect.New())
+	return bun.NewDB(sqldb, pgdialect.New())
 }

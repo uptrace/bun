@@ -27,7 +27,7 @@ func pg() *bun.DB {
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	return bun.Open(sqldb, pgdialect.New())
+	return bun.NewDB(sqldb, pgdialect.New())
 }
 
 func sqlite(t *testing.T) *bun.DB {
@@ -37,7 +37,7 @@ func sqlite(t *testing.T) *bun.DB {
 	sqldb.SetMaxIdleConns(1000)
 	sqldb.SetConnMaxLifetime(0)
 
-	return bun.Open(sqldb, sqlitedialect.New())
+	return bun.NewDB(sqldb, sqlitedialect.New())
 }
 
 func mysql(t *testing.T) *bun.DB {
@@ -49,7 +49,7 @@ func mysql(t *testing.T) *bun.DB {
 	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(t, err)
 
-	return bun.Open(sqldb, mysqldialect.New())
+	return bun.NewDB(sqldb, mysqldialect.New())
 }
 
 func dbs(t *testing.T) []*bun.DB {

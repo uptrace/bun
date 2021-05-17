@@ -20,7 +20,7 @@ func main() {
 		panic(err)
 	}
 
-	db := bun.Open(sqldb, sqlitedialect.New())
+	db := bun.NewDB(sqldb, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 
 	migrations := migrations.Migrations

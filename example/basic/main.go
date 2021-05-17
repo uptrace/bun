@@ -38,7 +38,7 @@ func main() {
 	}
 	sqlite.SetMaxOpenConns(1)
 
-	db := bun.Open(sqlite, sqlitedialect.New())
+	db := bun.NewDB(sqlite, sqlitedialect.New())
 	if false {
 		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 	}

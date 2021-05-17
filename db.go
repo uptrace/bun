@@ -22,15 +22,12 @@ type DBStats struct {
 	Errors  uint64
 }
 
-type Config struct{}
-
-type ConfigOption func(cfg *Config)
+type DBOption func(cfg *DB)
 
 type DB struct {
 	*sql.DB
 	dialect  schema.Dialect
 	features feature.Feature
-	cfg      Config
 
 	queryHooks []QueryHook
 
@@ -40,7 +37,7 @@ type DB struct {
 	stats DBStats
 }
 
-func Open(sqldb *sql.DB, dialect schema.Dialect, opts ...ConfigOption) *DB {
+func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	db := &DB{
 		DB:       sqldb,
 		dialect:  dialect,
@@ -49,7 +46,7 @@ func Open(sqldb *sql.DB, dialect schema.Dialect, opts ...ConfigOption) *DB {
 	}
 
 	for _, opt := range opts {
-		opt(&db.cfg)
+		opt(db)
 	}
 
 	return db
