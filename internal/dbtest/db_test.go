@@ -339,6 +339,7 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 
 		nums = append(nums, num)
 	}
+	require.NoError(t, rows.Err())
 
 	require.Equal(t, []int{3, 2, 1}, nums)
 }

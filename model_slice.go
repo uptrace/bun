@@ -62,6 +62,9 @@ func (m *sliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) 
 		}
 		n++
 	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
 
 	return n, nil
 }
