@@ -639,7 +639,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	return q.dbi.QueryContext(ctx, query)
 }
 
-func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	if err := q.beforeSelectQueryHook(ctx); err != nil {
 		return res, err
 	}

@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 	"sort"
 	"strconv"
 
@@ -248,7 +249,7 @@ func (q *CreateTableQuery) appendFKConstraint(
 
 //------------------------------------------------------------------------------
 
-func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
 	if err := q.beforeCreateTableQueryHook(ctx); err != nil {
 		return res, err
 	}

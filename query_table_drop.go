@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -84,7 +85,7 @@ func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
 	if err := q.beforeDropTableQueryHook(ctx); err != nil {
 		return res, err
 	}

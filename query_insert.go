@@ -428,7 +428,7 @@ func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	if err := q.beforeInsertQueryHook(ctx); err != nil {
 		return res, err
 	}

@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -103,7 +104,7 @@ func (q *TruncateTableQuery) AppendQuery(
 
 //------------------------------------------------------------------------------
 
-func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
 	bs := getByteSlice()
 	defer putByteSlice(bs)
 

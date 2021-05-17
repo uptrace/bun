@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/uptrace/bun/internal"
@@ -87,7 +88,7 @@ func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *AddColumnQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	bs := getByteSlice()
 	defer putByteSlice(bs)
 

@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -158,7 +159,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 //------------------------------------------------------------------------------
 
-func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, _ error) {
+func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
 	if q.tableModel == nil || q.table.SoftDeleteField == nil {
 		return q.ForceDelete(ctx, dest...)
 	}
@@ -175,7 +176,9 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res Result
 	return upd.Exec(ctx, dest...)
 }
 
-func (q *DeleteQuery) ForceDelete(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *DeleteQuery) ForceDelete(
+	ctx context.Context, dest ...interface{},
+) (res sql.Result, err error) {
 	if q.table != nil && q.table.SoftDeleteField != nil {
 		q = q.WhereAllWithDeleted()
 	}

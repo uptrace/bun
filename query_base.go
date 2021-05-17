@@ -373,7 +373,7 @@ func (q *baseQuery) scan(
 	queryApp schema.QueryAppender,
 	query string,
 	dest []interface{},
-) (res Result, _ error) {
+) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
 	rows, err := q.dbi.QueryContext(ctx, query)
@@ -404,7 +404,7 @@ func (q *baseQuery) exec(
 	ctx context.Context,
 	queryApp schema.QueryAppender,
 	query string,
-) (res Result, _ error) {
+) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
 	r, err := q.dbi.ExecContext(ctx, query)

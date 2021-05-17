@@ -292,19 +292,19 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 
 //------------------------------------------------------------------------------
 
-type Result struct {
+type result struct {
 	r sql.Result
 	n int
 }
 
-func (r Result) RowsAffected() (int64, error) {
+func (r result) RowsAffected() (int64, error) {
 	if r.r != nil {
 		return r.r.RowsAffected()
 	}
 	return int64(r.n), nil
 }
 
-func (r Result) LastInsertId() (int64, error) {
+func (r result) LastInsertId() (int64, error) {
 	if r.r != nil {
 		return r.r.LastInsertId()
 	}

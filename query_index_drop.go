@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -87,7 +88,7 @@ func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *DropIndexQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *DropIndexQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	bs := getByteSlice()
 	defer putByteSlice(bs)
 

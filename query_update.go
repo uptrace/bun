@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -291,7 +292,7 @@ func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []b
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res Result, err error) {
+func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	if err := q.beforeUpdateQueryHook(ctx); err != nil {
 		return res, err
 	}
