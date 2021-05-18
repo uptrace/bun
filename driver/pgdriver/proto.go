@@ -120,12 +120,12 @@ func writeStartup(ctx context.Context, cn *Conn) error {
 	wb.StartMessage(0)
 	wb.WriteInt32(196608)
 	wb.WriteString("user")
-	wb.WriteString(cn.driver.user)
+	wb.WriteString(cn.driver.cfg.User)
 	wb.WriteString("database")
-	wb.WriteString(cn.driver.database)
-	if cn.driver.appName != "" {
+	wb.WriteString(cn.driver.cfg.Database)
+	if cn.driver.cfg.AppName != "" {
 		wb.WriteString("application_name")
-		wb.WriteString(cn.driver.appName)
+		wb.WriteString(cn.driver.cfg.AppName)
 	}
 	wb.WriteString("")
 	wb.FinishMessage()
@@ -162,7 +162,7 @@ func auth(ctx context.Context, cn *Conn) error {
 }
 
 func authCleartext(ctx context.Context, cn *Conn) error {
-	if err := writePassword(ctx, cn, cn.driver.password); err != nil {
+	if err := writePassword(ctx, cn, cn.driver.cfg.Password); err != nil {
 		return err
 	}
 	return readAuthOK(cn)
@@ -174,7 +174,7 @@ func authMD5(ctx context.Context, cn *Conn) error {
 		return err
 	}
 
-	secret := "md5" + md5s(md5s(cn.driver.password+cn.driver.user)+string(b))
+	secret := "md5" + md5s(md5s(cn.driver.cfg.Password+cn.driver.cfg.User)+string(b))
 	if err := writePassword(ctx, cn, secret); err != nil {
 		return err
 	}

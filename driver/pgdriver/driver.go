@@ -74,39 +74,18 @@ type DriverStats struct {
 }
 
 type driverConnector struct {
-	network     string
-	addr        string
-	dialTimeout time.Duration
-	dialer      func(ctx context.Context, network, addr string) (net.Conn, error)
-
-	user     string
-	password string
-	database string
-	appName  string
-
-	readTimeout  time.Duration
-	writeTimeout time.Duration
+	cfg Config
 
 	stats DriverStats
 }
 
 func NewConnector(opts ...DriverOption) driver.Connector {
-	host := env("PGHOST", "localhost")
-	port := env("PGPORT", "5432")
 	d := &driverConnector{
-		network:     "tcp",
-		addr:        net.JoinHostPort(host, port),
-		dialTimeout: 5 * time.Second,
-
-		user:     env("PGUSER", "postgres"),
-		database: env("PGDATABASE", "postgres"),
-
-		readTimeout:  10 * time.Second,
-		writeTimeout: 5 * time.Second,
+		cfg: newDefaultConfig(),
 	}
-	d.dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	d.cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
-			Timeout:   d.dialTimeout,
+			Timeout:   d.cfg.DialTimeout,
 			KeepAlive: 5 * time.Minute,
 		}
 		return netDialer.DialContext(ctx, network, addr)
@@ -119,17 +98,10 @@ func NewConnector(opts ...DriverOption) driver.Connector {
 	return d
 }
 
-func env(key, defValue string) string {
-	if s := os.Getenv(key); s != "" {
-		return s
-	}
-	return defValue
-}
-
 var _ driver.Connector = (*driverConnector)(nil)
 
 func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	if d.user == "" {
+	if d.cfg.User == "" {
 		return nil, errors.New("pgdriver: user name is required")
 	}
 	return newConn(ctx, d)
@@ -137,6 +109,10 @@ func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 
 func (d *driverConnector) Driver() driver.Driver {
 	return Driver{connector: d}
+}
+
+func (d *driverConnector) Config() Config {
+	return d.cfg
 }
 
 func (d *driverConnector) Stats() DriverStats {
@@ -161,7 +137,7 @@ type Conn struct {
 }
 
 func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
-	netConn, err := driver.dialer(ctx, driver.network, driver.addr)
+	netConn, err := driver.cfg.Dialer(ctx, driver.cfg.Network, driver.cfg.Addr)
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +194,8 @@ func (cn *Conn) ExecContext(
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
+
+	cn.setReadDeadline(ctx, -1)
 
 	var res driver.Result
 	var firstErr error
@@ -280,19 +258,21 @@ func (cn *Conn) QueryContext(
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
+
+	cn.setReadDeadline(ctx, -1)
 	return newRows(cn)
 }
 
 func (cn *Conn) setReadDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.driver.readTimeout
+		timeout = cn.driver.cfg.ReadTimeout
 	}
 	_ = cn.netConn.SetReadDeadline(cn.deadline(ctx, timeout))
 }
 
 func (cn *Conn) setWriteDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.driver.writeTimeout
+		timeout = cn.driver.cfg.WriteTimeout
 	}
 	_ = cn.netConn.SetWriteDeadline(cn.deadline(ctx, timeout))
 }
@@ -332,7 +312,6 @@ func newRows(cn *Conn) (*rows, error) {
 	}
 
 	var firstErr error
-
 	for {
 		c, msgLen, err := readMessageType(cn)
 		if err != nil {

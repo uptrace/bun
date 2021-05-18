@@ -1,68 +1,103 @@
 package pgdriver
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
+
+type Config struct {
+	Network     string
+	Addr        string
+	DialTimeout time.Duration
+	Dialer      func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	User     string
+	Password string
+	Database string
+	AppName  string
+
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+}
+
+func newDefaultConfig() Config {
+	host := env("PGHOST", "localhost")
+	port := env("PGPORT", "5432")
+
+	return Config{
+		Network:     "tcp",
+		Addr:        net.JoinHostPort(host, port),
+		DialTimeout: 5 * time.Second,
+
+		User:     env("PGUSER", "postgres"),
+		Database: env("PGDATABASE", "postgres"),
+
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
+}
 
 type DriverOption func(*driverConnector)
 
 func WithAddr(addr string) DriverOption {
 	return func(d *driverConnector) {
-		d.addr = addr
+		d.cfg.Addr = addr
 	}
 }
 
 func WithUser(user string) DriverOption {
 	return func(d *driverConnector) {
-		d.user = user
+		d.cfg.User = user
 	}
 }
 
 func WithPassword(password string) DriverOption {
 	return func(d *driverConnector) {
-		d.password = password
+		d.cfg.Password = password
 	}
 }
 
 func WithDatabase(database string) DriverOption {
 	return func(d *driverConnector) {
-		d.database = database
+		d.cfg.Database = database
 	}
 }
 
 func WithApplicationName(appName string) DriverOption {
 	return func(d *driverConnector) {
-		d.appName = appName
+		d.cfg.AppName = appName
 	}
 }
 
 func WithTimeout(timeout time.Duration) DriverOption {
 	return func(d *driverConnector) {
-		d.dialTimeout = timeout
-		d.readTimeout = timeout
-		d.writeTimeout = timeout
+		d.cfg.DialTimeout = timeout
+		d.cfg.ReadTimeout = timeout
+		d.cfg.WriteTimeout = timeout
 	}
 }
 
 func WithDialTimeout(dialTimeout time.Duration) DriverOption {
 	return func(d *driverConnector) {
-		d.dialTimeout = dialTimeout
+		d.cfg.DialTimeout = dialTimeout
 	}
 }
 
 func WithReadTimeout(readTimeout time.Duration) DriverOption {
 	return func(d *driverConnector) {
-		d.readTimeout = readTimeout
+		d.cfg.ReadTimeout = readTimeout
 	}
 }
 
 func WithWriteTimeout(writeTimeout time.Duration) DriverOption {
 	return func(d *driverConnector) {
-		d.writeTimeout = writeTimeout
+		d.cfg.WriteTimeout = writeTimeout
 	}
 }
 
@@ -127,4 +162,11 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 	}
 
 	return opts, nil
+}
+
+func env(key, defValue string) string {
+	if s := os.Getenv(key); s != "" {
+		return s
+	}
+	return defValue
 }
