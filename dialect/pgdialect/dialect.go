@@ -17,6 +17,7 @@ type Dialect struct {
 	features feature.Feature
 
 	appenderMap sync.Map
+	scannerMap  sync.Map
 }
 
 func New() *Dialect {
@@ -117,6 +118,19 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(schema.AppenderFunc)
+	}
+	return fn
+}
+
+func (d *Dialect) Scanner(typ reflect.Type) schema.ScannerFunc {
+	if v, ok := d.scannerMap.Load(typ); ok {
+		return v.(schema.ScannerFunc)
+	}
+
+	fn := scanner(typ)
+
+	if v, ok := d.scannerMap.LoadOrStore(typ, fn); ok {
+		return v.(schema.ScannerFunc)
 	}
 	return fn
 }

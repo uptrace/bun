@@ -368,7 +368,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	}
 	field.DiscoveredSQLType = sqltype.Detect(field.Type)
 	field.Append = FieldAppender(t.dialect, field)
-	field.Scan = FieldScanner(field)
+	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = FieldZeroChecker(field)
 
 	if v, ok := tag.Options["alias"]; ok {

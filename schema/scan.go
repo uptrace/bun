@@ -37,31 +37,36 @@ var scanners = []ScannerFunc{
 	reflect.Array:         nil,
 	reflect.Chan:          nil,
 	reflect.Func:          nil,
-	reflect.Interface:     nil,
 	reflect.Map:           scanJSON,
 	reflect.Ptr:           nil,
 	reflect.Slice:         scanJSON,
 	reflect.String:        scanString,
-	reflect.Struct:        nil,
+	reflect.Struct:        scanJSON,
 	reflect.UnsafePointer: nil,
 }
 
-func FieldScanner(field *Field) ScannerFunc {
+func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	if field.Tag.HasOption("msgpack") {
 		return scanMsgpack
 	}
 	if field.Tag.HasOption("json_use_number") {
 		return scanJSONUseNumber
 	}
-	return Scanner(field.Type)
+	return dialect.Scanner(field.Type)
 }
 
 func Scanner(typ reflect.Type) ScannerFunc {
+	kind := typ.Kind()
+
+	if kind == reflect.Ptr {
+		if fn := Scanner(typ.Elem()); fn != nil {
+			return ptrScanner(fn)
+		}
+	}
+
 	if typ.Implements(scannerType) {
 		return scanScanner
 	}
-
-	kind := typ.Kind()
 
 	if kind != reflect.Ptr {
 		ptr := reflect.PtrTo(typ)
@@ -251,5 +256,22 @@ func toBytes(src interface{}) ([]byte, error) {
 		return src, nil
 	default:
 		return nil, fmt.Errorf("bun: got %T, wanted []byte or string", src)
+	}
+}
+
+func ptrScanner(fn ScannerFunc) ScannerFunc {
+	return func(dest reflect.Value, src interface{}) error {
+		if src == nil {
+			if !dest.IsNil() {
+				dest.Set(reflect.New(dest.Type().Elem()))
+				return nil
+			}
+			return nil
+		}
+
+		if dest.IsNil() {
+			dest.Set(reflect.New(dest.Type().Elem()))
+		}
+		return fn(dest.Elem(), src)
 	}
 }

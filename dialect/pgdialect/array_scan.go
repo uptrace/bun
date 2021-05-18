@@ -63,12 +63,12 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 			}
 		}
 
-		s, err := toString(src)
+		b, err := toBytes(src)
 		if err != nil {
 			return err
 		}
 
-		p := newArrayParser(s)
+		p := newArrayParser(b)
 		nextValue := internal.MakeSliceNextElemFunc(dest)
 		for {
 			elem, err := p.NextElem()
@@ -109,14 +109,14 @@ func decodeStringSlice(src interface{}) ([]string, error) {
 		return nil, nil
 	}
 
-	s, err := toString(src)
+	b, err := toBytes(src)
 	if err != nil {
 		return nil, err
 	}
 
 	slice := make([]string, 0)
 
-	p := newArrayParser(s)
+	p := newArrayParser(b)
 	for {
 		elem, err := p.NextElem()
 		if err != nil {
@@ -151,14 +151,14 @@ func decodeIntSlice(src interface{}) ([]int, error) {
 		return nil, nil
 	}
 
-	s, err := toString(src)
+	b, err := toBytes(src)
 	if err != nil {
 		return nil, err
 	}
 
 	slice := make([]int, 0)
 
-	p := newArrayParser(s)
+	p := newArrayParser(b)
 	for {
 		elem, err := p.NextElem()
 		if err != nil {
@@ -168,12 +168,12 @@ func decodeIntSlice(src interface{}) ([]int, error) {
 			return nil, err
 		}
 
-		if elem == "" {
+		if elem == nil {
 			slice = append(slice, 0)
 			continue
 		}
 
-		n, err := strconv.Atoi(elem)
+		n, err := strconv.Atoi(bytesToString(elem))
 		if err != nil {
 			return nil, err
 		}
@@ -204,14 +204,14 @@ func decodeInt64Slice(src interface{}) ([]int64, error) {
 		return nil, nil
 	}
 
-	s, err := toString(src)
+	b, err := toBytes(src)
 	if err != nil {
 		return nil, err
 	}
 
 	slice := make([]int64, 0)
 
-	p := newArrayParser(s)
+	p := newArrayParser(b)
 	for {
 		elem, err := p.NextElem()
 		if err != nil {
@@ -221,12 +221,12 @@ func decodeInt64Slice(src interface{}) ([]int64, error) {
 			return nil, err
 		}
 
-		if elem == "" {
+		if elem == nil {
 			slice = append(slice, 0)
 			continue
 		}
 
-		n, err := strconv.ParseInt(elem, 10, 64)
+		n, err := strconv.ParseInt(bytesToString(elem), 10, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -257,14 +257,14 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 		return nil, nil
 	}
 
-	s, err := toString(src)
+	b, err := toBytes(src)
 	if err != nil {
 		return nil, err
 	}
 
 	slice := make([]float64, 0)
 
-	p := newArrayParser(s)
+	p := newArrayParser(b)
 	for {
 		elem, err := p.NextElem()
 		if err != nil {
@@ -274,12 +274,12 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 			return nil, err
 		}
 
-		if elem == "" {
+		if elem == nil {
 			slice = append(slice, 0)
 			continue
 		}
 
-		n, err := strconv.ParseFloat(elem, 64)
+		n, err := strconv.ParseFloat(bytesToString(elem), 64)
 		if err != nil {
 			return nil, err
 		}
@@ -290,13 +290,13 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 	return slice, nil
 }
 
-func toString(src interface{}) (string, error) {
+func toBytes(src interface{}) ([]byte, error) {
 	switch src := src.(type) {
 	case string:
-		return src, nil
+		return stringToBytes(src), nil
 	case []byte:
-		return string(src), nil
+		return src, nil
 	default:
-		return "", fmt.Errorf("bun: got %T, wanted []byte or string", src)
+		return nil, fmt.Errorf("bun: got %T, wanted []byte or string", src)
 	}
 }

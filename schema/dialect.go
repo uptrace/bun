@@ -17,6 +17,7 @@ type Dialect interface {
 	IdentQuote() byte
 	Append(fmter Formatter, b []byte, v interface{}) []byte
 	Appender(typ reflect.Type) AppenderFunc
+	Scanner(typ reflect.Type) ScannerFunc
 }
 
 //------------------------------------------------------------------------------
@@ -26,6 +27,7 @@ type nopDialect struct {
 	features feature.Feature
 
 	appenderMap sync.Map
+	scannerMap  sync.Map
 }
 
 func newNopDialect() *nopDialect {
@@ -68,6 +70,19 @@ func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(AppenderFunc)
+	}
+	return fn
+}
+
+func (d *nopDialect) Scanner(typ reflect.Type) ScannerFunc {
+	if v, ok := d.scannerMap.Load(typ); ok {
+		return v.(ScannerFunc)
+	}
+
+	fn := Scanner(typ)
+
+	if v, ok := d.scannerMap.LoadOrStore(typ, fn); ok {
+		return v.(ScannerFunc)
 	}
 	return fn
 }

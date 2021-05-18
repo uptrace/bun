@@ -1,86 +1,86 @@
 package pgdialect
 
 import (
+	"bytes"
 	"fmt"
 	"io"
-	"strings"
 )
 
 type arrayParser struct {
-	s string
+	b []byte
 	i int
 
 	buf []byte
 	err error
 }
 
-func newArrayParser(s string) *arrayParser {
+func newArrayParser(b []byte) *arrayParser {
 	p := &arrayParser{
-		s: s,
+		b: b,
 		i: 1,
 	}
-	if len(s) < 2 || s[0] != '{' || s[len(s)-1] != '}' {
-		p.err = arrayParserError(s)
+	if len(b) < 2 || b[0] != '{' || b[len(b)-1] != '}' {
+		p.err = fmt.Errorf("bun: can't parse array: %q", b)
 	}
 	return p
 }
 
-func (p *arrayParser) NextElem() (string, error) {
+func (p *arrayParser) NextElem() ([]byte, error) {
 	if p.err != nil {
-		return "", p.err
+		return nil, p.err
 	}
 
 	c, err := p.readByte()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	switch c {
 	case '}':
-		return "", io.EOF
+		return nil, io.EOF
 	case '"':
-		s, err := p.readSubstring()
+		b, err := p.readSubstring()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		if p.peek() == ',' {
 			p.skipNext()
 		}
 
-		return s, nil
+		return b, nil
 	default:
-		s := p.readSimple()
-		if s == "NULL" {
-			s = ""
+		b := p.readSimple()
+		if bytes.Equal(b, []byte("NULL")) {
+			b = nil
 		}
 
 		if p.peek() == ',' {
 			p.skipNext()
 		}
 
-		return s, nil
+		return b, nil
 	}
 }
 
-func (p *arrayParser) readSimple() string {
+func (p *arrayParser) readSimple() []byte {
 	p.unreadByte()
 
-	if i := strings.IndexByte(p.s[p.i:], ','); i >= 0 {
-		s := p.s[p.i : p.i+i]
+	if i := bytes.IndexByte(p.b[p.i:], ','); i >= 0 {
+		b := p.b[p.i : p.i+i]
 		p.i += i
-		return s
+		return b
 	}
 
-	s := p.s[p.i : len(p.s)-1]
-	p.i = len(p.s) - 1
-	return s
+	b := p.b[p.i : len(p.b)-1]
+	p.i = len(p.b) - 1
+	return b
 }
 
-func (p *arrayParser) readSubstring() (string, error) {
+func (p *arrayParser) readSubstring() ([]byte, error) {
 	c, err := p.readByte()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	p.buf = p.buf[:0]
@@ -91,7 +91,7 @@ func (p *arrayParser) readSubstring() (string, error) {
 
 		next, err := p.readByte()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		if c == '\\' {
@@ -101,7 +101,7 @@ func (p *arrayParser) readSubstring() (string, error) {
 
 				c, err = p.readByte()
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 			default:
 				p.buf = append(p.buf, '\\')
@@ -114,16 +114,16 @@ func (p *arrayParser) readSubstring() (string, error) {
 		c = next
 	}
 
-	return string(p.buf), nil
+	return p.buf, nil
 }
 
 func (p *arrayParser) valid() bool {
-	return p.i < len(p.s)
+	return p.i < len(p.b)
 }
 
 func (p *arrayParser) readByte() (byte, error) {
 	if p.valid() {
-		c := p.s[p.i]
+		c := p.b[p.i]
 		p.i++
 		return c, nil
 	}
@@ -136,15 +136,11 @@ func (p *arrayParser) unreadByte() {
 
 func (p *arrayParser) peek() byte {
 	if p.valid() {
-		return p.s[p.i]
+		return p.b[p.i]
 	}
 	return 0
 }
 
 func (p *arrayParser) skipNext() {
 	p.i++
-}
-
-func arrayParserError(s string) error {
-	return fmt.Errorf("bun: can't parse array: %q", s)
 }

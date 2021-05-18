@@ -24,7 +24,7 @@ func TestArrayParser(t *testing.T) {
 	}
 
 	for testi, test := range tests {
-		p := newArrayParser(test.s)
+		p := newArrayParser([]byte(test.s))
 
 		var got []string
 		for {
@@ -35,7 +35,7 @@ func TestArrayParser(t *testing.T) {
 				}
 				t.Fatal(err)
 			}
-			got = append(got, s)
+			got = append(got, string(s))
 		}
 
 		if len(got) != len(test.els) {

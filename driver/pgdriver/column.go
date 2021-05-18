@@ -22,6 +22,7 @@ const (
 	pgVarchar = 1043
 	pgBytea   = 17
 
+	pgDate        = 1082
 	pgTimestamp   = 1114
 	pgTimestamptz = 1184
 )
@@ -47,6 +48,8 @@ func readColumnValue(cn *Conn, dataType int32, dataLen int) (interface{}, error)
 	case pgTimestamp:
 		return readTimeCol(cn, dataLen)
 	case pgTimestamptz:
+		return readTimeCol(cn, dataLen)
+	case pgDate:
 		return readTimeCol(cn, dataLen)
 	case pgText, pgVarchar:
 		return readStringCol(cn, dataLen)
