@@ -9,11 +9,11 @@ test:
 	done
 
 tag:
-	git tag extra/dialect/pgdialect/$(VERSION)
-	git tag extra/dialect/mysqldialect/$(VERSION)
-	git tag extra/dialect/sqlitedialect/$(VERSION)
-	git tag extra/driver/pgdriver/$(VERSION)
-	git tag extra/fixture/$(VERSION)
+	git tag dialect/pgdialect/$(VERSION)
+	git tag dialect/mysqldialect/$(VERSION)
+	git tag dialect/sqlitedialect/$(VERSION)
+	git tag driver/pgdriver/$(VERSION)
+	git tag fixture/$(VERSION)
 	git tag extra/bundebug/$(VERSION)
 	git tag extra/bunotel/$(VERSION)
 
