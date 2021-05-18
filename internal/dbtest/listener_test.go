@@ -1,22 +1,18 @@
-package pgdriver_test
+package dbtest_test
 
 import (
 	"context"
-	"database/sql"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
 func TestListener(t *testing.T) {
 	ctx := context.Background()
 
-	db := db()
+	db := pg()
 	defer db.Close()
 
 	ln := pgdriver.NewListener(db)
@@ -52,14 +48,4 @@ func TestListener(t *testing.T) {
 	_, _, err = ln.Receive(ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "closed")
-}
-
-func db() *bun.DB {
-	dsn := os.Getenv("PG")
-	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
-	}
-
-	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	return bun.NewDB(sqldb, pgdialect.New())
 }
