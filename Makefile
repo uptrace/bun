@@ -9,6 +9,7 @@ test:
 	done
 
 tag:
+	git tag $(VERSION)
 	git tag dialect/pgdialect/$(VERSION)
 	git tag dialect/mysqldialect/$(VERSION)
 	git tag dialect/sqlitedialect/$(VERSION)
