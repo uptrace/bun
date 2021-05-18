@@ -134,14 +134,10 @@ func eventQuery(event *bun.QueryEvent, operation string) string {
 
 	var query string
 
-	if operation == "INSERT" {
+	if len(event.Query) > softQueryLimit {
 		query = unformattedQuery(event)
 	} else {
-		if len(event.Query) > softQueryLimit {
-			query = unformattedQuery(event)
-		} else {
-			query = string(event.Query)
-		}
+		query = string(event.Query)
 	}
 
 	if len(query) > hardQueryLimit {

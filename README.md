@@ -57,7 +57,7 @@ The code above is equivalent to:
 ```go
 query := "SELECT id, name FROM users AS user WHERE name != '' ORDER BY id ASC LIMIT 1"
 
-rows, err := sqldb.QueryRows(ctx, query)
+rows, err := sqldb.QueryContext(ctx, query)
 if err != nil {
 	panic(err)
 }
@@ -74,4 +74,4 @@ if err := rows.Err(); err != nil {
 }
 ```
 
-For more details, please check [basic](example/basic) example.
+For more details, please check [docs](https://bun.uptrace.dev/).
