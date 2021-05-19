@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/fixture"
+	"github.com/uptrace/bun/dbfixture"
 )
 
 func TestORM(t *testing.T) {
@@ -366,7 +366,7 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 }
 
 func loadTestData(t *testing.T, db *bun.DB) {
-	loader := fixture.NewLoader(db)
-	err := loader.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
+	fixture := dbfixture.New(db)
+	err := fixture.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
 	require.NoError(t, err)
 }

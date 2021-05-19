@@ -1,4 +1,4 @@
-package fixture
+package dbfixture
 
 import (
 	"bytes"
@@ -17,10 +17,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type LoaderOption func(l *Loader)
+type FixtureOption func(l *Fixture)
 
-func WithRecreateTables() LoaderOption {
-	return func(l *Loader) {
+func WithRecreateTables() FixtureOption {
+	return func(l *Fixture) {
 		if l.truncateTables {
 			panic("don't use WithDropTables together with WithTruncateTables")
 		}
@@ -29,8 +29,8 @@ func WithRecreateTables() LoaderOption {
 	}
 }
 
-func WithTruncateTables() LoaderOption {
-	return func(l *Loader) {
+func WithTruncateTables() FixtureOption {
+	return func(l *Fixture) {
 		if l.truncateTables {
 			panic("don't use WithTruncateTables together with WithRecreateTables")
 		}
@@ -39,15 +39,15 @@ func WithTruncateTables() LoaderOption {
 	}
 }
 
-func WithTemplateFuncs(funcMap template.FuncMap) LoaderOption {
-	return func(l *Loader) {
+func WithTemplateFuncs(funcMap template.FuncMap) FixtureOption {
+	return func(l *Fixture) {
 		for k, v := range funcMap {
 			l.funcMap[k] = v
 		}
 	}
 }
 
-type Loader struct {
+type Fixture struct {
 	db *bun.DB
 
 	recreateTables bool
@@ -58,8 +58,8 @@ type Loader struct {
 	modelRows map[string]map[string]interface{}
 }
 
-func NewLoader(db *bun.DB, opts ...LoaderOption) *Loader {
-	l := &Loader{
+func New(db *bun.DB, opts ...FixtureOption) *Fixture {
+	l := &Fixture{
 		db: db,
 
 		funcMap:   defaultFuncs(),
@@ -71,7 +71,7 @@ func NewLoader(db *bun.DB, opts ...LoaderOption) *Loader {
 	return l
 }
 
-func (l *Loader) Row(id string) (interface{}, error) {
+func (l *Fixture) Row(id string) (interface{}, error) {
 	ss := strings.Split(id, ".")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("fixture: invalid row id: %q", id)
@@ -91,7 +91,7 @@ func (l *Loader) Row(id string) (interface{}, error) {
 	return row, nil
 }
 
-func (l *Loader) MustRow(id string) interface{} {
+func (l *Fixture) MustRow(id string) interface{} {
 	row, err := l.Row(id)
 	if err != nil {
 		panic(err)
@@ -99,7 +99,7 @@ func (l *Loader) MustRow(id string) interface{} {
 	return row
 }
 
-func (l *Loader) Load(ctx context.Context, fsys fs.FS, names ...string) error {
+func (l *Fixture) Load(ctx context.Context, fsys fs.FS, names ...string) error {
 	for _, name := range names {
 		if err := l.load(ctx, fsys, name); err != nil {
 			return err
@@ -108,13 +108,13 @@ func (l *Loader) Load(ctx context.Context, fsys fs.FS, names ...string) error {
 	return nil
 }
 
-func (l *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
+func (l *Fixture) load(ctx context.Context, fsys fs.FS, name string) error {
 	fh, err := fsys.Open(name)
 	if err != nil {
 		return err
 	}
 
-	var fixtures []Fixture
+	var fixtures []fixtureData
 
 	dec := yaml.NewDecoder(fh)
 	if err := dec.Decode(&fixtures); err != nil {
@@ -130,10 +130,10 @@ func (l *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 	return nil
 }
 
-func (l *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
-	table := l.db.Dialect().Tables().ByModel(fixture.Model)
+func (l *Fixture) addFixture(ctx context.Context, data *fixtureData) error {
+	table := l.db.Dialect().Tables().ByModel(data.Model)
 	if table == nil {
-		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", fixture.Model)
+		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", data.Model)
 	}
 
 	if l.recreateTables {
@@ -146,7 +146,7 @@ func (l *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 		}
 	}
 
-	for _, row := range fixture.Rows {
+	for _, row := range data.Rows {
 		if err := l.addRow(ctx, table, row); err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (l *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 	return nil
 }
 
-func (l *Loader) addRow(ctx context.Context, table *schema.Table, row row) error {
+func (l *Fixture) addRow(ctx context.Context, table *schema.Table, row row) error {
 	var rowID string
 	strct := reflect.New(table.Type).Elem()
 
@@ -217,7 +217,7 @@ func (l *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 	return nil
 }
 
-func (l *Loader) dropTable(ctx context.Context, table *schema.Table) error {
+func (l *Fixture) dropTable(ctx context.Context, table *schema.Table) error {
 	if _, ok := l.seenTables[table.Name]; ok {
 		return nil
 	}
@@ -239,7 +239,7 @@ func (l *Loader) dropTable(ctx context.Context, table *schema.Table) error {
 	return nil
 }
 
-func (l *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
+func (l *Fixture) truncateTable(ctx context.Context, table *schema.Table) error {
 	if _, ok := l.seenTables[table.Name]; ok {
 		return nil
 	}
@@ -254,7 +254,7 @@ func (l *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
 	return nil
 }
 
-func (l *Loader) eval(templ string) (string, error) {
+func (l *Fixture) eval(templ string) (string, error) {
 	tpl, err := template.New("").Funcs(l.funcMap).Parse(templ)
 	if err != nil {
 		return "", err
@@ -269,7 +269,7 @@ func (l *Loader) eval(templ string) (string, error) {
 	return buf.String(), nil
 }
 
-type Fixture struct {
+type fixtureData struct {
 	Model string `yaml:"model"`
 	Rows  []row  `yaml:"rows"`
 }

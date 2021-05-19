@@ -9,9 +9,9 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dbfixture"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/extra/bundebug"
-	"github.com/uptrace/bun/fixture"
 )
 
 type User struct {
@@ -42,11 +42,11 @@ func main() {
 
 	db.RegisterModel((*User)(nil), (*Org)(nil))
 
-	loader := fixture.NewLoader(db, fixture.WithRecreateTables())
-	if err := loader.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
+	fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
+	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Smith", loader.MustRow("User.smith").(*User))
-	fmt.Println("Org with id=1", loader.MustRow("Org.pk1").(*Org))
+	fmt.Println("Smith", fixture.MustRow("User.smith").(*User))
+	fmt.Println("Org with id=1", fixture.MustRow("Org.pk1").(*Org))
 }
