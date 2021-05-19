@@ -9,7 +9,9 @@ const DefaultFeatures = Returning | TableCascade
 const (
 	Returning Feature = 1 << iota
 	DefaultPlaceholder
+	DoubleColonCast
 	ValuesRow
+	UpdateMultiTable
 	AutoIncrement
 	TableCascade
 	TableIdentity

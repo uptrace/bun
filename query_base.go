@@ -237,9 +237,9 @@ func (q *baseQuery) _appendTables(
 			}
 		} else {
 			b = fmter.AppendQuery(b, string(q.table.SQLNameForSelects))
-			if withAlias && q.table.Alias != q.table.SQLNameForSelects {
+			if withAlias && q.table.SQLAlias != q.table.SQLNameForSelects {
 				b = append(b, " AS "...)
-				b = append(b, q.table.Alias...)
+				b = append(b, q.table.SQLAlias...)
 			}
 		}
 	}
@@ -276,9 +276,9 @@ func (q *baseQuery) _appendFirstTable(
 
 	if q.table != nil {
 		b = fmter.AppendQuery(b, string(q.table.SQLName))
-		if withAlias && q.table.Alias != q.table.SQLName {
+		if withAlias {
 			b = append(b, " AS "...)
-			b = append(b, q.table.Alias...)
+			b = append(b, q.table.SQLAlias...)
 		}
 		return b, nil
 	}
@@ -435,19 +435,19 @@ func (q *baseQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]
 		b = fmter.AppendQuery(b, string(q.table.SQLName))
 		return b, true
 	case "TableAlias":
-		b = fmter.AppendQuery(b, string(q.table.Alias))
+		b = fmter.AppendQuery(b, string(q.table.SQLAlias))
 		return b, true
 	case "PKs":
 		b = appendColumns(b, "", q.table.PKs)
 		return b, true
 	case "TablePKs":
-		b = appendColumns(b, q.table.Alias, q.table.PKs)
+		b = appendColumns(b, q.table.SQLAlias, q.table.PKs)
 		return b, true
 	case "Columns":
 		b = appendColumns(b, "", q.table.Fields)
 		return b, true
 	case "TableColumns":
-		b = appendColumns(b, q.table.Alias, q.table.Fields)
+		b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		return b, true
 	}
 
@@ -550,7 +550,7 @@ func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte
 		if len(b) > startLen {
 			b = append(b, " AND "...)
 		}
-		b = append(b, q.tableModel.Table().Alias...)
+		b = append(b, q.tableModel.Table().SQLAlias...)
 		b = q.appendWhereSoftDelete(b)
 	}
 
@@ -626,7 +626,7 @@ func (q *whereBaseQuery) appendWherePKStruct(
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = append(b, q.table.Alias...)
+		b = append(b, q.table.SQLAlias...)
 		b = append(b, '.')
 		b = append(b, f.SQLName...)
 		b = append(b, " = "...)
@@ -646,7 +646,7 @@ func (q *whereBaseQuery) appendWherePKSlice(
 	if len(q.table.PKs) > 1 {
 		b = append(b, '(')
 	}
-	b = appendColumns(b, q.table.Alias, q.table.PKs)
+	b = appendColumns(b, q.table.SQLAlias, q.table.PKs)
 	if len(q.table.PKs) > 1 {
 		b = append(b, ')')
 	}

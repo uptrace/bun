@@ -24,6 +24,7 @@ func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.Returning |
+		feature.DoubleColonCast |
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate

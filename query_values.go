@@ -136,7 +136,12 @@ func (q *ValuesQuery) appendQuery(
 		sliceLen := slice.Len()
 		for i := 0; i < sliceLen; i++ {
 			if i > 0 {
-				b = append(b, "), ("...)
+				b = append(b, "), "...)
+				if q.db.features.Has(feature.ValuesRow) {
+					b = append(b, "ROW("...)
+				} else {
+					b = append(b, '(')
+				}
 			}
 
 			b, err = q.appendValues(fmter, b, fields, slice.Index(i))
@@ -182,8 +187,10 @@ func (q *ValuesQuery) appendValues(
 			b = f.AppendValue(fmter, b, indirect(strct))
 		}
 
-		b = append(b, "::"...)
-		b = append(b, f.UserSQLType...)
+		if fmter.HasFeature(feature.DoubleColonCast) {
+			b = append(b, "::"...)
+			b = append(b, f.UserSQLType...)
+		}
 	}
 	return b, nil
 }

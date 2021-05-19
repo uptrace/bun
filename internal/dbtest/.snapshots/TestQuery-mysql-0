@@ -1,1 +1,1 @@
-VALUES ROW(42::BIGINT, 'hello'::VARCHAR(255))
+VALUES ROW(42, 'hello')

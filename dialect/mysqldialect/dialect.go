@@ -23,6 +23,7 @@ func New() *Dialect {
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
 		feature.DefaultPlaceholder |
+		feature.UpdateMultiTable |
 		feature.ValuesRow |
 		feature.TableTruncate
 	return d

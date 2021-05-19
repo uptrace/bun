@@ -67,7 +67,7 @@ func (j *join) manyQuery(q *SelectQuery) *SelectQuery {
 	if len(j.Relation.JoinFields) > 1 {
 		where = append(where, '(')
 	}
-	where = appendColumns(where, j.JoinModel.Table().Alias, j.Relation.JoinFields)
+	where = appendColumns(where, j.JoinModel.Table().SQLAlias, j.Relation.JoinFields)
 	if len(j.Relation.JoinFields) > 1 {
 		where = append(where, ')')
 	}
@@ -94,7 +94,7 @@ func (j *join) manyQuery(q *SelectQuery) *SelectQuery {
 
 func (j *join) hasManyColumns(q *SelectQuery) *SelectQuery {
 	if j.Relation.M2MTable != nil {
-		q = q.ColumnExpr(string(j.Relation.M2MTable.Alias) + ".*")
+		q = q.ColumnExpr(string(j.Relation.M2MTable.SQLAlias) + ".*")
 	}
 
 	b := make([]byte, 0, 32)
@@ -114,7 +114,7 @@ func (j *join) hasManyColumns(q *SelectQuery) *SelectQuery {
 		}
 	} else {
 		joinTable := j.JoinModel.Table()
-		b = appendColumns(b, joinTable.Alias, joinTable.Fields)
+		b = appendColumns(b, joinTable.SQLAlias, joinTable.Fields)
 	}
 
 	q = q.ColumnExpr(internal.String(b))
@@ -147,13 +147,13 @@ func (j *join) m2mQuery(q *SelectQuery) *SelectQuery {
 	join = append(join, "JOIN "...)
 	join = fmter.AppendQuery(join, string(j.Relation.M2MTable.Name))
 	join = append(join, " AS "...)
-	join = append(join, j.Relation.M2MTable.Alias...)
+	join = append(join, j.Relation.M2MTable.SQLAlias...)
 	join = append(join, " ON ("...)
 	for i, col := range j.Relation.M2MBaseFields {
 		if i > 0 {
 			join = append(join, ", "...)
 		}
-		join = append(join, j.Relation.M2MTable.Alias...)
+		join = append(join, j.Relation.M2MTable.SQLAlias...)
 		join = append(join, '.')
 		join = append(join, col.SQLName...)
 	}
@@ -166,8 +166,8 @@ func (j *join) m2mQuery(q *SelectQuery) *SelectQuery {
 	for i, m2mJoinField := range j.Relation.M2MJoinFields {
 		joinField := j.Relation.JoinFields[i]
 		q = q.Where("?.? = ?.?",
-			joinTable.Alias, joinField.SQLName,
-			j.Relation.M2MTable.Alias, m2mJoinField.SQLName)
+			joinTable.SQLAlias, joinField.SQLName,
+			j.Relation.M2MTable.SQLAlias, m2mJoinField.SQLName)
 	}
 
 	j.applyQuery(q)
@@ -215,7 +215,7 @@ func (j *join) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
 		b = append(b, quote)
 		return b
 	}
-	return append(b, j.BaseModel.Table().Alias...)
+	return append(b, j.BaseModel.Table().SQLAlias...)
 }
 
 func (j *join) appendSoftDelete(b []byte, flags internal.Flag) []byte {

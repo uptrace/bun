@@ -53,7 +53,8 @@ type Table struct {
 	Name              string
 	SQLName           Safe
 	SQLNameForSelects Safe
-	Alias             Safe
+	Alias             string
+	SQLAlias          Safe
 
 	Fields     []*Field // PKs + DataFields
 	PKs        []*Field
@@ -84,7 +85,8 @@ func newTable(dialect Dialect, typ reflect.Type) *Table {
 	t.ModelName = internal.Underscore(t.Type.Name())
 	tableName := tableNameInflector(t.ModelName)
 	t.setName(tableName)
-	t.Alias = t.quoteIdent(t.ModelName)
+	t.Alias = t.ModelName
+	t.SQLAlias = t.quoteIdent(t.ModelName)
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -125,8 +127,9 @@ func (t *Table) setName(name string) {
 	t.Name = name
 	t.SQLName = t.quoteIdent(name)
 	t.SQLNameForSelects = t.quoteIdent(name)
-	if t.Alias == "" {
-		t.Alias = t.quoteIdent(name)
+	if t.SQLAlias == "" {
+		t.Alias = name
+		t.SQLAlias = t.quoteIdent(name)
 	}
 }
 
@@ -243,6 +246,7 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 				t.SQLName = embeddedTable.SQLName
 				t.SQLNameForSelects = embeddedTable.SQLNameForSelects
 				t.Alias = embeddedTable.Alias
+				t.SQLAlias = embeddedTable.SQLAlias
 				t.ModelName = embeddedTable.ModelName
 			}
 
@@ -282,8 +286,9 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.SQLNameForSelects = t.quoteTableName(s)
 	}
 
-	if v, ok := tag.Options["alias"]; ok {
-		t.Alias = t.quoteIdent(v)
+	if s, ok := tag.Options["alias"]; ok {
+		t.Alias = s
+		t.SQLAlias = t.quoteIdent(s)
 	}
 }
 

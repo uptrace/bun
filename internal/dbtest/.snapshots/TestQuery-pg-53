@@ -1,1 +1,1 @@
-bun: bulk Update requires CTE with VALUES
+bun: to bulk Update, use CTE and VALUES

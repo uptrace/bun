@@ -515,7 +515,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 
 			if col.Args == nil {
 				if field, ok := q.table.FieldMap[col.Query]; ok {
-					b = append(b, q.table.Alias...)
+					b = append(b, q.table.SQLAlias...)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
 					continue
@@ -529,11 +529,11 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 		}
 	case q.table != nil:
 		if len(q.table.Fields) > 10 && fmter.IsNop() {
-			b = append(b, q.table.Alias...)
+			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
 			b = dialect.AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
 		} else {
-			b = appendColumns(b, q.table.Alias, q.table.Fields)
+			b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		}
 	default:
 		b = append(b, '*')
@@ -605,7 +605,7 @@ func (q *SelectQuery) appendHasOneColumns(
 
 func (q *SelectQuery) appendTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
-	return q.baseQuery.appendTablesWithAlias(fmter, b)
+	return q.appendTablesWithAlias(fmter, b)
 }
 
 func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, err error) {

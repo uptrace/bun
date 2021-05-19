@@ -198,6 +198,13 @@ func scanTime(dest reflect.Value, src interface{}) error {
 		}
 		dest.Set(reflect.ValueOf(tm))
 		return nil
+	case []byte:
+		tm, err := internal.ParseTime(internal.String(src))
+		if err != nil {
+			return err
+		}
+		dest.Set(reflect.ValueOf(tm))
+		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }

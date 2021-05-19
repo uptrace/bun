@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ func TestORM(t *testing.T) {
 		{"testAuthorRelations", testAuthorRelations},
 		{"testGenreRelations", testGenreRelations},
 		{"testTranslationRelations", testTranslationRelations},
+		{"testBulkUpdate", testBulkUpdate},
 	}
 
 	for _, db := range dbs(t) {
@@ -221,6 +223,38 @@ func testTranslationRelations(t *testing.T, db *bun.DB) {
 	}, translation)
 }
 
+func testBulkUpdate(t *testing.T, db *bun.DB) {
+	var books []Book
+	err := db.NewSelect().Model(&books).Scan(ctx)
+	require.NoError(t, err)
+
+	res, err := db.NewUpdate().
+		With("_data", db.NewValues(&books)).
+		Model((*Book)(nil)).
+		Table("_data").
+		Apply(func(q *bun.UpdateQuery) *bun.UpdateQuery {
+			return q.Set(
+				"? = UPPER(book.title)",
+				q.FQN("title"),
+			)
+		}).
+		Where("book.id = _data.id").
+		Exec(ctx)
+	require.NoError(t, err)
+
+	n, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.Equal(t, len(books), int(n))
+
+	var books2 []Book
+	err = db.NewSelect().Model(&books2).Scan(ctx)
+	require.NoError(t, err)
+
+	for i := range books {
+		require.Equal(t, strings.ToUpper(books[i].Title), books2[i].Title)
+	}
+}
+
 type Genre struct {
 	ID     int
 	Name   string
@@ -273,7 +307,7 @@ type Book struct {
 	EditorID  int
 	Editor    *Author   `bun:"rel:has-one"`
 	CreatedAt time.Time `bun:"default:current_timestamp"`
-	UpdatedAt time.Time
+	UpdatedAt time.Time `bun:",nullzero"`
 
 	Genres       []Genre       `bun:"m2m:book_genres"` // many to many relation
 	Translations []Translation `bun:"rel:has-many"`

@@ -162,7 +162,11 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	b = append(b, "UPDATE "...)
 
-	b, err = q.appendFirstTableWithAlias(fmter, b)
+	if fmter.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendTablesWithAlias(fmter, b)
+	} else {
+		b, err = q.appendFirstTableWithAlias(fmter, b)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -172,9 +176,11 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	b, err = q.appendOtherTables(fmter, b)
-	if err != nil {
-		return nil, err
+	if !fmter.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendOtherTables(fmter, b)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b, err = q.mustAppendWhere(fmter, b)
@@ -361,4 +367,13 @@ func (q *UpdateQuery) afterUpdateQueryHook(ctx context.Context) error {
 	// }
 
 	return nil
+}
+
+// FQN returns a fully qualified column name. For MySQL, it returns the column name with
+// the table alias. For other RDBMS, it returns just the column name.
+func (q *UpdateQuery) FQN(name string) Ident {
+	if q.db.fmter.HasFeature(feature.UpdateMultiTable) {
+		return Ident(q.table.Alias + "." + name)
+	}
+	return Ident(name)
 }

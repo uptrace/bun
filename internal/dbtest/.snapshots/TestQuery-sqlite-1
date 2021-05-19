@@ -1,1 +1,1 @@
-VALUES (42::INTEGER, 'hello'::VARCHAR), (43::INTEGER, 'world'::VARCHAR)
+VALUES (42, 'hello'), (43, 'world')

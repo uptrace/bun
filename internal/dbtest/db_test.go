@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/uptrace/bun/extra/bundebug"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -53,11 +54,19 @@ func mysql(t *testing.T) *bun.DB {
 }
 
 func dbs(t *testing.T) []*bun.DB {
-	return []*bun.DB{
+	dbs := []*bun.DB{
 		pg(),
 		sqlite(t),
 		mysql(t),
 	}
+
+	if false {
+		for _, db := range dbs {
+			db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		}
+	}
+
+	return dbs
 }
 
 func TestSelectScan(t *testing.T) {
