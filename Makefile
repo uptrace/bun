@@ -14,7 +14,7 @@ tag:
 	git tag dialect/mysqldialect/$(VERSION)
 	git tag dialect/sqlitedialect/$(VERSION)
 	git tag driver/pgdriver/$(VERSION)
-	git tag fixture/$(VERSION)
+	git tag dbfixture/$(VERSION)
 	git tag extra/bundebug/$(VERSION)
 	git tag extra/bunotel/$(VERSION)
 

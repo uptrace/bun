@@ -85,7 +85,7 @@ func (l *Fixture) Row(id string) (interface{}, error) {
 
 	row, ok := rows[rowID]
 	if !ok {
-		return nil, fmt.Errorf("fixture: unknown row=%q for model=%q", row, model)
+		return nil, fmt.Errorf("fixture: can't find row=%q for model=%q", rowID, model)
 	}
 
 	return row, nil
