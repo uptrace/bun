@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -212,6 +213,8 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 		if err != nil {
 			return nil, err
 		}
+	case *sliceTableModel:
+		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
 	default:
 		return nil, fmt.Errorf("bun: Update does not support %T", q.tableModel)
 	}

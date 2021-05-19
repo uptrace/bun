@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bradleyjkemp/cupaloy"
-	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
@@ -316,6 +315,16 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(new(Model)).Where("id = ?", 1).For("UPDATE")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []Model{
+				{42, "hello"},
+				{43, "world"},
+			}
+			return db.NewUpdate().
+				Model(&models).
+				Table("_data").
+				Where("model.id = _data.id")
+		},
 	}
 
 	for _, db := range dbs(t) {
@@ -325,8 +334,11 @@ func TestQuery(t *testing.T) {
 					q := fn(db)
 
 					query, err := q.AppendQuery(db.Formatter(), nil)
-					require.NoError(t, err)
-					cupaloy.SnapshotT(t, string(query))
+					if err != nil {
+						cupaloy.SnapshotT(t, err.Error())
+					} else {
+						cupaloy.SnapshotT(t, string(query))
+					}
 				})
 			}
 		})
