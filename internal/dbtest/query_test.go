@@ -180,12 +180,12 @@ func TestQuery(t *testing.T) {
 			return db.NewUpdate().
 				With("_data", db.NewValues(&models)).
 				Model(&models).
+				Table("_data").
 				Set("model.str = _data.str").
 				Where("model.id = _data.id")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.
-				NewUpdate().
+			return db.NewUpdate().
 				Model(&map[string]interface{}{"str": "hello"}).
 				Table("models").
 				Where("id = 42")

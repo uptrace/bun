@@ -10,7 +10,6 @@ const (
 	Returning Feature = 1 << iota
 	DefaultPlaceholder
 	ValuesRow
-	Backticks
 	AutoIncrement
 	TableCascade
 	TableIdentity

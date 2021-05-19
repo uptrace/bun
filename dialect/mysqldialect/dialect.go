@@ -21,8 +21,7 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Backticks |
-		feature.AutoIncrement |
+	d.features = feature.AutoIncrement |
 		feature.DefaultPlaceholder |
 		feature.ValuesRow |
 		feature.TableTruncate
