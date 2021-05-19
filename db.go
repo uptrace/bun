@@ -22,7 +22,13 @@ type DBStats struct {
 	Errors  uint64
 }
 
-type DBOption func(cfg *DB)
+type DBOption func(db *DB)
+
+func WithDiscardUnknownColumns() DBOption {
+	return func(db *DB) {
+		db.flags = db.flags.Set(discardUnknownColumns)
+	}
+}
 
 type DB struct {
 	*sql.DB
@@ -57,10 +63,6 @@ func (db *DB) Stats() DBStats {
 		Queries: atomic.LoadUint64(&db.stats.Queries),
 		Errors:  atomic.LoadUint64(&db.stats.Errors),
 	}
-}
-
-func (db *DB) DiscardUnknownColumns() {
-	db.flags = db.flags.Set(discardUnknownColumns)
 }
 
 func (db *DB) NewValues(model interface{}) *ValuesQuery {
