@@ -74,4 +74,4 @@ if err := rows.Err(); err != nil {
 }
 ```
 
-For more details, please check [docs](https://bun.uptrace.dev/).
+For more details, please consult [docs](https://bun.uptrace.dev/) or check [examples](example).
