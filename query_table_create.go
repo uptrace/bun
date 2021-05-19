@@ -36,7 +36,7 @@ func NewCreateTableQuery(db *DB) *CreateTableQuery {
 }
 
 func (q *CreateTableQuery) DB(db DBI) *CreateTableQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

@@ -28,7 +28,7 @@ func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 }
 
 func (q *ValuesQuery) DB(db DBI) *ValuesQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

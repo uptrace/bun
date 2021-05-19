@@ -202,7 +202,6 @@ func (db *DB) QueryContext(
 	ctx, event := db.beforeQuery(ctx, nil, query, args)
 	rows, err := db.DB.QueryContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, nil, err)
-
 	return rows, err
 }
 
@@ -242,17 +241,26 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	return c.Conn.ExecContext(ctx, c.db.format(query, args))
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	res, err := c.Conn.ExecContext(ctx, c.db.format(query, args))
+	c.db.afterQuery(ctx, event, res, err)
+	return res, err
 }
 
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	return c.Conn.QueryContext(ctx, c.db.format(query, args))
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	rows, err := c.Conn.QueryContext(ctx, c.db.format(query, args))
+	c.db.afterQuery(ctx, event, nil, err)
+	return rows, err
 }
 
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return c.Conn.QueryRowContext(ctx, c.db.format(query, args))
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	row := c.Conn.QueryRowContext(ctx, c.db.format(query, args))
+	c.db.afterQuery(ctx, event, nil, row.Err())
+	return row
 }
 
 //------------------------------------------------------------------------------
@@ -274,6 +282,7 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 }
 
 type Tx struct {
+	db *DB
 	*sql.Tx
 }
 
@@ -286,7 +295,47 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	if err != nil {
 		return Tx{}, err
 	}
-	return Tx{Tx: tx}, nil
+	return Tx{
+		db: db,
+		Tx: tx,
+	}, nil
+}
+
+func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return tx.ExecContext(context.TODO(), query, args...)
+}
+
+func (tx Tx) ExecContext(
+	ctx context.Context, query string, args ...interface{},
+) (sql.Result, error) {
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	res, err := tx.Tx.ExecContext(ctx, tx.db.format(query, args))
+	tx.db.afterQuery(ctx, event, res, err)
+	return res, err
+}
+
+func (tx Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return tx.QueryContext(context.TODO(), query, args...)
+}
+
+func (tx Tx) QueryContext(
+	ctx context.Context, query string, args ...interface{},
+) (*sql.Rows, error) {
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	rows, err := tx.Tx.QueryContext(ctx, tx.db.format(query, args))
+	tx.db.afterQuery(ctx, event, nil, err)
+	return rows, err
+}
+
+func (tx Tx) QueryRow(query string, args ...interface{}) *sql.Row {
+	return tx.QueryRowContext(context.TODO(), query, args...)
+}
+
+func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	row := tx.Tx.QueryRowContext(ctx, tx.db.format(query, args))
+	tx.db.afterQuery(ctx, event, nil, row.Err())
+	return row
 }
 
 //------------------------------------------------------------------------------

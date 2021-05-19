@@ -34,7 +34,7 @@ func NewInsertQuery(db *DB) *InsertQuery {
 }
 
 func (q *InsertQuery) DB(db DBI) *InsertQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

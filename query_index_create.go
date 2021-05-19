@@ -35,7 +35,7 @@ func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
 }
 
 func (q *CreateIndexQuery) DB(db DBI) *CreateIndexQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

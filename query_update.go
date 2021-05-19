@@ -33,7 +33,7 @@ func NewUpdateQuery(db *DB) *UpdateQuery {
 }
 
 func (q *UpdateQuery) DB(db DBI) *UpdateQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

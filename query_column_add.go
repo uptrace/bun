@@ -24,7 +24,7 @@ func NewAddColumnQuery(db *DB) *AddColumnQuery {
 }
 
 func (q *AddColumnQuery) DB(db DBI) *AddColumnQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

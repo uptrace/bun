@@ -27,7 +27,7 @@ func NewDeleteQuery(db *DB) *DeleteQuery {
 }
 
 func (q *DeleteQuery) DB(db DBI) *DeleteQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

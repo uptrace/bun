@@ -29,7 +29,7 @@ func NewDropIndexQuery(db *DB) *DropIndexQuery {
 }
 
 func (q *DropIndexQuery) DB(db DBI) *DropIndexQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

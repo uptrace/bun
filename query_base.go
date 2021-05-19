@@ -28,6 +28,15 @@ type DBI interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
+var (
+	_ DBI = (*sql.DB)(nil)
+	_ DBI = (*sql.Conn)(nil)
+	_ DBI = (*sql.Tx)(nil)
+	_ DBI = (*DB)(nil)
+	_ DBI = (*Conn)(nil)
+	_ DBI = (*Tx)(nil)
+)
+
 type baseQuery struct {
 	db  *DB
 	dbi DBI
@@ -48,6 +57,20 @@ type baseQuery struct {
 
 func (q *baseQuery) GetDB() *DB {
 	return q.db
+}
+
+func (q *baseQuery) setDBI(db DBI) {
+	// Unwrap Bun wrappers to not call query hooks twice.
+	switch db := db.(type) {
+	case *DB:
+		q.dbi = db.DB
+	case Conn:
+		q.dbi = db.Conn
+	case Tx:
+		q.dbi = db.Tx
+	default:
+		q.dbi = db
+	}
 }
 
 func (q *baseQuery) setTableModel(modeli interface{}) {

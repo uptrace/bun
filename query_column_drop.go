@@ -24,7 +24,7 @@ func NewDropColumnQuery(db *DB) *DropColumnQuery {
 }
 
 func (q *DropColumnQuery) DB(db DBI) *DropColumnQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 

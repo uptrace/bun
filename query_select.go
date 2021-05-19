@@ -47,7 +47,7 @@ func NewSelectQuery(db *DB) *SelectQuery {
 }
 
 func (q *SelectQuery) DB(db DBI) *SelectQuery {
-	q.dbi = db
+	q.setDBI(db)
 	return q
 }
 
