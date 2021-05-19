@@ -1,0 +1,17 @@
+- model: User
+  rows:
+    - _id: smith
+      name: John Smith
+      email: john@smith.com
+      created_at: "{{ now }}"
+    - _id: doe
+      name: Jonh Doe
+      email: john@doe.com
+      created_at: "{{ now }}"
+
+- model: Org
+  rows:
+    - name: "{{ $.User.smith.Name }}'s Org"
+      owner_id: "{{ $.User.smith.ID }}"
+    - name: "{{ $.User.doe.Name }}'s Org"
+      owner_id: "{{ $.User.doe.ID }}"

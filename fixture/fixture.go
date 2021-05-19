@@ -8,32 +8,42 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 	"gopkg.in/yaml.v3"
 )
 
-type LoaderOption func(f *Loader)
+type LoaderOption func(l *Loader)
 
 func WithRecreateTables() LoaderOption {
-	return func(f *Loader) {
-		if f.truncateTables {
+	return func(l *Loader) {
+		if l.truncateTables {
 			panic("don't use WithDropTables together with WithTruncateTables")
 		}
-		f.recreateTables = true
-		f.seenTables = make(map[string]struct{})
+		l.recreateTables = true
+		l.seenTables = make(map[string]struct{})
 	}
 }
 
 func WithTruncateTables() LoaderOption {
-	return func(f *Loader) {
-		if f.truncateTables {
+	return func(l *Loader) {
+		if l.truncateTables {
 			panic("don't use WithTruncateTables together with WithRecreateTables")
 		}
-		f.truncateTables = true
-		f.seenTables = make(map[string]struct{})
+		l.truncateTables = true
+		l.seenTables = make(map[string]struct{})
+	}
+}
+
+func WithTemplateFuncs(funcMap template.FuncMap) LoaderOption {
+	return func(l *Loader) {
+		for k, v := range funcMap {
+			l.funcMap[k] = v
+		}
 	}
 }
 
@@ -44,23 +54,31 @@ type Loader struct {
 	truncateTables bool
 	seenTables     map[string]struct{}
 
+	funcMap   template.FuncMap
 	modelRows map[string]map[string]interface{}
 }
 
 func NewLoader(db *bun.DB, opts ...LoaderOption) *Loader {
-	f := &Loader{
+	l := &Loader{
 		db: db,
 
+		funcMap:   defaultFuncs(),
 		modelRows: make(map[string]map[string]interface{}),
 	}
 	for _, opt := range opts {
-		opt(f)
+		opt(l)
 	}
-	return f
+	return l
 }
 
-func (f *Loader) Get(model, rowID string) (interface{}, error) {
-	rows, ok := f.modelRows[model]
+func (l *Loader) Row(id string) (interface{}, error) {
+	ss := strings.Split(id, ".")
+	if len(ss) != 2 {
+		return nil, fmt.Errorf("fixture: invalid row id: %q", id)
+	}
+	model, rowID := ss[0], ss[1]
+
+	rows, ok := l.modelRows[model]
 	if !ok {
 		return nil, fmt.Errorf("fixture: unknown model=%q", model)
 	}
@@ -73,24 +91,24 @@ func (f *Loader) Get(model, rowID string) (interface{}, error) {
 	return row, nil
 }
 
-func (f *Loader) MustGet(table, rowID string) interface{} {
-	row, err := f.Get(table, rowID)
+func (l *Loader) MustRow(id string) interface{} {
+	row, err := l.Row(id)
 	if err != nil {
 		panic(err)
 	}
 	return row
 }
 
-func (f *Loader) Load(ctx context.Context, fsys fs.FS, names ...string) error {
+func (l *Loader) Load(ctx context.Context, fsys fs.FS, names ...string) error {
 	for _, name := range names {
-		if err := f.load(ctx, fsys, name); err != nil {
+		if err := l.load(ctx, fsys, name); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
+func (l *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 	fh, err := fsys.Open(name)
 	if err != nil {
 		return err
@@ -104,7 +122,7 @@ func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 	}
 
 	for i := range fixtures {
-		if err := f.addFixture(ctx, &fixtures[i]); err != nil {
+		if err := l.addFixture(ctx, &fixtures[i]); err != nil {
 			return err
 		}
 	}
@@ -112,24 +130,24 @@ func (f *Loader) load(ctx context.Context, fsys fs.FS, name string) error {
 	return nil
 }
 
-func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
-	table := f.db.Dialect().Tables().ByModel(fixture.Model)
+func (l *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
+	table := l.db.Dialect().Tables().ByModel(fixture.Model)
 	if table == nil {
 		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", fixture.Model)
 	}
 
-	if f.recreateTables {
-		if err := f.dropTable(ctx, table); err != nil {
+	if l.recreateTables {
+		if err := l.dropTable(ctx, table); err != nil {
 			return err
 		}
-	} else if f.truncateTables {
-		if err := f.truncateTable(ctx, table); err != nil {
+	} else if l.truncateTables {
+		if err := l.truncateTable(ctx, table); err != nil {
 			return err
 		}
 	}
 
 	for _, row := range fixture.Rows {
-		if err := f.addRow(ctx, table, row); err != nil {
+		if err := l.addRow(ctx, table, row); err != nil {
 			return err
 		}
 	}
@@ -137,7 +155,7 @@ func (f *Loader) addFixture(ctx context.Context, fixture *Fixture) error {
 	return nil
 }
 
-func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error {
+func (l *Loader) addRow(ctx context.Context, table *schema.Table, row row) error {
 	var rowID string
 	strct := reflect.New(table.Type).Elem()
 
@@ -155,7 +173,7 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 		}
 
 		if value.Tag == "!!str" && isTemplate(value.Value) {
-			res, err := f.eval(value.Value)
+			res, err := l.eval(value.Value)
 			if err != nil {
 				return err
 			}
@@ -175,7 +193,7 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 	}
 
 	iface := strct.Addr().Interface()
-	if _, err := f.db.NewInsert().
+	if _, err := l.db.NewInsert().
 		Model(iface).
 		Exec(ctx); err != nil {
 		return err
@@ -188,10 +206,10 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 	}
 
 	if rowID != "" {
-		rows, ok := f.modelRows[table.TypeName]
+		rows, ok := l.modelRows[table.TypeName]
 		if !ok {
 			rows = make(map[string]interface{})
-			f.modelRows[table.TypeName] = rows
+			l.modelRows[table.TypeName] = rows
 		}
 		rows[rowID] = iface
 	}
@@ -199,20 +217,20 @@ func (f *Loader) addRow(ctx context.Context, table *schema.Table, row row) error
 	return nil
 }
 
-func (f *Loader) dropTable(ctx context.Context, table *schema.Table) error {
-	if _, ok := f.seenTables[table.Name]; ok {
+func (l *Loader) dropTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := l.seenTables[table.Name]; ok {
 		return nil
 	}
-	f.seenTables[table.Name] = struct{}{}
+	l.seenTables[table.Name] = struct{}{}
 
-	if _, err := f.db.NewDropTable().
+	if _, err := l.db.NewDropTable().
 		Model(table.ZeroIface).
 		IfExists().
 		Exec(ctx); err != nil {
 		return err
 	}
 
-	if _, err := f.db.NewCreateTable().
+	if _, err := l.db.NewCreateTable().
 		Model(table.ZeroIface).
 		Exec(ctx); err != nil {
 		return err
@@ -221,13 +239,13 @@ func (f *Loader) dropTable(ctx context.Context, table *schema.Table) error {
 	return nil
 }
 
-func (f *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
-	if _, ok := f.seenTables[table.Name]; ok {
+func (l *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := l.seenTables[table.Name]; ok {
 		return nil
 	}
-	f.seenTables[table.Name] = struct{}{}
+	l.seenTables[table.Name] = struct{}{}
 
-	if _, err := f.db.NewTruncateTable().
+	if _, err := l.db.NewTruncateTable().
 		Model(table.ZeroIface).
 		Exec(ctx); err != nil {
 		return err
@@ -236,15 +254,15 @@ func (f *Loader) truncateTable(ctx context.Context, table *schema.Table) error {
 	return nil
 }
 
-func (f *Loader) eval(templ string) (string, error) {
-	tpl, err := template.New("").Parse(templ)
+func (l *Loader) eval(templ string) (string, error) {
+	tpl, err := template.New("").Funcs(l.funcMap).Parse(templ)
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
 
-	if err := tpl.Execute(&buf, f.modelRows); err != nil {
+	if err := tpl.Execute(&buf, l.modelRows); err != nil {
 		return "", err
 	}
 
@@ -278,4 +296,12 @@ func asString(rv reflect.Value) string {
 		return strconv.FormatBool(rv.Bool())
 	}
 	return fmt.Sprintf("%v", rv.Interface())
+}
+
+func defaultFuncs() template.FuncMap {
+	return template.FuncMap{
+		"now": func() string {
+			return time.Now().Format(time.RFC3339Nano)
+		},
+	}
 }
