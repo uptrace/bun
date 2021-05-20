@@ -79,7 +79,7 @@ func newModel(db *DB, dest []interface{}) (model, error) {
 
 		v = v.Elem()
 		if v.Kind() != reflect.Slice {
-			return newScanModel(dest), nil
+			return newScanModel(db, dest), nil
 		}
 
 		values[i] = v
@@ -104,7 +104,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 		if !scan {
 			return nil, fmt.Errorf("bun: Model(unsupported %T)", dest)
 		}
-		return newScanModel([]interface{}{dest}), nil
+		return newScanModel(db, []interface{}{dest}), nil
 	}
 
 	v := reflect.ValueOf(dest)
@@ -154,7 +154,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 	}
 
 	if scan {
-		return newScanModel([]interface{}{dest}), nil
+		return newScanModel(db, []interface{}{dest}), nil
 	}
 
 	return nil, fmt.Errorf("bun: Model(unsupported %T)", dest)

@@ -269,9 +269,15 @@ func toBytes(src interface{}) ([]byte, error) {
 func ptrScanner(fn ScannerFunc) ScannerFunc {
 	return func(dest reflect.Value, src interface{}) error {
 		if src == nil {
+			if !dest.CanAddr() {
+				if dest.IsNil() {
+					return nil
+				}
+				return fn(dest.Elem(), src)
+			}
+
 			if !dest.IsNil() {
 				dest.Set(reflect.New(dest.Type().Elem()))
-				return nil
 			}
 			return nil
 		}

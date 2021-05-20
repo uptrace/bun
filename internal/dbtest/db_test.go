@@ -87,6 +87,7 @@ func TestSelectScan(t *testing.T) {
 		{"testSelectSingleSlice", testSelectSingleSlice},
 		{"testSelectMultiSlice", testSelectMultiSlice},
 		{"testSelectJSON", testSelectJSON},
+		{"testScanNullVar", testScanNullVar},
 		{"testScanSingleRow", testScanSingleRow},
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
 		{"testScanRows", testScanRows},
@@ -306,6 +307,13 @@ func testSelectJSON(t *testing.T, db *bun.DB) {
 		Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"hello": "world"}, model.Map)
+}
+
+func testScanNullVar(t *testing.T, db *bun.DB) {
+	num := int(42)
+	err := db.NewSelect().ColumnExpr("NULL").Scan(ctx, &num)
+	require.NoError(t, err)
+	require.Zero(t, num)
 }
 
 func testScanSingleRow(t *testing.T, db *bun.DB) {
