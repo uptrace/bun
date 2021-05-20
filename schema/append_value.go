@@ -35,7 +35,7 @@ var (
 //nolint
 func init() {
 	appenders = []AppenderFunc{
-		reflect.Bool:          appendBoolValue,
+		reflect.Bool:          AppendBoolValue,
 		reflect.Int:           AppendIntValue,
 		reflect.Int8:          AppendIntValue,
 		reflect.Int16:         AppendIntValue,
@@ -47,8 +47,8 @@ func init() {
 		reflect.Uint32:        AppendUintValue,
 		reflect.Uint64:        AppendUintValue,
 		reflect.Uintptr:       nil,
-		reflect.Float32:       appendFloat32Value,
-		reflect.Float64:       appendFloat64Value,
+		reflect.Float32:       AppendFloat32Value,
+		reflect.Float64:       AppendFloat64Value,
 		reflect.Complex64:     nil,
 		reflect.Complex128:    nil,
 		reflect.Array:         appendJSONValue,
@@ -141,7 +141,7 @@ func appendIfaceValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return Append(fmter, b, v.Interface())
 }
 
-func appendBoolValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendBoolValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return dialect.AppendBool(b, v.Bool())
 }
 
@@ -153,11 +153,11 @@ func AppendUintValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return strconv.AppendUint(b, v.Uint(), 10)
 }
 
-func appendFloat32Value(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendFloat32Value(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return dialect.AppendFloat32(b, float32(v.Float()))
 }
 
-func appendFloat64Value(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendFloat64Value(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return dialect.AppendFloat64(b, float64(v.Float()))
 }
 

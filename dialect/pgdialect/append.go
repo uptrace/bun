@@ -1,6 +1,7 @@
 package pgdialect
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"unicode/utf8"
@@ -41,6 +42,45 @@ func appendUint32ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) [
 
 func appendUint64ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	return strconv.AppendInt(b, int64(v.Uint()), 10)
+}
+
+//------------------------------------------------------------------------------
+
+var arrayAppenders = []schema.AppenderFunc{
+	reflect.Bool:          schema.AppendBoolValue,
+	reflect.Int:           schema.AppendIntValue,
+	reflect.Int8:          schema.AppendIntValue,
+	reflect.Int16:         schema.AppendIntValue,
+	reflect.Int32:         schema.AppendIntValue,
+	reflect.Int64:         schema.AppendIntValue,
+	reflect.Uint:          schema.AppendUintValue,
+	reflect.Uint8:         schema.AppendUintValue,
+	reflect.Uint16:        schema.AppendUintValue,
+	reflect.Uint32:        schema.AppendUintValue,
+	reflect.Uint64:        schema.AppendUintValue,
+	reflect.Uintptr:       nil,
+	reflect.Float32:       schema.AppendFloat32Value,
+	reflect.Float64:       schema.AppendFloat64Value,
+	reflect.Complex64:     nil,
+	reflect.Complex128:    nil,
+	reflect.Array:         nil,
+	reflect.Chan:          nil,
+	reflect.Func:          nil,
+	reflect.Interface:     nil,
+	reflect.Map:           nil,
+	reflect.Ptr:           nil,
+	reflect.Slice:         nil,
+	reflect.String:        arrayAppendStringValue,
+	reflect.Struct:        nil,
+	reflect.UnsafePointer: nil,
+}
+
+func arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
+	return arrayAppenders[typ.Kind()]
+}
+
+func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return arrayAppendString(b, v.String())
 }
 
 //------------------------------------------------------------------------------
@@ -88,7 +128,11 @@ func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 		}
 	}
 
-	appendElem := schema.Appender(elemType)
+	appendElem := arrayElemAppender(elemType)
+	if appendElem == nil {
+		panic(fmt.Errorf("pgdialect: %s is not supported", typ))
+	}
+
 	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 		kind := v.Kind()
 		switch kind {

@@ -344,6 +344,15 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(new(Model))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type mystr string
+			type Model struct {
+				Array []mystr `bun:",array"`
+			}
+			return db.NewInsert().Model(&Model{
+				Array: []mystr{"foo", "bar"},
+			})
+		},
 	}
 
 	for _, db := range dbs(t) {
