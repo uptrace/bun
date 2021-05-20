@@ -288,7 +288,7 @@ func (m *structTableModel) updateSoftDeleteField() error {
 
 func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
-		return 0, errNoRows(rows)
+		return 0, rows.Err()
 	}
 
 	if err := m.ScanRow(ctx, rows); err != nil {

@@ -113,7 +113,7 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	require.Equal(t, 10, num)
 
 	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, &num)
-	require.EqualError(t, err, "sql: no rows in result set")
+	require.Equal(t, sql.ErrNoRows, err)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
@@ -180,7 +180,7 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	require.Equal(t, "hello", model.Str)
 
 	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, model)
-	require.EqualError(t, err, "sql: no rows in result set")
+	require.Equal(t, sql.ErrNoRows, err)
 
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
 	require.Error(t, err)

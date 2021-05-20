@@ -400,6 +400,7 @@ func (q *baseQuery) scan(
 	queryApp schema.QueryAppender,
 	query string,
 	dest []interface{},
+	forceDest bool,
 ) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
@@ -422,6 +423,10 @@ func (q *baseQuery) scan(
 		return res, err
 	}
 	res.n = n
+
+	if n == 0 && (forceDest || len(dest) > 0) && isSingleRowModel(model) {
+		return res, sql.ErrNoRows
+	}
 
 	q.db.afterQuery(ctx, event, nil, err)
 	return res, nil
@@ -863,13 +868,4 @@ func getByteSlice() *byteSlice {
 func putByteSlice(b *byteSlice) {
 	b.b = b.b[:0]
 	byteSlicePool.Put(b)
-}
-
-//------------------------------------------------------------------------------
-
-func errNoRows(rows *sql.Rows) error {
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	return sql.ErrNoRows
 }

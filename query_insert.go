@@ -436,7 +436,7 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 	bs := getByteSlice()
 	defer putByteSlice(bs)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return res, err
 	}
@@ -444,8 +444,8 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
-	if q.hasReturning() {
-		res, err = q.scan(ctx, q, query, dest)
+	if len(dest) > 0 || q.hasReturning() {
+		res, err = q.scan(ctx, q, query, dest, false)
 		if err != nil {
 			return res, err
 		}

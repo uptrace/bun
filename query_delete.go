@@ -198,8 +198,8 @@ func (q *DeleteQuery) ForceDelete(
 	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
-	if q.hasReturning() {
-		res, err = q.scan(ctx, q, query, dest)
+	if len(dest) > 0 || q.hasReturning() {
+		res, err = q.scan(ctx, q, query, dest, false)
 	} else {
 		res, err = q.exec(ctx, q, query)
 	}

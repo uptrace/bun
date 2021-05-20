@@ -16,6 +16,7 @@ func TestPGArray(t *testing.T) {
 	}
 
 	db := pg()
+	defer db.Close()
 
 	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
 	require.NoError(t, err)
@@ -66,6 +67,7 @@ type IngredientRecipe struct {
 
 func TestPGMultiTenant(t *testing.T) {
 	db := pg()
+	defer db.Close()
 
 	db = db.WithNamedArg("tenant", bun.Safe("public"))
 	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())
@@ -105,4 +107,42 @@ func TestPGMultiTenant(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, recipe.Ingredients, 1)
 	require.Equal(t, 1, recipe.Ingredients[0].ID)
+}
+
+func TestPGInsertNoRows(t *testing.T) {
+	type User struct {
+		ID int64
+	}
+
+	db := pg()
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*User)(nil))
+	require.NoError(t, err)
+
+	{
+		res, err := db.NewInsert().
+			Model(&User{ID: 1}).
+			OnConflict("DO NOTHING").
+			Returning("*").
+			Exec(ctx)
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1), n)
+	}
+
+	{
+		res, err := db.NewInsert().
+			Model(&User{ID: 1}).
+			OnConflict("DO NOTHING").
+			Returning("*").
+			Exec(ctx)
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(0), n)
+	}
 }

@@ -630,10 +630,15 @@ func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, e
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, nil)
+	bs := getByteSlice()
+	defer putByteSlice(bs)
+
+	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
 		return nil, err
 	}
+
+	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
 	return q.dbi.QueryContext(ctx, query)
@@ -683,7 +688,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	bs.b = queryBytes
 	query := internal.String(queryBytes)
 
-	res, err := q.scan(ctx, q, query, dest)
+	res, err := q.scan(ctx, q, query, dest, true)
 	if err != nil {
 		return err
 	}

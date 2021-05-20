@@ -26,7 +26,7 @@ func newScanModel(db *DB, dest []interface{}) *scanModel {
 
 func (m *scanModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
-		return 0, errNoRows(rows)
+		return 0, rows.Err()
 	}
 
 	dest := makeDest(m, len(m.dest))

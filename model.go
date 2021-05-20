@@ -221,3 +221,16 @@ func newModelWithHookStubs(m hooklessModel) model {
 		hooklessModel: m,
 	}
 }
+
+//------------------------------------------------------------------------------
+
+func isSingleRowModel(m model) bool {
+	switch m.(type) {
+	case *mapModel,
+		*structTableModel,
+		*scanModel:
+		return true
+	default:
+		return false
+	}
+}

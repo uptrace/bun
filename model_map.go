@@ -38,7 +38,7 @@ func newMapModel(db *DB, ptr *map[string]interface{}) *mapModel {
 
 func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
-		return 0, errNoRows(rows)
+		return 0, rows.Err()
 	}
 
 	columns, err := rows.Columns()
