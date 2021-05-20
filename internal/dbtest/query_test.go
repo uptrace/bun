@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bradleyjkemp/cupaloy"
 	"github.com/uptrace/bun"
@@ -324,6 +325,24 @@ func TestQuery(t *testing.T) {
 				Model(&models).
 				Table("_data").
 				Where("model.id = _data.id")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Int  int64     `bun:",nullzero"`
+				Uint uint64    `bun:",nullzero"`
+				Str  string    `bun:",nullzero"`
+				Time time.Time `bun:",nullzero"`
+			}
+			return db.NewInsert().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Int  int64     `bun:",nullzero,default:42"`
+				Uint uint64    `bun:",nullzero,default:42"`
+				Str  string    `bun:",nullzero,default:'hello'"`
+				Time time.Time `bun:",nullzero,default:now()"`
+			}
+			return db.NewInsert().Model(new(Model))
 		},
 	}
 
