@@ -276,9 +276,7 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		}
 	}
 
-	if tag.Name == "_" {
-		t.setName("")
-	} else if tag.Name != "" {
+	if tag.Name != "" {
 		t.setName(tag.Name)
 	}
 

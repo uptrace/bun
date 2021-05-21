@@ -44,7 +44,7 @@ func (d *Dialect) Tables() *schema.Tables {
 }
 
 func (d *Dialect) OnTable(table *schema.Table) {
-	for _, field := range table.Fields {
+	for _, field := range table.FieldMap {
 		d.onField(field)
 	}
 }

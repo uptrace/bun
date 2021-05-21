@@ -146,3 +146,19 @@ func TestPGInsertNoRows(t *testing.T) {
 		require.Equal(t, int64(0), n)
 	}
 }
+
+func TestPGScanIgnoredField(t *testing.T) {
+	type Model struct {
+		Array []string `bun:"-,array"`
+	}
+
+	db := pg()
+	defer db.Close()
+
+	model := new(Model)
+	err := db.NewSelect().
+		ColumnExpr("? AS array", pgdialect.Array([]string{"foo", "bar"})).
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, []string{"foo", "bar"}, model.Array)
+}
