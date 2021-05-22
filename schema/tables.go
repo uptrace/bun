@@ -109,7 +109,7 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 
 	t.dialect.OnTable(table)
 
-	for _, field := range table.Fields {
+	for _, field := range table.FieldMap {
 		if field.UserSQLType == "" {
 			field.UserSQLType = field.DiscoveredSQLType
 		}
