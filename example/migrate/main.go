@@ -91,6 +91,13 @@ func newDBCommand(migrations *migrate.Migrations, db *bun.DB) *cli.Command {
 				},
 			},
 			{
+				Name:  "status",
+				Usage: "print migrations status",
+				Action: func(c *cli.Context) error {
+					return migrations.Status(c.Context, db)
+				},
+			},
+			{
 				Name:  "mark_completed",
 				Usage: "mark migrations as completed without actually running them",
 				Action: func(c *cli.Context) error {

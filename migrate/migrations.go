@@ -153,7 +153,7 @@ func (m *Migrations) Init(ctx context.Context, db *bun.DB) error {
 
 func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("there are no any migrations")
+		return errors.New("migrate: there are no any migrations")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -187,7 +187,7 @@ func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 
 func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("there are no any migrations")
+		return errors.New("migrate: there are no any migrations")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -195,16 +195,35 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 	}
 	defer m.Unlock(ctx, db) //nolint:errcheck
 
-	completed, lastGroupID, err := m.selectCompletedMigrations(ctx, db)
+	lastGroup, lastGroupID, err := m.selectLastGroup(ctx, db)
 	if err != nil {
 		return err
 	}
-
 	if lastGroupID == 0 {
-		return errors.New("there are no any migrations to rollback")
+		return errors.New("migrate: there are no any migrations to rollback")
 	}
 
-	var group []*Migration
+	fmt.Printf("rolling back group #%d with %d migrations...\n", lastGroupID, len(lastGroup))
+
+	for i := range lastGroup {
+		if err := m.runDown(ctx, db, &lastGroup[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Migrations) selectLastGroup(ctx context.Context, db *bun.DB) ([]Migration, int64, error) {
+	completed, lastGroupID, err := m.selectCompletedMigrations(ctx, db)
+	if err != nil {
+		return nil, 0, err
+	}
+	if lastGroupID == 0 {
+		return nil, 0, nil
+	}
+
+	var group []Migration
 
 	migrationMap := migrationMap(m.ms)
 	for i := range completed {
@@ -218,27 +237,19 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 
 		migration, ok := migrationMap[name]
 		if !ok {
-			return fmt.Errorf("can't find migration %q", name)
+			return nil, 0, fmt.Errorf("migrate: can't find migration %q", name)
 		}
 
 		migration.ID = id
-		group = append(group, migration)
+		group = append(group, *migration)
 	}
 
-	fmt.Printf("rolling back group #%d with %d migrations...\n", lastGroupID, len(group))
-
-	for _, migration := range group {
-		if err := m.runDown(ctx, db, migration); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return group, lastGroupID, nil
 }
 
 func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("there are no any migrations")
+		return errors.New("migrate: there are no any migrations")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -269,6 +280,52 @@ func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	}
 
 	return nil
+}
+
+func (m *Migrations) Status(ctx context.Context, db *bun.DB) error {
+	allMigrations := m.sortedMigrations()
+	if len(allMigrations) > 0 {
+		fmt.Printf("In total you have %d migrations: %s\n",
+			len(allMigrations), migrationNames(allMigrations))
+	} else {
+		fmt.Println("You don't have any migrations")
+		return nil
+	}
+
+	lastGroup, lastGroupID, err := m.selectLastGroup(ctx, db)
+	if err != nil {
+		return err
+	}
+	if lastGroupID != 0 {
+		fmt.Printf("Last migration group is #%d: %s\n", lastGroupID, migrationNames(lastGroup))
+	} else {
+		fmt.Println("You don't have any migrations to rollback")
+	}
+
+	newMigrations, _, err := m.selectNewMigrations(ctx, db)
+	if err != nil {
+		return err
+	}
+
+	if len(newMigrations) > 0 {
+		fmt.Printf("You have %d new migrations: %s\n",
+			len(newMigrations), migrationNames(newMigrations))
+	} else {
+		fmt.Println("You don't have new migrations (database is up to date)")
+	}
+
+	return nil
+}
+
+func migrationNames(migrations []Migration) string {
+	names := make([]string, len(migrations))
+	for i := range migrations {
+		names[i] = migrations[i].Name
+	}
+	if len(names) <= 5 {
+		return strings.Join(names, " ")
+	}
+	return names[0] + " ... " + names[len(names)-1]
 }
 
 func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) error {
@@ -379,18 +436,6 @@ func (m *Migrations) selectCompletedMigrations(
 	return ms, lastGroupID, nil
 }
 
-func (m *Migrations) formattedTableName(db *bun.DB) string {
-	return db.Formatter().FormatQuery(m.table)
-}
-
-func (m *Migrations) tableNameWithAlias() string {
-	return m.table + " AS m"
-}
-
-func (m *Migrations) locksTableNameWithAlias() string {
-	return m.locksTable + " AS l"
-}
-
 func (m *Migrations) selectNewMigrations(
 	ctx context.Context, db *bun.DB,
 ) ([]Migration, int64, error) {
@@ -421,6 +466,18 @@ func (m *Migrations) sortedMigrations() []Migration {
 	})
 
 	return migrations
+}
+
+func (m *Migrations) formattedTableName(db *bun.DB) string {
+	return db.Formatter().FormatQuery(m.table)
+}
+
+func (m *Migrations) tableNameWithAlias() string {
+	return m.table + " AS m"
+}
+
+func (m *Migrations) locksTableNameWithAlias() string {
+	return m.locksTable + " AS l"
 }
 
 //------------------------------------------------------------------------------
