@@ -25,6 +25,58 @@ Resources:
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
 - [RealWorld app](https://github.com/go-bun/bun-realworld-app)
 
+<details>
+  <summary>https://github.com/frederikhors/orm-benchmark results</summary>
+
+```
+  4000 times - Insert
+       raw:     0.36s        88996 ns/op     723 B/op     13 allocs/op
+  raw_stmt:     0.38s        95830 ns/op     718 B/op     14 allocs/op
+ beego_orm:     0.45s       111891 ns/op    2412 B/op     56 allocs/op
+       bun:     0.53s       132247 ns/op     922 B/op     13 allocs/op
+        pg:     0.54s       134564 ns/op    1779 B/op     12 allocs/op
+      xorm:     0.72s       180681 ns/op    3032 B/op     94 allocs/op
+      gorm:     0.73s       183065 ns/op    6662 B/op     87 allocs/op
+
+  4000 times - MultiInsert 100 row
+       raw:     4.42s      1104043 ns/op  135155 B/op    916 allocs/op
+  raw_stmt:     4.62s      1154436 ns/op  131076 B/op    916 allocs/op
+ beego_orm:     5.34s      1334183 ns/op  179833 B/op   2746 allocs/op
+       bun:     5.98s      1494491 ns/op    4272 B/op    214 allocs/op
+        pg:     7.19s      1797878 ns/op    4552 B/op    114 allocs/op
+      gorm:     9.44s      2359121 ns/op  293955 B/op   3729 allocs/op
+      xorm:    11.73s      2933636 ns/op  286116 B/op   7422 allocs/op
+
+  4000 times - Update
+       raw:     0.28s        69490 ns/op     757 B/op     13 allocs/op
+  raw_stmt:     0.28s        70916 ns/op     773 B/op     14 allocs/op
+ beego_orm:     0.43s       106624 ns/op    1802 B/op     47 allocs/op
+       bun:     0.52s       130781 ns/op     584 B/op      4 allocs/op
+        pg:     0.61s       153114 ns/op     896 B/op     11 allocs/op
+      gorm:     0.75s       187061 ns/op    6604 B/op     81 allocs/op
+      xorm:     0.83s       208494 ns/op    2995 B/op    119 allocs/op
+
+  4000 times - Read
+       raw:     0.30s        75817 ns/op    2080 B/op     49 allocs/op
+  raw_stmt:     0.32s        80209 ns/op    2112 B/op     50 allocs/op
+ beego_orm:     0.34s        84849 ns/op    2105 B/op     75 allocs/op
+       bun:     0.40s       100620 ns/op    1310 B/op     18 allocs/op
+        pg:     0.43s       107559 ns/op    1020 B/op     22 allocs/op
+      gorm:     0.65s       161706 ns/op    5240 B/op    108 allocs/op
+      xorm:     1.09s       271853 ns/op    8324 B/op    237 allocs/op
+
+  4000 times - MultiRead limit 100
+       raw:     1.45s       363109 ns/op   38356 B/op   1037 allocs/op
+  raw_stmt:     1.53s       381645 ns/op   38388 B/op   1038 allocs/op
+        pg:     1.83s       457559 ns/op   23760 B/op    631 allocs/op
+       bun:     2.48s       620337 ns/op   29933 B/op   1122 allocs/op
+ beego_orm:     2.80s       700737 ns/op   55258 B/op   3077 allocs/op
+      gorm:     5.06s      1265065 ns/op   71628 B/op   3877 allocs/op
+      xorm:     doesn't work
+```
+
+</details>
+
 ## Installation
 
 ```go
