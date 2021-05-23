@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dbfixture"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/extra/bundebug"
 )
@@ -40,74 +42,59 @@ func main() {
 	db := bun.NewDB(sqlite, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 
-	// Drop and create tables.
-	models := []interface{}{
-		(*User)(nil),
-		(*Story)(nil),
-	}
-	for _, model := range models {
-		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
-		if err != nil {
-			panic(err)
-		}
+	// Register models for the fixture.
+	db.RegisterModel((*User)(nil), (*Story)(nil))
 
-		_, err = db.NewCreateTable().Model(model).Exec(ctx)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// Bulk-insert multiple users.
-	users := []User{
-		{
-			Name:   "admin",
-			Emails: []string{"admin1@admin", "admin2@admin"},
-		},
-		{
-			Name:   "root",
-			Emails: []string{"root1@root", "root2@root"},
-		},
-	}
-	_, err = db.NewInsert().Model(&users).Exec(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// Insert one story.
-	story1 := &Story{
-		Title:    "Cool story",
-		AuthorID: users[0].ID,
-	}
-	_, err = db.NewInsert().Model(story1).Exec(ctx)
-	if err != nil {
+	// Create tables and load initial data.
+	fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
+	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
 		panic(err)
 	}
 
 	// Select all users.
-	users = make([]User, 0)
-	err = db.NewSelect().Model(&users).OrderExpr("id ASC").Scan(ctx)
-	if err != nil {
+	users := make([]User, 0)
+	if err := db.NewSelect().Model(&users).OrderExpr("id ASC").Scan(ctx); err != nil {
 		panic(err)
 	}
-	fmt.Println("users", users)
+	fmt.Printf("all users: %v\n\n", users)
 
 	// Select one user by primary key.
 	user1 := new(User)
-	err = db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx)
-	if err != nil {
+	if err := db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx); err != nil {
 		panic(err)
 	}
-	fmt.Println("user1", user1)
+	fmt.Printf("user1: %v\n\n", user1)
 
-	// Select the story and the associated author in a single query.
+	// Select a story and the associated author in a single query.
 	story := new(Story)
-	err = db.NewSelect().
+	if err := db.NewSelect().
 		Model(story).
 		Relation("Author").
 		Limit(1).
-		Scan(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		panic(err)
 	}
-	fmt.Println(story)
+	fmt.Printf("story and the author: %v\n\n", story)
+
+	// Select a user into a map.
+	var m map[string]interface{}
+	if err := db.NewSelect().
+		Model((*User)(nil)).
+		Limit(1).
+		Scan(ctx, &m); err != nil {
+		panic(err)
+	}
+	fmt.Printf("story map: %v\n\n", m)
+
+	// Select all users scanning each column into a separate slice.
+	var ids []int64
+	var names []string
+	if err := db.NewSelect().
+		ColumnExpr("id, name").
+		Model((*User)(nil)).
+		OrderExpr("id ASC").
+		Scan(ctx, &ids, &names); err != nil {
+		panic(err)
+	}
+	fmt.Printf("users columns: %v %v\n\n", ids, names)
 }

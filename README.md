@@ -10,6 +10,7 @@ Main features are:
 - Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
+- [Selecting](/example/basic/) into a map, struct, slice of maps/structs/vars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/queries.html#insert).
 - [Bulk updates](https://bun.uptrace.dev/guide/queries.html#update) using common table expression.
 - [Bulk deletes](https://bun.uptrace.dev/guide/queries.html#delete).
@@ -81,11 +82,13 @@ if err != nil {
 	panic(err)
 }
 
-if rows.Next() {
-	user := new(User)
-	if err := db.ScanRow(ctx, rows, user); err != nil {
-		panic(err)
-	}
+if !rows.Next() {
+    panic(sql.ErrNoRows)
+}
+
+user := new(User)
+if err := db.ScanRow(ctx, rows, user); err != nil {
+	panic(err)
 }
 
 if err := rows.Err(); err != nil {
@@ -93,4 +96,99 @@ if err := rows.Err(); err != nil {
 }
 ```
 
-For more details, please consult [docs](https://bun.uptrace.dev/) or check [examples](example).
+## Basic example
+
+For our [basic example](/example/basic/) we need to load some data first. To provide initial data,
+use Bun [fixtures](https://bun.uptrace.dev/guide/fixtures.html):
+
+```go
+import "github.com/uptrace/bun/dbfixture"
+
+// Register models for the fixture.
+db.RegisterModel((*User)(nil), (*Story)(nil))
+
+// WithRecreateTables tells Bun to drop existing tables and create new ones.
+fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
+
+// Load fixture.yaml which contains data for User and Story models.
+if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
+	panic(err)
+}
+```
+
+The `fixture.yaml` looks like this:
+
+```yaml
+- model: User
+  rows:
+    - _id: admin
+      name: admin
+      emails: ['admin1@admin', 'admin2@admin']
+    - _id: root
+      name: root
+      emails: ['root1@root', 'root2@root']
+
+- model: Story
+  rows:
+    - title: Cool story
+      author_id: '{{ $.User.admin.ID }}'
+```
+
+To select all users:
+
+```go
+users := make([]User, 0)
+if err := db.NewSelect().Model(&users).OrderExpr("id ASC").Scan(ctx); err != nil {
+	panic(err)
+}
+```
+
+To select a single user by id:
+
+```go
+user1 := new(User)
+if err := db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx); err != nil {
+	panic(err)
+}
+```
+
+To select a story and the associated author in a single query:
+
+```go
+story := new(Story)
+if err := db.NewSelect().
+	Model(story).
+	Relation("Author").
+	Limit(1).
+	Scan(ctx); err != nil {
+	panic(err)
+}
+```
+
+To select a user into a map:
+
+```go
+m := make(map[string]interface{})
+if err := db.NewSelect().
+	Model((*User)(nil)).
+	Limit(1).
+	Scan(ctx, &m); err != nil {
+	panic(err)
+}
+```
+
+To select all users scanning each column into a separate slice:
+
+```go
+var ids []int64
+var names []string
+if err := db.NewSelect().
+	ColumnExpr("id, name").
+	Model((*User)(nil)).
+	OrderExpr("id ASC").
+	Scan(ctx, &ids, &names); err != nil {
+	panic(err)
+}
+```
+
+For more details, please consult [docs](https://bun.uptrace.dev/) and check [examples](example).
