@@ -82,6 +82,13 @@ func main() {
 							return migrations.CreateSQL(c.Context, db, c.Args().Get(0))
 						},
 					},
+					{
+						Name:  "mark_completed",
+						Usage: "mark migrations as completed without actually rnning them",
+						Action: func(c *cli.Context) error {
+							return migrations.MarkCompleted(c.Context, db)
+						},
+					},
 				},
 			},
 		},
