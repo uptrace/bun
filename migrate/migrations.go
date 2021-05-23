@@ -44,8 +44,8 @@ type Migrations struct {
 
 func NewMigrations(opts ...MigrationsOption) *Migrations {
 	m := &Migrations{
-		table:      "migrations",
-		locksTable: "migration_locks",
+		table:      "bun_migrations",
+		locksTable: "bun_migration_locks",
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -156,29 +156,14 @@ func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 		return errors.New("there are no any migrations")
 	}
 
-	migrations := make([]Migration, len(m.ms))
-	copy(migrations, m.ms)
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Name < migrations[j].Name
-	})
-
 	if err := m.Lock(ctx, db); err != nil {
 		return err
 	}
 	defer m.Unlock(ctx, db) //nolint:errcheck
 
-	completed, lastGroupID, err := m.selectMigrations(ctx, db)
+	migrations, lastGroupID, err := m.selectNewMigrations(ctx, db)
 	if err != nil {
 		return err
-	}
-
-	completedMap := migrationMap(completed)
-	for i := len(migrations) - 1; i >= 0; i-- {
-		migration := &migrations[i]
-		if _, ok := completedMap[migration.Name]; ok {
-			migrations = append(migrations[:i], migrations[i+1:]...)
-		}
 	}
 
 	if len(migrations) == 0 {
@@ -210,7 +195,7 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 	}
 	defer m.Unlock(ctx, db) //nolint:errcheck
 
-	completed, lastGroupID, err := m.selectMigrations(ctx, db)
+	completed, lastGroupID, err := m.selectCompletedMigrations(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -244,6 +229,41 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 
 	for _, migration := range group {
 		if err := m.runDown(ctx, db, migration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
+	if len(m.ms) == 0 {
+		return errors.New("there are no any migrations")
+	}
+
+	if err := m.Lock(ctx, db); err != nil {
+		return err
+	}
+	defer m.Unlock(ctx, db) //nolint:errcheck
+
+	migrations, lastGroupID, err := m.selectNewMigrations(ctx, db)
+	if err != nil {
+		return err
+	}
+
+	if len(migrations) == 0 {
+		fmt.Printf("nothing to run - database is up to date\n")
+		return nil
+	}
+
+	groupID := lastGroupID + 1
+	fmt.Printf("marking group #%d with %d migrations as completed...\n", groupID, len(migrations))
+
+	for i := range migrations {
+		migration := &migrations[i]
+		migration.GroupID = groupID
+		migration.Up = nil
+		if err := m.runUp(ctx, db, migration); err != nil {
 			return err
 		}
 	}
@@ -333,7 +353,9 @@ func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migrati
 	return err
 }
 
-func (m *Migrations) selectMigrations(
+// selectCompletedMigrations selects completed migrations in descending order
+// (the order is used for rollbacks).
+func (m *Migrations) selectCompletedMigrations(
 	ctx context.Context, db *bun.DB,
 ) ([]Migration, int64, error) {
 	var ms []Migration
@@ -367,6 +389,38 @@ func (m *Migrations) tableNameWithAlias() string {
 
 func (m *Migrations) locksTableNameWithAlias() string {
 	return m.locksTable + " AS l"
+}
+
+func (m *Migrations) selectNewMigrations(
+	ctx context.Context, db *bun.DB,
+) ([]Migration, int64, error) {
+	migrations := m.sortedMigrations()
+
+	completed, lastGroupID, err := m.selectCompletedMigrations(ctx, db)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	completedMap := migrationMap(completed)
+	for i := len(migrations) - 1; i >= 0; i-- {
+		migration := &migrations[i]
+		if _, ok := completedMap[migration.Name]; ok {
+			migrations = append(migrations[:i], migrations[i+1:]...)
+		}
+	}
+
+	return migrations, lastGroupID, nil
+}
+
+func (m *Migrations) sortedMigrations() []Migration {
+	migrations := make([]Migration, len(m.ms))
+	copy(migrations, m.ms)
+
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].Name < migrations[j].Name
+	})
+
+	return migrations
 }
 
 //------------------------------------------------------------------------------
