@@ -297,7 +297,7 @@ func (m *Migrations) Status(ctx context.Context, db *bun.DB) error {
 		return err
 	}
 	if lastGroupID != 0 {
-		fmt.Printf("Last migration group is #%d: %s\n", lastGroupID, migrationNames(lastGroup))
+		fmt.Printf("The last migration group is #%d: %s\n", lastGroupID, migrationNames(lastGroup))
 	} else {
 		fmt.Println("You don't have any migrations to rollback")
 	}
