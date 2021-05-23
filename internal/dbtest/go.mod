@@ -18,6 +18,7 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
+	github.com/brianvoe/gofakeit/v6 v6.4.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/mattn/go-sqlite3 v1.14.7

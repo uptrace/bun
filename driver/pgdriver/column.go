@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -180,6 +181,10 @@ func parseTime(s string) (time.Time, error) {
 			return time.Parse(timestamptzFormat2, s)
 		}
 		if c := s[l-3]; c == '+' || c == '-' {
+			if strings.HasSuffix(s, "+00") {
+				s = s[:len(s)-3]
+				return time.ParseInLocation(timestampFormat, s, time.UTC)
+			}
 			return time.Parse(timestamptzFormat3, s)
 		}
 		return time.ParseInLocation(timestampFormat, s, time.UTC)

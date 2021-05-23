@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/uptrace/bun"
 )
 
@@ -14,7 +15,7 @@ type Bench struct {
 	CreatedAt time.Time
 }
 
-func BenchmarkSelect(b *testing.B) {
+func BenchmarkSelectOne(b *testing.B) {
 	db := benchDB()
 
 	b.ResetTimer()
@@ -23,6 +24,22 @@ func BenchmarkSelect(b *testing.B) {
 		for pb.Next() {
 			bench := new(Bench)
 			err := db.NewSelect().Model(bench).Where("id = ?", 1).Scan(ctx)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkSelectSlice(b *testing.B) {
+	db := benchDB()
+
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			var bs []Bench
+			err := db.NewSelect().Model(&bs).Limit(100).Scan(ctx)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -52,21 +69,18 @@ func resetBenchSchema() error {
 	db := pg()
 	defer db.Close()
 
-	if _, err := db.NewDropTable().Model(&Bench{}).IfExists().Exec(ctx); err != nil {
+	if err := db.ResetModel(ctx, (*Bench)(nil)); err != nil {
 		return err
 	}
 
-	if _, err := db.NewCreateTable().Model(&Bench{}).Exec(ctx); err != nil {
-		return err
-	}
-
-	bench := &Bench{
-		ID:        1,
-		Name:      "John Doe",
-		CreatedAt: time.Now(),
-	}
-	if _, err := db.NewInsert().Model(bench).Exec(ctx); err != nil {
-		return err
+	for i := 0; i < 1000; i++ {
+		bench := &Bench{
+			Name:      gofakeit.Name(),
+			CreatedAt: time.Now(),
+		}
+		if _, err := db.NewInsert().Model(bench).Exec(ctx); err != nil {
+			return err
+		}
 	}
 
 	return nil

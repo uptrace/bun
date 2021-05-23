@@ -186,24 +186,28 @@ func scanString(dest reflect.Value, src interface{}) error {
 func scanTime(dest reflect.Value, src interface{}) error {
 	switch src := src.(type) {
 	case nil:
-		dest.Set(reflect.ValueOf(time.Time{}))
+		destTime := dest.Addr().Interface().(*time.Time)
+		*destTime = time.Time{}
 		return nil
 	case time.Time:
-		dest.Set(reflect.ValueOf(src))
+		destTime := dest.Addr().Interface().(*time.Time)
+		*destTime = src
 		return nil
 	case string:
-		tm, err := internal.ParseTime(src)
+		srcTime, err := internal.ParseTime(src)
 		if err != nil {
 			return err
 		}
-		dest.Set(reflect.ValueOf(tm))
+		destTime := dest.Addr().Interface().(*time.Time)
+		*destTime = srcTime
 		return nil
 	case []byte:
-		tm, err := internal.ParseTime(internal.String(src))
+		srcTime, err := internal.ParseTime(internal.String(src))
 		if err != nil {
 			return err
 		}
-		dest.Set(reflect.ValueOf(tm))
+		destTime := dest.Addr().Interface().(*time.Time)
+		*destTime = srcTime
 		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())

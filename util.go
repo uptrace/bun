@@ -77,7 +77,8 @@ func makeSliceNextElemFunc(v reflect.Value) func() reflect.Value {
 		}
 	}
 
-	elemType := v.Type().Elem()
+	sliceType := v.Type()
+	elemType := sliceType.Elem()
 
 	if elemType.Kind() == reflect.Ptr {
 		elemType = elemType.Elem()
@@ -99,12 +100,15 @@ func makeSliceNextElemFunc(v reflect.Value) func() reflect.Value {
 
 	zero := reflect.Zero(elemType)
 	return func() reflect.Value {
-		if v.Len() < v.Cap() {
-			v.Set(v.Slice(0, v.Len()+1))
-			return v.Index(v.Len() - 1)
+		l := v.Len()
+		c := v.Cap()
+
+		if l < c {
+			v.Set(v.Slice(0, l+1))
+			return v.Index(l)
 		}
 
 		v.Set(reflect.Append(v, zero))
-		return v.Index(v.Len() - 1)
+		return v.Index(l)
 	}
 }
