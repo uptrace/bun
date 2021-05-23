@@ -19,6 +19,9 @@ type InsertQuery struct {
 
 	onConflict schema.QueryWithArgs
 	setQuery
+
+	ignore  bool
+	replace bool
 }
 
 func NewInsertQuery(db *DB) *InsertQuery {
@@ -120,6 +123,20 @@ func (q *InsertQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
+// Ignore generates an `INSERT IGNORE INTO` query (MySQL).
+func (q *InsertQuery) Ignore() *InsertQuery {
+	q.ignore = true
+	return q
+}
+
+// Replaces generates a `REPLACE INTO` query (MySQL).
+func (q *InsertQuery) Replace() *InsertQuery {
+	q.replace = true
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -130,7 +147,15 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	b = append(b, "INSERT INTO "...)
+	if q.replace {
+		b = append(b, "REPLACE "...)
+	} else {
+		b = append(b, "INSERT "...)
+		if q.ignore {
+			b = append(b, "IGNORE "...)
+		}
+	}
+	b = append(b, "INTO "...)
 
 	if !q.onConflict.IsZero() {
 		b, err = q.appendFirstTableWithAlias(fmter, b)

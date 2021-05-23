@@ -29,6 +29,7 @@ Resources:
 
 ```go
 go get github.com/uptrace/bun
+go get github.com/uptrace/bun/dialect/sqlitedialect
 ```
 
 ## Quickstart

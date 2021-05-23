@@ -353,6 +353,12 @@ func TestQuery(t *testing.T) {
 				Array: []mystr{"foo", "bar"},
 			})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewInsert().Ignore().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewInsert().Replace().Model(new(Model))
+		},
 	}
 
 	for _, db := range dbs(t) {
