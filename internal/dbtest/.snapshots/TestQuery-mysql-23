@@ -1,1 +1,1 @@
-INSERT INTO `models` AS `model` (`id`, `str`) VALUES (42, 'hello'), (43, 'world') ON CONFLICT DO UPDATE SET model.str = EXCLUDED.str WHERE (model.str IS NULL)
+INSERT INTO `models` AS `model` (`id`, `str`) VALUES (42, 'hello'), (43, 'world') ON CONFLICT DO UPDATE model.str = EXCLUDED.str WHERE (model.str IS NULL)

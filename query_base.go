@@ -816,7 +816,6 @@ func (q *setQuery) addSet(set schema.QueryWithArgs) {
 }
 
 func (q setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	b = append(b, " SET "...)
 	for i, f := range q.set {
 		if i > 0 {
 			b = append(b, ", "...)

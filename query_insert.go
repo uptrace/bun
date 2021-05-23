@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -171,7 +170,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	b, err = q.appendOnConflict(fmter, b)
+	b, err = q.appendOn(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -381,15 +380,9 @@ func (q *InsertQuery) appendFields(
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) OnConflict(s string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) On(s string, args ...interface{}) *InsertQuery {
 	q.onConflict = schema.SafeQuery(s, args)
 	return q
-}
-
-func (q *InsertQuery) onConflictDoUpdate() bool {
-	return !q.onConflict.IsZero() &&
-		strings.HasSuffix(q.onConflict.Query, "DO UPDATE") ||
-		strings.HasSuffix(q.onConflict.Query, "do update")
 }
 
 func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
@@ -397,27 +390,29 @@ func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) appendOnConflict(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.onConflict.IsZero() {
 		return b, nil
 	}
 
-	b = append(b, " ON CONFLICT "...)
+	b = append(b, " ON "...)
 	b, err = q.onConflict.AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if !q.onConflictDoUpdate() {
-		return b, nil
-	}
-
 	if len(q.set) > 0 {
+		if fmter.HasFeature(feature.OnDuplicateKey) {
+			b = append(b, ' ')
+		} else {
+			b = append(b, " SET "...)
+		}
+
 		b, err = q.appendSet(fmter, b)
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	} else if len(q.columns) > 0 {
 		fields, err := q.getDataFields()
 		if err != nil {
 			return nil, err

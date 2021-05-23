@@ -25,7 +25,8 @@ func New() *Dialect {
 		feature.DefaultPlaceholder |
 		feature.UpdateMultiTable |
 		feature.ValuesRow |
-		feature.TableTruncate
+		feature.TableTruncate |
+		feature.OnDuplicateKey
 	return d
 }
 

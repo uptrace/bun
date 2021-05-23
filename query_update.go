@@ -199,11 +199,11 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, " SET "...)
+
 	if len(q.set) > 0 {
 		return q.appendSet(fmter, b)
 	}
-
-	b = append(b, " SET "...)
 
 	if m, ok := q.model.(*mapModel); ok {
 		return m.appendSet(fmter, b), nil

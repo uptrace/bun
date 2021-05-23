@@ -123,7 +123,7 @@ func TestPGInsertNoRows(t *testing.T) {
 	{
 		res, err := db.NewInsert().
 			Model(&User{ID: 1}).
-			OnConflict("DO NOTHING").
+			On("CONFLICT DO NOTHING").
 			Returning("*").
 			Exec(ctx)
 		require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestPGInsertNoRows(t *testing.T) {
 	{
 		res, err := db.NewInsert().
 			Model(&User{ID: 1}).
-			OnConflict("DO NOTHING").
+			On("CONFLICT DO NOTHING").
 			Returning("*").
 			Exec(ctx)
 		require.NoError(t, err)

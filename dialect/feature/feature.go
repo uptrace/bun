@@ -16,4 +16,5 @@ const (
 	TableCascade
 	TableIdentity
 	TableTruncate
+	OnDuplicateKey
 )

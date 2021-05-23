@@ -135,7 +135,7 @@ func TestQuery(t *testing.T) {
 				{42, "hello"},
 				{43, "world"},
 			}
-			return db.NewInsert().Model(&models).OnConflict("DO NOTHING")
+			return db.NewInsert().Model(&models).On("CONFLICT DO NOTHING")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			models := []*Model{
@@ -144,7 +144,7 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().
 				Model(&models).
-				OnConflict("DO UPDATE").
+				On("CONFLICT DO UPDATE").
 				Set("model.str = EXCLUDED.str").
 				Where("model.str IS NULL")
 		},
@@ -358,6 +358,16 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewInsert().Replace().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []*Model{
+				{42, "hello"},
+				{43, "world"},
+			}
+			return db.NewInsert().
+				Model(&models).
+				On("DUPLICATE KEY UPDATE").
+				Set("str = upper(str)")
 		},
 	}
 
