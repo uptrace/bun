@@ -5,6 +5,25 @@
 [![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
+Main features are:
+
+- Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
+  [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql),
+  [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
+- [Bulk inserts](https://bun.uptrace.dev/guide/queries.html#insert).
+- [Bulk updates](https://bun.uptrace.dev/guide/queries.html#update) using common table expression.
+- [Bulk deletes](https://bun.uptrace.dev/guide/queries.html#delete).
+- [Fixtures](https://bun.uptrace.dev/guide/fixtures.html).
+- [Migrations](https://bun.uptrace.dev/guide/migrations.html).
+
+Resources:
+
+- [Examples](https://github.com/uptrace/bun/tree/master/example)
+- [Documentation](https://bun.uptrace.dev/)
+- [Reference](https://pkg.go.dev/github.com/uptrace/bun)
+- [Starter kit](https://github.com/go-bun/bun-starter-kit)
+- [RealWorld app](https://github.com/go-bun/bun-realworld-app)
+
 ## Installation
 
 ```go
@@ -13,7 +32,7 @@ go get github.com/uptrace/bun
 
 ## Quickstart
 
-First you need to create a `*sql.DB`. Here we using the SQLite3 driver.
+First you need to create a `sql.DB`. Here we using the SQLite3 driver.
 
 ```go
 import _ "github.com/mattn/go-sqlite3"
@@ -24,7 +43,7 @@ if err != nil {
 }
 ```
 
-And then create a `*bun.DB` on top of it using the corresponding SQLite dialect:
+And then create a `bun.DB` on top of it using the corresponding SQLite dialect:
 
 ```go
 import (
