@@ -91,7 +91,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		return nil, q.err
 	}
 	if q.table == nil {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 
 	b = append(b, "CREATE "...)

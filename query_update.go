@@ -88,7 +88,7 @@ func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
 // Value overwrites model value for the column in INSERT and UPDATE queries.
 func (q *UpdateQuery) Value(column string, value string, args ...interface{}) *UpdateQuery {
 	if q.table == nil {
-		q.err = errModelNil
+		q.err = errNilModel
 		return q
 	}
 	q.addValue(q.table, column, value, args)
@@ -210,7 +210,7 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 	}
 
 	if q.tableModel == nil {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 
 	switch model := q.tableModel.(type) {

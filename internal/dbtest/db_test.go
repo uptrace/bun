@@ -78,6 +78,7 @@ func TestDB(t *testing.T) {
 
 	tests := []Test{
 		{"testPing", testPing},
+		{"testNilModel", testNilModel},
 		{"testSelectScan", testSelectScan},
 		{"testSelectCount", testSelectCount},
 		{"testSelectMap", testSelectMap},
@@ -111,6 +112,12 @@ func TestDB(t *testing.T) {
 func testPing(t *testing.T, db *bun.DB) {
 	err := db.PingContext(ctx)
 	require.NoError(t, err)
+}
+
+func testNilModel(t *testing.T, db *bun.DB) {
+	err := db.NewSelect().ColumnExpr("1").Scan(ctx)
+	require.Error(t, err)
+	require.Equal(t, "bun: Model(nil)", err.Error())
 }
 
 func testSelectScan(t *testing.T, db *bun.DB) {

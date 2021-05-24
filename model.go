@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-var errModelNil = errors.New("bun: Model(nil)")
+var errNilModel = errors.New("bun: Model(nil)")
 
 var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
 
@@ -95,7 +95,7 @@ func newSingleModel(db *DB, dest interface{}) (model, error) {
 func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 	switch dest := dest.(type) {
 	case nil:
-		return nil, errModelNil
+		return nil, errNilModel
 	case model:
 		return dest, nil
 	case hooklessModel:
@@ -109,7 +109,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 
 	v := reflect.ValueOf(dest)
 	if !v.IsValid() {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 	if v.Kind() != reflect.Ptr {
 		return nil, fmt.Errorf("bun: Model(non-pointer %T)", dest)

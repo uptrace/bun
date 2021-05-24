@@ -94,7 +94,7 @@ func (m *structTableModel) initStruct() error {
 
 	switch m.strct.Kind() {
 	case reflect.Invalid:
-		m.structInitErr = errModelNil
+		m.structInitErr = errNilModel
 		return m.structInitErr
 	case reflect.Interface:
 		m.strct = m.strct.Elem()

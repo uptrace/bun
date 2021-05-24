@@ -96,7 +96,10 @@ func (q *baseQuery) setErr(err error) {
 
 func (q *baseQuery) getModel(dest []interface{}) (model, error) {
 	if len(dest) == 0 {
-		return q.model, nil
+		if q.model != nil {
+			return q.model, nil
+		}
+		return nil, errNilModel
 	}
 	return newModel(q.db, dest)
 }

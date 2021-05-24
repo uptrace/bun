@@ -86,7 +86,7 @@ func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 // Value overwrites model value for the column in INSERT and UPDATE queries.
 func (q *InsertQuery) Value(column string, value string, args ...interface{}) *InsertQuery {
 	if q.table == nil {
-		q.err = errModelNil
+		q.err = errNilModel
 		return q
 	}
 	q.addValue(q.table, column, value, args)
@@ -215,7 +215,7 @@ func (q *InsertQuery) appendColumnsValues(
 	}
 
 	if q.model == nil {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 
 	fields, err := q.getFields()

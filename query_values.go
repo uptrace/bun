@@ -56,7 +56,7 @@ func (q *ValuesQuery) AppendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 		return nil, q.err
 	}
 	if q.model == nil {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 
 	if q.tableModel != nil {
@@ -87,7 +87,7 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, q.err
 	}
 	if q.model == nil {
-		return nil, errModelNil
+		return nil, errNilModel
 	}
 
 	fmter = formatterWithModel(fmter, q)
