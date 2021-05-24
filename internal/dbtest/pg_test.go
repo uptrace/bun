@@ -193,3 +193,15 @@ func TestPGScanUUID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []uuid.UUID(nil), model.Array)
 }
+
+func TestInvalidQuery(t *testing.T) {
+	db := pg()
+	defer db.Close()
+
+	_, err := db.Exec("invalid query")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "#42601 syntax error")
+
+	_, err = db.Exec("SELECT 1")
+	require.NoError(t, err)
+}
