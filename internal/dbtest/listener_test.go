@@ -9,7 +9,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
-func TestListener(t *testing.T) {
+func TestListenerReceive(t *testing.T) {
 	ctx := context.Background()
 
 	db := pg()
@@ -48,4 +48,40 @@ func TestListener(t *testing.T) {
 	_, _, err = ln.Receive(ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "closed")
+}
+
+func TestListenerChannel(t *testing.T) {
+	ctx := context.Background()
+
+	db := pg()
+	defer db.Close()
+
+	ln := pgdriver.NewListener(db)
+	ch := ln.Channel()
+
+	err := ln.Listen(ctx, "test_channel")
+	require.NoError(t, err)
+
+	for _, msg := range []string{"foo", "bar"} {
+		_, err = db.Exec("NOTIFY test_channel, ?", msg)
+		require.NoError(t, err)
+	}
+
+	require.Eventually(t, func() bool {
+		_, ok := <-ch
+		return ok
+	}, 3*time.Second, 100*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		_, ok := <-ch
+		return ok
+	}, 3*time.Second, 100*time.Millisecond)
+
+	err = ln.Close()
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		_, ok := <-ch
+		return !ok
+	}, 3*time.Second, 100*time.Millisecond)
 }

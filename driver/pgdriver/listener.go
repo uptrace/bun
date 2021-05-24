@@ -221,8 +221,8 @@ func (ln *Listener) ReceiveTimeout(
 //
 // The channel is closed with Listener. Receive* APIs can not be used
 // after channel is created.
-func (ln *Listener) Channel(opts ...ChannelOption) *Channel {
-	return newChannel(ln, opts)
+func (ln *Listener) Channel(opts ...ChannelOption) <-chan Notification {
+	return newChannel(ln, opts).ch
 }
 
 //------------------------------------------------------------------------------
@@ -249,7 +249,7 @@ type Channel struct {
 	pingTimeout     time.Duration
 	chanSendTimeout time.Duration
 
-	C      chan Notification
+	ch     chan Notification
 	pingCh chan struct{}
 }
 
@@ -267,7 +267,7 @@ func newChannel(ln *Listener, opts []ChannelOption) *Channel {
 		opt(c)
 	}
 
-	c.C = make(chan Notification, c.size)
+	c.ch = make(chan Notification, c.size)
 	c.pingCh = make(chan struct{}, 1)
 	_ = c.ln.Listen(c.ctx, pingChannel)
 	go c.startReceive()
@@ -285,7 +285,7 @@ func (c *Channel) startReceive() {
 		channel, payload, err := c.ln.Receive(c.ctx)
 		if err != nil {
 			if err == errListenerClosed {
-				close(c.C)
+				close(c.ch)
 				return
 			}
 
@@ -311,7 +311,7 @@ func (c *Channel) startReceive() {
 		default:
 			timer.Reset(c.chanSendTimeout)
 			select {
-			case c.C <- Notification{channel, payload}:
+			case c.ch <- Notification{channel, payload}:
 				if !timer.Stop() {
 					<-timer.C
 				}
