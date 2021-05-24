@@ -432,7 +432,9 @@ func (r *rows) readDataRow(dest []driver.Value) error {
 			return err
 		}
 
-		dest[colIdx] = value
+		if dest != nil {
+			dest[colIdx] = value
+		}
 	}
 
 	return nil
