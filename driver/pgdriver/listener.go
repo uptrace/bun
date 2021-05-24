@@ -233,15 +233,15 @@ type Notification struct {
 	Payload string
 }
 
-type ChannelOption func(c *Channel)
+type ChannelOption func(c *channel)
 
 func WithChannelSize(size int) ChannelOption {
-	return func(c *Channel) {
+	return func(c *channel) {
 		c.size = size
 	}
 }
 
-type Channel struct {
+type channel struct {
 	ctx context.Context
 	ln  *Listener
 
@@ -253,8 +253,8 @@ type Channel struct {
 	pingCh chan struct{}
 }
 
-func newChannel(ln *Listener, opts []ChannelOption) *Channel {
-	c := &Channel{
+func newChannel(ln *Listener, opts []ChannelOption) *channel {
+	c := &channel{
 		ctx: context.TODO(),
 		ln:  ln,
 
@@ -276,7 +276,7 @@ func newChannel(ln *Listener, opts []ChannelOption) *Channel {
 	return c
 }
 
-func (c *Channel) startReceive() {
+func (c *channel) startReceive() {
 	timer := time.NewTimer(time.Minute)
 	timer.Stop()
 
@@ -327,7 +327,7 @@ func (c *Channel) startReceive() {
 	}
 }
 
-func (c *Channel) startPing() {
+func (c *channel) startPing() {
 	timer := time.NewTimer(time.Minute)
 	timer.Stop()
 
@@ -359,7 +359,7 @@ func (c *Channel) startPing() {
 	}
 }
 
-func (c *Channel) ping(ctx context.Context) error {
+func (c *channel) ping(ctx context.Context) error {
 	_, err := c.ln.db.ExecContext(ctx, "NOTIFY "+strconv.Quote(pingChannel))
 	return err
 }
