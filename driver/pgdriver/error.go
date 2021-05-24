@@ -44,7 +44,14 @@ func isBadConn(err error, allowTimeout bool) bool {
 		return false
 	}
 	if err, ok := err.(Error); ok {
-		return !err.IntegrityViolation()
+		if err.IntegrityViolation() {
+			return false
+		}
+		switch err.Field('C') {
+		case "42601": // syntax error
+			return false
+		}
+		return true
 	}
 	if allowTimeout {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {

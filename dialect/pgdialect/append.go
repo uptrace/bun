@@ -1,13 +1,31 @@
 package pgdialect
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 	"unicode/utf8"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/schema"
+)
+
+var (
+	driverValuerType = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+
+	stringType      = reflect.TypeOf((*string)(nil)).Elem()
+	sliceStringType = reflect.TypeOf([]string(nil))
+
+	intType      = reflect.TypeOf((*int)(nil)).Elem()
+	sliceIntType = reflect.TypeOf([]int(nil))
+
+	int64Type      = reflect.TypeOf((*int64)(nil)).Elem()
+	sliceInt64Type = reflect.TypeOf([]int64(nil))
+
+	float64Type      = reflect.TypeOf((*float64)(nil)).Elem()
+	sliceFloat64Type = reflect.TypeOf([]float64(nil))
 )
 
 func appender(typ reflect.Type, pgArray bool) schema.AppenderFunc {
@@ -46,58 +64,51 @@ func appendUint64ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) [
 
 //------------------------------------------------------------------------------
 
-var arrayAppenders = []schema.AppenderFunc{
-	reflect.Bool:          schema.AppendBoolValue,
-	reflect.Int:           schema.AppendIntValue,
-	reflect.Int8:          schema.AppendIntValue,
-	reflect.Int16:         schema.AppendIntValue,
-	reflect.Int32:         schema.AppendIntValue,
-	reflect.Int64:         schema.AppendIntValue,
-	reflect.Uint:          schema.AppendUintValue,
-	reflect.Uint8:         schema.AppendUintValue,
-	reflect.Uint16:        schema.AppendUintValue,
-	reflect.Uint32:        schema.AppendUintValue,
-	reflect.Uint64:        schema.AppendUintValue,
-	reflect.Uintptr:       nil,
-	reflect.Float32:       schema.AppendFloat32Value,
-	reflect.Float64:       schema.AppendFloat64Value,
-	reflect.Complex64:     nil,
-	reflect.Complex128:    nil,
-	reflect.Array:         nil,
-	reflect.Chan:          nil,
-	reflect.Func:          nil,
-	reflect.Interface:     nil,
-	reflect.Map:           nil,
-	reflect.Ptr:           nil,
-	reflect.Slice:         nil,
-	reflect.String:        arrayAppendStringValue,
-	reflect.Struct:        nil,
-	reflect.UnsafePointer: nil,
+func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
+	switch v := v.(type) {
+	case int64:
+		return strconv.AppendInt(b, v, 10)
+	case float64:
+		return dialect.AppendFloat64(b, v)
+	case bool:
+		return dialect.AppendBool(b, v)
+	case []byte:
+		return dialect.AppendBytes(b, v)
+	case string:
+		return arrayAppendString(b, v)
+	case time.Time:
+		return dialect.AppendTime(b, v)
+	default:
+		err := fmt.Errorf("pgdialect: can't append %T", v)
+		return dialect.AppendError(b, err)
+	}
 }
 
 func arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
-	return arrayAppenders[typ.Kind()]
+	if typ.Kind() == reflect.String {
+		return arrayAppendStringValue
+	}
+
+	if typ.Implements(driverValuerType) {
+		return arrayAppendDriverValue
+	}
+
+	return schema.Appender(typ)
 }
 
 func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	return arrayAppendString(b, v.String())
 }
 
+func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	iface, err := v.Interface().(driver.Valuer).Value()
+	if err != nil {
+		return dialect.AppendError(b, err)
+	}
+	return arrayAppend(fmter, b, iface)
+}
+
 //------------------------------------------------------------------------------
-
-var (
-	stringType      = reflect.TypeOf((*string)(nil)).Elem()
-	sliceStringType = reflect.TypeOf([]string(nil))
-
-	intType      = reflect.TypeOf((*int)(nil)).Elem()
-	sliceIntType = reflect.TypeOf([]int(nil))
-
-	int64Type      = reflect.TypeOf((*int64)(nil)).Elem()
-	sliceInt64Type = reflect.TypeOf([]int64(nil))
-
-	float64Type      = reflect.TypeOf((*float64)(nil)).Elem()
-	sliceFloat64Type = reflect.TypeOf([]float64(nil))
-)
 
 func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()

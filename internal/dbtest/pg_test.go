@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -161,4 +162,34 @@ func TestPGScanIgnoredField(t *testing.T) {
 		Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, []string{"foo", "bar"}, model.Array)
+
+	err = db.NewSelect().
+		ColumnExpr("NULL AS array").
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, []string(nil), model.Array)
+}
+
+func TestPGScanUUID(t *testing.T) {
+	type Model struct {
+		Array []uuid.UUID `bun:"type:uuid[],array"`
+	}
+
+	db := pg()
+	defer db.Close()
+
+	ids := []uuid.UUID{uuid.New(), uuid.New()}
+
+	model := new(Model)
+	err := db.NewSelect().
+		ColumnExpr("? AS array", pgdialect.Array(ids)).
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, ids, model.Array)
+
+	err = db.NewSelect().
+		ColumnExpr("NULL AS array").
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID(nil), model.Array)
 }
