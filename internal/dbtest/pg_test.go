@@ -194,7 +194,7 @@ func TestPGScanUUID(t *testing.T) {
 	require.Equal(t, []uuid.UUID(nil), model.Array)
 }
 
-func TestInvalidQuery(t *testing.T) {
+func TestPGInvalidQuery(t *testing.T) {
 	db := pg()
 	defer db.Close()
 
@@ -204,4 +204,33 @@ func TestInvalidQuery(t *testing.T) {
 
 	_, err = db.Exec("SELECT 1")
 	require.NoError(t, err)
+}
+
+func TestPGTransaction(t *testing.T) {
+	db := pg()
+	defer db.Close()
+
+	type Model struct {
+		ID int64
+	}
+
+	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
+	require.NoError(t, err)
+
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().DB(tx).Model((*Model)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	n, err := db.NewSelect().DB(tx).Model((*Model)(nil)).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, n)
+
+	err = tx.Rollback()
+	require.NoError(t, err)
+
+	_, err = db.NewSelect().Model((*Model)(nil)).Count(ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "does not exist")
 }

@@ -198,7 +198,23 @@ func (cn *Conn) Begin() (driver.Tx, error) {
 	if cn.isClosed() {
 		return nil, driver.ErrBadConn
 	}
-	panic("not implemented")
+	return cn.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+var _ driver.ConnBeginTx = (*Conn)(nil)
+
+func (cn *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	if sql.IsolationLevel(opts.Isolation) != sql.LevelDefault {
+		return nil, errors.New("pgdriver: custom IsolationLevel is not supported")
+	}
+	if opts.ReadOnly {
+		return nil, errors.New("pgdriver: ReadOnly transactions are not supported")
+	}
+
+	if _, err := cn.ExecContext(ctx, "BEGIN", nil); err != nil {
+		return nil, err
+	}
+	return tx{cn: cn}, nil
 }
 
 var _ driver.ExecerContext = (*Conn)(nil)
@@ -516,6 +532,24 @@ func (r result) RowsAffected() (int64, error) {
 
 func (r result) LastInsertId() (int64, error) {
 	return 0, nil
+}
+
+//------------------------------------------------------------------------------
+
+type tx struct {
+	cn *Conn
+}
+
+var _ driver.Tx = (*tx)(nil)
+
+func (tx tx) Commit() error {
+	_, err := tx.cn.ExecContext(context.Background(), "COMMIT", nil)
+	return err
+}
+
+func (tx tx) Rollback() error {
+	_, err := tx.cn.ExecContext(context.Background(), "ROLLBACK", nil)
+	return err
 }
 
 //------------------------------------------------------------------------------

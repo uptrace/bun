@@ -747,7 +747,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 
 	var num int
 
-	if err := q.db.QueryRowContext(ctx, internal.String(query)).Scan(&num); err != nil {
+	if err := q.dbi.QueryRowContext(ctx, internal.String(query)).Scan(&num); err != nil {
 		return 0, err
 	}
 

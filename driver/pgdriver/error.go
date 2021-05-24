@@ -48,7 +48,8 @@ func isBadConn(err error, allowTimeout bool) bool {
 			return false
 		}
 		switch err.Field('C') {
-		case "42601": // syntax error
+		case "42P01", // relation does not exist
+			"42601": // syntax error
 			return false
 		}
 		return true

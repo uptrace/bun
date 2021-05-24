@@ -28,7 +28,8 @@ func pg() *bun.DB {
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	return bun.NewDB(sqldb, pgdialect.New())
+	db := bun.NewDB(sqldb, pgdialect.New())
+	return db
 }
 
 func sqlite(t *testing.T) *bun.DB {
