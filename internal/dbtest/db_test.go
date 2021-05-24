@@ -69,13 +69,14 @@ func dbs(t *testing.T) []*bun.DB {
 	return dbs
 }
 
-func TestSelectScan(t *testing.T) {
+func TestDB(t *testing.T) {
 	type Test struct {
 		name string
 		run  func(t *testing.T, db *bun.DB)
 	}
 
 	tests := []Test{
+		{"testPing", testPing},
 		{"testSelectScan", testSelectScan},
 		{"testSelectCount", testSelectCount},
 		{"testSelectMap", testSelectMap},
@@ -104,6 +105,11 @@ func TestSelectScan(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testPing(t *testing.T, db *bun.DB) {
+	err := db.PingContext(ctx)
+	require.NoError(t, err)
 }
 
 func testSelectScan(t *testing.T, db *bun.DB) {
@@ -307,6 +313,12 @@ func testSelectJSON(t *testing.T, db *bun.DB) {
 		Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"hello": "world"}, model.Map)
+
+	err = db.NewSelect().
+		ColumnExpr("NULL AS map").
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string(nil), model.Map)
 }
 
 func testScanNullVar(t *testing.T, db *bun.DB) {
@@ -356,8 +368,8 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 
 		nums = append(nums, num)
 	}
-	require.NoError(t, rows.Err())
 
+	require.NoError(t, rows.Err())
 	require.Equal(t, []int{3, 2, 1}, nums)
 }
 

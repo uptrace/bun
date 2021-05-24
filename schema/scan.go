@@ -218,6 +218,10 @@ func scanScanner(dest reflect.Value, src interface{}) error {
 }
 
 func scanMsgpack(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
 	b, err := toBytes(src)
 	if err != nil {
 		return err
@@ -231,6 +235,10 @@ func scanMsgpack(dest reflect.Value, src interface{}) error {
 }
 
 func scanJSON(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
 	b, err := toBytes(src)
 	if err != nil {
 		return err
@@ -240,6 +248,10 @@ func scanJSON(dest reflect.Value, src interface{}) error {
 }
 
 func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
 	b, err := toBytes(src)
 	if err != nil {
 		return err
@@ -291,4 +303,12 @@ func ptrScanner(fn ScannerFunc) ScannerFunc {
 		}
 		return fn(dest.Elem(), src)
 	}
+}
+
+func scanNull(dest reflect.Value) error {
+	if dest.IsNil() {
+		return nil
+	}
+	dest.Set(reflect.New(dest.Type()).Elem())
+	return nil
 }
