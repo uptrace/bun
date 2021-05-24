@@ -134,6 +134,8 @@ type Conn struct {
 
 	processID int32
 	secretKey int32
+
+	closed int32
 }
 
 func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
@@ -175,20 +177,46 @@ func (cn *Conn) withWriter(
 var _ driver.Conn = (*Conn)(nil)
 
 func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
+	if cn.isClosed() {
+		return nil, driver.ErrBadConn
+	}
 	panic("not implemented")
 }
 
 func (cn *Conn) Close() error {
+	if !atomic.CompareAndSwapInt32(&cn.closed, 0, 1) {
+		return nil
+	}
 	return cn.netConn.Close()
 }
 
+func (cn *Conn) isClosed() bool {
+	return atomic.LoadInt32(&cn.closed) == 1
+}
+
 func (cn *Conn) Begin() (driver.Tx, error) {
+	if cn.isClosed() {
+		return nil, driver.ErrBadConn
+	}
 	panic("not implemented")
 }
 
 var _ driver.ExecerContext = (*Conn)(nil)
 
 func (cn *Conn) ExecContext(
+	ctx context.Context, query string, args []driver.NamedValue,
+) (driver.Result, error) {
+	if cn.isClosed() {
+		return nil, driver.ErrBadConn
+	}
+	res, err := cn.exec(ctx, query, args)
+	if err != nil {
+		return nil, checkBadConn(err)
+	}
+	return res, nil
+}
+
+func (cn *Conn) exec(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Result, error) {
 	if err := writeQuery(ctx, cn, query); err != nil {
@@ -255,12 +283,31 @@ var _ driver.QueryerContext = (*Conn)(nil)
 func (cn *Conn) QueryContext(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Rows, error) {
+	if cn.isClosed() {
+		return nil, driver.ErrBadConn
+	}
+	rows, err := cn.query(ctx, query, args)
+	if err != nil {
+		return nil, checkBadConn(err)
+	}
+	return rows, nil
+}
+
+func (cn *Conn) query(
+	ctx context.Context, query string, args []driver.NamedValue,
+) (driver.Rows, error) {
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
-
 	cn.setReadDeadline(ctx, -1)
 	return newRows(cn)
+}
+
+var _ driver.Pinger = (*Conn)(nil)
+
+func (cn *Conn) Ping(ctx context.Context) error {
+	_, err := cn.ExecContext(ctx, "SELECT 1", nil)
+	return err
 }
 
 func (cn *Conn) setReadDeadline(ctx context.Context, timeout time.Duration) {
