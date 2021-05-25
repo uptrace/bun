@@ -188,6 +188,12 @@ func TestPGScanUUID(t *testing.T) {
 	require.Equal(t, ids, model.Array)
 
 	err = db.NewSelect().
+		ColumnExpr("? AS array", pgdialect.Array([]uuid.UUID{})).
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{}, model.Array)
+
+	err = db.NewSelect().
 		ColumnExpr("NULL AS array").
 		Scan(ctx, model)
 	require.NoError(t, err)
