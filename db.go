@@ -58,7 +58,7 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	return db
 }
 
-func (db *DB) Stats() DBStats {
+func (db *DB) DBStats() DBStats {
 	return DBStats{
 		Queries: atomic.LoadUint64(&db.stats.Queries),
 		Errors:  atomic.LoadUint64(&db.stats.Errors),
