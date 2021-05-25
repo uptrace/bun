@@ -43,22 +43,26 @@ func isBadConn(err error, allowTimeout bool) bool {
 	if err == nil {
 		return false
 	}
+
 	if err, ok := err.(Error); ok {
-		if err.IntegrityViolation() {
-			return false
+		switch err.Field('V') {
+		case "FATAL", "PANIC":
+			return true
 		}
 		switch err.Field('C') {
-		case "42P01", // relation does not exist
-			"42601": // syntax error
-			return false
+		case "25P02", // current transaction is aborted
+			"57014": // canceling statement due to user request
+			return true
 		}
-		return true
+		return false
 	}
+
 	if allowTimeout {
-		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			return !netErr.Temporary()
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return !err.Temporary()
 		}
 	}
+
 	return true
 }
 
