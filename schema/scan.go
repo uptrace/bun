@@ -3,12 +3,12 @@ package schema
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"time"
 
+	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -244,7 +244,7 @@ func scanJSON(dest reflect.Value, src interface{}) error {
 		return err
 	}
 
-	return json.Unmarshal(b, dest.Addr().Interface())
+	return bunjson.Unmarshal(b, dest.Addr().Interface())
 }
 
 func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
@@ -257,7 +257,7 @@ func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
 		return err
 	}
 
-	dec := json.NewDecoder(bytes.NewReader(b))
+	dec := bunjson.NewDecoder(bytes.NewReader(b))
 	dec.UseNumber()
 	return dec.Decode(dest.Addr().Interface())
 }

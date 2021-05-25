@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
 )
 
@@ -185,12 +185,11 @@ func appendStructValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 }
 
 func appendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(v.Interface()); err != nil {
+	bb, err := bunjson.Marshal(v.Interface())
+	if err != nil {
 		return dialect.AppendError(b, err)
 	}
 
-	bb := buf.Bytes()
 	if len(bb) > 0 && bb[len(bb)-1] == '\n' {
 		bb = bb[:len(bb)-1]
 	}
