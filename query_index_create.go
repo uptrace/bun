@@ -239,7 +239,7 @@ func (q *CreateIndexQuery) Exec(
 		return res, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)

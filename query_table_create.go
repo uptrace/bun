@@ -262,7 +262,7 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res s
 		return res, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)

@@ -638,7 +638,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	return q.dbi.QueryContext(ctx, query)
@@ -657,7 +657,7 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 		return res, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)
@@ -685,7 +685,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	res, err := q.scan(ctx, q, query, dest, true)

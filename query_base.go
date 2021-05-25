@@ -864,6 +864,13 @@ type byteSlice struct {
 	b []byte
 }
 
+func (bs *byteSlice) update(b []byte) {
+	const limit = 1 << 20 // 1MB
+	if len(b) < limit {
+		bs.b = b
+	}
+}
+
 func getByteSlice() *byteSlice {
 	return byteSlicePool.Get().(*byteSlice)
 }

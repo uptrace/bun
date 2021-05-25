@@ -104,7 +104,7 @@ func (q *DropColumnQuery) Exec(ctx context.Context, dest ...interface{}) (res sq
 		return res, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	res, err = q.exec(ctx, q, query)

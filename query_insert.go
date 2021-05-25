@@ -461,7 +461,7 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 		return res, err
 	}
 
-	bs.b = queryBytes
+	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	if len(dest) > 0 || q.hasReturning() {
