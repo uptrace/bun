@@ -275,6 +275,54 @@ func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interfa
 	return row
 }
 
+func (c Conn) NewValues(model interface{}) *ValuesQuery {
+	return NewValuesQuery(c.db, model).DB(c)
+}
+
+func (c Conn) NewSelect() *SelectQuery {
+	return NewSelectQuery(c.db).DB(c)
+}
+
+func (c Conn) NewInsert() *InsertQuery {
+	return NewInsertQuery(c.db).DB(c)
+}
+
+func (c Conn) NewUpdate() *UpdateQuery {
+	return NewUpdateQuery(c.db).DB(c)
+}
+
+func (c Conn) NewDelete() *DeleteQuery {
+	return NewDeleteQuery(c.db).DB(c)
+}
+
+func (c Conn) NewCreateTable() *CreateTableQuery {
+	return NewCreateTableQuery(c.db).DB(c)
+}
+
+func (c Conn) NewDropTable() *DropTableQuery {
+	return NewDropTableQuery(c.db).DB(c)
+}
+
+func (c Conn) NewCreateIndex() *CreateIndexQuery {
+	return NewCreateIndexQuery(c.db).DB(c)
+}
+
+func (c Conn) NewDropIndex() *DropIndexQuery {
+	return NewDropIndexQuery(c.db).DB(c)
+}
+
+func (c Conn) NewTruncateTable() *TruncateTableQuery {
+	return NewTruncateTableQuery(c.db).DB(c)
+}
+
+func (c Conn) NewAddColumn() *AddColumnQuery {
+	return NewAddColumnQuery(c.db).DB(c)
+}
+
+func (c Conn) NewDropColumn() *DropColumnQuery {
+	return NewDropColumnQuery(c.db).DB(c)
+}
+
 //------------------------------------------------------------------------------
 
 type Stmt struct {
@@ -348,6 +396,54 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 	row := tx.Tx.QueryRowContext(ctx, tx.db.format(query, args))
 	tx.db.afterQuery(ctx, event, nil, row.Err())
 	return row
+}
+
+func (tx Tx) NewValues(model interface{}) *ValuesQuery {
+	return NewValuesQuery(tx.db, model).DB(tx)
+}
+
+func (tx Tx) NewSelect() *SelectQuery {
+	return NewSelectQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewInsert() *InsertQuery {
+	return NewInsertQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewUpdate() *UpdateQuery {
+	return NewUpdateQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewDelete() *DeleteQuery {
+	return NewDeleteQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewCreateTable() *CreateTableQuery {
+	return NewCreateTableQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewDropTable() *DropTableQuery {
+	return NewDropTableQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewCreateIndex() *CreateIndexQuery {
+	return NewCreateIndexQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewDropIndex() *DropIndexQuery {
+	return NewDropIndexQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewTruncateTable() *TruncateTableQuery {
+	return NewTruncateTableQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewAddColumn() *AddColumnQuery {
+	return NewAddColumnQuery(tx.db).DB(tx)
+}
+
+func (tx Tx) NewDropColumn() *DropColumnQuery {
+	return NewDropColumnQuery(tx.db).DB(tx)
 }
 
 //------------------------------------------------------------------------------
