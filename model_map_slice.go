@@ -28,6 +28,15 @@ func newMapSliceModel(db *DB, ptr *[]map[string]interface{}) *mapSliceModel {
 	}
 }
 
+func (m *mapSliceModel) SetCap(cap int) {
+	if cap > 100 {
+		cap = 100
+	}
+	if slice := *m.slicePtr; len(slice) < cap {
+		*m.slicePtr = make([]map[string]interface{}, 0, cap)
+	}
+}
+
 func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	columns, err := rows.Columns()
 	if err != nil {

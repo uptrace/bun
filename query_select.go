@@ -673,6 +673,17 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 }
 
 func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
+	model, err := q.getModel(dest)
+	if err != nil {
+		return err
+	}
+
+	if q.limit > 1 {
+		if model, ok := model.(interface{ SetCap(int) }); ok {
+			model.SetCap(int(q.limit))
+		}
+	}
+
 	if err := q.beforeSelectQueryHook(ctx); err != nil {
 		return err
 	}
@@ -688,7 +699,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	res, err := q.scan(ctx, q, query, dest, true)
+	res, err := q.scan(ctx, q, query, model, true)
 	if err != nil {
 		return err
 	}

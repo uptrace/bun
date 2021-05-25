@@ -403,8 +403,8 @@ func (q *baseQuery) scan(
 	ctx context.Context,
 	queryApp schema.QueryAppender,
 	query string,
-	dest []interface{},
-	forceDest bool,
+	model model,
+	hasDest bool,
 ) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
@@ -415,12 +415,6 @@ func (q *baseQuery) scan(
 	}
 	defer rows.Close()
 
-	model, err := q.getModel(dest)
-	if err != nil {
-		q.db.afterQuery(ctx, event, nil, err)
-		return res, err
-	}
-
 	n, err := model.ScanRows(ctx, rows)
 	if err != nil {
 		q.db.afterQuery(ctx, event, nil, err)
@@ -428,12 +422,12 @@ func (q *baseQuery) scan(
 	}
 	res.n = n
 
-	if n == 0 && (forceDest || len(dest) > 0) && isSingleRowModel(model) {
-		return res, sql.ErrNoRows
+	if n == 0 && hasDest && isSingleRowModel(model) {
+		err = sql.ErrNoRows
 	}
 
 	q.db.afterQuery(ctx, event, nil, err)
-	return res, nil
+	return res, err
 }
 
 func (q *baseQuery) exec(

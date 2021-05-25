@@ -64,6 +64,15 @@ func (m *sliceTableModel) Value() reflect.Value {
 	return m.slice
 }
 
+func (m *sliceTableModel) SetCap(cap int) {
+	if cap > 100 {
+		cap = 100
+	}
+	if m.slice.Cap() < cap {
+		m.slice.Set(reflect.MakeSlice(m.slice.Type(), 0, cap))
+	}
+}
+
 func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	columns, err := rows.Columns()
 	if err != nil {

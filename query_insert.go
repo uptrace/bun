@@ -448,9 +448,9 @@ func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
+func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
 	if err := q.beforeInsertQueryHook(ctx); err != nil {
-		return res, err
+		return nil, err
 	}
 
 	bs := getByteSlice()
@@ -458,30 +458,37 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	if len(dest) > 0 || q.hasReturning() {
-		res, err = q.scan(ctx, q, query, dest, false)
+	var res sql.Result
+
+	if hasDest := len(dest) > 0; hasDest || q.hasReturning() {
+		model, err := q.getModel(dest)
 		if err != nil {
-			return res, err
+			return nil, err
+		}
+
+		res, err = q.scan(ctx, q, query, model, hasDest)
+		if err != nil {
+			return nil, err
 		}
 	} else {
 		res, err = q.exec(ctx, q, query)
 		if err != nil {
-			return res, err
+			return nil, err
 		}
 
 		if err := q.tryLastInsertID(res, dest); err != nil {
-			return res, err
+			return nil, err
 		}
 	}
 
 	if err := q.afterInsertQueryHook(ctx); err != nil {
-		return res, err
+		return nil, err
 	}
 
 	return res, nil

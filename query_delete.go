@@ -178,13 +178,13 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 
 func (q *DeleteQuery) ForceDelete(
 	ctx context.Context, dest ...interface{},
-) (res sql.Result, err error) {
+) (sql.Result, error) {
 	if q.table != nil && q.table.SoftDeleteField != nil {
 		q = q.WhereAllWithDeleted()
 	}
 
 	if err := q.beforeDeleteQueryHook(ctx); err != nil {
-		return res, err
+		return nil, err
 	}
 
 	bs := getByteSlice()
@@ -192,23 +192,33 @@ func (q *DeleteQuery) ForceDelete(
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	if len(dest) > 0 || q.hasReturning() {
-		res, err = q.scan(ctx, q, query, dest, false)
+	var res sql.Result
+
+	if hasDest := len(dest) > 0; hasDest || q.hasReturning() {
+		model, err := q.getModel(dest)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err = q.scan(ctx, q, query, model, hasDest)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		res, err = q.exec(ctx, q, query)
-	}
-	if err != nil {
-		return res, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := q.afterDeleteQueryHook(ctx); err != nil {
-		return res, err
+		return nil, err
 	}
 
 	return res, nil
