@@ -369,6 +369,11 @@ func TestQuery(t *testing.T) {
 				On("DUPLICATE KEY UPDATE").
 				Set("str = upper(str)")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewCreateTable().
+				Model(new(Model)).
+				ForeignKey(`("profile_id") REFERENCES "profiles" ("id")`)
+		},
 	}
 
 	for _, db := range dbs(t) {

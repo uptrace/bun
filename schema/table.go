@@ -356,18 +356,11 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 			t.Unique[uniqueName] = append(t.Unique[uniqueName], field)
 		}
 	}
-	if v, ok := tag.Options["default"]; ok {
-		field.SQLDefault = v
+	if s, ok := tag.Options["default"]; ok {
+		field.SQLDefault = s
 	}
-	if v, ok := tag.Options["on_delete"]; ok {
-		field.OnDelete = v
-	}
-	if v, ok := tag.Options["on_update"]; ok {
-		field.OnUpdate = v
-	}
-
-	if v, ok := field.Tag.Options["type"]; ok {
-		field.UserSQLType = v
+	if s, ok := field.Tag.Options["type"]; ok {
+		field.UserSQLType = s
 	}
 	field.DiscoveredSQLType = sqltype.Detect(field.Type)
 	field.Append = FieldAppender(t.dialect, field)
@@ -850,8 +843,6 @@ func isKnownFieldOption(name string) bool {
 		"default",
 		"unique",
 		"soft_delete",
-		"on_delete",
-		"on_update",
 
 		"pk",
 		"autoincrement",

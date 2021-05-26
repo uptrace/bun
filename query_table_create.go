@@ -19,8 +19,7 @@ type CreateTableQuery struct {
 	ifNotExists bool
 	varchar     int
 
-	withFKConstraints bool
-
+	fks         []schema.QueryWithArgs
 	partitionBy schema.QueryWithArgs
 	tablespace  schema.QueryWithArgs
 }
@@ -81,8 +80,8 @@ func (q *CreateTableQuery) Varchar(n int) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) WithFKConstraints() *CreateTableQuery {
-	q.withFKConstraints = true
+func (q *CreateTableQuery) ForeignKey(query string, args ...interface{}) *CreateTableQuery {
+	q.fks = append(q.fks, schema.SafeQuery(query, args))
 	return q
 }
 
@@ -106,6 +105,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 	if err != nil {
 		return nil, err
 	}
+
 	b = append(b, " ("...)
 
 	for i, field := range q.table.Fields {
@@ -130,11 +130,9 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 	b = q.appendPKConstraint(b, q.table.PKs)
 	b = q.appendUniqueConstraints(fmter, b)
-
-	if q.withFKConstraints {
-		for _, rel := range q.table.Relations {
-			b = q.appendFKConstraint(fmter, b, rel)
-		}
+	b, err = q.appenFKConstraints(fmter, b)
+	if err != nil {
+		return nil, err
 	}
 
 	b = append(b, ")"...)
@@ -206,6 +204,19 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 	return b
 }
 
+func (q *CreateTableQuery) appenFKConstraints(
+	fmter schema.Formatter, b []byte,
+) (_ []byte, err error) {
+	for _, fk := range q.fks {
+		b = append(b, ", FOREIGN KEY "...)
+		b, err = fk.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
 func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []byte {
 	if len(pks) == 0 {
 		return b
@@ -214,36 +225,6 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 	b = append(b, ", PRIMARY KEY ("...)
 	b = appendColumns(b, "", pks)
 	b = append(b, ")"...)
-	return b
-}
-
-func (q *CreateTableQuery) appendFKConstraint(
-	fmter schema.Formatter, b []byte, rel *schema.Relation,
-) []byte {
-	if rel.Type != schema.HasOneRelation {
-		return b
-	}
-
-	b = append(b, ", FOREIGN KEY ("...)
-	b = appendColumns(b, "", rel.BaseFields)
-	b = append(b, ")"...)
-
-	b = append(b, " REFERENCES "...)
-	b = fmter.AppendQuery(b, string(rel.JoinTable.SQLName))
-	b = append(b, " ("...)
-	b = appendColumns(b, "", rel.JoinFields)
-	b = append(b, ")"...)
-
-	// if s := onDelete(rel.BaseFields); s != "" {
-	// 	b = append(b, " ON DELETE "...)
-	// 	b = append(b, s...)
-	// }
-
-	// if s := onUpdate(rel.BaseFields); s != "" {
-	// 	b = append(b, " ON UPDATE "...)
-	// 	b = append(b, s...)
-	// }
-
 	return b
 }
 
