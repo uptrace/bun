@@ -23,7 +23,7 @@ func NewDropColumnQuery(db *DB) *DropColumnQuery {
 	return q
 }
 
-func (q *DropColumnQuery) DB(db DBI) *DropColumnQuery {
+func (q *DropColumnQuery) Conn(db DBI) *DropColumnQuery {
 	q.setDBI(db)
 	return q
 }

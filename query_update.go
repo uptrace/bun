@@ -32,7 +32,7 @@ func NewUpdateQuery(db *DB) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) DB(db DBI) *UpdateQuery {
+func (q *UpdateQuery) Conn(db DBI) *UpdateQuery {
 	q.setDBI(db)
 	return q
 }

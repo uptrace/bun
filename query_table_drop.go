@@ -25,7 +25,7 @@ func NewDropTableQuery(db *DB) *DropTableQuery {
 	return q
 }
 
-func (q *DropTableQuery) DB(db DBI) *DropTableQuery {
+func (q *DropTableQuery) Conn(db DBI) *DropTableQuery {
 	q.setDBI(db)
 	return q
 }

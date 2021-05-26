@@ -23,7 +23,7 @@ func NewAddColumnQuery(db *DB) *AddColumnQuery {
 	return q
 }
 
-func (q *AddColumnQuery) DB(db DBI) *AddColumnQuery {
+func (q *AddColumnQuery) Conn(db DBI) *AddColumnQuery {
 	q.setDBI(db)
 	return q
 }

@@ -200,7 +200,6 @@ func (db *DB) ExecContext(
 	ctx, event := db.beforeQuery(ctx, nil, query, args)
 	res, err := db.DB.ExecContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, res, err)
-
 	return res, err
 }
 
@@ -276,51 +275,51 @@ func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interfa
 }
 
 func (c Conn) NewValues(model interface{}) *ValuesQuery {
-	return NewValuesQuery(c.db, model).DB(c)
+	return NewValuesQuery(c.db, model).Conn(c)
 }
 
 func (c Conn) NewSelect() *SelectQuery {
-	return NewSelectQuery(c.db).DB(c)
+	return NewSelectQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewInsert() *InsertQuery {
-	return NewInsertQuery(c.db).DB(c)
+	return NewInsertQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewUpdate() *UpdateQuery {
-	return NewUpdateQuery(c.db).DB(c)
+	return NewUpdateQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewDelete() *DeleteQuery {
-	return NewDeleteQuery(c.db).DB(c)
+	return NewDeleteQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewCreateTable() *CreateTableQuery {
-	return NewCreateTableQuery(c.db).DB(c)
+	return NewCreateTableQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewDropTable() *DropTableQuery {
-	return NewDropTableQuery(c.db).DB(c)
+	return NewDropTableQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewCreateIndex() *CreateIndexQuery {
-	return NewCreateIndexQuery(c.db).DB(c)
+	return NewCreateIndexQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewDropIndex() *DropIndexQuery {
-	return NewDropIndexQuery(c.db).DB(c)
+	return NewDropIndexQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewTruncateTable() *TruncateTableQuery {
-	return NewTruncateTableQuery(c.db).DB(c)
+	return NewTruncateTableQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewAddColumn() *AddColumnQuery {
-	return NewAddColumnQuery(c.db).DB(c)
+	return NewAddColumnQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewDropColumn() *DropColumnQuery {
-	return NewDropColumnQuery(c.db).DB(c)
+	return NewDropColumnQuery(c.db).Conn(c)
 }
 
 //------------------------------------------------------------------------------
@@ -399,51 +398,51 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 }
 
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
-	return NewValuesQuery(tx.db, model).DB(tx)
+	return NewValuesQuery(tx.db, model).Conn(tx)
 }
 
 func (tx Tx) NewSelect() *SelectQuery {
-	return NewSelectQuery(tx.db).DB(tx)
+	return NewSelectQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewInsert() *InsertQuery {
-	return NewInsertQuery(tx.db).DB(tx)
+	return NewInsertQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewUpdate() *UpdateQuery {
-	return NewUpdateQuery(tx.db).DB(tx)
+	return NewUpdateQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewDelete() *DeleteQuery {
-	return NewDeleteQuery(tx.db).DB(tx)
+	return NewDeleteQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewCreateTable() *CreateTableQuery {
-	return NewCreateTableQuery(tx.db).DB(tx)
+	return NewCreateTableQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewDropTable() *DropTableQuery {
-	return NewDropTableQuery(tx.db).DB(tx)
+	return NewDropTableQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewCreateIndex() *CreateIndexQuery {
-	return NewCreateIndexQuery(tx.db).DB(tx)
+	return NewCreateIndexQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewDropIndex() *DropIndexQuery {
-	return NewDropIndexQuery(tx.db).DB(tx)
+	return NewDropIndexQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewTruncateTable() *TruncateTableQuery {
-	return NewTruncateTableQuery(tx.db).DB(tx)
+	return NewTruncateTableQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewAddColumn() *AddColumnQuery {
-	return NewAddColumnQuery(tx.db).DB(tx)
+	return NewAddColumnQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewDropColumn() *DropColumnQuery {
-	return NewDropColumnQuery(tx.db).DB(tx)
+	return NewDropColumnQuery(tx.db).Conn(tx)
 }
 
 //------------------------------------------------------------------------------

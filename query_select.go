@@ -46,7 +46,7 @@ func NewSelectQuery(db *DB) *SelectQuery {
 	}
 }
 
-func (q *SelectQuery) DB(db DBI) *SelectQuery {
+func (q *SelectQuery) Conn(db DBI) *SelectQuery {
 	q.setDBI(db)
 	return q
 }

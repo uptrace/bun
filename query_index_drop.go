@@ -28,7 +28,7 @@ func NewDropIndexQuery(db *DB) *DropIndexQuery {
 	return q
 }
 
-func (q *DropIndexQuery) DB(db DBI) *DropIndexQuery {
+func (q *DropIndexQuery) Conn(db DBI) *DropIndexQuery {
 	q.setDBI(db)
 	return q
 }

@@ -56,7 +56,7 @@ type baseQuery struct {
 	flags internal.Flag
 }
 
-func (q *baseQuery) GetDB() *DB {
+func (q *baseQuery) DB() *DB {
 	return q.db
 }
 

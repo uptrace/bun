@@ -34,7 +34,7 @@ func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
 	return q
 }
 
-func (q *CreateIndexQuery) DB(db DBI) *CreateIndexQuery {
+func (q *CreateIndexQuery) Conn(db DBI) *CreateIndexQuery {
 	q.setDBI(db)
 	return q
 }

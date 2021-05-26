@@ -34,7 +34,7 @@ func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) DB(db DBI) *CreateTableQuery {
+func (q *CreateTableQuery) Conn(db DBI) *CreateTableQuery {
 	q.setDBI(db)
 	return q
 }

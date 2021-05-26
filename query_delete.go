@@ -26,7 +26,7 @@ func NewDeleteQuery(db *DB) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) DB(db DBI) *DeleteQuery {
+func (q *DeleteQuery) Conn(db DBI) *DeleteQuery {
 	q.setDBI(db)
 	return q
 }

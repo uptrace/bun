@@ -26,7 +26,7 @@ func NewTruncateTableQuery(db *DB) *TruncateTableQuery {
 	return q
 }
 
-func (q *TruncateTableQuery) DB(db DBI) *TruncateTableQuery {
+func (q *TruncateTableQuery) Conn(db DBI) *TruncateTableQuery {
 	q.setDBI(db)
 	return q
 }
