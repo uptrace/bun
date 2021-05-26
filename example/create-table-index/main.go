@@ -19,7 +19,7 @@ type Book struct {
 var _ bun.AfterCreateTableQueryHook = (*Book)(nil)
 
 func (*Book) AfterCreateTableQuery(ctx context.Context, query *bun.CreateTableQuery) error {
-	_, err := query.GetDB().NewCreateIndex().
+	_, err := query.DB().NewCreateIndex().
 		Model((*Book)(nil)).
 		Index("category_id_idx").
 		Column("category_id").
