@@ -338,7 +338,7 @@ func (m *structTableModel) ScanColumn(column string, src interface{}) error {
 	if ok, err := m.scanColumn(column, src); ok {
 		return err
 	}
-	if m.db.flags.Has(discardUnknownColumns) {
+	if column == "" || column[0] == '_' || m.db.flags.Has(discardUnknownColumns) {
 		return nil
 	}
 	return fmt.Errorf("bun: %s does not have column %q", m.table.TypeName, column)
