@@ -213,7 +213,11 @@ func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 }
 
 func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return dialect.AppendString(b, internal.String(v.Bytes()))
+	bytes := v.Bytes()
+	if bytes == nil {
+		return dialect.AppendNull(b)
+	}
+	return dialect.AppendString(b, internal.String(bytes))
 }
 
 func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte {

@@ -52,7 +52,7 @@ func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	if field.Tag.HasOption("json_use_number") {
 		return scanJSONUseNumber
 	}
-	return dialect.Scanner(field.Type)
+	return dialect.Scanner(field.StructField.Type)
 }
 
 func Scanner(typ reflect.Type) ScannerFunc {

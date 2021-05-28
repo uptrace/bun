@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -373,6 +374,24 @@ func TestQuery(t *testing.T) {
 			return db.NewCreateTable().
 				Model(new(Model)).
 				ForeignKey(`("profile_id") REFERENCES "profiles" ("id")`)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Raw json.RawMessage
+			}
+			return db.NewInsert().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Raw *json.RawMessage
+			}
+			return db.NewInsert().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Bytes []byte
+			}
+			return db.NewInsert().Model(&Model{Bytes: make([]byte, 10)})
 		},
 	}
 

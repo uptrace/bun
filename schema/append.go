@@ -14,7 +14,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	if field.Tag.HasOption("msgpack") {
 		return appendMsgpack
 	}
-	return dialect.Appender(field.Type)
+	return dialect.Appender(field.StructField.Type)
 }
 
 func Append(fmter Formatter, b []byte, v interface{}) []byte {

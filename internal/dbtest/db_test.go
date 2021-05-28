@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -90,6 +91,7 @@ func TestDB(t *testing.T) {
 		{"testSelectSingleSlice", testSelectSingleSlice},
 		{"testSelectMultiSlice", testSelectMultiSlice},
 		{"testSelectJSON", testSelectJSON},
+		{"testSelectRawMessage", testSelectRawMessage},
 		{"testScanNullVar", testScanNullVar},
 		{"testScanSingleRow", testScanSingleRow},
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
@@ -327,6 +329,25 @@ func testSelectJSON(t *testing.T, db *bun.DB) {
 		Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string(nil), model.Map)
+}
+
+func testSelectRawMessage(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Raw json.RawMessage
+	}
+
+	model := new(Model)
+	err := db.NewSelect().
+		ColumnExpr("? AS raw", map[string]string{"hello": "world"}).
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, `{"hello":"world"}`, string(model.Raw))
+
+	err = db.NewSelect().
+		ColumnExpr("NULL AS raw").
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Nil(t, model.Raw)
 }
 
 func testScanNullVar(t *testing.T, db *bun.DB) {
