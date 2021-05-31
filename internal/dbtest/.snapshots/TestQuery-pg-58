@@ -1,1 +1,1 @@
-REPLACE INTO "models" ("str") VALUES ('') RETURNING "id"
+REPLACE INTO "models" ("id", "str") VALUES (DEFAULT, '') RETURNING "id"

@@ -1,1 +1,1 @@
-INSERT IGNORE INTO "models" ("str") VALUES ('') RETURNING "id"
+INSERT IGNORE INTO "models" ("id", "str") VALUES (DEFAULT, '') RETURNING "id"
