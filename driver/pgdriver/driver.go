@@ -453,6 +453,8 @@ func (r *rows) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
+	var firstErr error
+
 	for {
 		c, msgLen, err := readMessageType(r.cn)
 		if err != nil {
@@ -467,11 +469,24 @@ func (r *rows) Next(dest []driver.Value) error {
 				return err
 			}
 		case readyForQueryMsg:
+			r.close()
+
 			if err := discard(r.cn, msgLen); err != nil {
 				return err
 			}
-			r.close()
+
+			if firstErr != nil {
+				return firstErr
+			}
 			return io.EOF
+		case errorResponseMsg:
+			e, err := readError(r.cn)
+			if err != nil {
+				return err
+			}
+			if firstErr == nil {
+				firstErr = e
+			}
 		default:
 			return fmt.Errorf("pgdriver: Next: unexpected message %q", c)
 		}
