@@ -393,6 +393,14 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(&Model{Bytes: make([]byte, 10)})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Time bun.NullTime
+			}
+			models := make([]Model, 2)
+			models[1].Time = bun.NullTime{Time: time.Unix(0, 0)}
+			return db.NewValues(&models)
+		},
 	}
 
 	for _, db := range dbs(t) {

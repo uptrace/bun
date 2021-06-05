@@ -9,14 +9,8 @@ import (
 	"time"
 
 	"github.com/jinzhu/inflection"
-	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
-)
-
-var (
-	nullTimeType = reflect.TypeOf((*sql.NullTime)(nil)).Elem()
-	nullIntType  = reflect.TypeOf((*sql.NullInt64)(nil)).Elem()
 )
 
 const (
@@ -362,7 +356,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	if s, ok := field.Tag.Options["type"]; ok {
 		field.UserSQLType = s
 	}
-	field.DiscoveredSQLType = sqltype.Detect(field.Type)
+	field.DiscoveredSQLType = DiscoverSQLType(field.Type)
 	field.Append = FieldAppender(t.dialect, field)
 	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = FieldZeroChecker(field)

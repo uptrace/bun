@@ -73,8 +73,6 @@ func fieldSQLType(field *schema.Field) string {
 
 func sqlType(typ reflect.Type) string {
 	switch typ {
-	case timeType:
-		return pgTypeTimestampTz
 	case ipType:
 		return pgTypeInet
 	case ipNetType:
@@ -83,21 +81,23 @@ func sqlType(typ reflect.Type) string {
 		return pgTypeJSONB
 	}
 
+	sqlType := schema.DiscoverSQLType(typ)
+	switch sqlType {
+	case sqltype.Timestamp:
+		sqlType = pgTypeTimestampTz
+	}
+
 	switch typ.Kind() {
 	case reflect.Map, reflect.Struct:
-		return pgTypeJSONB
+		if sqlType == sqltype.VarChar {
+			return pgTypeJSONB
+		}
+		return sqlType
 	case reflect.Array, reflect.Slice:
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return pgTypeBytea
 		}
 		return pgTypeJSONB
-	}
-
-	sqlType := sqltype.Detect(typ)
-
-	switch sqlType {
-	case sqltype.Timestamp:
-		return pgTypeTimestampTz
 	}
 
 	return sqlType
