@@ -357,6 +357,12 @@ func (cn *Conn) deadline(ctx context.Context, timeout time.Duration) time.Time {
 	return deadline
 }
 
+var _ driver.Validator = (*Conn)(nil)
+
+func (cn *Conn) IsValid() bool {
+	return !cn.isClosed()
+}
+
 func (cn *Conn) checkBadConn(err error) error {
 	if isBadConn(err, false) {
 		// Close and return driver.ErrBadConn next time the conn is used.
