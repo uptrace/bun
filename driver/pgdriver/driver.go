@@ -195,15 +195,14 @@ func (cn *Conn) isClosed() bool {
 }
 
 func (cn *Conn) Begin() (driver.Tx, error) {
-	if cn.isClosed() {
-		return nil, driver.ErrBadConn
-	}
 	return cn.BeginTx(context.Background(), driver.TxOptions{})
 }
 
 var _ driver.ConnBeginTx = (*Conn)(nil)
 
 func (cn *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	// No need to check if the conn is closed. ExecContext below handles that.
+
 	if sql.IsolationLevel(opts.Isolation) != sql.LevelDefault {
 		return nil, errors.New("pgdriver: custom IsolationLevel is not supported")
 	}
@@ -227,7 +226,7 @@ func (cn *Conn) ExecContext(
 	}
 	res, err := cn.exec(ctx, query, args)
 	if err != nil {
-		return nil, checkBadConn(err)
+		return nil, cn.checkBadConn(err)
 	}
 	return res, nil
 }
@@ -304,7 +303,7 @@ func (cn *Conn) QueryContext(
 	}
 	rows, err := cn.query(ctx, query, args)
 	if err != nil {
-		return nil, checkBadConn(err)
+		return nil, cn.checkBadConn(err)
 	}
 	return rows, nil
 }
@@ -356,6 +355,15 @@ func (cn *Conn) deadline(ctx context.Context, timeout time.Duration) time.Time {
 		return tm
 	}
 	return deadline
+}
+
+func (cn *Conn) checkBadConn(err error) error {
+	if isBadConn(err, false) {
+		// Close and return driver.ErrBadConn next time the conn is used.
+		_ = cn.Close()
+	}
+	// Always return the original error.
+	return err
 }
 
 //------------------------------------------------------------------------------
