@@ -15,8 +15,9 @@ var errNilModel = errors.New("bun: Model(nil)")
 
 var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
 
-type hooklessModel interface {
+type Model interface {
 	ScanRows(ctx context.Context, rows *sql.Rows) (int, error)
+	Value() interface{}
 }
 
 type rowScanner interface {
@@ -24,18 +25,7 @@ type rowScanner interface {
 }
 
 type model interface {
-	hooklessModel
-
-	schema.AfterSelectHook
-
-	schema.BeforeInsertHook
-	schema.AfterInsertHook
-
-	schema.BeforeUpdateHook
-	schema.AfterUpdateHook
-
-	schema.BeforeDeleteHook
-	schema.AfterDeleteHook
+	Model
 }
 
 type tableModel interface {
@@ -45,7 +35,6 @@ type tableModel interface {
 	schema.AfterScanHook
 	ScanColumn(column string, src interface{}) error
 
-	IsNil() bool
 	Table() *schema.Table
 	Relation() *schema.Relation
 
@@ -55,11 +44,8 @@ type tableModel interface {
 	AddJoin(join) *join
 
 	Root() reflect.Value
-	Index() []int
 	ParentIndex() []int
 	Mount(reflect.Value)
-	Kind() reflect.Kind
-	Value() reflect.Value
 
 	updateSoftDeleteField() error
 }
@@ -85,7 +71,7 @@ func newModel(db *DB, dest []interface{}) (model, error) {
 		values[i] = v
 	}
 
-	return newSliceModel(db, values), nil
+	return newSliceModel(db, dest, values), nil
 }
 
 func newSingleModel(db *DB, dest interface{}) (model, error) {
@@ -96,10 +82,8 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 	switch dest := dest.(type) {
 	case nil:
 		return nil, errNilModel
-	case model:
+	case Model:
 		return dest, nil
-	case hooklessModel:
-		return newModelWithHookStubs(dest), nil
 	case sql.Scanner:
 		if !scan {
 			return nil, fmt.Errorf("bun: Model(unsupported %T)", dest)
@@ -118,7 +102,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 	if v.IsNil() {
 		typ := v.Type().Elem()
 		if typ.Kind() == reflect.Struct {
-			return newStructTableModel(db, db.Table(typ)), nil
+			return newStructTableModel(db, dest, db.Table(typ)), nil
 		}
 		return nil, fmt.Errorf("bun: Model(nil %T)", dest)
 	}
@@ -135,13 +119,13 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
 		if v.Type() != timeType {
-			return newStructTableModelValue(db, v), nil
+			return newStructTableModelValue(db, dest, v), nil
 		}
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:
 			if elemType != timeType {
-				return newSliceTableModel(db, v, elemType), nil
+				return newSliceTableModel(db, dest, v, elemType), nil
 			}
 		case reflect.Map:
 			if err := validMap(elemType); err != nil {
@@ -150,7 +134,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
 			slicePtr := v.Addr().Interface().(*[]map[string]interface{})
 			return newMapSliceModel(db, slicePtr), nil
 		}
-		return newSliceModel(db, []reflect.Value{v}), nil
+		return newSliceModel(db, []interface{}{dest}, []reflect.Value{v}), nil
 	}
 
 	if scan {
@@ -207,19 +191,6 @@ func validMap(typ reflect.Type) error {
 			typ)
 	}
 	return nil
-}
-
-//------------------------------------------------------------------------------
-
-type modelWithHookStubs struct {
-	hookStubs
-	hooklessModel
-}
-
-func newModelWithHookStubs(m hooklessModel) model {
-	return modelWithHookStubs{
-		hooklessModel: m,
-	}
 }
 
 //------------------------------------------------------------------------------

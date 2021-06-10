@@ -60,6 +60,10 @@ func (q *baseQuery) DB() *DB {
 	return q.db
 }
 
+func (q *baseQuery) GetModel() Model {
+	return q.model
+}
+
 func (q *baseQuery) setDBI(db DBI) {
 	// Unwrap Bun wrappers to not call query hooks twice.
 	switch db := db.(type) {

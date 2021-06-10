@@ -16,9 +16,9 @@ type Book struct {
 	CategoryID int64
 }
 
-var _ bun.AfterCreateTableQueryHook = (*Book)(nil)
+var _ bun.AfterCreateTableHook = (*Book)(nil)
 
-func (*Book) AfterCreateTableQuery(ctx context.Context, query *bun.CreateTableQuery) error {
+func (*Book) AfterCreateTable(ctx context.Context, query *bun.CreateTableQuery) error {
 	_, err := query.DB().NewCreateIndex().
 		Model((*Book)(nil)).
 		Index("category_id_idx").

@@ -18,63 +18,56 @@ type NullTime = schema.NullTime
 type BaseModel struct{}
 
 type (
-	BeforeScanHook   = schema.BeforeScanHook
-	AfterScanHook    = schema.AfterScanHook
-	AfterSelectHook  = schema.AfterSelectHook
-	BeforeInsertHook = schema.BeforeInsertHook
-	AfterInsertHook  = schema.AfterInsertHook
-	BeforeUpdateHook = schema.BeforeUpdateHook
-	AfterUpdateHook  = schema.AfterUpdateHook
-	BeforeDeleteHook = schema.BeforeDeleteHook
-	AfterDeleteHook  = schema.AfterDeleteHook
+	BeforeScanHook = schema.BeforeScanHook
+	AfterScanHook  = schema.AfterScanHook
 )
 
-// type BeforeSelectQueryHook interface {
-// 	BeforeSelectQuery(ctx context.Context, query *SelectQuery) error
-// }
-
-// type AfterSelectQueryHook interface {
-// 	AfterSelectQuery(ctx context.Context, query *SelectQuery) error
-// }
-
-// type BeforeInsertQueryHook interface {
-// 	BeforeInsertQuery(ctx context.Context, query *InsertQuery) error
-// }
-
-// type AfterInsertQueryHook interface {
-// 	AfterInsertQuery(ctx context.Context, query *InsertQuery) error
-// }
-
-// type BeforeUpdateQueryHook interface {
-// 	BeforeUpdateQuery(ctx context.Context, query *UpdateQuery) error
-// }
-
-// type AfterUpdateQueryHook interface {
-// 	AfterUpdateQuery(ctx context.Context, query *UpdateQuery) error
-// }
-
-// type BeforeDeleteQueryHook interface {
-// 	BeforeDeleteQuery(ctx context.Context, query *DeleteQuery) error
-// }
-
-// type AfterDeleteQueryHook interface {
-// 	AfterDeleteQuery(ctx context.Context, query *DeleteQuery) error
-// }
-
-type BeforeCreateTableQueryHook interface {
-	BeforeCreateTableQuery(ctx context.Context, query *CreateTableQuery) error
+type BeforeSelectHook interface {
+	BeforeSelect(ctx context.Context, query *SelectQuery) error
 }
 
-type AfterCreateTableQueryHook interface {
-	AfterCreateTableQuery(ctx context.Context, query *CreateTableQuery) error
+type AfterSelectHook interface {
+	AfterSelect(ctx context.Context, query *SelectQuery) error
 }
 
-type BeforeDropTableQueryHook interface {
-	BeforeDropTableQuery(ctx context.Context, query *DropTableQuery) error
+type BeforeInsertHook interface {
+	BeforeInsert(ctx context.Context, query *InsertQuery) error
 }
 
-type AfterDropTableQueryHook interface {
-	AfterDropTableQuery(ctx context.Context, query *DropTableQuery) error
+type AfterInsertHook interface {
+	AfterInsert(ctx context.Context, query *InsertQuery) error
+}
+
+type BeforeUpdateHook interface {
+	BeforeUpdate(ctx context.Context, query *UpdateQuery) error
+}
+
+type AfterUpdateHook interface {
+	AfterUpdate(ctx context.Context, query *UpdateQuery) error
+}
+
+type BeforeDeleteHook interface {
+	BeforeDelete(ctx context.Context, query *DeleteQuery) error
+}
+
+type AfterDeleteHook interface {
+	AfterDelete(ctx context.Context, query *DeleteQuery) error
+}
+
+type BeforeCreateTableHook interface {
+	BeforeCreateTable(ctx context.Context, query *CreateTableQuery) error
+}
+
+type AfterCreateTableHook interface {
+	AfterCreateTable(ctx context.Context, query *CreateTableQuery) error
+}
+
+type BeforeDropTableHook interface {
+	BeforeDropTable(ctx context.Context, query *DropTableQuery) error
+}
+
+type AfterDropTableHook interface {
+	AfterDropTable(ctx context.Context, query *DropTableQuery) error
 }
 
 //------------------------------------------------------------------------------

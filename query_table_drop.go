@@ -86,8 +86,10 @@ func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 //------------------------------------------------------------------------------
 
 func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
-	if err := q.beforeDropTableQueryHook(ctx); err != nil {
-		return res, err
+	if q.table != nil {
+		if err := q.beforeDropTableHook(ctx); err != nil {
+			return res, err
+		}
 	}
 
 	bs := getByteSlice()
@@ -106,37 +108,29 @@ func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql
 		return res, err
 	}
 
-	if err := q.afterDropTableQueryHook(ctx); err != nil {
-		return res, err
+	if q.table != nil {
+		if err := q.afterDropTableHook(ctx); err != nil {
+			return res, err
+		}
 	}
 
 	return res, nil
 }
 
-func (q *DropTableQuery) beforeDropTableQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
-	}
-
-	if hook, ok := q.table.ZeroIface.(BeforeDropTableQueryHook); ok {
-		if err := hook.BeforeDropTableQuery(ctx, q); err != nil {
+func (q *DropTableQuery) beforeDropTableHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeDropTableHook); ok {
+		if err := hook.BeforeDropTable(ctx, q); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (q *DropTableQuery) afterDropTableQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
-	}
-
-	if hook, ok := q.table.ZeroIface.(AfterDropTableQueryHook); ok {
-		if err := hook.AfterDropTableQuery(ctx, q); err != nil {
+func (q *DropTableQuery) afterDropTableHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterDropTableHook); ok {
+		if err := hook.AfterDropTable(ctx, q); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }

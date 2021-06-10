@@ -231,7 +231,7 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 //------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
-	if err := q.beforeCreateTableQueryHook(ctx); err != nil {
+	if err := q.beforeCreateTableHook(ctx); err != nil {
 		return res, err
 	}
 
@@ -251,37 +251,29 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res s
 		return res, err
 	}
 
-	if err := q.afterCreateTableQueryHook(ctx); err != nil {
-		return res, err
+	if q.table != nil {
+		if err := q.afterCreateTableHook(ctx); err != nil {
+			return res, err
+		}
 	}
 
 	return res, nil
 }
 
-func (q *CreateTableQuery) beforeCreateTableQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
-	}
-
-	if hook, ok := q.table.ZeroIface.(BeforeCreateTableQueryHook); ok {
-		if err := hook.BeforeCreateTableQuery(ctx, q); err != nil {
+func (q *CreateTableQuery) beforeCreateTableHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeCreateTableHook); ok {
+		if err := hook.BeforeCreateTable(ctx, q); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (q *CreateTableQuery) afterCreateTableQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
-	}
-
-	if hook, ok := q.table.ZeroIface.(AfterCreateTableQueryHook); ok {
-		if err := hook.AfterCreateTableQuery(ctx, q); err != nil {
+func (q *CreateTableQuery) afterCreateTableHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterCreateTableHook); ok {
+		if err := hook.AfterCreateTable(ctx, q); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }

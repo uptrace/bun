@@ -20,12 +20,13 @@ type sliceTableModel struct {
 var _ tableModel = (*sliceTableModel)(nil)
 
 func newSliceTableModel(
-	db *DB, slice reflect.Value, elemType reflect.Type,
+	db *DB, dest interface{}, slice reflect.Value, elemType reflect.Type,
 ) *sliceTableModel {
 	m := &sliceTableModel{
 		structTableModel: structTableModel{
 			db:    db,
 			table: db.Table(elemType),
+			dest:  dest,
 			root:  slice,
 		},
 
@@ -44,24 +45,12 @@ func (m *sliceTableModel) init(sliceType reflect.Type) {
 	}
 }
 
-func (m *sliceTableModel) IsNil() bool {
-	return false
-}
-
 func (m *sliceTableModel) Join(name string, apply func(*SelectQuery) *SelectQuery) *join {
-	return m.join(m.Value(), name, apply)
+	return m.join(m.slice, name, apply)
 }
 
 func (m *sliceTableModel) Bind(bind reflect.Value) {
 	m.slice = bind.Field(m.index[len(m.index)-1])
-}
-
-func (m *sliceTableModel) Kind() reflect.Kind {
-	return reflect.Slice
-}
-
-func (m *sliceTableModel) Value() reflect.Value {
-	return m.slice
 }
 
 func (m *sliceTableModel) SetCap(cap int) {
@@ -110,55 +99,6 @@ var (
 	_ schema.BeforeScanHook = (*sliceTableModel)(nil)
 	_ schema.AfterScanHook  = (*sliceTableModel)(nil)
 )
-
-func (m *sliceTableModel) AfterSelect(ctx context.Context) error {
-	if m.table.HasAfterSelectHook() {
-		return callAfterSelectHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) BeforeInsert(ctx context.Context) error {
-	if m.table.HasBeforeInsertHook() {
-		return callBeforeInsertHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) AfterInsert(ctx context.Context) error {
-	if m.table.HasAfterInsertHook() {
-		return callAfterInsertHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) BeforeUpdate(ctx context.Context) error {
-	if m.table.HasBeforeUpdateHook() && !m.IsNil() {
-		return callBeforeUpdateHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) AfterUpdate(ctx context.Context) error {
-	if m.table.HasAfterUpdateHook() {
-		return callAfterUpdateHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) BeforeDelete(ctx context.Context) error {
-	if m.table.HasBeforeDeleteHook() && !m.IsNil() {
-		return callBeforeDeleteHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
-
-func (m *sliceTableModel) AfterDelete(ctx context.Context) error {
-	if m.table.HasAfterDeleteHook() && !m.IsNil() {
-		return callAfterDeleteHookSlice(ctx, m.slice, m.sliceOfPtr)
-	}
-	return nil
-}
 
 func (m *sliceTableModel) updateSoftDeleteField() error {
 	sliceLen := m.slice.Len()

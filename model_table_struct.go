@@ -13,9 +13,11 @@ import (
 type structTableModel struct {
 	db    *DB
 	table *schema.Table
+
 	rel   *schema.Relation
 	joins []join
 
+	dest  interface{}
 	root  reflect.Value
 	index []int
 
@@ -29,28 +31,26 @@ type structTableModel struct {
 
 var _ tableModel = (*structTableModel)(nil)
 
-func newStructTableModel(db *DB, table *schema.Table) *structTableModel {
+func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: table,
+		dest:  dest,
 	}
 }
 
-func newStructTableModelValue(db *DB, v reflect.Value) *structTableModel {
+func newStructTableModelValue(db *DB, dest interface{}, v reflect.Value) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: db.Table(v.Type()),
+		dest:  dest,
 		root:  v,
 		strct: v,
 	}
 }
 
-func (m *structTableModel) String() string {
-	return m.table.String()
-}
-
-func (m *structTableModel) IsNil() bool {
-	return !m.strct.IsValid()
+func (m *structTableModel) Value() interface{} {
+	return m.dest
 }
 
 func (m *structTableModel) Table() *schema.Table {
@@ -71,14 +71,6 @@ func (m *structTableModel) Index() []int {
 
 func (m *structTableModel) ParentIndex() []int {
 	return m.index[:len(m.index)-len(m.rel.Field.Index)]
-}
-
-func (m *structTableModel) Kind() reflect.Kind {
-	return reflect.Struct
-}
-
-func (m *structTableModel) Value() reflect.Value {
-	return m.strct
 }
 
 func (m *structTableModel) Mount(host reflect.Value) {
@@ -158,55 +150,6 @@ func (m *structTableModel) AfterScan(ctx context.Context) error {
 	return firstErr
 }
 
-func (m *structTableModel) AfterSelect(ctx context.Context) error {
-	if m.table.HasAfterSelectHook() {
-		return callAfterSelectHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) BeforeInsert(ctx context.Context) error {
-	if m.table.HasBeforeInsertHook() {
-		return callBeforeInsertHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) AfterInsert(ctx context.Context) error {
-	if m.table.HasAfterInsertHook() {
-		return callAfterInsertHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) BeforeUpdate(ctx context.Context) error {
-	if m.table.HasBeforeUpdateHook() && !m.IsNil() {
-		return callBeforeUpdateHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) AfterUpdate(ctx context.Context) error {
-	if m.table.HasAfterUpdateHook() && !m.IsNil() {
-		return callAfterUpdateHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) BeforeDelete(ctx context.Context) error {
-	if m.table.HasBeforeDeleteHook() && !m.IsNil() {
-		return callBeforeDeleteHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
-func (m *structTableModel) AfterDelete(ctx context.Context) error {
-	if m.table.HasAfterDeleteHook() && !m.IsNil() {
-		return callAfterDeleteHook(ctx, m.strct.Addr())
-	}
-	return nil
-}
-
 func (m *structTableModel) GetJoin(name string) *join {
 	for i := range m.joins {
 		j := &m.joins[i]
@@ -227,7 +170,7 @@ func (m *structTableModel) AddJoin(j join) *join {
 }
 
 func (m *structTableModel) Join(name string, apply func(*SelectQuery) *SelectQuery) *join {
-	return m.join(m.Value(), name, apply)
+	return m.join(m.strct, name, apply)
 }
 
 func (m *structTableModel) join(

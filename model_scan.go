@@ -7,8 +7,6 @@ import (
 )
 
 type scanModel struct {
-	hookStubs
-
 	db *DB
 
 	dest      []interface{}
@@ -22,6 +20,10 @@ func newScanModel(db *DB, dest []interface{}) *scanModel {
 		db:   db,
 		dest: dest,
 	}
+}
+
+func (m *scanModel) Value() interface{} {
+	return m.dest
 }
 
 func (m *scanModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {

@@ -179,12 +179,14 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 func (q *DeleteQuery) ForceDelete(
 	ctx context.Context, dest ...interface{},
 ) (sql.Result, error) {
-	if q.table != nil && q.table.SoftDeleteField != nil {
-		q = q.WhereAllWithDeleted()
-	}
+	if q.table != nil {
+		if q.table.SoftDeleteField != nil {
+			q = q.WhereAllWithDeleted()
+		}
 
-	if err := q.beforeDeleteQueryHook(ctx); err != nil {
-		return nil, err
+		if err := q.beforeDeleteHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	bs := getByteSlice()
@@ -217,45 +219,29 @@ func (q *DeleteQuery) ForceDelete(
 		}
 	}
 
-	if err := q.afterDeleteQueryHook(ctx); err != nil {
-		return nil, err
+	if q.table != nil {
+		if err := q.afterDeleteHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
 }
 
-func (q *DeleteQuery) beforeDeleteQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *DeleteQuery) beforeDeleteHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeDeleteHook); ok {
+		if err := hook.BeforeDelete(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.BeforeDelete(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(BeforeDeleteQueryHook); ok {
-	// 	if err := hook.BeforeDeleteQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-func (q *DeleteQuery) afterDeleteQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *DeleteQuery) afterDeleteHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterDeleteHook); ok {
+		if err := hook.AfterDelete(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.AfterDelete(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(AfterDeleteQueryHook); ok {
-	// 	if err := hook.AfterDeleteQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }

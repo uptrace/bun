@@ -12,28 +12,32 @@ import (
 
 type mapSliceModel struct {
 	mapModel
-	slicePtr *[]map[string]interface{}
+	dest *[]map[string]interface{}
 
 	keys []string
 }
 
 var _ model = (*mapSliceModel)(nil)
 
-func newMapSliceModel(db *DB, ptr *[]map[string]interface{}) *mapSliceModel {
+func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
 	return &mapSliceModel{
 		mapModel: mapModel{
 			db: db,
 		},
-		slicePtr: ptr,
+		dest: dest,
 	}
+}
+
+func (m *mapSliceModel) Value() interface{} {
+	return m.dest
 }
 
 func (m *mapSliceModel) SetCap(cap int) {
 	if cap > 100 {
 		cap = 100
 	}
-	if slice := *m.slicePtr; len(slice) < cap {
-		*m.slicePtr = make([]map[string]interface{}, 0, cap)
+	if slice := *m.dest; len(slice) < cap {
+		*m.dest = make([]map[string]interface{}, 0, cap)
 	}
 }
 
@@ -47,7 +51,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	m.columns = columns
 	dest := makeDest(m, len(columns))
 
-	slice := *m.slicePtr
+	slice := *m.dest
 	if len(slice) > 0 {
 		slice = slice[:0]
 	}
@@ -69,7 +73,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 		return 0, err
 	}
 
-	*m.slicePtr = slice
+	*m.dest = slice
 	return n, nil
 }
 
@@ -92,7 +96,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
-	slice := *m.slicePtr
+	slice := *m.dest
 
 	b = append(b, "VALUES "...)
 	if m.db.features.Has(feature.ValuesRow) {
@@ -139,7 +143,7 @@ func (m *mapSliceModel) initKeys() error {
 		return nil
 	}
 
-	slice := *m.slicePtr
+	slice := *m.dest
 	if len(slice) == 0 {
 		return errors.New("bun: map slice is empty")
 	}

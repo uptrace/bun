@@ -10,12 +10,10 @@ import (
 )
 
 type mapModel struct {
-	hookStubs
-
 	db *DB
 
-	ptr *map[string]interface{}
-	m   map[string]interface{}
+	dest *map[string]interface{}
+	m    map[string]interface{}
 
 	rows         *sql.Rows
 	columns      []string
@@ -25,15 +23,19 @@ type mapModel struct {
 
 var _ model = (*mapModel)(nil)
 
-func newMapModel(db *DB, ptr *map[string]interface{}) *mapModel {
+func newMapModel(db *DB, dest *map[string]interface{}) *mapModel {
 	m := &mapModel{
-		db:  db,
-		ptr: ptr,
+		db:   db,
+		dest: dest,
 	}
-	if ptr != nil {
-		m.m = *ptr
+	if dest != nil {
+		m.m = *dest
 	}
 	return m
+}
+
+func (m *mapModel) Value() interface{} {
+	return m.dest
 }
 
 func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
@@ -59,7 +61,7 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 		return 0, err
 	}
 
-	*m.ptr = m.m
+	*m.dest = m.m
 
 	return 1, nil
 }

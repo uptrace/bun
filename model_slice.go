@@ -15,19 +15,23 @@ type sliceInfo struct {
 }
 
 type sliceModel struct {
-	hookStubs
-
-	dest      []reflect.Value
+	dest      []interface{}
+	values    []reflect.Value
 	scanIndex int
 	info      []sliceInfo
 }
 
 var _ model = (*sliceModel)(nil)
 
-func newSliceModel(db *DB, dest []reflect.Value) *sliceModel {
+func newSliceModel(db *DB, dest []interface{}, values []reflect.Value) *sliceModel {
 	return &sliceModel{
-		dest: dest,
+		dest:   dest,
+		values: values,
 	}
+}
+
+func (m *sliceModel) Value() interface{} {
+	return m.dest
 }
 
 func (m *sliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
@@ -36,8 +40,8 @@ func (m *sliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) 
 		return 0, err
 	}
 
-	m.info = make([]sliceInfo, len(m.dest))
-	for i, v := range m.dest {
+	m.info = make([]sliceInfo, len(m.values))
+	for i, v := range m.values {
 		if v.IsValid() && v.Len() > 0 {
 			v.Set(v.Slice(0, 0))
 		}

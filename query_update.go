@@ -302,8 +302,10 @@ func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []b
 //------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	if err := q.beforeUpdateQueryHook(ctx); err != nil {
-		return nil, err
+	if q.table != nil {
+		if err := q.beforeUpdateHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	bs := getByteSlice()
@@ -336,46 +338,30 @@ func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		}
 	}
 
-	if err := q.afterUpdateQueryHook(ctx); err != nil {
-		return nil, err
+	if q.table != nil {
+		if err := q.afterUpdateHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
 }
 
-func (q *UpdateQuery) beforeUpdateQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *UpdateQuery) beforeUpdateHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeUpdateHook); ok {
+		if err := hook.BeforeUpdate(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.BeforeUpdate(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(BeforeUpdateQueryHook); ok {
-	// 	if err := hook.BeforeUpdateQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-func (q *UpdateQuery) afterUpdateQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *UpdateQuery) afterUpdateHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterUpdateHook); ok {
+		if err := hook.AfterUpdate(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.AfterUpdate(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(AfterUpdateQueryHook); ok {
-	// 	if err := hook.AfterUpdateQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 

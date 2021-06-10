@@ -644,17 +644,13 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	return q.dbi.QueryContext(ctx, query)
 }
 
-func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
-	if err := q.beforeSelectQueryHook(ctx); err != nil {
-		return res, err
-	}
-
+func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
 	bs := getByteSlice()
 	defer putByteSlice(bs)
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	bs.update(queryBytes)
@@ -662,11 +658,7 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 
 	res, err = q.exec(ctx, q, query)
 	if err != nil {
-		return res, err
-	}
-
-	if err := q.afterSelectQueryHook(ctx); err != nil {
-		return res, err
+		return nil, err
 	}
 
 	return res, nil
@@ -684,8 +676,10 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		}
 	}
 
-	if err := q.beforeSelectQueryHook(ctx); err != nil {
-		return err
+	if q.table != nil {
+		if err := q.beforeSelectHook(ctx); err != nil {
+			return err
+		}
 	}
 
 	bs := getByteSlice()
@@ -704,49 +698,38 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	if res.n > 0 && q.tableModel != nil {
-		if err := q.selectJoins(ctx, q.tableModel.GetJoins()); err != nil {
+	if res.n > 0 {
+		if tableModel, ok := model.(tableModel); ok {
+			if err := q.selectJoins(ctx, tableModel.GetJoins()); err != nil {
+				return err
+			}
+		}
+	}
+
+	if q.table != nil {
+		if err := q.afterSelectHook(ctx); err != nil {
 			return err
 		}
 	}
 
-	if err := q.afterSelectQueryHook(ctx); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (q *SelectQuery) beforeSelectQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *SelectQuery) beforeSelectHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeSelectHook); ok {
+		if err := hook.BeforeSelect(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	// hook, ok := q.table.ZeroIface.(BeforeSelectQueryHook)
-	// if ok {
-	// 	if err := hook.BeforeSelectQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-func (q *SelectQuery) afterSelectQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *SelectQuery) afterSelectHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterSelectHook); ok {
+		if err := hook.AfterSelect(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.AfterSelect(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(AfterSelectQueryHook); ok {
-	// 	if err := hook.AfterSelectQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 

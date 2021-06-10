@@ -16,13 +16,6 @@ import (
 const (
 	beforeScanHookFlag internal.Flag = 1 << iota
 	afterScanHookFlag
-	afterSelectHookFlag
-	beforeInsertHookFlag
-	afterInsertHookFlag
-	beforeUpdateHookFlag
-	afterUpdateHookFlag
-	beforeDeleteHookFlag
-	afterDeleteHookFlag
 )
 
 var tableNameInflector = inflection.Plural
@@ -88,13 +81,6 @@ func newTable(dialect Dialect, typ reflect.Type) *Table {
 	}{
 		{beforeScanHookType, beforeScanHookFlag},
 		{afterScanHookType, afterScanHookFlag},
-		{afterSelectHookType, afterSelectHookFlag},
-		{beforeInsertHookType, beforeInsertHookFlag},
-		{afterInsertHookType, afterInsertHookFlag},
-		{beforeUpdateHookType, beforeUpdateHookFlag},
-		{afterUpdateHookType, afterUpdateHookFlag},
-		{beforeDeleteHookType, beforeDeleteHookFlag},
-		{afterDeleteHookType, afterDeleteHookFlag},
 	}
 
 	typ = reflect.PtrTo(t.Type)
@@ -782,15 +768,8 @@ func (t *Table) Dialect() Dialect { return t.dialect }
 
 //------------------------------------------------------------------------------
 
-func (t *Table) HasBeforeScanHook() bool   { return t.flags.Has(beforeScanHookFlag) }
-func (t *Table) HasAfterScanHook() bool    { return t.flags.Has(afterScanHookFlag) }
-func (t *Table) HasAfterSelectHook() bool  { return t.flags.Has(afterSelectHookFlag) }
-func (t *Table) HasBeforeInsertHook() bool { return t.flags.Has(afterInsertHookFlag) }
-func (t *Table) HasAfterInsertHook() bool  { return t.flags.Has(afterInsertHookFlag) }
-func (t *Table) HasBeforeUpdateHook() bool { return t.flags.Has(beforeUpdateHookFlag) }
-func (t *Table) HasAfterUpdateHook() bool  { return t.flags.Has(afterUpdateHookFlag) }
-func (t *Table) HasBeforeDeleteHook() bool { return t.flags.Has(beforeDeleteHookFlag) }
-func (t *Table) HasAfterDeleteHook() bool  { return t.flags.Has(afterDeleteHookFlag) }
+func (t *Table) HasBeforeScanHook() bool { return t.flags.Has(beforeScanHookFlag) }
+func (t *Table) HasAfterScanHook() bool  { return t.flags.Has(afterScanHookFlag) }
 
 //------------------------------------------------------------------------------
 

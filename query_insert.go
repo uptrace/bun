@@ -444,8 +444,10 @@ func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte
 //------------------------------------------------------------------------------
 
 func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	if err := q.beforeInsertQueryHook(ctx); err != nil {
-		return nil, err
+	if q.table != nil {
+		if err := q.beforeInsertHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	bs := getByteSlice()
@@ -482,46 +484,30 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		}
 	}
 
-	if err := q.afterInsertQueryHook(ctx); err != nil {
-		return nil, err
+	if q.table != nil {
+		if err := q.afterInsertHook(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
 }
 
-func (q *InsertQuery) beforeInsertQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *InsertQuery) beforeInsertHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(BeforeInsertHook); ok {
+		if err := hook.BeforeInsert(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.BeforeInsert(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(BeforeInsertQueryHook); ok {
-	// 	if err := hook.BeforeInsertQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-func (q *InsertQuery) afterInsertQueryHook(ctx context.Context) error {
-	if q.tableModel == nil {
-		return nil
+func (q *InsertQuery) afterInsertHook(ctx context.Context) error {
+	if hook, ok := q.table.ZeroIface.(AfterInsertHook); ok {
+		if err := hook.AfterInsert(ctx, q); err != nil {
+			return err
+		}
 	}
-
-	if err := q.tableModel.AfterInsert(ctx); err != nil {
-		return err
-	}
-
-	// if hook, ok := q.table.ZeroIface.(AfterInsertQueryHook); ok {
-	// 	if err := hook.AfterInsertQuery(ctx, q); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 

@@ -2,6 +2,7 @@ package dbtest_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -61,6 +62,7 @@ func testModelHook(t *testing.T, db *bun.DB) {
 		err := db.NewSelect().Model(hook).Scan(ctx)
 		require.NoError(t, err)
 		require.Equal(t, []string{
+			"BeforeSelect",
 			"BeforeScan",
 			"AfterScan",
 			"AfterSelect",
@@ -72,6 +74,7 @@ func testModelHook(t *testing.T, db *bun.DB) {
 		err := db.NewSelect().Model(&hooks).Scan(ctx)
 		require.NoError(t, err)
 		require.Equal(t, []string{
+			"BeforeSelect",
 			"BeforeScan",
 			"AfterScan",
 			"AfterSelect",
@@ -95,7 +98,7 @@ func testModelHook(t *testing.T, db *bun.DB) {
 	{
 		_, err := db.NewDelete().Model((*ModelHookTest)(nil)).Where("TRUE").Exec(ctx)
 		require.NoError(t, err)
-		require.Nil(t, events.Flush())
+		require.Equal(t, []string{"BeforeDelete", "AfterDelete"}, events.Flush())
 	}
 }
 
@@ -118,107 +121,75 @@ func (t *ModelHookTest) AfterScan(c context.Context) error {
 	return nil
 }
 
-// var _ bun.BeforeSelectQueryHook = (*ModelHookTest)(nil)
+var _ bun.BeforeSelectHook = (*ModelHookTest)(nil)
 
-// func (t *ModelHookTest) BeforeSelectQuery(ctx context.Context, query *bun.SelectQuery) error {
-// 	events.Add("BeforeSelectQuery")
-// 	return nil
-// }
-
-// var _ bun.AfterSelectQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) AfterSelectQuery(ctx context.Context, query *bun.SelectQuery) error {
-// 	events.Add("AfterSelectQuery")
-// 	return nil
-// }
-
-// var _ bun.BeforeUpdateQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) BeforeUpdateQuery(ctx context.Context, query *bun.UpdateQuery) error {
-// 	events.Add("BeforeUpdateQuery")
-// 	return nil
-// }
-
-// var _ bun.AfterUpdateQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) AfterUpdateQuery(ctx context.Context, query *bun.UpdateQuery) error {
-// 	events.Add("AfterUpdateQuery")
-// 	return nil
-// }
-
-// var _ bun.BeforeInsertQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) BeforeInsertQuery(ctx context.Context, query *bun.InsertQuery) error {
-// 	events.Add("BeforeInsertQuery")
-// 	return nil
-// }
-
-// var _ bun.AfterInsertQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) AfterInsertQuery(ctx context.Context, query *bun.InsertQuery) error {
-// 	events.Add("AfterInsertQuery")
-// 	return nil
-// }
-
-// var _ bun.BeforeDeleteQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) BeforeDeleteQuery(ctx context.Context, query *bun.DeleteQuery) error {
-// 	events.Add("BeforeDeleteQuery")
-// 	return nil
-// }
-
-// var _ bun.AfterDeleteQueryHook = (*ModelHookTest)(nil)
-
-// func (t *ModelHookTest) AfterDeleteQuery(ctx context.Context, query *bun.DeleteQuery) error {
-// 	events.Add("AfterDeleteQuery")
-// 	return nil
-// }
+func (t *ModelHookTest) BeforeSelect(ctx context.Context, query *bun.SelectQuery) error {
+	assertQueryModel(query)
+	events.Add("BeforeSelect")
+	return nil
+}
 
 var _ bun.AfterSelectHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) AfterSelect(c context.Context) error {
+func (t *ModelHookTest) AfterSelect(ctx context.Context, query *bun.SelectQuery) error {
+	assertQueryModel(query)
 	events.Add("AfterSelect")
-	return nil
-}
-
-var _ bun.BeforeInsertHook = (*ModelHookTest)(nil)
-
-func (t *ModelHookTest) BeforeInsert(ctx context.Context) error {
-	events.Add("BeforeInsert")
-	return nil
-}
-
-var _ bun.AfterInsertHook = (*ModelHookTest)(nil)
-
-func (t *ModelHookTest) AfterInsert(c context.Context) error {
-	events.Add("AfterInsert")
 	return nil
 }
 
 var _ bun.BeforeUpdateHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) BeforeUpdate(ctx context.Context) error {
+func (t *ModelHookTest) BeforeUpdate(ctx context.Context, query *bun.UpdateQuery) error {
+	assertQueryModel(query)
 	events.Add("BeforeUpdate")
 	return nil
 }
 
 var _ bun.AfterUpdateHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) AfterUpdate(c context.Context) error {
+func (t *ModelHookTest) AfterUpdate(ctx context.Context, query *bun.UpdateQuery) error {
+	assertQueryModel(query)
 	events.Add("AfterUpdate")
+	return nil
+}
+
+var _ bun.BeforeInsertHook = (*ModelHookTest)(nil)
+
+func (t *ModelHookTest) BeforeInsert(ctx context.Context, query *bun.InsertQuery) error {
+	assertQueryModel(query)
+	events.Add("BeforeInsert")
+	return nil
+}
+
+var _ bun.AfterInsertHook = (*ModelHookTest)(nil)
+
+func (t *ModelHookTest) AfterInsert(ctx context.Context, query *bun.InsertQuery) error {
+	assertQueryModel(query)
+	events.Add("AfterInsert")
 	return nil
 }
 
 var _ bun.BeforeDeleteHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) BeforeDelete(ctx context.Context) error {
+func (t *ModelHookTest) BeforeDelete(ctx context.Context, query *bun.DeleteQuery) error {
+	assertQueryModel(query)
 	events.Add("BeforeDelete")
 	return nil
 }
 
 var _ bun.AfterDeleteHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) AfterDelete(c context.Context) error {
+func (t *ModelHookTest) AfterDelete(ctx context.Context, query *bun.DeleteQuery) error {
+	assertQueryModel(query)
 	events.Add("AfterDelete")
 	return nil
+}
+
+func assertQueryModel(query interface{ GetModel() bun.Model }) {
+	switch value := query.GetModel().Value(); value.(type) {
+	case *ModelHookTest, *[]ModelHookTest:
+		// ok
+	default:
+		panic(fmt.Errorf("unexpected: %T", value))
+	}
 }
