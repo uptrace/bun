@@ -83,6 +83,16 @@ func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	return q
 }
 
+func (q *InsertQuery) ColumnExpr(query string, args ...interface{}) *InsertQuery {
+	q.addColumn(schema.SafeQuery(query, args))
+	return q
+}
+
+func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
+	q.excludeColumn(columns)
+	return q
+}
+
 // Value overwrites model value for the column in INSERT and UPDATE queries.
 func (q *InsertQuery) Value(column string, value string, args ...interface{}) *InsertQuery {
 	if q.table == nil {
