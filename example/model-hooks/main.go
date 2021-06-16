@@ -64,6 +64,15 @@ type Story struct {
 	Author   *User `bun:"rel:belongs-to"`
 }
 
+var _ bun.BeforeSelectHook = (*Story)(nil)
+
+func (s *Story) BeforeSelect(ctx context.Context, query *bun.SelectQuery) error {
+	if id := ctx.Value("author_id"); id != nil {
+		query.Where("author_id = ?", id)
+	}
+	return nil
+}
+
 var _ bun.AfterSelectHook = (*Story)(nil)
 
 func (s *Story) AfterSelect(ctx context.Context, query *bun.SelectQuery) error {
