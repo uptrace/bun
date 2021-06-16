@@ -1,4 +1,4 @@
-module github.com/uptrace/bun/example/has-one
+module github.com/uptrace/bun/example/belongs-to
 
 go 1.16
 

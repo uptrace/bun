@@ -21,10 +21,10 @@ type Item struct {
 }
 
 type OrderToItem struct {
-	OrderID int64
-	Order   *Order `bun:"rel:has-one"`
-	ItemID  int64
-	Item    *Item `bun:"rel:has-one"`
+	OrderID int64  `bun:",pk"`
+	Order   *Order `bun:"rel:belongs-to"`
+	ItemID  int64  `bun:",pk"`
+	Item    *Item  `bun:"rel:belongs-to"`
 }
 
 func main() {

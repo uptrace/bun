@@ -25,7 +25,7 @@ type Org struct {
 	ID      int64
 	Name    string
 	OwnerID int64
-	Owner   *User `bun:"rel:has-one"`
+	Owner   *User `bun:"rel:belongs-to"`
 }
 
 func main() {

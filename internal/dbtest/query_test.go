@@ -26,7 +26,7 @@ func TestQuery(t *testing.T) {
 		ID     int64
 		Name   string
 		UserID int64
-		User   *User `bun:"rel:has-one"`
+		User   *User `bun:"rel:belongs-to"`
 	}
 
 	queries := []func(db *bun.DB) schema.QueryAppender{

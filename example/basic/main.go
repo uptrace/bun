@@ -96,5 +96,5 @@ type Story struct {
 	ID       int64
 	Title    string
 	AuthorID int64
-	Author   *User `bun:"rel:has-one"`
+	Author   *User `bun:"rel:belongs-to"`
 }

@@ -415,10 +415,10 @@ func (t *Table) tryRelation(field *Field) bool {
 
 func (t *Table) initRelation(field *Field, rel string) {
 	switch rel {
-	case "has-one":
-		t.addRelation(t.hasOneRelation(field))
 	case "belongs-to":
 		t.addRelation(t.belongsToRelation(field))
+	case "has-one":
+		t.addRelation(t.hasOneRelation(field))
 	case "has-many":
 		t.addRelation(t.hasManyRelation(field))
 	default:
@@ -437,7 +437,7 @@ func (t *Table) addRelation(rel *Relation) {
 	t.Relations[rel.Field.GoName] = rel
 }
 
-func (t *Table) hasOneRelation(field *Field) *Relation {
+func (t *Table) belongsToRelation(field *Field) *Relation {
 	joinTable := t.dialect.Tables().Ref(field.Type)
 	if err := joinTable.CheckPKs(); err != nil {
 		panic(err)
@@ -458,7 +458,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 				rel.BaseFields = append(rel.BaseFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s has-one %s: %s must have column %s",
+					"bun: %s belongs-to %s: %s must have column %s",
 					t.TypeName, field.GoName, t.TypeName, baseColumn,
 				))
 			}
@@ -467,7 +467,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 				rel.JoinFields = append(rel.JoinFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s has-one %s: %s must have column %s",
+					"bun: %s belongs-to %s: %s must have column %s",
 					t.TypeName, field.GoName, t.TypeName, baseColumn,
 				))
 			}
@@ -490,7 +490,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		}
 
 		panic(fmt.Errorf(
-			"bun: %s has-one %s: %s must have column %s "+
+			"bun: %s belongs-to %s: %s must have column %s "+
 				"(to override, use join:base_column=join_column tag on %s field)",
 			t.TypeName, field.GoName, t.TypeName, fkName, field.GoName,
 		))
@@ -498,7 +498,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 	return rel
 }
 
-func (t *Table) belongsToRelation(field *Field) *Relation {
+func (t *Table) hasOneRelation(field *Field) *Relation {
 	if err := t.CheckPKs(); err != nil {
 		panic(err)
 	}
@@ -517,7 +517,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 				rel.BaseFields = append(rel.BaseFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s belongs-to %s: %s must have column %s",
+					"bun: %s has-one %s: %s must have column %s",
 					field.GoName, t.TypeName, joinTable.TypeName, baseColumn,
 				))
 			}
@@ -527,7 +527,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 				rel.JoinFields = append(rel.JoinFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s belongs-to %s: %s must have column %s",
+					"bun: %s has-one %s: %s must have column %s",
 					field.GoName, t.TypeName, joinTable.TypeName, baseColumn,
 				))
 			}
@@ -550,7 +550,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		}
 
 		panic(fmt.Errorf(
-			"bun: %s belongs-to %s: %s must have column %s "+
+			"bun: %s has-one %s: %s must have column %s "+
 				"(to override, use join:base_column=join_column tag on %s field)",
 			field.GoName, t.TypeName, joinTable.TypeName, fkName, field.GoName,
 		))
@@ -715,11 +715,11 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 		))
 	}
 
-	leftRel := m2mTable.hasOneRelation(leftField)
+	leftRel := m2mTable.belongsToRelation(leftField)
 	rel.BaseFields = leftRel.JoinFields
 	rel.M2MBaseFields = leftRel.BaseFields
 
-	rightRel := m2mTable.hasOneRelation(rightField)
+	rightRel := m2mTable.belongsToRelation(rightField)
 	rel.JoinFields = rightRel.JoinFields
 	rel.M2MJoinFields = rightRel.BaseFields
 

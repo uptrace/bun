@@ -60,9 +60,9 @@ type Ingredient struct {
 type IngredientRecipe struct {
 	bun.BaseModel `bun:"?tenant.ingredients_recipes"`
 
-	Recipe       *Recipe     `bun:"rel:has-one"`
+	Recipe       *Recipe     `bun:"rel:belongs-to"`
 	RecipeID     int         `bun:",pk"`
-	Ingredient   *Ingredient `bun:"rel:has-one"`
+	Ingredient   *Ingredient `bun:"rel:belongs-to"`
 	IngredientID int         `bun:",pk"`
 }
 

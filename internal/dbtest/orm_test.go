@@ -281,7 +281,7 @@ type Author struct {
 	Books []*Book `bun:"rel:has-many"`
 
 	AvatarID int
-	Avatar   Image `bun:"rel:has-one"`
+	Avatar   Image `bun:"rel:belongs-to"`
 }
 
 func (a Author) String() string {
@@ -292,9 +292,9 @@ type BookGenre struct {
 	bun.BaseModel `bun:"alias:bg"` // custom table alias
 
 	BookID  int    `bun:",pk"`
-	Book    *Book  `bun:"rel:has-one"`
+	Book    *Book  `bun:"rel:belongs-to"`
 	GenreID int    `bun:",pk"`
-	Genre   *Genre `bun:"rel:has-one"`
+	Genre   *Genre `bun:"rel:belongs-to"`
 
 	Genre_Rating int // is copied to Genre.Rating
 }
@@ -303,9 +303,9 @@ type Book struct {
 	ID        int
 	Title     string
 	AuthorID  int
-	Author    Author `bun:"rel:has-one"`
+	Author    Author `bun:"rel:belongs-to"`
 	EditorID  int
-	Editor    *Author   `bun:"rel:has-one"`
+	Editor    *Author   `bun:"rel:belongs-to"`
 	CreatedAt time.Time `bun:"default:current_timestamp"`
 	UpdatedAt time.Time `bun:",nullzero"`
 
@@ -332,7 +332,7 @@ type Translation struct {
 
 	ID     int
 	BookID int    `bun:"unique:book_id_lang"`
-	Book   *Book  `bun:"rel:has-one"`
+	Book   *Book  `bun:"rel:belongs-to"`
 	Lang   string `bun:"unique:book_id_lang"`
 
 	Comments []Comment `bun:"rel:has-many,join:\"id=trackable_id,type=trackable_type\",polymorphic"`
