@@ -83,11 +83,6 @@ func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) ColumnExpr(query string, args ...interface{}) *InsertQuery {
-	q.addColumn(schema.SafeQuery(query, args))
-	return q
-}
-
 func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
 	q.excludeColumn(columns)
 	return q
