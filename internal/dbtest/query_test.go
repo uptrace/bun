@@ -401,6 +401,12 @@ func TestQuery(t *testing.T) {
 			models[1].Time = bun.NullTime{Time: time.Unix(0, 0)}
 			return db.NewValues(&models)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewInsert().Model(new(Model)).Value("foo", "?", "bar")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(Model)).Value("foo", "?", "bar").WherePK()
+		},
 	}
 
 	for _, db := range dbs(t) {

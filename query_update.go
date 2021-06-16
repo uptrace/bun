@@ -80,11 +80,6 @@ func (q *UpdateQuery) Column(columns ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) ColumnExpr(query string, args ...interface{}) *UpdateQuery {
-	q.addColumn(schema.SafeQuery(query, args))
-	return q
-}
-
 func (q *UpdateQuery) ExcludeColumn(columns ...string) *UpdateQuery {
 	q.excludeColumn(columns)
 	return q
