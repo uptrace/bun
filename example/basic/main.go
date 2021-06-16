@@ -13,23 +13,6 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
-type User struct {
-	ID     int64
-	Name   string
-	Emails []string
-}
-
-func (u User) String() string {
-	return fmt.Sprintf("User<%d %s %v>", u.ID, u.Name, u.Emails)
-}
-
-type Story struct {
-	ID       int64
-	Title    string
-	AuthorID int64
-	Author   *User `bun:"rel:has-one"`
-}
-
 func main() {
 	ctx := context.Background()
 
@@ -97,4 +80,21 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("users columns: %v %v\n\n", ids, names)
+}
+
+type User struct {
+	ID     int64
+	Name   string
+	Emails []string
+}
+
+func (u User) String() string {
+	return fmt.Sprintf("User<%d %s %v>", u.ID, u.Name, u.Emails)
+}
+
+type Story struct {
+	ID       int64
+	Title    string
+	AuthorID int64
+	Author   *User `bun:"rel:has-one"`
 }
