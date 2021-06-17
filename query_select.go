@@ -184,7 +184,7 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 		field := order[:index]
 		sort := order[index+1:]
 
-		switch internal.UpperString(sort) {
+		switch strings.ToUpper(sort) {
 		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
 			"ASC NULLS LAST", "DESC NULLS LAST":
 			q.order = append(q.order, schema.SafeQuery("? ?", []interface{}{

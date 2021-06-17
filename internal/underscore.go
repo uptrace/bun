@@ -65,29 +65,3 @@ func ToExported(s string) string {
 	}
 	return s
 }
-
-func UpperString(s string) string {
-	if isUpperString(s) {
-		return s
-	}
-
-	b := make([]byte, len(s))
-	for i := range b {
-		c := s[i]
-		if IsLower(c) {
-			c = ToUpper(c)
-		}
-		b[i] = c
-	}
-	return string(b)
-}
-
-func isUpperString(s string) bool {
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if IsLower(c) {
-			return false
-		}
-	}
-	return true
-}
