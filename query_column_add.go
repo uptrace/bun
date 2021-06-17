@@ -16,15 +16,15 @@ type AddColumnQuery struct {
 func NewAddColumnQuery(db *DB) *AddColumnQuery {
 	q := &AddColumnQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	return q
 }
 
-func (q *AddColumnQuery) Conn(db DBI) *AddColumnQuery {
-	q.setDBI(db)
+func (q *AddColumnQuery) Conn(db IConn) *AddColumnQuery {
+	q.setConn(db)
 	return q
 }
 

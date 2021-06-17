@@ -27,15 +27,15 @@ type CreateTableQuery struct {
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	return q
 }
 
-func (q *CreateTableQuery) Conn(db DBI) *CreateTableQuery {
-	q.setDBI(db)
+func (q *CreateTableQuery) Conn(db IConn) *CreateTableQuery {
+	q.setConn(db)
 	return q
 }
 

@@ -21,15 +21,15 @@ type DropIndexQuery struct {
 func NewDropIndexQuery(db *DB) *DropIndexQuery {
 	q := &DropIndexQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	return q
 }
 
-func (q *DropIndexQuery) Conn(db DBI) *DropIndexQuery {
-	q.setDBI(db)
+func (q *DropIndexQuery) Conn(db IConn) *DropIndexQuery {
+	q.setConn(db)
 	return q
 }
 

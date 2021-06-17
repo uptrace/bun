@@ -64,32 +64,32 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 			return err
 		}
 
-		var dbi bun.DBI
+		var idb bun.IConn
 
 		if isTx {
 			tx, err := db.BeginTx(ctx, nil)
 			if err != nil {
 				return err
 			}
-			dbi = tx
+			idb = tx
 		} else {
 			conn, err := db.Conn(ctx)
 			if err != nil {
 				return err
 			}
-			dbi = conn
+			idb = conn
 		}
 
 		for _, q := range queries {
-			_, err = dbi.ExecContext(ctx, q)
+			_, err = idb.ExecContext(ctx, q)
 			if err != nil {
 				return err
 			}
 		}
 
-		if tx, ok := dbi.(bun.Tx); ok {
+		if tx, ok := idb.(bun.Tx); ok {
 			return tx.Commit()
-		} else if conn, ok := dbi.(bun.Conn); ok {
+		} else if conn, ok := idb.(bun.Conn); ok {
 			return conn.Close()
 		}
 

@@ -23,24 +23,24 @@ type withQuery struct {
 	query schema.QueryAppender
 }
 
-type DBI interface {
+type IConn interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
 var (
-	_ DBI = (*sql.DB)(nil)
-	_ DBI = (*sql.Conn)(nil)
-	_ DBI = (*sql.Tx)(nil)
-	_ DBI = (*DB)(nil)
-	_ DBI = (*Conn)(nil)
-	_ DBI = (*Tx)(nil)
+	_ IConn = (*sql.DB)(nil)
+	_ IConn = (*sql.Conn)(nil)
+	_ IConn = (*sql.Tx)(nil)
+	_ IConn = (*DB)(nil)
+	_ IConn = (*Conn)(nil)
+	_ IConn = (*Tx)(nil)
 )
 
 type baseQuery struct {
-	db  *DB
-	dbi DBI
+	db   *DB
+	conn IConn
 
 	model model
 	err   error
@@ -64,17 +64,17 @@ func (q *baseQuery) GetModel() Model {
 	return q.model
 }
 
-func (q *baseQuery) setDBI(db DBI) {
+func (q *baseQuery) setConn(db IConn) {
 	// Unwrap Bun wrappers to not call query hooks twice.
 	switch db := db.(type) {
 	case *DB:
-		q.dbi = db.DB
+		q.conn = db.DB
 	case Conn:
-		q.dbi = db.Conn
+		q.conn = db.Conn
 	case Tx:
-		q.dbi = db.Tx
+		q.conn = db.Tx
 	default:
-		q.dbi = db
+		q.conn = db
 	}
 }
 
@@ -412,7 +412,7 @@ func (q *baseQuery) scan(
 ) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
-	rows, err := q.dbi.QueryContext(ctx, query)
+	rows, err := q.conn.QueryContext(ctx, query)
 	if err != nil {
 		q.db.afterQuery(ctx, event, nil, err)
 		return res, err
@@ -441,7 +441,7 @@ func (q *baseQuery) exec(
 ) (res result, _ error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)
 
-	r, err := q.dbi.ExecContext(ctx, query)
+	r, err := q.conn.ExecContext(ctx, query)
 	if err != nil {
 		q.db.afterQuery(ctx, event, nil, err)
 		return res, err

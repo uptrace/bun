@@ -27,16 +27,16 @@ func NewInsertQuery(db *DB) *InsertQuery {
 	q := &InsertQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:  db,
-				dbi: db.DB,
+				db:   db,
+				conn: db.DB,
 			},
 		},
 	}
 	return q
 }
 
-func (q *InsertQuery) Conn(db DBI) *InsertQuery {
-	q.setDBI(db)
+func (q *InsertQuery) Conn(db IConn) *InsertQuery {
+	q.setConn(db)
 	return q
 }
 

@@ -19,16 +19,16 @@ type ValuesQuery struct {
 func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	q.setTableModel(model)
 	return q
 }
 
-func (q *ValuesQuery) Conn(db DBI) *ValuesQuery {
-	q.setDBI(db)
+func (q *ValuesQuery) Conn(db IConn) *ValuesQuery {
+	q.setConn(db)
 	return q
 }
 

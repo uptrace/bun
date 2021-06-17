@@ -39,15 +39,15 @@ func NewSelectQuery(db *DB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:  db,
-				dbi: db.DB,
+				db:   db,
+				conn: db.DB,
 			},
 		},
 	}
 }
 
-func (q *SelectQuery) Conn(db DBI) *SelectQuery {
-	q.setDBI(db)
+func (q *SelectQuery) Conn(db IConn) *SelectQuery {
+	q.setConn(db)
 	return q
 }
 
@@ -641,7 +641,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	return q.dbi.QueryContext(ctx, query)
+	return q.conn.QueryContext(ctx, query)
 }
 
 func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
@@ -741,7 +741,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 
 	var num int
 
-	if err := q.dbi.QueryRowContext(ctx, internal.String(query)).Scan(&num); err != nil {
+	if err := q.conn.QueryRowContext(ctx, internal.String(query)).Scan(&num); err != nil {
 		return 0, err
 	}
 

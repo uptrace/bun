@@ -26,16 +26,16 @@ func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
 	q := &CreateIndexQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:  db,
-				dbi: db.DB,
+				db:   db,
+				conn: db.DB,
 			},
 		},
 	}
 	return q
 }
 
-func (q *CreateIndexQuery) Conn(db DBI) *CreateIndexQuery {
-	q.setDBI(db)
+func (q *CreateIndexQuery) Conn(db IConn) *CreateIndexQuery {
+	q.setConn(db)
 	return q
 }
 

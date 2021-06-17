@@ -18,16 +18,16 @@ func NewDeleteQuery(db *DB) *DeleteQuery {
 	q := &DeleteQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:  db,
-				dbi: db.DB,
+				db:   db,
+				conn: db.DB,
 			},
 		},
 	}
 	return q
 }
 
-func (q *DeleteQuery) Conn(db DBI) *DeleteQuery {
-	q.setDBI(db)
+func (q *DeleteQuery) Conn(db IConn) *DeleteQuery {
+	q.setConn(db)
 	return q
 }
 

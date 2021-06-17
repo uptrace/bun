@@ -24,16 +24,16 @@ func NewUpdateQuery(db *DB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:  db,
-				dbi: db.DB,
+				db:   db,
+				conn: db.DB,
 			},
 		},
 	}
 	return q
 }
 
-func (q *UpdateQuery) Conn(db DBI) *UpdateQuery {
-	q.setDBI(db)
+func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
+	q.setConn(db)
 	return q
 }
 

@@ -19,15 +19,15 @@ type TruncateTableQuery struct {
 func NewTruncateTableQuery(db *DB) *TruncateTableQuery {
 	q := &TruncateTableQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	return q
 }
 
-func (q *TruncateTableQuery) Conn(db DBI) *TruncateTableQuery {
-	q.setDBI(db)
+func (q *TruncateTableQuery) Conn(db IConn) *TruncateTableQuery {
+	q.setConn(db)
 	return q
 }
 

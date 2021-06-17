@@ -18,15 +18,15 @@ type DropTableQuery struct {
 func NewDropTableQuery(db *DB) *DropTableQuery {
 	q := &DropTableQuery{
 		baseQuery: baseQuery{
-			db:  db,
-			dbi: db.DB,
+			db:   db,
+			conn: db.DB,
 		},
 	}
 	return q
 }
 
-func (q *DropTableQuery) Conn(db DBI) *DropTableQuery {
-	q.setDBI(db)
+func (q *DropTableQuery) Conn(db IConn) *DropTableQuery {
+	q.setConn(db)
 	return q
 }
 
