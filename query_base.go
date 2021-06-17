@@ -38,6 +38,29 @@ var (
 	_ IConn = (*Tx)(nil)
 )
 
+type IDB interface {
+	IConn
+
+	NewValues(model interface{}) *ValuesQuery
+	NewSelect() *SelectQuery
+	NewInsert() *InsertQuery
+	NewUpdate() *UpdateQuery
+	NewDelete() *DeleteQuery
+	NewCreateTable() *CreateTableQuery
+	NewDropTable() *DropTableQuery
+	NewCreateIndex() *CreateIndexQuery
+	NewDropIndex() *DropIndexQuery
+	NewTruncateTable() *TruncateTableQuery
+	NewAddColumn() *AddColumnQuery
+	NewDropColumn() *DropColumnQuery
+}
+
+var (
+	_ IConn = (*DB)(nil)
+	_ IConn = (*Conn)(nil)
+	_ IConn = (*Tx)(nil)
+)
+
 type baseQuery struct {
 	db   *DB
 	conn IConn
