@@ -81,8 +81,10 @@ Resources:
 
 ```go
 go get github.com/uptrace/bun
-go get github.com/uptrace/bun/dialect/sqlitedialect
 ```
+
+You also need to install a database/sql driver and the corresponding Bun
+[dialect](https://bun.uptrace.dev/guide/drivers.html).
 
 ## Quickstart
 
