@@ -23,6 +23,7 @@ type withQuery struct {
 	query schema.QueryAppender
 }
 
+// IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
 type IConn interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
@@ -38,6 +39,7 @@ var (
 	_ IConn = (*Tx)(nil)
 )
 
+// IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
 type IDB interface {
 	IConn
 
