@@ -447,7 +447,8 @@ func (r *rows) Close() error {
 		switch err := r.Next(nil); err {
 		case nil, io.EOF:
 			return nil
-		default:
+		default: // unexpected error
+			_ = r.cn.Close()
 			return err
 		}
 	}
@@ -467,42 +468,55 @@ func (r *rows) Next(dest []driver.Value) error {
 		return io.EOF
 	}
 
+	eof, err := r.next(dest)
+	if err == io.EOF {
+		return io.ErrUnexpectedEOF
+	} else if err != nil {
+		return err
+	}
+	if eof {
+		return io.EOF
+	}
+	return nil
+}
+
+func (r *rows) next(dest []driver.Value) (eof bool, _ error) {
 	var firstErr error
 
 	for {
 		c, msgLen, err := readMessageType(r.cn)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		switch c {
 		case dataRowMsg:
-			return r.readDataRow(dest)
+			return false, r.readDataRow(dest)
 		case commandCompleteMsg:
 			if err := discard(r.cn, msgLen); err != nil {
-				return err
+				return false, err
 			}
 		case readyForQueryMsg:
 			r.close()
 
 			if err := discard(r.cn, msgLen); err != nil {
-				return err
+				return false, err
 			}
 
 			if firstErr != nil {
-				return firstErr
+				return false, firstErr
 			}
-			return io.EOF
+			return true, nil
 		case errorResponseMsg:
 			e, err := readError(r.cn)
 			if err != nil {
-				return err
+				return false, err
 			}
 			if firstErr == nil {
 				firstErr = e
 			}
 		default:
-			return fmt.Errorf("pgdriver: Next: unexpected message %q", c)
+			return false, fmt.Errorf("pgdriver: Next: unexpected message %q", c)
 		}
 	}
 }
