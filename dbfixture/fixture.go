@@ -12,9 +12,10 @@ import (
 	"text/template"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
-	"gopkg.in/yaml.v3"
 )
 
 type FixtureOption func(l *Fixture)

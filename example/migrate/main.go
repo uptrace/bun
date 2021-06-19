@@ -11,8 +11,9 @@ import (
 	"github.com/uptrace/bun/migrate"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/uptrace/bun"
 	"github.com/urfave/cli/v2"
+
+	"github.com/uptrace/bun"
 )
 
 func main() {

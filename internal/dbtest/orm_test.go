@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
 )

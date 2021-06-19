@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bradleyjkemp/cupaloy"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/inflection"
+
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
 )

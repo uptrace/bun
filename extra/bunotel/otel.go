@@ -7,13 +7,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect"
-	"github.com/uptrace/bun/schema"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/schema"
 )
 
 var tracer = otel.Tracer("github.com/uptrace/bun")

@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vmihailenco/msgpack/v5"
+
 	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()

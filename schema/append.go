@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vmihailenco/msgpack/v5"
+
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
