@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
 )
@@ -44,6 +45,28 @@ func BenchmarkSelectSlice(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
+		}
+	})
+}
+
+func BenchmarkSelectError(b *testing.B) {
+	db := benchDB()
+
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		var i int
+		for pb.Next() {
+			if i%2 == 0 {
+				_, err := db.Exec("SELECT * FROM unknown_table")
+				require.Error(b, err)
+			} else {
+				var num int
+				err := db.NewSelect().ColumnExpr("123").Scan(ctx, &num)
+				require.NoError(b, err)
+				require.Equal(b, 123, num)
+			}
+			i++
 		}
 	})
 }
