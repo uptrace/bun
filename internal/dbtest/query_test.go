@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -28,6 +29,11 @@ func TestQuery(t *testing.T) {
 		Name   string
 		UserID int64
 		User   *User `bun:"rel:belongs-to"`
+	}
+
+	type SoftDelete struct {
+		ID        int64
+		DeletedAt time.Time `bun:",soft_delete"`
 	}
 
 	queries := []func(db *bun.DB) schema.QueryAppender{
@@ -408,7 +414,24 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(new(Model)).Value("foo", "?", "bar").WherePK()
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete)).WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete)).WherePK().ForceDelete()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete)).WhereDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete)).WhereAllWithDeleted()
+		},
 	}
+
+	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}'`)
 
 	for _, db := range dbs(t) {
 		t.Run(db.Dialect().Name(), func(t *testing.T) {
@@ -420,6 +443,7 @@ func TestQuery(t *testing.T) {
 					if err != nil {
 						cupaloy.SnapshotT(t, err.Error())
 					} else {
+						query = timeRE.ReplaceAll(query, []byte("[TIME]"))
 						cupaloy.SnapshotT(t, string(query))
 					}
 				})

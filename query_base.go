@@ -14,6 +14,7 @@ import (
 
 const (
 	wherePKFlag internal.Flag = 1 << iota
+	forceDeleteFlag
 	deletedFlag
 	allWithDeletedFlag
 )

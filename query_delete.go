@@ -99,6 +99,11 @@ func (q *DeleteQuery) WhereAllWithDeleted() *DeleteQuery {
 	return q
 }
 
+func (q *DeleteQuery) ForceDelete() *DeleteQuery {
+	q.flags = q.flags.Set(forceDeleteFlag)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // Returning adds a RETURNING clause to the query.
@@ -122,6 +127,21 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	if q.isSoftDelete() {
+		if err := q.tableModel.updateSoftDeleteField(); err != nil {
+			return nil, err
+		}
+
+		upd := UpdateQuery{
+			whereBaseQuery: q.whereBaseQuery,
+			returningQuery: q.returningQuery,
+		}
+		upd.Column(q.table.SoftDeleteField.Name)
+		return upd.AppendQuery(fmter, b)
+	}
+
+	q = q.WhereAllWithDeleted()
 
 	b, err = q.appendWith(fmter, b)
 	if err != nil {
@@ -157,33 +177,14 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	return b, nil
 }
 
-//------------------------------------------------------------------------------
-
-func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
-	if q.tableModel == nil || q.table.SoftDeleteField == nil {
-		return q.ForceDelete(ctx, dest...)
-	}
-
-	if err := q.tableModel.updateSoftDeleteField(); err != nil {
-		return res, err
-	}
-
-	upd := &UpdateQuery{
-		whereBaseQuery: q.whereBaseQuery,
-	}
-	upd = upd.Column(q.table.SoftDeleteField.Name)
-
-	return upd.Exec(ctx, dest...)
+func (q *DeleteQuery) isSoftDelete() bool {
+	return q.tableModel != nil && q.table.SoftDeleteField != nil && !q.flags.Has(forceDeleteFlag)
 }
 
-func (q *DeleteQuery) ForceDelete(
-	ctx context.Context, dest ...interface{},
-) (sql.Result, error) {
-	if q.table != nil {
-		if q.table.SoftDeleteField != nil {
-			q = q.WhereAllWithDeleted()
-		}
+//------------------------------------------------------------------------------
 
+func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+	if q.table != nil {
 		if err := q.beforeDeleteHook(ctx); err != nil {
 			return nil, err
 		}

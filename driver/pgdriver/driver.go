@@ -83,6 +83,7 @@ func NewConnector(opts ...DriverOption) driver.Connector {
 	d := &driverConnector{
 		cfg: newDefaultConfig(),
 	}
+
 	d.cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
 			Timeout:   d.cfg.DialTimeout,
@@ -403,14 +404,21 @@ func newRows(cn *Conn) (*rows, error) {
 			}
 			rows.rowDesc = rowDesc
 			return rows, nil
+		case commandCompleteMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
 		case readyForQueryMsg:
+			// Mark rows as closed because there is no more data to read.
+			rows.closed = true
+
 			if err := discard(cn, msgLen); err != nil {
 				return nil, err
 			}
 			if firstErr != nil {
 				return nil, firstErr
 			}
-			return nil, fmt.Errorf("pgdriver: newRows: unexpected message %q", c)
+			return rows, nil
 		case errorResponseMsg:
 			e, err := readError(cn)
 			if err != nil {
@@ -434,6 +442,9 @@ func newRows(cn *Conn) (*rows, error) {
 }
 
 func (r *rows) Columns() []string {
+	if r.closed || r.rowDesc == nil {
+		return nil
+	}
 	return r.rowDesc.names
 }
 
@@ -525,6 +536,11 @@ func (r *rows) readDataRow(dest []driver.Value) error {
 	numCol, err := readInt16(r.cn)
 	if err != nil {
 		return err
+	}
+
+	if len(dest) != int(numCol) {
+		return fmt.Errorf("pgdriver: query returned %d columns, but dest has %d items",
+			numCol, len(dest))
 	}
 
 	for colIdx := int16(0); colIdx < numCol; colIdx++ {

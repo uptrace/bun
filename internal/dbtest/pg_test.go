@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"database/sql"
 	"reflect"
 	"testing"
 
@@ -240,4 +241,20 @@ func TestPGTransaction(t *testing.T) {
 	_, err = db.NewSelect().Model((*Model)(nil)).Count(ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "does not exist")
+}
+
+func TestPGScanWithoutResult(t *testing.T) {
+	db := pg()
+	defer db.Close()
+
+	type Model struct {
+		ID int64
+	}
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	var num int64
+	_, err = db.NewUpdate().Model(new(Model)).Set("id = NULL").WherePK().Exec(ctx, &num)
+	require.Equal(t, sql.ErrNoRows, err)
 }

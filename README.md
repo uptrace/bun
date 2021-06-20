@@ -16,6 +16,7 @@ Main features are:
 - [Bulk deletes](https://bun.uptrace.dev/guide/queries.html#delete).
 - [Fixtures](https://bun.uptrace.dev/guide/fixtures.html).
 - [Migrations](https://bun.uptrace.dev/guide/migrations.html).
+- [Soft deletes](https://bun.uptrace.dev/guide/soft-deletes.html).
 
 Resources:
 
