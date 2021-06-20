@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.3 - Jun 20 2021
+
+- Replaced `ForceDelete(ctx)` with `ForceDelete().Exec(ctx)` for soft deletes.
+
 ## v0.2.1 - Jun 17 2021
 
 - Renamed `DBI` to `IConn`. `IConn` is a common interface for `*sql.DB`, `*sql.Conn`, and `*sql.Tx`.
