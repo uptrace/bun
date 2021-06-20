@@ -2,6 +2,7 @@ package dbtest_test
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"os"
@@ -25,7 +26,7 @@ var ctx = context.TODO()
 func pg() *bun.DB {
 	dsn := os.Getenv("PG")
 	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
+		dsn = "postgres://postgres:@localhost:5432/test"
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
@@ -53,6 +54,15 @@ func mysql(t *testing.T) *bun.DB {
 	require.NoError(t, err)
 
 	return bun.NewDB(sqldb, mysqldialect.New())
+}
+
+func tlsConfig() *tls.Config {
+	if s := os.Getenv("PGSSLMODE"); s == "disable" {
+		return nil
+	}
+	return &tls.Config{
+		InsecureSkipVerify: true,
+	}
 }
 
 func dbs(t *testing.T) []*bun.DB {

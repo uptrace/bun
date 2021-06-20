@@ -4,4 +4,7 @@ go 1.16
 
 replace github.com/uptrace/bun => ../..
 
-require github.com/uptrace/bun v0.1.1
+require (
+	github.com/uptrace/bun v0.1.1
+	mellium.im/sasl v0.2.1
+)

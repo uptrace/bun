@@ -152,6 +152,13 @@ func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
 		rd:  bufio.NewReader(netConn),
 		buf: make([]byte, 64),
 	}
+
+	if cn.driver.cfg.TLSConfig != nil {
+		if err := enableSSL(ctx, cn, cn.driver.cfg.TLSConfig); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := startup(ctx, cn); err != nil {
 		return nil, err
 	}

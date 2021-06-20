@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -12,17 +13,31 @@ import (
 )
 
 type Config struct {
-	Network     string
-	Addr        string
+	// Network type, either tcp or unix.
+	// Default is tcp.
+	Network string
+	// TCP host:port or Unix socket depending on Network.
+	Addr string
+	// Dial timeout for establishing new connections.
+	// Default is 5 seconds.
 	DialTimeout time.Duration
-	Dialer      func(ctx context.Context, network, addr string) (net.Conn, error)
+	// Dialer creates new network connection and has priority over
+	// Network and Addr options.
+	Dialer func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	// TLS config for secure connections.
+	TLSConfig *tls.Config
 
 	User     string
 	Password string
 	Database string
 	AppName  string
 
-	ReadTimeout  time.Duration
+	// Timeout for socket reads. If reached, commands will fail
+	// with a timeout instead of blocking.
+	ReadTimeout time.Duration
+	// Timeout for socket writes. If reached, commands will fail
+	// with a timeout instead of blocking.
 	WriteTimeout time.Duration
 }
 
@@ -48,6 +63,12 @@ type DriverOption func(*driverConnector)
 func WithAddr(addr string) DriverOption {
 	return func(d *driverConnector) {
 		d.cfg.Addr = addr
+	}
+}
+
+func WithTLSConfig(cfg *tls.Config) DriverOption {
+	return func(d *driverConnector) {
+		d.cfg.TLSConfig = cfg
 	}
 }
 
@@ -152,13 +173,24 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 	}
 	delete(query, "application_name")
 
-	if sslMode := query.Get("sslmode"); sslMode != "" { //nolint:staticcheck
-		// TODO: implement
+	if sslMode := query.Get("sslmode"); sslMode != "" {
+		switch sslMode {
+		case "verify-ca", "verify-full":
+			opts = append(opts, WithTLSConfig(new(tls.Config)))
+		case "allow", "prefer", "require":
+			opts = append(opts, WithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
+		case "disable":
+			// no TLS config
+		default:
+			return nil, fmt.Errorf("pgdriver: sslmode '%v' is not supported", sslMode[0])
+		}
+	} else {
+		opts = append(opts, WithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
 	}
 	delete(query, "sslmode")
 
 	for key := range query {
-		return nil, fmt.Errorf("pgdialect: unsupported option=%q", key)
+		return nil, fmt.Errorf("pgdriver: unsupported option=%q", key)
 	}
 
 	return opts, nil

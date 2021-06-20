@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"context"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"sync"
+
+	"mellium.im/sasl"
 )
 
 // https://www.postgresql.org/docs/current/protocol-message-formats.html
@@ -67,6 +70,41 @@ const (
 )
 
 var errEmptyQuery = errors.New("pgdriver: query is empty")
+
+func enableSSL(ctx context.Context, cn *Conn, tlsConf *tls.Config) error {
+	if err := writeSSLMsg(ctx, cn); err != nil {
+		return err
+	}
+
+	c, err := cn.rd.ReadByte()
+	if err != nil {
+		return err
+	}
+	if c != 'S' {
+		return errors.New("pgdriver: SSL is not enabled on the server")
+	}
+
+	cn.netConn = tls.Client(cn.netConn, tlsConf)
+	cn.rd.Reset(cn.netConn)
+
+	return nil
+}
+
+func writeSSLMsg(ctx context.Context, cn *Conn) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(0)
+	wb.WriteInt32(80877103)
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		if _, err := wr.Write(wb.Bytes); err != nil {
+			return err
+		}
+		return wr.Flush()
+	})
+}
 
 func startup(ctx context.Context, cn *Conn) error {
 	if err := writeStartup(ctx, cn); err != nil {
@@ -154,8 +192,7 @@ func auth(ctx context.Context, cn *Conn) error {
 	case authenticationMD5Password:
 		return authMD5(ctx, cn)
 	case authenticationSASL:
-		panic("not reached")
-		// return authSASL(cn)
+		return authSASL(ctx, cn)
 	default:
 		return fmt.Errorf("pgdriver: unknown authentication message: %q", num)
 	}
@@ -228,6 +265,167 @@ func readAuthOK(cn *Conn) error {
 func md5s(s string) string {
 	h := md5.Sum([]byte(s))
 	return hex.EncodeToString(h[:])
+}
+
+//------------------------------------------------------------------------------
+
+func authSASL(ctx context.Context, cn *Conn) error {
+	s, err := readString(cn)
+	if err != nil {
+		return err
+	}
+	if s != "SCRAM-SHA-256" {
+		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", s, "SCRAM-SHA-256")
+	}
+
+	c0, err := cn.rd.ReadByte()
+	if err != nil {
+		return err
+	}
+	if c0 != 0 {
+		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c0, 0)
+	}
+
+	creds := sasl.Credentials(func() (Username, Password, Identity []byte) {
+		return []byte(cn.driver.cfg.User), []byte(cn.driver.cfg.Password), nil
+	})
+	client := sasl.NewClient(sasl.ScramSha256, creds)
+
+	_, resp, err := client.Step(nil)
+	if err != nil {
+		return err
+	}
+
+	if err := saslWriteInitialResponse(ctx, cn, resp); err != nil {
+		return err
+	}
+
+	c, msgLen, err := readMessageType(cn)
+	if err != nil {
+		return err
+	}
+
+	switch c {
+	case authenticationSASLContinueMsg:
+		c11, err := readInt32(cn)
+		if err != nil {
+			return err
+		}
+		if c11 != 11 {
+			return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, 11)
+		}
+
+		b, err := readN(cn, msgLen-4)
+		if err != nil {
+			return err
+		}
+
+		_, resp, err = client.Step(b)
+		if err != nil {
+			return err
+		}
+
+		if err := saslWriteResponse(ctx, cn, resp); err != nil {
+			return err
+		}
+
+		resp, err := saslReadAuthFinal(cn)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = client.Step(resp)
+		if err != nil {
+			return err
+		}
+
+		if client.State() != sasl.ValidServerResponse {
+			return fmt.Errorf("pgdriver: SASL: state=%q, wanted %q",
+				client.State(), sasl.ValidServerResponse)
+		}
+
+		return nil
+	case errorResponseMsg:
+		e, err := readError(cn)
+		if err != nil {
+			return err
+		}
+		return e
+	default:
+		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, authenticationSASLContinueMsg)
+	}
+}
+
+func saslWriteInitialResponse(ctx context.Context, cn *Conn, resp []byte) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(saslInitialResponseMsg)
+	wb.WriteString("SCRAM-SHA-256")
+	wb.WriteInt32(int32(len(resp)))
+	if _, err := wb.Write(resp); err != nil {
+		return err
+	}
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		if _, err := wr.Write(wb.Bytes); err != nil {
+			return err
+		}
+		return wr.Flush()
+	})
+}
+
+func saslWriteResponse(ctx context.Context, cn *Conn, resp []byte) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(saslResponseMsg)
+	if _, err := wb.Write(resp); err != nil {
+		return err
+	}
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		if _, err := wr.Write(wb.Bytes); err != nil {
+			return err
+		}
+		return wr.Flush()
+	})
+}
+
+func saslReadAuthFinal(cn *Conn) ([]byte, error) {
+	c, msgLen, err := readMessageType(cn)
+	if err != nil {
+		return nil, err
+	}
+
+	switch c {
+	case authenticationSASLFinalMsg:
+		c12, err := readInt32(cn)
+		if err != nil {
+			return nil, err
+		}
+		if c12 != 12 {
+			return nil, fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, 12)
+		}
+
+		resp, err := readN(cn, msgLen-4)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp, readAuthOK(cn)
+	case errorResponseMsg:
+		e, err := readError(cn)
+		if err != nil {
+			return nil, err
+		}
+		return nil, e
+	default:
+		return nil, fmt.Errorf(
+			"pgdriver: SASL: got %q, wanted %q", c, authenticationSASLFinalMsg)
+	}
 }
 
 //------------------------------------------------------------------------------
