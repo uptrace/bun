@@ -175,7 +175,11 @@ func (cn *Conn) withWriter(
 
 	cn.setWriteDeadline(ctx, timeout)
 	wr.Reset(cn.netConn)
+
 	err := fn(wr)
+	if err == nil {
+		err = wr.Flush()
+	}
 
 	putBufioWriter(wr)
 

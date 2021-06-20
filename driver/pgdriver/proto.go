@@ -99,10 +99,8 @@ func writeSSLMsg(ctx context.Context, cn *Conn) error {
 	wb.FinishMessage()
 
 	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if _, err := wr.Write(wb.Bytes); err != nil {
-			return err
-		}
-		return wr.Flush()
+		_, err := wr.Write(wb.Bytes)
+		return err
 	})
 }
 
@@ -169,10 +167,8 @@ func writeStartup(ctx context.Context, cn *Conn) error {
 	wb.FinishMessage()
 
 	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if _, err := wr.Write(wb.Bytes); err != nil {
-			return err
-		}
-		return wr.Flush()
+		_, err := wr.Write(wb.Bytes)
+		return err
 	})
 }
 
@@ -228,10 +224,8 @@ func writePassword(ctx context.Context, cn *Conn, password string) error {
 	wb.FinishMessage()
 
 	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if _, err := wr.Write(wb.Bytes); err != nil {
-			return err
-		}
-		return wr.Flush()
+		_, err := wr.Write(wb.Bytes)
+		return err
 	})
 }
 
@@ -369,10 +363,8 @@ func saslWriteInitialResponse(ctx context.Context, cn *Conn, resp []byte) error 
 	wb.FinishMessage()
 
 	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if _, err := wr.Write(wb.Bytes); err != nil {
-			return err
-		}
-		return wr.Flush()
+		_, err := wr.Write(wb.Bytes)
+		return err
 	})
 }
 
@@ -387,10 +379,8 @@ func saslWriteResponse(ctx context.Context, cn *Conn, resp []byte) error {
 	wb.FinishMessage()
 
 	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if _, err := wr.Write(wb.Bytes); err != nil {
-			return err
-		}
-		return wr.Flush()
+		_, err := wr.Write(wb.Bytes)
+		return err
 	})
 }
 
@@ -448,7 +438,7 @@ func writeQuery(ctx context.Context, cn *Conn, query string) error {
 			return err
 		}
 
-		return wr.Flush()
+		return nil
 	})
 }
 

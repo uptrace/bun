@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.4
+
+- Added SSL support to pgdriver.
+
 ## v0.2.3 - Jun 20 2021
 
 - Replaced `ForceDelete(ctx)` with `ForceDelete().Exec(ctx)` for soft deletes.
