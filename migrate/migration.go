@@ -18,7 +18,7 @@ type Migration struct {
 	ID         int64
 	Name       string
 	GroupID    int64
-	MigratedAt time.Time `bun:",notnull,default:current_timestamp"`
+	MigratedAt time.Time `bun:",notnull,nullzero,default:current_timestamp"`
 
 	Up   MigrationFunc `bun:"-"`
 	Down MigrationFunc `bun:"-"`
