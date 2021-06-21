@@ -20,10 +20,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
         ports:
           - 5432:5432
       mysql:
@@ -36,9 +33,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
+          --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s
           --health-retries=3
 
     steps:
@@ -53,5 +48,5 @@ jobs:
       - name: Test
         run: make test
         env:
-          PG: postgres://postgres:postgres@localhost/postgres
+          PG: postgres://postgres:postgres@localhost/postgres?sslmode=disable
           MYSQL: user:pass@/test
