@@ -126,6 +126,10 @@ func (t *Table) CheckPKs() error {
 }
 
 func (t *Table) addField(field *Field) {
+	if field.Type == timeType && !field.NullZero {
+		internal.Warn.Printf("the field %s has zero value", field.Name)
+	}
+
 	t.Fields = append(t.Fields, field)
 	if field.IsPK {
 		t.PKs = append(t.PKs, field)
