@@ -182,7 +182,7 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 		case "disable":
 			// no TLS config
 		default:
-			return nil, fmt.Errorf("pgdriver: sslmode '%v' is not supported", sslMode[0])
+			return nil, fmt.Errorf("pgdriver: sslmode '%s' is not supported", sslMode)
 		}
 	} else {
 		opts = append(opts, WithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
