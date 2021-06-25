@@ -31,14 +31,9 @@ func main() {
 		panic(err)
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		panic(err)
-	}
-	if err := insertUserAndProfile(ctx, tx); err != nil {
-		panic(err)
-	}
-	if err := tx.Commit(); err != nil {
+	if err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		return insertUserAndProfile(ctx, tx)
+	}); err != nil {
 		panic(err)
 	}
 }
