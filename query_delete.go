@@ -65,6 +65,11 @@ func (q *DeleteQuery) ModelTableExpr(query string, args ...interface{}) *DeleteQ
 
 //------------------------------------------------------------------------------
 
+func (q *DeleteQuery) wherePK() *DeleteQuery {
+	q.flags = q.flags.Set(wherePKFlag)
+	return q
+}
+
 func (q *DeleteQuery) Where(query string, args ...interface{}) *DeleteQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
@@ -77,15 +82,6 @@ func (q *DeleteQuery) WhereOr(query string, args ...interface{}) *DeleteQuery {
 
 func (q *DeleteQuery) WhereGroup(sep string, fn func(*WhereQuery)) *DeleteQuery {
 	q.addWhereGroup(sep, fn)
-	return q
-}
-
-// WherePK adds conditions based on the model primary keys.
-// Usually it is the same as:
-//
-//    Where("id = ?id")
-func (q *DeleteQuery) WherePK() *DeleteQuery {
-	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }
 

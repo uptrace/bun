@@ -116,6 +116,11 @@ func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *SelectQuery) wherePK() *SelectQuery {
+	q.flags = q.flags.Set(wherePKFlag)
+	return q
+}
+
 func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
@@ -128,15 +133,6 @@ func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
 
 func (q *SelectQuery) WhereGroup(sep string, fn func(*WhereQuery)) *SelectQuery {
 	q.addWhereGroup(sep, fn)
-	return q
-}
-
-// WherePK adds conditions based on the model primary keys.
-// Usually it is the same as:
-//
-//    Where("id = ?id")
-func (q *SelectQuery) WherePK() *SelectQuery {
-	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }
 

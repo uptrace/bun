@@ -104,6 +104,7 @@ func (q *baseQuery) setConn(db IConn) {
 	}
 }
 
+// TODO: rename to setModel
 func (q *baseQuery) setTableModel(modeli interface{}) {
 	model, err := newSingleModel(q.db, modeli)
 	if err != nil {
@@ -580,8 +581,7 @@ type whereBaseQuery struct {
 
 func (q *whereBaseQuery) mustAppendWhere(fmter schema.Formatter, b []byte) ([]byte, error) {
 	if len(q.where) == 0 && !q.flags.Has(wherePKFlag) {
-		err := errors.New(
-			"bun: Update and Delete queries require Where clause (try WherePK)")
+		err := errors.New("bun: Update and Delete queries require at least one Where")
 		return nil, err
 	}
 	return q.appendWhere(fmter, b)
@@ -670,7 +670,7 @@ func (q *whereBaseQuery) appendWherePK(
 		return q.appendWherePKSlice(fmter, b, model)
 	}
 
-	return nil, fmt.Errorf("bun: WherePK does not support %T", q.tableModel)
+	return nil, fmt.Errorf("bun: wherePK does not support %T", q.tableModel)
 }
 
 func (q *whereBaseQuery) appendWherePKStruct(
@@ -682,8 +682,6 @@ func (q *whereBaseQuery) appendWherePKStruct(
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = append(b, q.table.SQLAlias...)
-		b = append(b, '.')
 		b = append(b, f.SQLName...)
 		b = append(b, " = "...)
 		if isTemplate {
@@ -702,7 +700,7 @@ func (q *whereBaseQuery) appendWherePKSlice(
 	if len(q.table.PKs) > 1 {
 		b = append(b, '(')
 	}
-	b = appendColumns(b, q.table.SQLAlias, q.table.PKs)
+	b = appendColumns(b, "", q.table.PKs)
 	if len(q.table.PKs) > 1 {
 		b = append(b, ')')
 	}

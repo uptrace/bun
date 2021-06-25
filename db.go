@@ -424,6 +424,110 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 	return row
 }
 
+//------------------------------------------------------------------------------
+
+func (db *DB) Select(ctx context.Context, modeli interface{}) error {
+	model, err := newSingleModel(db, modeli)
+	if err != nil {
+		return err
+	}
+
+	switch model.(type) {
+	case *structTableModel, *sliceTableModel:
+		return db.NewSelect().Model(model).wherePK().Scan(ctx)
+	default:
+		return fmt.Errorf("bun: Select(unsupported %T)", model)
+	}
+}
+
+func (db *DB) Insert(ctx context.Context, modeli interface{}) error {
+	model, err := newSingleModel(db, modeli)
+	if err != nil {
+		return err
+	}
+
+	switch model.(type) {
+	case *structTableModel, *sliceTableModel:
+		_, err := db.NewInsert().Model(model).Exec(ctx)
+		return err
+	default:
+		return fmt.Errorf("bun: Insert(unsupported %T)", model)
+	}
+}
+
+func (db *DB) Update(ctx context.Context, modeli interface{}) error {
+	model, err := newSingleModel(db, modeli)
+	if err != nil {
+		return err
+	}
+
+	switch model := model.(type) {
+	case *structTableModel:
+		_, err := db.NewUpdate().Model(model).wherePK().Exec(ctx)
+		return err
+	case *sliceTableModel:
+		_, err := db.NewUpdate().
+			With("_data", db.NewValues(model)).
+			Model(model).
+			TableExpr("_data").
+			Set(db.updateSliceSet(model)).
+			Where(db.updateSliceWhere(model)).
+			Exec(ctx)
+		return err
+	default:
+		return fmt.Errorf("bun: Update(unsupported %T)", model)
+	}
+}
+
+func (db *DB) updateSliceSet(model *sliceTableModel) string {
+	var b []byte
+	for i, field := range model.table.DataFields {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+		if db.fmter.HasFeature(feature.UpdateMultiTable) {
+			b = append(b, model.table.SQLAlias...)
+			b = append(b, '.')
+		}
+		b = append(b, field.SQLName...)
+		b = append(b, " = _data."...)
+		b = append(b, field.SQLName...)
+	}
+	return internal.String(b)
+}
+
+func (db *DB) updateSliceWhere(model *sliceTableModel) string {
+	var b []byte
+	for i, pk := range model.table.PKs {
+		if i > 0 {
+			b = append(b, " AND "...)
+		}
+		b = append(b, model.table.SQLAlias...)
+		b = append(b, '.')
+		b = append(b, pk.SQLName...)
+		b = append(b, " = _data."...)
+		b = append(b, pk.SQLName...)
+	}
+	return internal.String(b)
+}
+
+func (db *DB) Delete(ctx context.Context, modeli interface{}) error {
+	model, err := newSingleModel(db, modeli)
+	if err != nil {
+		return err
+	}
+
+	switch model.(type) {
+	case *structTableModel, *sliceTableModel:
+		_, err := db.NewDelete().Model(model).wherePK().Exec(ctx)
+		return err
+	default:
+		return fmt.Errorf("bun: Delete(unsupported %T)", model)
+	}
+}
+
+//------------------------------------------------------------------------------
+
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
 }

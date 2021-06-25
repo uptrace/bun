@@ -102,6 +102,11 @@ func (q *UpdateQuery) Value(column string, value string, args ...interface{}) *U
 
 //------------------------------------------------------------------------------
 
+func (q *UpdateQuery) wherePK() *UpdateQuery {
+	q.flags = q.flags.Set(wherePKFlag)
+	return q
+}
+
 func (q *UpdateQuery) Where(query string, args ...interface{}) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
@@ -114,15 +119,6 @@ func (q *UpdateQuery) WhereOr(query string, args ...interface{}) *UpdateQuery {
 
 func (q *UpdateQuery) WhereGroup(sep string, fn func(*WhereQuery)) *UpdateQuery {
 	q.addWhereGroup(sep, fn)
-	return q
-}
-
-// WherePK adds conditions based on the model primary keys.
-// Usually it is the same as:
-//
-//    Where("id = ?id")
-func (q *UpdateQuery) WherePK() *UpdateQuery {
-	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }
 
