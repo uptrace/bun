@@ -420,7 +420,7 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
-	b, err = q.appendWhere(fmter, b)
+	b, err = q.appendWhere(fmter, b, true)
 	if err != nil {
 		return nil, err
 	}

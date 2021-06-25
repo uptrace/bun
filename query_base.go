@@ -579,15 +579,19 @@ type whereBaseQuery struct {
 	WhereQuery
 }
 
-func (q *whereBaseQuery) mustAppendWhere(fmter schema.Formatter, b []byte) ([]byte, error) {
+func (q *whereBaseQuery) mustAppendWhere(
+	fmter schema.Formatter, b []byte, withAlias bool,
+) ([]byte, error) {
 	if len(q.where) == 0 && !q.flags.Has(wherePKFlag) {
 		err := errors.New("bun: Update and Delete queries require at least one Where")
 		return nil, err
 	}
-	return q.appendWhere(fmter, b)
+	return q.appendWhere(fmter, b, withAlias)
 }
 
-func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *whereBaseQuery) appendWhere(
+	fmter schema.Formatter, b []byte, withAlias bool,
+) (_ []byte, err error) {
 	if len(q.where) == 0 && !q.isSoftDelete() && !q.flags.Has(wherePKFlag) {
 		return b, nil
 	}
@@ -596,7 +600,7 @@ func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte
 	startLen := len(b)
 
 	if len(q.where) > 0 {
-		b, err = q._appendWhere(fmter, b, q.where)
+		b, err = appendWhere(fmter, b, q.where)
 		if err != nil {
 			return nil, err
 		}
@@ -606,15 +610,23 @@ func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte
 		if len(b) > startLen {
 			b = append(b, " AND "...)
 		}
-		b = append(b, q.tableModel.Table().SQLAlias...)
-		b = q.appendWhereSoftDelete(b)
+		if withAlias {
+			b = append(b, q.tableModel.Table().SQLAlias...)
+			b = append(b, '.')
+		}
+		b = append(b, q.tableModel.Table().SoftDeleteField.SQLName...)
+		if q.flags.Has(deletedFlag) {
+			b = append(b, " IS NOT NULL"...)
+		} else {
+			b = append(b, " IS NULL"...)
+		}
 	}
 
 	if q.flags.Has(wherePKFlag) {
 		if len(b) > startLen {
 			b = append(b, " AND "...)
 		}
-		b, err = q.appendWherePK(fmter, b)
+		b, err = q.appendWherePK(fmter, b, withAlias)
 		if err != nil {
 			return nil, err
 		}
@@ -623,7 +635,7 @@ func (q *whereBaseQuery) appendWhere(fmter schema.Formatter, b []byte) (_ []byte
 	return b, nil
 }
 
-func (q *whereBaseQuery) _appendWhere(
+func appendWhere(
 	fmter schema.Formatter, b []byte, where []schema.QueryWithSep,
 ) (_ []byte, err error) {
 	for i, where := range where {
@@ -645,19 +657,8 @@ func (q *whereBaseQuery) _appendWhere(
 	return b, nil
 }
 
-func (q *whereBaseQuery) appendWhereSoftDelete(b []byte) []byte {
-	b = append(b, '.')
-	b = append(b, q.tableModel.Table().SoftDeleteField.SQLName...)
-	if q.flags.Has(deletedFlag) {
-		b = append(b, " IS NOT NULL"...)
-	} else {
-		b = append(b, " IS NULL"...)
-	}
-	return b
-}
-
 func (q *whereBaseQuery) appendWherePK(
-	fmter schema.Formatter, b []byte,
+	fmter schema.Formatter, b []byte, withAlias bool,
 ) (_ []byte, err error) {
 	if q.table == nil {
 		err := fmt.Errorf("bun: got %T, but WherePK requires a struct or slice-based model", q.model)
@@ -669,22 +670,26 @@ func (q *whereBaseQuery) appendWherePK(
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
-		return q.appendWherePKStruct(fmter, b, model)
+		return q.appendWherePKStruct(fmter, b, model, withAlias)
 	case *sliceTableModel:
-		return q.appendWherePKSlice(fmter, b, model)
+		return q.appendWherePKSlice(fmter, b, model, withAlias)
 	}
 
 	return nil, fmt.Errorf("bun: WherePK does not support %T", q.tableModel)
 }
 
 func (q *whereBaseQuery) appendWherePKStruct(
-	fmter schema.Formatter, b []byte, model *structTableModel,
+	fmter schema.Formatter, b []byte, model *structTableModel, withAlias bool,
 ) (_ []byte, err error) {
 	isTemplate := fmter.IsNop()
 	b = append(b, '(')
 	for i, f := range q.table.PKs {
 		if i > 0 {
 			b = append(b, " AND "...)
+		}
+		if withAlias {
+			b = append(b, q.table.SQLAlias...)
+			b = append(b, '.')
 		}
 		b = append(b, f.SQLName...)
 		b = append(b, " = "...)
@@ -699,12 +704,16 @@ func (q *whereBaseQuery) appendWherePKStruct(
 }
 
 func (q *whereBaseQuery) appendWherePKSlice(
-	fmter schema.Formatter, b []byte, model *sliceTableModel,
+	fmter schema.Formatter, b []byte, model *sliceTableModel, withAlias bool,
 ) (_ []byte, err error) {
 	if len(q.table.PKs) > 1 {
 		b = append(b, '(')
 	}
-	b = appendColumns(b, "", q.table.PKs)
+	if withAlias {
+		b = appendColumns(b, q.table.SQLAlias, q.table.PKs)
+	} else {
+		b = appendColumns(b, "", q.table.PKs)
+	}
 	if len(q.table.PKs) > 1 {
 		b = append(b, ')')
 	}

@@ -218,9 +218,11 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, ')')
 	}
 
-	b, err = q.appendWhere(fmter, b)
-	if err != nil {
-		return nil, err
+	if len(q.where) > 0 {
+		b, err = appendWhere(fmter, b, q.where)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return b, nil

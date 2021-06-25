@@ -425,7 +425,7 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		b = q.appendSetExcluded(b, fields)
 	}
 
-	b, err = q.appendWhere(fmter, b)
+	b, err = q.appendWhere(fmter, b, true)
 	if err != nil {
 		return nil, err
 	}

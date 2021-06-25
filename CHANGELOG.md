@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.3.0
+## v0.2.7
 
 - Added `UpdateQuery.Bulk` helper to generate bulk-update queries.
 
