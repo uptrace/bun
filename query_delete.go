@@ -65,7 +65,7 @@ func (q *DeleteQuery) ModelTableExpr(query string, args ...interface{}) *DeleteQ
 
 //------------------------------------------------------------------------------
 
-func (q *DeleteQuery) wherePK() *DeleteQuery {
+func (q *DeleteQuery) WherePK() *DeleteQuery {
 	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }

@@ -102,7 +102,7 @@ func (q *UpdateQuery) Value(column string, value string, args ...interface{}) *U
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) wherePK() *UpdateQuery {
+func (q *UpdateQuery) WherePK() *UpdateQuery {
 	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }
@@ -298,6 +298,54 @@ func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []b
 	}
 
 	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+func (q *UpdateQuery) Bulk() *UpdateQuery {
+	model, ok := q.model.(*sliceTableModel)
+	if !ok {
+		q.setErr(fmt.Errorf("bun: Bulk requires a slice, got %T", q.model))
+		return q
+	}
+
+	return q.With("_data", q.db.NewValues(model)).
+		Model(model).
+		TableExpr("_data").
+		Set(q.updateSliceSet(model)).
+		Where(q.updateSliceWhere(model))
+}
+
+func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) string {
+	var b []byte
+	for i, field := range model.table.DataFields {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+		if q.db.fmter.HasFeature(feature.UpdateMultiTable) {
+			b = append(b, model.table.SQLAlias...)
+			b = append(b, '.')
+		}
+		b = append(b, field.SQLName...)
+		b = append(b, " = _data."...)
+		b = append(b, field.SQLName...)
+	}
+	return internal.String(b)
+}
+
+func (db *UpdateQuery) updateSliceWhere(model *sliceTableModel) string {
+	var b []byte
+	for i, pk := range model.table.PKs {
+		if i > 0 {
+			b = append(b, " AND "...)
+		}
+		b = append(b, model.table.SQLAlias...)
+		b = append(b, '.')
+		b = append(b, pk.SQLName...)
+		b = append(b, " = _data."...)
+		b = append(b, pk.SQLName...)
+	}
+	return internal.String(b)
 }
 
 //------------------------------------------------------------------------------

@@ -2,27 +2,29 @@
 
 ## v0.3.0
 
-- Added helpers `db.Select`, `db.Insert`, `db.Update`, and `db.Delete` that only support struct and
-  slice-based models.
-- Removed `WherePK`, because it meant too many different things depending on which query it was
-  called.
+- Added `UpdateQuery.Bulk` helper to generate bulk-update queries.
 
-  You should rewrite queries like:
+  Before:
 
   ```go
-  err := db.NewSelect().Model(model).WherePK().Scan(ctx)
-  res, err := db.NewInsert().Model(model).Exec(ctx)
-  res, err := db.NewUpdate().Model(model).WherePK().Exec(ctx)
-  res, err := db.NewDelete().Model(model).WherePK().Exec(ctx)
+  models := []Model{
+  	{42, "hello"},
+  	{43, "world"},
+  }
+  return db.NewUpdate().
+  	With("_data", db.NewValues(&models)).
+  	Model(&models).
+  	Table("_data").
+  	Set("model.str = _data.str").
+  	Where("model.id = _data.id")
   ```
 
-  to
+  Now:
 
   ```go
-  err := db.Select(ctx, model)
-  err := db.Insert(ctx, model)
-  err := db.Update(ctx, model)
-  err := db.Delete(ctx, model)
+  db.NewUpdate().
+  	Model(&models).
+  	Bulk()
   ```
 
 ## v0.2.5 - Jun 25 2021

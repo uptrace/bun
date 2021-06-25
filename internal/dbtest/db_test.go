@@ -98,7 +98,6 @@ func TestDB(t *testing.T) {
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
 		{"testScanRows", testScanRows},
 		{"testRunInTx", testRunInTx},
-		{"testQueryHelpers", testQueryHelpers},
 	}
 
 	for _, db := range dbs(t) {
@@ -465,77 +464,4 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
-}
-
-func testQueryHelpers(t *testing.T, db *bun.DB) {
-	type Model struct {
-		ID  int64
-		Str string
-	}
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
-
-	t.Run("struct", func(t *testing.T) {
-		model := &Model{Str: "hello"}
-
-		err = db.Insert(ctx, model)
-		require.NoError(t, err)
-
-		require.NotZero(t, model.ID)
-		model.Str += "_suffix"
-
-		err = db.Update(ctx, model)
-		require.NoError(t, err)
-
-		model.Str = ""
-
-		err = db.Select(ctx, model)
-		require.NoError(t, err)
-		require.Contains(t, model.Str, "_suffix")
-
-		err = db.Delete(ctx, model)
-		require.NoError(t, err)
-
-		err = db.Select(ctx, model)
-		require.Equal(t, sql.ErrNoRows, err)
-	})
-
-	t.Run("slice", func(t *testing.T) {
-		models := []*Model{
-			{Str: "hello"},
-			{Str: "world"},
-			{Str: "foo"},
-			{Str: "bar"},
-		}
-
-		err = db.Insert(ctx, &models)
-		require.NoError(t, err)
-
-		for _, m := range models {
-			require.NotZero(t, m.ID)
-			m.Str += "_suffix"
-		}
-
-		err = db.Update(ctx, &models)
-		require.NoError(t, err)
-
-		for _, m := range models {
-			m.Str = ""
-		}
-
-		err = db.Select(ctx, &models)
-		require.NoError(t, err)
-
-		for _, m := range models {
-			require.Contains(t, m.Str, "_suffix")
-		}
-
-		err = db.Delete(ctx, &models)
-		require.NoError(t, err)
-
-		err = db.Select(ctx, &models)
-		require.NoError(t, err)
-		require.Len(t, models, 0)
-	})
 }

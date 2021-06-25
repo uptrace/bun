@@ -1,1 +1,1 @@
-SELECT "soft_delete"."id", "soft_delete"."deleted_at" FROM "soft_deletes" AS "soft_delete" WHERE "soft_delete"."deleted_at" IS NULL
+WITH "_data" ("id", "str") AS (VALUES (42::BIGINT, 'hello'::VARCHAR), (43::BIGINT, 'world'::VARCHAR)) UPDATE "models" AS "model" SET "str" = _data."str" FROM _data WHERE ("model"."id" = _data."id")

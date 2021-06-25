@@ -1,1 +1,1 @@
-SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` WHERE (id = 0)
+SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` WHERE (`id` = NULL)

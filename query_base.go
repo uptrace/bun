@@ -659,6 +659,10 @@ func (q *whereBaseQuery) appendWhereSoftDelete(b []byte) []byte {
 func (q *whereBaseQuery) appendWherePK(
 	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
+	if q.table == nil {
+		err := fmt.Errorf("bun: got %T, but WherePK requires a struct or slice-based model", q.model)
+		return nil, err
+	}
 	if err := q.table.CheckPKs(); err != nil {
 		return nil, err
 	}
@@ -670,7 +674,7 @@ func (q *whereBaseQuery) appendWherePK(
 		return q.appendWherePKSlice(fmter, b, model)
 	}
 
-	return nil, fmt.Errorf("bun: wherePK does not support %T", q.tableModel)
+	return nil, fmt.Errorf("bun: WherePK does not support %T", q.tableModel)
 }
 
 func (q *whereBaseQuery) appendWherePKStruct(

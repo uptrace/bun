@@ -74,10 +74,10 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().TableExpr("table")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).Where("id = 0")
+			return db.NewSelect().Model(new(Model)).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).Where("id = 42")
+			return db.NewSelect().Model(new(Model)).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(new(Model)).WhereOr("id = 42")
@@ -174,11 +174,11 @@ func TestQuery(t *testing.T) {
 		},
 
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(Model)).Where("id = 0")
+			return db.NewUpdate().Model(new(Model)).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			model := &Model{ID: 42, Str: "hello"}
-			return db.NewUpdate().Model(model).Where("id = ?", model.ID)
+			return db.NewUpdate().Model(model).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			models := []Model{
@@ -211,7 +211,7 @@ func TestQuery(t *testing.T) {
 		},
 
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(Model)).Where("id = 0")
+			return db.NewDelete().Model(new(Model)).WherePK()
 		},
 
 		func(db *bun.DB) schema.QueryAppender {
@@ -304,7 +304,7 @@ func TestQuery(t *testing.T) {
 				})
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).Where("id = ?", 1).For("UPDATE")
+			return db.NewSelect().Model(new(Model)).WherePK().For("UPDATE")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			models := []Model{
@@ -394,13 +394,13 @@ func TestQuery(t *testing.T) {
 			return db.NewInsert().Model(new(Model)).Value("foo", "?", "bar")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(Model)).Value("foo", "?", "bar").Where("id = 0")
+			return db.NewUpdate().Model(new(Model)).Value("foo", "?", "bar").WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete)).Where("id = 0")
+			return db.NewDelete().Model(new(SoftDelete)).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete)).Where("id = 0").ForceDelete()
+			return db.NewDelete().Model(new(SoftDelete)).WherePK().ForceDelete()
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(new(SoftDelete))
@@ -410,6 +410,15 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(new(SoftDelete)).WhereAllWithDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []Model{
+				{42, "hello"},
+				{43, "world"},
+			}
+			return db.NewUpdate().
+				Model(&models).
+				Bulk()
 		},
 	}
 

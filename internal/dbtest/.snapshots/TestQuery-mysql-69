@@ -1,1 +1,1 @@
-SELECT `soft_delete`.`id`, `soft_delete`.`deleted_at` FROM `soft_deletes` AS `soft_delete` WHERE `soft_delete`.`deleted_at` IS NULL
+WITH `_data` (`id`, `str`) AS (VALUES ROW(42, 'hello'), ROW(43, 'world')) UPDATE `models` AS `model`, _data SET `model`.`str` = _data.`str` WHERE (`model`.`id` = _data.`id`)

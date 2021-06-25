@@ -116,7 +116,7 @@ func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) wherePK() *SelectQuery {
+func (q *SelectQuery) WherePK() *SelectQuery {
 	q.flags = q.flags.Set(wherePKFlag)
 	return q
 }

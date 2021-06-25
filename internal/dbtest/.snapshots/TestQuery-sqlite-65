@@ -1,1 +1,1 @@
-DELETE FROM "soft_deletes" AS "soft_delete" WHERE (id = 0)
+DELETE FROM "soft_deletes" AS "soft_delete" WHERE ("id" = NULL)

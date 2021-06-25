@@ -1,1 +1,1 @@
-DELETE FROM "models" AS "model" WHERE (id = 0)
+DELETE FROM "models" AS "model" WHERE ("id" = NULL)
