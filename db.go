@@ -10,11 +10,12 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"golang.org/x/mod/semver"
+
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
-	"golang.org/x/mod/semver"
 )
 
 const (
