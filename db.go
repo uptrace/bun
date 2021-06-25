@@ -47,8 +47,10 @@ type DB struct {
 
 	stats DBStats
 
-	mysqlVersionOnce sync.Once
-	mysqlVersion     string
+	mysql struct {
+		versionOnce *sync.Once
+		version     string
+	}
 }
 
 func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
@@ -58,6 +60,7 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 		features: dialect.Features(),
 		fmter:    schema.NewFormatter(dialect),
 	}
+	db.mysql.versionOnce = new(sync.Once)
 
 	for _, opt := range opts {
 		opt(db)
@@ -580,19 +583,19 @@ func (tx Tx) NewDropColumn() *DropColumnQuery {
 
 func (db *DB) supportsDeleteTableAlias() bool {
 	if db.dialect.Name() == dialect.MySQL {
-		return semver.Compare(db.getMysqlVersion(), "v8.0") >= 0
+		return semver.Compare(db.mysqlVersion(), "v8.0") >= 0
 	}
 	return true
 }
 
-func (db *DB) getMysqlVersion() string {
-	db.mysqlVersionOnce.Do(func() {
+func (db *DB) mysqlVersion() string {
+	db.mysql.versionOnce.Do(func() {
 		var version string
 		if err := db.QueryRow("SELECT version()").Scan(&version); err == nil {
-			db.mysqlVersion = semver.MajorMinor("v" + cleanupVersion(version))
+			db.mysql.version = semver.MajorMinor("v" + cleanupVersion(version))
 		}
 	})
-	return db.mysqlVersion
+	return db.mysql.version
 }
 
 func cleanupVersion(s string) string {

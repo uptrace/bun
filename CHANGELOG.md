@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.3.0
+
+- Added helpers `db.Select`, `db.Insert`, `db.Update`, and `db.Delete` that only support struct and
+  slice-based models.
+- Removed `WherePK`, because it meant too many different things depending on which query it was
+  called.
+
+  You should rewrite queries like:
+
+  ```go
+  err := db.NewSelect().Model(model).WherePK().Scan(ctx)
+  res, err := db.NewInsert().Model(model).Exec(ctx)
+  res, err := db.NewUpdate().Model(model).WherePK().Exec(ctx)
+  res, err := db.NewDelete().Model(model).WherePK().Exec(ctx)
+  ```
+
+  to
+
+  ```go
+  err := db.Select(ctx, model)
+  err := db.Insert(ctx, model)
+  err := db.Update(ctx, model)
+  err := db.Delete(ctx, model)
+  ```
+
 ## v0.2.5 - Jun 25 2021
 
 - Changed time.Time to always append zero time as `NULL`.
