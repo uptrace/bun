@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.5
+
+- Changed time.Time to always append zero time as `NULL`.
+- Added `db.RunInTx` helper.
+
 ## v0.2.4
 
 - Added SSL support to pgdriver.

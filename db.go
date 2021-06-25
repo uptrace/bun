@@ -340,9 +340,28 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 	return Stmt{Stmt: stmt}, nil
 }
 
+//------------------------------------------------------------------------------
+
 type Tx struct {
 	db *DB
 	*sql.Tx
+}
+
+// RunInTx runs the function in a transaction. If the function returns an error,
+// the transaction is rolled back. Otherwise, the transaction is committed.
+func (db *DB) RunInTx(
+	ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
+) error {
+	tx, err := db.BeginTx(ctx, opts)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if err := fn(ctx, tx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (db *DB) Begin() (Tx, error) {

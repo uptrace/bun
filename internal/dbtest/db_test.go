@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 
@@ -106,6 +107,7 @@ func TestDB(t *testing.T) {
 		{"testScanSingleRow", testScanSingleRow},
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
 		{"testScanRows", testScanRows},
+		{"testRunInTx", testRunInTx},
 	}
 
 	for _, db := range dbs(t) {
@@ -431,4 +433,45 @@ func testScanRows(t *testing.T, db *bun.DB) {
 	err = db.ScanRows(ctx, rows, &nums)
 	require.NoError(t, err)
 	require.Equal(t, []int{3, 2, 1}, nums)
+}
+
+func testRunInTx(t *testing.T, db *bun.DB) {
+	type Counter struct {
+		Count int64
+	}
+
+	err := db.ResetModel(ctx, (*Counter)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
+	require.NoError(t, err)
+
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		_, err := tx.NewUpdate().Model((*Counter)(nil)).
+			Set("count = count + 1").
+			Where("TRUE").
+			Exec(ctx)
+		return err
+	})
+	require.NoError(t, err)
+
+	var count int
+	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewUpdate().Model((*Counter)(nil)).
+			Set("count = count + 1").
+			Where("TRUE").
+			Exec(ctx); err != nil {
+			return err
+		}
+		return errors.New("rollback")
+	})
+	require.Error(t, err)
+
+	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
 }
