@@ -1,1 +1,1 @@
-SELECT * WHERE (id IN (1, 2, 3))
+ALTER TABLE `models` ADD column_name VARCHAR(123)

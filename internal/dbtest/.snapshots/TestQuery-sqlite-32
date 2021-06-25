@@ -1,1 +1,1 @@
-DELETE FROM "models" AS "model" WHERE ("model"."id" = 42)
+CREATE TABLE "models" ("id" INTEGER NOT NULL, "str" VARCHAR, PRIMARY KEY ("id"))

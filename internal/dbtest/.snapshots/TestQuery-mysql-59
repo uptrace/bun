@@ -1,1 +1,1 @@
-INSERT INTO `models` AS `model` (`id`, `str`) VALUES (42, 'hello'), (43, 'world') ON DUPLICATE KEY UPDATE str = upper(str)
+INSERT INTO `models` (`raw`) VALUES (NULL)

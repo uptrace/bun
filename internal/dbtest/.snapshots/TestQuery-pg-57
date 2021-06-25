@@ -1,1 +1,1 @@
-INSERT IGNORE INTO "models" ("id", "str") VALUES (DEFAULT, '') RETURNING "id"
+CREATE TABLE "models" ("id" BIGSERIAL NOT NULL, "str" VARCHAR, PRIMARY KEY ("id"), FOREIGN KEY ("profile_id") REFERENCES "profiles" ("id"))

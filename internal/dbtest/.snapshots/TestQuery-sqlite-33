@@ -1,1 +1,1 @@
-DELETE FROM "models" AS "model" WHERE "model"."id" IN (42, 43)
+CREATE TABLE "models" ("id" INTEGER NOT NULL, "struct" VARCHAR, "map" VARCHAR, "slice" VARCHAR, "array" VARCHAR, PRIMARY KEY ("id"))

@@ -67,7 +67,7 @@ func testSoftDelete(t *testing.T, db *bun.DB) {
 	require.Equal(t, 1, count)
 
 	// Soft delete.
-	_, err = db.NewDelete().Model(video1).WherePK().Exec(ctx)
+	_, err = db.NewDelete().Model(video1).Where("id = ?", video1.ID).Exec(ctx)
 	require.NoError(t, err)
 
 	// Count visible videos.
@@ -79,7 +79,7 @@ func testSoftDelete(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
 
-	_, err = db.NewDelete().Model(video1).WherePK().ForceDelete().Exec(ctx)
+	_, err = db.NewDelete().Model(video1).Where("id = ?", video1.ID).ForceDelete().Exec(ctx)
 	require.NoError(t, err)
 
 	count, err = db.NewSelect().Model((*Video)(nil)).WhereDeleted().Count(ctx)

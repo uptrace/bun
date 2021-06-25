@@ -1,1 +1,1 @@
-DELETE FROM "soft_deletes" AS "soft_delete" WHERE ("soft_delete"."id" = NULL)
+SELECT "soft_delete"."id", "soft_delete"."deleted_at" FROM "soft_deletes" AS "soft_delete"

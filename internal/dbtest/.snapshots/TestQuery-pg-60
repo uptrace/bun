@@ -1,1 +1,1 @@
-CREATE TABLE "models" ("id" BIGSERIAL NOT NULL, "str" VARCHAR, PRIMARY KEY ("id"), FOREIGN KEY ("profile_id") REFERENCES "profiles" ("id"))
+INSERT INTO "models" ("bytes") VALUES ('\x00000000000000000000')

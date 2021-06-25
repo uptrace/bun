@@ -1,1 +1,1 @@
-CREATE TABLE "models" ("id" BIGSERIAL NOT NULL, "str" VARCHAR, PRIMARY KEY ("id"))
+SELECT "model"."id", "model"."str" FROM "models" AS "model" WHERE (1) OR (2) OR ((3) OR (4) OR NOT ((5) OR (6)))

@@ -84,14 +84,14 @@ func testModelHook(t *testing.T, db *bun.DB) {
 
 	{
 		hook := &ModelHookTest{ID: 1}
-		_, err := db.NewUpdate().Model(hook).WherePK().Exec(ctx)
+		_, err := db.NewUpdate().Model(hook).Where("id = 1").Exec(ctx)
 		require.NoError(t, err)
 		require.Equal(t, []string{"BeforeUpdate", "AfterUpdate"}, events.Flush())
 	}
 
 	{
 		hook := &ModelHookTest{ID: 1}
-		_, err := db.NewDelete().Model(hook).WherePK().Exec(ctx)
+		_, err := db.NewDelete().Model(hook).Where("id = 1").Exec(ctx)
 		require.NoError(t, err)
 		require.Equal(t, []string{"BeforeDelete", "AfterDelete"}, events.Flush())
 	}

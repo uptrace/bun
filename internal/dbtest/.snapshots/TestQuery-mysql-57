@@ -1,1 +1,1 @@
-INSERT IGNORE INTO `models` (`id`, `str`) VALUES (DEFAULT, '')
+CREATE TABLE `models` (`id` BIGINT NOT NULL AUTO_INCREMENT, `str` VARCHAR(255), PRIMARY KEY (`id`), FOREIGN KEY ("profile_id") REFERENCES "profiles" ("id"))

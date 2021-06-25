@@ -1,1 +1,1 @@
-DROP TABLE "models"
+CREATE TABLE "users" ("name" VARCHAR NOT NULL DEFAULT \'unknown\')

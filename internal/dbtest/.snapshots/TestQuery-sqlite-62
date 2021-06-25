@@ -1,1 +1,1 @@
-INSERT INTO "models" ("raw") VALUES (NULL)
+INSERT INTO "models" ("str", "foo") VALUES ('', 'bar') RETURNING "id"

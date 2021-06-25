@@ -1,1 +1,1 @@
-REPLACE INTO "models" ("str") VALUES ('') RETURNING "id"
+INSERT INTO "models" ("raw") VALUES (NULL)

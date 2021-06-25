@@ -1,1 +1,1 @@
-INSERT INTO "models" ("array") VALUES ('{"foo","bar"}')
+INSERT INTO "models" AS "model" ("id", "str") VALUES (42, 'hello'), (43, 'world') ON DUPLICATE KEY UPDATE SET str = upper(str)

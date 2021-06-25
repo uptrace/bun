@@ -1,1 +1,1 @@
-CREATE TABLE "users" ("name" VARCHAR NOT NULL DEFAULT \'unknown\')
+SELECT * WHERE (id IN (1, 2, 3))

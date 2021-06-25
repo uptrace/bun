@@ -1,1 +1,1 @@
-INSERT INTO "models" ("bytes") VALUES ('\x00000000000000000000')
+UPDATE "models" AS "model" SET "str" = '', foo = 'bar' WHERE (id = 0)

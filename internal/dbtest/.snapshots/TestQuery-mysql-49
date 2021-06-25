@@ -1,1 +1,1 @@
-SELECT `story`.`id`, `story`.`name`, `story`.`user_id`, `user`.`id` AS `user__id`, `user`.`name` AS `user__name` FROM `stories` AS `story` LEFT JOIN `users` AS `user` ON (`user`.`id` = `story`.`user_id`)
+SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` WHERE (id = 1) FOR UPDATE

@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str", "foo") VALUES ('', 'bar') RETURNING "id"
+DELETE FROM "soft_deletes" AS "soft_delete" WHERE (id = 0)

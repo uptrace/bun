@@ -1,1 +1,1 @@
-SELECT "story"."id", "story"."name", "story"."user_id", "user"."name" AS "user__name" FROM "stories" AS "story" LEFT JOIN "users" AS "user" ON ("user"."id" = "story"."user_id")
+INSERT INTO "models" ("int", "uint", "str", "time") VALUES (NULL, NULL, NULL, NULL) RETURNING "int", "uint", "str", "time"

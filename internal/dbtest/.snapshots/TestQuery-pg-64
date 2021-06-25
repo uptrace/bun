@@ -1,1 +1,1 @@
-VALUES (NULL::TIMESTAMPTZ), ('1970-01-01 00:00:00+00:00'::TIMESTAMPTZ)
+UPDATE "soft_deletes" AS "soft_delete" SET "deleted_at" = [TIME] WHERE (id = 0) AND "soft_delete"."deleted_at" IS NULL

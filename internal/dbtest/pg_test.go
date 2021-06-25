@@ -255,6 +255,6 @@ func TestPGScanWithoutResult(t *testing.T) {
 	require.NoError(t, err)
 
 	var num int64
-	_, err = db.NewUpdate().Model(new(Model)).Set("id = NULL").WherePK().Exec(ctx, &num)
+	_, err = db.NewUpdate().Model(new(Model)).Set("id = NULL").Where("id = 0").Exec(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 }

@@ -1,1 +1,1 @@
-INSERT INTO "models" ("int", "uint", "str", "time") VALUES (NULL, NULL, NULL, NULL) RETURNING "int", "uint", "str", "time"
+INSERT IGNORE INTO "models" ("str") VALUES ('') RETURNING "id"

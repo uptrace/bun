@@ -1,1 +1,1 @@
-INSERT INTO "models" ("int", "uint", "str", "time") VALUES (42, 42, 'hello', now()) RETURNING "int", "uint", "str", "time"
+REPLACE INTO "models" ("str") VALUES ('') RETURNING "id"
