@@ -149,7 +149,12 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 
 	b = append(b, "DELETE FROM "...)
-	b, err = q.appendFirstTableWithAlias(fmter, b)
+
+	if q.db.supportsDeleteTableAlias() {
+		b, err = q.appendFirstTableWithAlias(fmter, b)
+	} else {
+		b, err = q.appendFirstTable(fmter, b)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -405,7 +405,7 @@ func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migrati
 	_, err := db.NewDelete().
 		Model(migration).
 		ModelTableExpr(m.tableNameWithAlias()).
-		WherePK().
+		Where("id = ?", migration.ID).
 		Exec(ctx)
 	return err
 }

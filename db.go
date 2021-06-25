@@ -6,11 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
+	"sync"
 	"sync/atomic"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -41,6 +45,9 @@ type DB struct {
 	flags internal.Flag
 
 	stats DBStats
+
+	mysqlVersionOnce sync.Once
+	mysqlVersion     string
 }
 
 func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
@@ -462,6 +469,32 @@ func (tx Tx) NewAddColumn() *AddColumnQuery {
 
 func (tx Tx) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(tx.db).Conn(tx)
+}
+
+//------------------------------------------------------------------------------0
+
+func (db *DB) supportsDeleteTableAlias() bool {
+	if db.dialect.Name() == dialect.MySQL {
+		return semver.Compare(db.getMysqlVersion(), "v8.0") >= 0
+	}
+	return true
+}
+
+func (db *DB) getMysqlVersion() string {
+	db.mysqlVersionOnce.Do(func() {
+		var version string
+		if err := db.QueryRow("SELECT version()").Scan(&version); err == nil {
+			db.mysqlVersion = semver.MajorMinor("v" + cleanupVersion(version))
+		}
+	})
+	return db.mysqlVersion
+}
+
+func cleanupVersion(s string) string {
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		return s[:i]
+	}
+	return s
 }
 
 //------------------------------------------------------------------------------
