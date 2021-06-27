@@ -134,6 +134,8 @@ type Conn struct {
 	processID int32
 	secretKey int32
 
+	stmtCount int
+
 	closed int32
 }
 
@@ -195,7 +197,9 @@ func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 	}
 
 	ctx := context.TODO()
-	name := query
+
+	name := fmt.Sprintf("pgdriver-%d", cn.stmtCount)
+	cn.stmtCount++
 
 	if err := writeParseDescribeSync(ctx, cn, query, query); err != nil {
 		return nil, err
