@@ -712,7 +712,7 @@ func readNotification(ctx context.Context, rd *reader) (channel, payload string,
 
 //------------------------------------------------------------------------------
 
-func writeParseDescribeSync(ctx context.Context, cn *Conn, query, name string) error {
+func writeParseDescribeSync(ctx context.Context, cn *Conn, name, query string) error {
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
