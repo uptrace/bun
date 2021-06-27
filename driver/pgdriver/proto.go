@@ -5,12 +5,17 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/tls"
+	"database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"strconv"
 	"sync"
+	"time"
+	"unicode/utf8"
 
 	"mellium.im/sasl"
 )
@@ -442,6 +447,59 @@ func writeQuery(ctx context.Context, cn *Conn, query string) error {
 	})
 }
 
+func readQuery(ctx context.Context, cn *Conn) (*rows, error) {
+	cn.setReadDeadline(ctx, -1)
+
+	var firstErr error
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return nil, err
+		}
+
+		switch c {
+		case rowDescriptionMsg:
+			rowDesc, err := readRowDescription(cn)
+			if err != nil {
+				return nil, err
+			}
+			return newRows(cn, rowDesc), nil
+		case commandCompleteMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case readyForQueryMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+			if firstErr != nil {
+				return nil, firstErr
+			}
+			return &rows{closed: true}, nil
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return nil, err
+			}
+			if firstErr == nil {
+				firstErr = e
+			}
+		case emptyQueryResponseMsg:
+			if firstErr == nil {
+				firstErr = errEmptyQuery
+			}
+		case noticeResponseMsg, parameterStatusMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("pgdriver: newRows: unexpected message %q", c)
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+
 var rowDescPool sync.Pool
 
 type rowDescription struct {
@@ -560,6 +618,280 @@ func readNotification(cn *Conn) (channel, payload string, err error) {
 
 //------------------------------------------------------------------------------
 
+func writeParseDescribeSync(ctx context.Context, cn *Conn, query, name string) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(parseMsg)
+	wb.WriteString(name)
+	wb.WriteString(query)
+	wb.WriteInt16(0)
+	wb.FinishMessage()
+
+	wb.StartMessage(describeMsg)
+	wb.WriteByte('S')
+	wb.WriteString(name)
+	wb.FinishMessage()
+
+	wb.StartMessage(syncMsg)
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		_, err := wr.Write(wb.Bytes)
+		return err
+	})
+}
+
+func readParseDescribeSync(cn *Conn) (*rowDescription, error) {
+	var rowDesc *rowDescription
+	var firstErr error
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return nil, err
+		}
+
+		switch c {
+		case parseCompleteMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case rowDescriptionMsg: // response to DESCRIBE message.
+			rowDesc, err = readRowDescription(cn)
+			if err != nil {
+				return nil, err
+			}
+		case parameterDescriptionMsg: // response to DESCRIBE message.
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case noDataMsg: // response to DESCRIBE message.
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case readyForQueryMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+			if firstErr != nil {
+				return nil, firstErr
+			}
+			return rowDesc, err
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return nil, err
+			}
+			if firstErr == nil {
+				firstErr = e
+			}
+		case noticeResponseMsg, parameterStatusMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("pgdriver: readParseDescribeSync: unexpected message %q", c)
+		}
+	}
+}
+
+func writeBindExecute(ctx context.Context, cn *Conn, name string, args []driver.NamedValue) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(bindMsg)
+	wb.WriteString("")
+	wb.WriteString(name)
+	wb.WriteInt16(0)
+	wb.WriteInt16(int16(len(args)))
+	for i := range args {
+		wb.StartParam()
+		bytes, err := appendStmtArg(wb.Bytes, args[i].Value)
+		if err != nil {
+			return err
+		}
+		if bytes != nil {
+			wb.Bytes = bytes
+			wb.FinishParam()
+		} else {
+			wb.FinishNullParam()
+		}
+	}
+	wb.WriteInt16(0)
+	wb.FinishMessage()
+
+	wb.StartMessage(executeMsg)
+	wb.WriteString("")
+	wb.WriteInt32(0)
+	wb.FinishMessage()
+
+	wb.StartMessage(syncMsg)
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		_, err := wr.Write(wb.Bytes)
+		return err
+	})
+}
+
+func readExtQuery(ctx context.Context, cn *Conn) (driver.Result, error) {
+	cn.setReadDeadline(ctx, -1)
+
+	var res driver.Result
+	var firstErr error
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return nil, err
+		}
+
+		switch c {
+		case bindCompleteMsg, dataRowMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case commandCompleteMsg: // response to EXECUTE message.
+			tmp, err := readN(cn, msgLen)
+			if err != nil {
+				return nil, err
+			}
+
+			r, err := parseResult(tmp)
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+			} else {
+				res = r
+			}
+		case readyForQueryMsg: // Response to SYNC message.
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+			if firstErr != nil {
+				return nil, firstErr
+			}
+			return res, nil
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return nil, err
+			}
+			if firstErr == nil {
+				firstErr = e
+			}
+		case emptyQueryResponseMsg:
+			if firstErr == nil {
+				firstErr = errEmptyQuery
+			}
+		case noticeResponseMsg, parameterStatusMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("pgdriver: readExtQuery: unexpected message %q", c)
+		}
+	}
+}
+
+func readExtQueryData(ctx context.Context, cn *Conn, rowDesc *rowDescription) (*rows, error) {
+	cn.setReadDeadline(ctx, -1)
+
+	var firstErr error
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return nil, err
+		}
+
+		switch c {
+		case bindCompleteMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+			return newRows(cn, rowDesc), nil
+		case commandCompleteMsg: // response to EXECUTE message.
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		case readyForQueryMsg: // Response to SYNC message.
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+			if firstErr != nil {
+				return nil, firstErr
+			}
+			return &rows{closed: true}, nil
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return nil, err
+			}
+			if firstErr == nil {
+				firstErr = e
+			}
+		case emptyQueryResponseMsg:
+			if firstErr == nil {
+				firstErr = errEmptyQuery
+			}
+		case noticeResponseMsg, parameterStatusMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("pgdriver: readExtQueryData: unexpected message %q", c)
+		}
+	}
+}
+
+func writeCloseStmt(ctx context.Context, cn *Conn, name string) error {
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
+
+	wb.StartMessage(closeMsg)
+	wb.WriteByte('S') //nolint
+	wb.WriteString(name)
+	wb.FinishMessage()
+
+	wb.StartMessage(flushMsg)
+	wb.FinishMessage()
+
+	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
+		_, err := wr.Write(wb.Bytes)
+		return err
+	})
+}
+
+func readCloseStmtComplete(ctx context.Context, cn *Conn) error {
+	cn.setReadDeadline(ctx, -1)
+
+	for {
+		c, msgLen, err := readMessageType(cn)
+		if err != nil {
+			return err
+		}
+
+		switch c {
+		case closeCompleteMsg:
+			return discard(cn, msgLen)
+		case errorResponseMsg:
+			e, err := readError(cn)
+			if err != nil {
+				return err
+			}
+			return e
+		case noticeResponseMsg, parameterStatusMsg:
+			if err := discard(cn, msgLen); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("pgdriver: readCloseCompleteMsg: unexpected message %q", c)
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+
 func readMessageType(cn *Conn) (byte, int, error) {
 	c, err := cn.rd.ReadByte()
 	if err != nil {
@@ -632,4 +964,69 @@ func discard(cn *Conn, n int) error {
 	b := make([]byte, n)
 	_, err := io.ReadFull(cn.rd, b)
 	return err
+}
+
+//------------------------------------------------------------------------------
+
+func appendStmtArg(b []byte, v driver.Value) ([]byte, error) {
+	switch v := v.(type) {
+	case nil:
+		return nil, nil
+	case int64:
+		return strconv.AppendInt(b, v, 10), nil
+	case float64:
+		switch {
+		case math.IsNaN(v):
+			return append(b, "NaN"...), nil
+		case math.IsInf(v, 1):
+			return append(b, "Infinity"...), nil
+		case math.IsInf(v, -1):
+			return append(b, "-Infinity"...), nil
+		default:
+			return strconv.AppendFloat(b, v, 'f', -1, 64), nil
+		}
+	case bool:
+		if v {
+			return append(b, "TRUE"...), nil
+		}
+		return append(b, "FALSE"...), nil
+	case []byte:
+		if v == nil {
+			return nil, nil
+		}
+
+		b = append(b, `\x`...)
+
+		s := len(b)
+		b = append(b, make([]byte, hex.EncodedLen(len(v)))...)
+		hex.Encode(b[s:], v)
+
+		return b, nil
+	case string:
+		for _, r := range v {
+			if r != 0 {
+				b = appendRune(b, r)
+			}
+		}
+		return b, nil
+	case time.Time:
+		if v.IsZero() {
+			return nil, nil
+		}
+		return v.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00"), nil
+	default:
+		return nil, fmt.Errorf("pgdriver: unexpected arg: %T", v)
+	}
+}
+
+func appendRune(b []byte, r rune) []byte {
+	if r < utf8.RuneSelf {
+		return append(b, byte(r))
+	}
+	l := len(b)
+	if cap(b)-l < utf8.UTFMax {
+		b = append(b, make([]byte, utf8.UTFMax)...)
+	}
+	n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+	return b[:l+n]
 }

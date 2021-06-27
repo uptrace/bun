@@ -192,7 +192,19 @@ func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 	if cn.isClosed() {
 		return nil, driver.ErrBadConn
 	}
-	panic("not implemented")
+
+	name := query
+
+	if err := writeParseDescribeSync(context.TODO(), cn, query, query); err != nil {
+		return nil, err
+	}
+
+	rowDesc, err := readParseDescribeSync(cn)
+	if err != nil {
+		return nil, err
+	}
+
+	return newStmt(cn, name, rowDesc), nil
 }
 
 func (cn *Conn) Close() error {
@@ -326,8 +338,7 @@ func (cn *Conn) query(
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
-	cn.setReadDeadline(ctx, -1)
-	return newRows(cn)
+	return readQuery(ctx, cn)
 }
 
 var _ driver.Pinger = (*Conn)(nil)
@@ -387,68 +398,17 @@ func (cn *Conn) checkBadConn(err error) error {
 //------------------------------------------------------------------------------
 
 type rows struct {
-	cn *Conn
-
+	cn      *Conn
 	rowDesc *rowDescription
 	closed  bool
 }
 
 var _ driver.Rows = (*rows)(nil)
 
-func newRows(cn *Conn) (*rows, error) {
-	rows := &rows{
-		cn: cn,
-	}
-
-	var firstErr error
-	for {
-		c, msgLen, err := readMessageType(cn)
-		if err != nil {
-			return nil, err
-		}
-
-		switch c {
-		case rowDescriptionMsg:
-			rowDesc, err := readRowDescription(cn)
-			if err != nil {
-				return nil, err
-			}
-			rows.rowDesc = rowDesc
-			return rows, nil
-		case commandCompleteMsg:
-			if err := discard(cn, msgLen); err != nil {
-				return nil, err
-			}
-		case readyForQueryMsg:
-			// Mark rows as closed because there is no more data to read.
-			rows.closed = true
-
-			if err := discard(cn, msgLen); err != nil {
-				return nil, err
-			}
-			if firstErr != nil {
-				return nil, firstErr
-			}
-			return rows, nil
-		case errorResponseMsg:
-			e, err := readError(cn)
-			if err != nil {
-				return nil, err
-			}
-			if firstErr == nil {
-				firstErr = e
-			}
-		case emptyQueryResponseMsg:
-			if firstErr == nil {
-				firstErr = errEmptyQuery
-			}
-		case noticeResponseMsg, parameterStatusMsg:
-			if err := discard(cn, msgLen); err != nil {
-				return nil, err
-			}
-		default:
-			return nil, fmt.Errorf("pgdriver: newRows: unexpected message %q", c)
-		}
+func newRows(cn *Conn, rowDesc *rowDescription) *rows {
+	return &rows{
+		cn:      cn,
+		rowDesc: rowDesc,
 	}
 }
 
@@ -606,6 +566,73 @@ func (tx tx) Commit() error {
 func (tx tx) Rollback() error {
 	_, err := tx.cn.ExecContext(context.Background(), "ROLLBACK", nil)
 	return err
+}
+
+//------------------------------------------------------------------------------
+
+type stmt struct {
+	cn      *Conn
+	name    string
+	rowDesc *rowDescription
+}
+
+var (
+	_ driver.Stmt             = (*stmt)(nil)
+	_ driver.StmtExecContext  = (*stmt)(nil)
+	_ driver.StmtQueryContext = (*stmt)(nil)
+)
+
+func newStmt(cn *Conn, name string, rowDesc *rowDescription) *stmt {
+	return &stmt{
+		cn:      cn,
+		name:    name,
+		rowDesc: rowDesc,
+	}
+}
+
+func (stmt *stmt) Close() error {
+	if stmt.rowDesc != nil {
+		rowDescPool.Put(stmt.rowDesc)
+		stmt.rowDesc = nil
+	}
+
+	ctx := context.TODO()
+	if err := writeCloseStmt(ctx, stmt.cn, stmt.name); err != nil {
+		return err
+	}
+	if err := readCloseStmtComplete(ctx, stmt.cn); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (stmt *stmt) NumInput() int {
+	if stmt.rowDesc == nil {
+		return -1
+	}
+	return len(stmt.rowDesc.names)
+}
+
+func (stmt *stmt) Exec(args []driver.Value) (driver.Result, error) {
+	panic("not implemented")
+}
+
+func (stmt *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
+	if err := writeBindExecute(ctx, stmt.cn, stmt.name, args); err != nil {
+		return nil, err
+	}
+	return readExtQuery(ctx, stmt.cn)
+}
+
+func (stmt *stmt) Query(args []driver.Value) (driver.Rows, error) {
+	panic("not implemented")
+}
+
+func (stmt *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
+	if err := writeBindExecute(ctx, stmt.cn, stmt.name, args); err != nil {
+		return nil, err
+	}
+	return readExtQueryData(ctx, stmt.cn, stmt.rowDesc)
 }
 
 //------------------------------------------------------------------------------
