@@ -10,13 +10,25 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
-func sqlDB() *sql.DB {
-	dsn := os.Getenv("PG")
-	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test"
-	}
+func TestSQLOpen(t *testing.T) {
+	db, err := sql.Open("pg", dsn())
+	require.NoError(t, err)
 
-	return sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	err = db.Ping()
+	require.NoError(t, err)
+
+	err = db.Close()
+	require.NoError(t, err)
+}
+
+func TestConnector(t *testing.T) {
+	db := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn())))
+
+	err := db.Ping()
+	require.NoError(t, err)
+
+	err = db.Close()
+	require.NoError(t, err)
 }
 
 func TestStmt(t *testing.T) {
@@ -60,4 +72,20 @@ func TestStmt(t *testing.T) {
 
 	err = db.Close()
 	require.NoError(t, err)
+}
+
+func sqlDB() *sql.DB {
+	db, err := sql.Open("pg", dsn())
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func dsn() string {
+	dsn := os.Getenv("PG")
+	if dsn == "" {
+		dsn = "postgres://postgres:@localhost:5432/test"
+	}
+	return dsn
 }
