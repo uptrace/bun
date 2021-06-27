@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.8
+
+- Added support for prepared statements in pgdriver.
+
 ## v0.2.7
 
 - Added `UpdateQuery.Bulk` helper to generate bulk-update queries.

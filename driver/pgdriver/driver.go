@@ -129,9 +129,7 @@ type Conn struct {
 	driver *driverConnector
 
 	netConn net.Conn
-
-	rd  *bufio.Reader
-	buf []byte
+	rd      *reader
 
 	processID int32
 	secretKey int32
@@ -148,9 +146,7 @@ func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
 	cn := &Conn{
 		driver:  driver,
 		netConn: netConn,
-
-		rd:  bufio.NewReader(netConn),
-		buf: make([]byte, 64),
+		rd:      newReader(netConn),
 	}
 
 	if cn.driver.cfg.TLSConfig != nil {
@@ -164,6 +160,11 @@ func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
 	}
 
 	return cn, nil
+}
+
+func (cn *Conn) reader(ctx context.Context, timeout time.Duration) *reader {
+	cn.setReadDeadline(ctx, timeout)
+	return cn.rd
 }
 
 func (cn *Conn) withWriter(
@@ -193,13 +194,14 @@ func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 		return nil, driver.ErrBadConn
 	}
 
+	ctx := context.TODO()
 	name := query
 
-	if err := writeParseDescribeSync(context.TODO(), cn, query, query); err != nil {
+	if err := writeParseDescribeSync(ctx, cn, query, query); err != nil {
 		return nil, err
 	}
 
-	rowDesc, err := readParseDescribeSync(cn)
+	rowDesc, err := readParseDescribeSync(ctx, cn)
 	if err != nil {
 		return nil, err
 	}
@@ -261,60 +263,7 @@ func (cn *Conn) exec(
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
-
-	cn.setReadDeadline(ctx, -1)
-
-	var res driver.Result
-	var firstErr error
-
-	for {
-		c, msgLen, err := readMessageType(cn)
-		if err != nil {
-			return nil, err
-		}
-
-		switch c {
-		case errorResponseMsg:
-			e, err := readError(cn)
-			if err != nil {
-				return nil, err
-			}
-			if firstErr == nil {
-				firstErr = e
-			}
-		case emptyQueryResponseMsg:
-			if firstErr == nil {
-				firstErr = errEmptyQuery
-			}
-		case commandCompleteMsg:
-			tmp, err := readN(cn, msgLen)
-			if err != nil {
-				firstErr = err
-				break
-			}
-
-			r, err := parseResult(tmp)
-			if err != nil {
-				firstErr = err
-			} else {
-				res = r
-			}
-		case describeMsg,
-			rowDescriptionMsg,
-			noticeResponseMsg,
-			parameterStatusMsg:
-			if err := discard(cn, msgLen); err != nil {
-				return nil, err
-			}
-		case readyForQueryMsg:
-			if err := discard(cn, msgLen); err != nil {
-				return nil, err
-			}
-			return res, firstErr
-		default:
-			return nil, fmt.Errorf("pgdriver: Exec: unexpected message %q", c)
-		}
-	}
+	return readQuery(ctx, cn)
 }
 
 var _ driver.QueryerContext = (*Conn)(nil)
@@ -338,7 +287,7 @@ func (cn *Conn) query(
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
-	return readQuery(ctx, cn)
+	return readQueryData(ctx, cn)
 }
 
 var _ driver.Pinger = (*Conn)(nil)
@@ -463,25 +412,25 @@ func (r *rows) Next(dest []driver.Value) error {
 }
 
 func (r *rows) next(dest []driver.Value) (eof bool, _ error) {
+	rd := r.cn.reader(context.TODO(), -1)
 	var firstErr error
-
 	for {
-		c, msgLen, err := readMessageType(r.cn)
+		c, msgLen, err := readMessageType(rd)
 		if err != nil {
 			return false, err
 		}
 
 		switch c {
 		case dataRowMsg:
-			return false, r.readDataRow(dest)
+			return false, r.readDataRow(rd, dest)
 		case commandCompleteMsg:
-			if err := discard(r.cn, msgLen); err != nil {
+			if err := rd.Discard(msgLen); err != nil {
 				return false, err
 			}
 		case readyForQueryMsg:
 			r.close()
 
-			if err := discard(r.cn, msgLen); err != nil {
+			if err := rd.Discard(msgLen); err != nil {
 				return false, err
 			}
 
@@ -490,7 +439,7 @@ func (r *rows) next(dest []driver.Value) (eof bool, _ error) {
 			}
 			return true, nil
 		case errorResponseMsg:
-			e, err := readError(r.cn)
+			e, err := readError(rd)
 			if err != nil {
 				return false, err
 			}
@@ -503,8 +452,8 @@ func (r *rows) next(dest []driver.Value) (eof bool, _ error) {
 	}
 }
 
-func (r *rows) readDataRow(dest []driver.Value) error {
-	numCol, err := readInt16(r.cn)
+func (r *rows) readDataRow(rd *reader, dest []driver.Value) error {
+	numCol, err := readInt16(rd)
 	if err != nil {
 		return err
 	}
@@ -515,12 +464,12 @@ func (r *rows) readDataRow(dest []driver.Value) error {
 	}
 
 	for colIdx := int16(0); colIdx < numCol; colIdx++ {
-		dataLen, err := readInt32(r.cn)
+		dataLen, err := readInt32(rd)
 		if err != nil {
 			return err
 		}
 
-		value, err := readColumnValue(r.cn, r.rowDesc.types[colIdx], int(dataLen))
+		value, err := readColumnValue(rd, r.rowDesc.types[colIdx], int(dataLen))
 		if err != nil {
 			return err
 		}

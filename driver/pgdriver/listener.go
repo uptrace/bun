@@ -206,8 +206,8 @@ func (ln *Listener) ReceiveTimeout(
 		return "", "", err
 	}
 
-	cn.setReadDeadline(ctx, timeout)
-	channel, payload, err = readNotification(cn)
+	rd := cn.reader(ctx, timeout)
+	channel, payload, err = readNotification(ctx, rd)
 	if err != nil {
 		ln.checkConn(ctx, cn, err, timeout > 0)
 		return "", "", err

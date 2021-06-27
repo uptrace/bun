@@ -28,57 +28,57 @@ const (
 	pgTimestamptz = 1184
 )
 
-func readColumnValue(cn *Conn, dataType int32, dataLen int) (interface{}, error) {
+func readColumnValue(rd *reader, dataType int32, dataLen int) (interface{}, error) {
 	if dataLen == -1 {
 		return nil, nil
 	}
 
 	switch dataType {
 	case pgBool:
-		return readBoolCol(cn, dataLen)
+		return readBoolCol(rd, dataLen)
 	case pgInt2:
-		return readInt64Col(cn, dataLen, 16)
+		return readInt64Col(rd, dataLen, 16)
 	case pgInt4:
-		return readInt64Col(cn, dataLen, 32)
+		return readInt64Col(rd, dataLen, 32)
 	case pgInt8:
-		return readInt64Col(cn, dataLen, 64)
+		return readInt64Col(rd, dataLen, 64)
 	case pgFloat4:
-		return readFloat64Col(cn, dataLen, 32)
+		return readFloat64Col(rd, dataLen, 32)
 	case pgFloat8:
-		return readFloat64Col(cn, dataLen, 64)
+		return readFloat64Col(rd, dataLen, 64)
 	case pgTimestamp:
-		return readTimeCol(cn, dataLen)
+		return readTimeCol(rd, dataLen)
 	case pgTimestamptz:
-		return readTimeCol(cn, dataLen)
+		return readTimeCol(rd, dataLen)
 	case pgDate:
-		return readTimeCol(cn, dataLen)
+		return readTimeCol(rd, dataLen)
 	case pgText, pgVarchar:
-		return readStringCol(cn, dataLen)
+		return readStringCol(rd, dataLen)
 	case pgBytea:
-		return readBytesCol(cn, dataLen)
+		return readBytesCol(rd, dataLen)
 	}
 
 	b := make([]byte, dataLen)
-	if _, err := io.ReadFull(cn.rd, b); err != nil {
+	if _, err := io.ReadFull(rd, b); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func readBoolCol(cn *Conn, n int) (interface{}, error) {
-	tmp, err := readN(cn, n)
+func readBoolCol(rd *reader, n int) (interface{}, error) {
+	tmp, err := rd.ReadN(n)
 	if err != nil {
 		return nil, err
 	}
 	return len(tmp) == 1 && (tmp[0] == 't' || tmp[0] == '1'), nil
 }
 
-func readInt64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
+func readInt64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 	if n <= 0 {
 		return 0, nil
 	}
 
-	tmp, err := readN(cn, n)
+	tmp, err := rd.ReadN(n)
 	if err != nil {
 		return 0, err
 	}
@@ -86,12 +86,12 @@ func readInt64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
 	return strconv.ParseInt(bytesToString(tmp), 10, bitSize)
 }
 
-func readFloat64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
+func readFloat64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 	if n <= 0 {
 		return 0, nil
 	}
 
-	tmp, err := readN(cn, n)
+	tmp, err := rd.ReadN(n)
 	if err != nil {
 		return 0, err
 	}
@@ -99,26 +99,26 @@ func readFloat64Col(cn *Conn, n int, bitSize int) (interface{}, error) {
 	return strconv.ParseFloat(bytesToString(tmp), 32)
 }
 
-func readStringCol(cn *Conn, n int) (interface{}, error) {
+func readStringCol(rd *reader, n int) (interface{}, error) {
 	if n <= 0 {
 		return "", nil
 	}
 
 	b := make([]byte, n)
 
-	if _, err := io.ReadFull(cn.rd, b); err != nil {
+	if _, err := io.ReadFull(rd, b); err != nil {
 		return nil, err
 	}
 
 	return bytesToString(b), nil
 }
 
-func readBytesCol(cn *Conn, n int) (interface{}, error) {
+func readBytesCol(rd *reader, n int) (interface{}, error) {
 	if n <= 0 {
 		return []byte{}, nil
 	}
 
-	tmp, err := readN(cn, n)
+	tmp, err := rd.ReadN(n)
 	if err != nil {
 		return nil, err
 	}
@@ -135,12 +135,12 @@ func readBytesCol(cn *Conn, n int) (interface{}, error) {
 	return b, nil
 }
 
-func readTimeCol(cn *Conn, n int) (interface{}, error) {
+func readTimeCol(rd *reader, n int) (interface{}, error) {
 	if n <= 0 {
 		return time.Time{}, nil
 	}
 
-	tmp, err := readN(cn, n)
+	tmp, err := rd.ReadN(n)
 	if err != nil {
 		return time.Time{}, err
 	}
