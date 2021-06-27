@@ -281,7 +281,7 @@ func (cn *Conn) exec(
 				break
 			}
 
-			r, err := newResult(tmp)
+			r, err := parseResult(tmp)
 			if err != nil {
 				firstErr = err
 			} else {
@@ -575,33 +575,19 @@ func (r *rows) readDataRow(dest []driver.Value) error {
 
 //------------------------------------------------------------------------------
 
-type result struct {
-	affected uint32
-}
-
-var _ driver.Result = (*result)(nil)
-
-func newResult(b []byte) (result, error) {
+func parseResult(b []byte) (driver.RowsAffected, error) {
 	i := bytes.LastIndexByte(b, ' ')
 	if i == -1 {
-		return result{}, nil
+		return 0, nil
 	}
 
 	b = b[i+1 : len(b)-1]
-	affected, err := strconv.ParseUint(bytesToString(b), 10, 32)
+	affected, err := strconv.ParseUint(bytesToString(b), 10, 64)
 	if err != nil {
-		return result{}, nil
+		return 0, nil
 	}
 
-	return result{affected: uint32(affected)}, nil
-}
-
-func (r result) RowsAffected() (int64, error) {
-	return int64(r.affected), nil
-}
-
-func (r result) LastInsertId() (int64, error) {
-	return 0, nil
+	return driver.RowsAffected(affected), nil
 }
 
 //------------------------------------------------------------------------------
