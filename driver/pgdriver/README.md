@@ -1,6 +1,8 @@
 # pgdriver
 
-pgdriver is database/sql driver for PostgreSQL based on [go-pg](https://github.com/go-pg/pg) code.
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun/driver/pgdriver)
+
+pgdriver is a database/sql driver for PostgreSQL based on [go-pg](https://github.com/go-pg/pg) code.
 
 You can install it with:
 
