@@ -17,6 +17,11 @@ func TestSQLOpen(t *testing.T) {
 	err = db.Ping()
 	require.NoError(t, err)
 
+	var str string
+	err = db.QueryRow("SELECT $1", "hello").Scan(&str)
+	require.NoError(t, err)
+	require.Equal(t, "hello", str)
+
 	err = db.Close()
 	require.NoError(t, err)
 }

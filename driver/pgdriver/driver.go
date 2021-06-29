@@ -264,6 +264,10 @@ func (cn *Conn) ExecContext(
 func (cn *Conn) exec(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Result, error) {
+	query, err := formatQuery(query, args)
+	if err != nil {
+		return nil, err
+	}
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
@@ -288,6 +292,10 @@ func (cn *Conn) QueryContext(
 func (cn *Conn) query(
 	ctx context.Context, query string, args []driver.NamedValue,
 ) (driver.Rows, error) {
+	query, err := formatQuery(query, args)
+	if err != nil {
+		return nil, err
+	}
 	if err := writeQuery(ctx, cn, query); err != nil {
 		return nil, err
 	}
