@@ -50,7 +50,7 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 func appendArg(b []byte, v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case nil:
-		return nil, nil
+		return append(b, "NULL"...), nil
 	case int64:
 		return strconv.AppendInt(b, v, 10), nil
 	case float64:
@@ -71,7 +71,7 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		return append(b, "FALSE"...), nil
 	case []byte:
 		if v == nil {
-			return nil, nil
+			return append(b, "NULL"...), nil
 		}
 
 		b = append(b, `'\x`...)
@@ -99,7 +99,7 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		return b, nil
 	case time.Time:
 		if v.IsZero() {
-			return nil, nil
+			return append(b, "NULL"...), nil
 		}
 		return v.UTC().AppendFormat(b, "'2006-01-02 15:04:05.999999-07:00'"), nil
 	default:

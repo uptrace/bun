@@ -30,6 +30,11 @@ func TestFormatQuery(t *testing.T) {
 			args:   []interface{}{time.Unix(0, 0), math.NaN()},
 			wanted: "select '1970-01-01 00:00:00+00:00', 'NaN'",
 		},
+		{
+			query:  "select $1,$2,$3,$4",
+			args:   []interface{}{nil, "", []byte(nil), time.Time{}},
+			wanted: "select NULL,'',NULL,NULL",
+		},
 	}
 
 	for _, test := range tests {
