@@ -293,12 +293,10 @@ func appendFloat64Slice(b []byte, floats []float64) []byte {
 
 func arrayAppendString(b []byte, s string) []byte {
 	b = append(b, '"')
-	for _, c := range s {
-		if c == '\000' {
-			continue
-		}
-
-		switch c {
+	for _, r := range s {
+		switch r {
+		case 0:
+			// ignore
 		case '\'':
 			b = append(b, "'''"...)
 		case '"':
@@ -306,21 +304,18 @@ func arrayAppendString(b []byte, s string) []byte {
 		case '\\':
 			b = append(b, '\\', '\\')
 		default:
-			b = appendRune(b, c)
+			if r < utf8.RuneSelf {
+				b = append(b, byte(r))
+				break
+			}
+			l := len(b)
+			if cap(b)-l < utf8.UTFMax {
+				b = append(b, make([]byte, utf8.UTFMax)...)
+			}
+			n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+			b = b[:l+n]
 		}
 	}
 	b = append(b, '"')
 	return b
-}
-
-func appendRune(b []byte, r rune) []byte {
-	if r < utf8.RuneSelf {
-		return append(b, byte(r))
-	}
-	l := len(b)
-	if cap(b)-l < utf8.UTFMax {
-		b = append(b, make([]byte, utf8.UTFMax)...)
-	}
-	n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-	return b[:l+n]
 }

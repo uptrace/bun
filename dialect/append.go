@@ -52,31 +52,30 @@ func appendFloat(b []byte, v float64, bitSize int) []byte {
 
 func AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
-	for _, c := range s {
-		if c == '\000' {
+	for _, r := range s {
+		if r == '\000' {
 			continue
 		}
 
-		if c == '\'' {
+		if r == '\'' {
 			b = append(b, '\'', '\'')
-		} else {
-			b = appendRune(b, c)
+			continue
 		}
+
+		if r < utf8.RuneSelf {
+			b = append(b, byte(r))
+			continue
+		}
+
+		l := len(b)
+		if cap(b)-l < utf8.UTFMax {
+			b = append(b, make([]byte, utf8.UTFMax)...)
+		}
+		n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+		b = b[:l+n]
 	}
 	b = append(b, '\'')
 	return b
-}
-
-func appendRune(b []byte, r rune) []byte {
-	if r < utf8.RuneSelf {
-		return append(b, byte(r))
-	}
-	l := len(b)
-	if cap(b)-l < utf8.UTFMax {
-		b = append(b, make([]byte, utf8.UTFMax)...)
-	}
-	n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-	return b[:l+n]
 }
 
 func AppendBytes(b []byte, bytes []byte) []byte {

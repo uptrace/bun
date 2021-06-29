@@ -1077,9 +1077,19 @@ func appendStmtArg(b []byte, v driver.Value) ([]byte, error) {
 		return b, nil
 	case string:
 		for _, r := range v {
-			if r != 0 {
-				b = appendRune(b, r)
+			if r == 0 {
+				continue
 			}
+			if r < utf8.RuneSelf {
+				b = append(b, byte(r))
+				continue
+			}
+			l := len(b)
+			if cap(b)-l < utf8.UTFMax {
+				b = append(b, make([]byte, utf8.UTFMax)...)
+			}
+			n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+			b = b[:l+n]
 		}
 		return b, nil
 	case time.Time:
@@ -1090,16 +1100,4 @@ func appendStmtArg(b []byte, v driver.Value) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("pgdriver: unexpected arg: %T", v)
 	}
-}
-
-func appendRune(b []byte, r rune) []byte {
-	if r < utf8.RuneSelf {
-		return append(b, byte(r))
-	}
-	l := len(b)
-	if cap(b)-l < utf8.UTFMax {
-		b = append(b, make([]byte, utf8.UTFMax)...)
-	}
-	n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-	return b[:l+n]
 }

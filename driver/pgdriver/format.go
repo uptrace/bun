@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"time"
+	"unicode/utf8"
 )
 
 func formatQuery(query string, args []driver.NamedValue) (string, error) {
@@ -85,15 +86,26 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		return b, nil
 	case string:
 		b = append(b, '\'')
-		for _, c := range v {
-			if c == '\000' {
+		for _, r := range v {
+			if r == '\000' {
 				continue
 			}
-			if c == '\'' {
+
+			if r == '\'' {
 				b = append(b, '\'', '\'')
-			} else {
-				b = appendRune(b, c)
+				continue
 			}
+
+			if r < utf8.RuneSelf {
+				b = append(b, byte(r))
+				continue
+			}
+			l := len(b)
+			if cap(b)-l < utf8.UTFMax {
+				b = append(b, make([]byte, utf8.UTFMax)...)
+			}
+			n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+			b = b[:l+n]
 		}
 		b = append(b, '\'')
 		return b, nil
