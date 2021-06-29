@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.10 - Jun 29 2021
+
+- Fixed pgdriver to format passed query args.
+
 ## v0.2.9 - Jun 27 2021
 
 - Added support for prepared statements in pgdriver.
