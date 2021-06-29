@@ -101,7 +101,7 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		if v.IsZero() {
 			return nil, nil
 		}
-		return v.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00"), nil
+		return v.UTC().AppendFormat(b, "'2006-01-02 15:04:05.999999-07:00'"), nil
 	default:
 		return nil, fmt.Errorf("pgdriver: unexpected arg: %T", v)
 	}

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.12 - Jun 29 2021
+
+- Fixed scanners for net.IP and net.IPNet.
+
 ## v0.2.10 - Jun 29 2021
 
 - Fixed pgdriver to format passed query args.
