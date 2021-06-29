@@ -2,6 +2,7 @@ package dbtest_test
 
 import (
 	"database/sql"
+	"net"
 	"reflect"
 	"testing"
 
@@ -257,4 +258,27 @@ func TestPGScanWithoutResult(t *testing.T) {
 	var num int64
 	_, err = db.NewUpdate().Model(new(Model)).Set("id = NULL").Where("id = 0").Exec(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
+}
+
+func TestIPNet(t *testing.T) {
+	type Model struct {
+		Network net.IPNet `bun:"type:inet"`
+	}
+
+	db := pg()
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	_, ipv4Net, err := net.ParseCIDR("192.0.2.1/24")
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Model{Network: *ipv4Net}).Exec(ctx)
+	require.NoError(t, err)
+
+	model := new(Model)
+	err = db.NewSelect().Model(model).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *ipv4Net, model.Network)
 }

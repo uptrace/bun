@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"time"
@@ -79,6 +80,12 @@ func Scanner(typ reflect.Type) ScannerFunc {
 	switch typ {
 	case timeType:
 		return scanTime
+	case ipType:
+		return scanIP
+	case ipNetType:
+		return scanIPNet
+	case jsonRawMessageType:
+		return scanJSONRawMessage
 	}
 
 	return scanners[kind]
@@ -261,6 +268,63 @@ func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
 	dec := bunjson.NewDecoder(bytes.NewReader(b))
 	dec.UseNumber()
 	return dec.Decode(dest.Addr().Interface())
+}
+
+func scanIP(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	ip := net.ParseIP(internal.String(b))
+	if ip == nil {
+		return fmt.Errorf("bun: invalid ip: %q", b)
+	}
+
+	ptr := dest.Addr().Interface().(*net.IP)
+	*ptr = ip
+
+	return nil
+}
+
+func scanIPNet(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	_, ipnet, err := net.ParseCIDR(internal.String(b))
+	if err != nil {
+		return err
+	}
+
+	ptr := dest.Addr().Interface().(*net.IPNet)
+	*ptr = *ipnet
+
+	return nil
+}
+
+func scanJSONRawMessage(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		dest.SetBytes(nil)
+		return nil
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	dest.SetBytes(b)
+	return nil
 }
 
 func addrScanner(fn ScannerFunc) ScannerFunc {
