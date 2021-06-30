@@ -192,15 +192,11 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		}
 	}
 
-	bs := getByteSlice()
-	defer putByteSlice(bs)
-
-	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
 
-	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
 	var res sql.Result

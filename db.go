@@ -505,6 +505,13 @@ func cleanupVersion(s string) string {
 
 //------------------------------------------------------------------------------
 
+func (db *DB) makeQueryBytes() []byte {
+	// TODO: make this configurable?
+	return make([]byte, 0, 4096)
+}
+
+//------------------------------------------------------------------------------
+
 type result struct {
 	r sql.Result
 	n int
