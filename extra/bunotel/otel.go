@@ -1,7 +1,6 @@
 package bunotel
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"runtime"
@@ -119,14 +118,14 @@ func eventOperation(event *bun.QueryEvent) string {
 	return queryOperation(event.Query)
 }
 
-func queryOperation(name []byte) string {
-	if idx := bytes.IndexByte(name, ' '); idx > 0 {
+func queryOperation(name string) string {
+	if idx := strings.IndexByte(name, ' '); idx > 0 {
 		name = name[:idx]
 	}
 	if len(name) > 16 {
 		name = name[:16]
 	}
-	return string(name)
+	return name
 }
 
 func eventQuery(event *bun.QueryEvent, operation string) string {
@@ -138,7 +137,7 @@ func eventQuery(event *bun.QueryEvent, operation string) string {
 	if len(event.Query) > softQueryLimit {
 		query = unformattedQuery(event)
 	} else {
-		query = string(event.Query)
+		query = event.Query
 	}
 
 	if len(query) > hardQueryLimit {

@@ -85,32 +85,28 @@ func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
+func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
 	if q.table != nil {
 		if err := q.beforeDropTableHook(ctx); err != nil {
-			return res, err
+			return nil, err
 		}
 	}
 
-	bs := getByteSlice()
-	defer putByteSlice(bs)
-
-	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	res, err = q.exec(ctx, q, query)
+	res, err := q.exec(ctx, q, query)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	if q.table != nil {
 		if err := q.afterDropTableHook(ctx); err != nil {
-			return res, err
+			return nil, err
 		}
 	}
 

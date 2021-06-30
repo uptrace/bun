@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -15,7 +14,7 @@ type QueryEvent struct {
 	DB *DB
 
 	QueryAppender schema.QueryAppender
-	Query         []byte
+	Query         string
 	QueryArgs     []interface{}
 
 	StartTime time.Time
@@ -46,7 +45,7 @@ func (db *DB) beforeQuery(
 		DB: db,
 
 		QueryAppender: queryApp,
-		Query:         internal.Bytes(query),
+		Query:         query,
 		QueryArgs:     queryArgs,
 
 		StartTime: time.Now(),

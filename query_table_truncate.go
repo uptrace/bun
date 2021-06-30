@@ -104,21 +104,17 @@ func (q *TruncateTableQuery) AppendQuery(
 
 //------------------------------------------------------------------------------
 
-func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, _ error) {
-	bs := getByteSlice()
-	defer putByteSlice(bs)
-
-	queryBytes, err := q.AppendQuery(q.db.fmter, bs.b)
+func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	bs.update(queryBytes)
 	query := internal.String(queryBytes)
 
-	res, err = q.exec(ctx, q, query)
+	res, err := q.exec(ctx, q, query)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	return res, nil
