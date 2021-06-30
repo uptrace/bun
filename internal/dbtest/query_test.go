@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -14,7 +15,8 @@ import (
 )
 
 func init() {
-	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory("testdata"))
+	snapshotsDir := filepath.Join("testdata", "snapshots")
+	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory(snapshotsDir))
 }
 
 func TestQuery(t *testing.T) {
