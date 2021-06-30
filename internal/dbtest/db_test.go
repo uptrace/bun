@@ -13,11 +13,11 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +35,7 @@ func pg() *bun.DB {
 }
 
 func sqlite(t *testing.T) *bun.DB {
-	sqldb, err := sql.Open("sqlite3", ":memory:?cache=shared")
+	sqldb, err := sql.Open(sqliteshim.ShimName, "file::memory:?cache=shared")
 	require.NoError(t, err)
 
 	sqldb.SetMaxIdleConns(1000)
