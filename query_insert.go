@@ -161,7 +161,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 	b = append(b, "INTO "...)
 
-	if !q.onConflict.IsZero() && q.db.supportsInsertTableAlias() {
+	if q.db.features.Has(feature.InsertTableAlias) && !q.onConflict.IsZero() {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
 	} else {
 		b, err = q.appendFirstTable(fmter, b)
