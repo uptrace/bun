@@ -26,6 +26,7 @@ func New() *Dialect {
 	d.features = feature.Returning |
 		feature.DefaultPlaceholder |
 		feature.DoubleColonCast |
+		feature.InsertTableAlias |
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate

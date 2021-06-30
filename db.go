@@ -486,10 +486,6 @@ func (db *DB) supportsDeleteTableAlias() bool {
 	return true
 }
 
-func (db *DB) supportsInsertTableAlias() bool {
-	return db.dialect.Name() != dialect.MySQL
-}
-
 func (db *DB) mysqlVersion() string {
 	db.mysql.versionOnce.Do(func() {
 		var version string

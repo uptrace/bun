@@ -21,7 +21,7 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Returning
+	d.features = feature.Returning | feature.InsertTableAlias
 	return d
 }
 

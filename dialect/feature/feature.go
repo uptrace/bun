@@ -12,6 +12,7 @@ const (
 	DoubleColonCast
 	ValuesRow
 	UpdateMultiTable
+	InsertTableAlias
 	AutoIncrement
 	TableCascade
 	TableIdentity
