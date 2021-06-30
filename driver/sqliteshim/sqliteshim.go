@@ -17,17 +17,8 @@ func init() {
 	sql.Register(ShimName, shimDriver)
 }
 
-const (
-	// ShimName is the name of the shim database/sql driver registration.
-	ShimName = "sqliteshim"
-
-	// DriverName is the name of the database/sql driver. Note that
-	// the value depends on the build target.
-	DriverName = driverName
-
-	// HasDriver indicates that SQLite driver implementation is available.
-	HasDriver = !needsCgo || (needsCgo && usesCgo)
-)
+// ShimName is the name of the shim database/sql driver registration.
+const ShimName = "sqliteshim"
 
 // UnsupportedError is returned from driver on unsupported platforms.
 type UnsupportedError struct{}
@@ -36,7 +27,19 @@ func (e *UnsupportedError) Error() string {
 	return "sqlite driver is not available on the current platform"
 }
 
+// HasDriver indicates that SQLite driver implementation is available.
+func HasDriver() bool {
+	return hasDriver
+}
+
 // Driver returns the shim driver registered under ShimName name.
 func Driver() driver.Driver {
 	return shimDriver
+}
+
+// DriverName is the name of the database/sql driver. Note that unlike ShimName
+// the value depends on the build target. That is, DriverName returns the name
+// of the underlying database driver.
+func DriverName() string {
+	return driverName
 }

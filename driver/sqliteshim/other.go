@@ -15,8 +15,7 @@ package sqliteshim
 import "database/sql/driver"
 
 const (
-	needsCgo   = true
-	usesCgo    = false
+	hasDriver  = false
 	driverName = ShimName
 )
 

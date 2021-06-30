@@ -15,8 +15,7 @@ package sqliteshim
 import "github.com/mattn/go-sqlite3"
 
 const (
-	needsCgo   = true
-	usesCgo    = true
+	hasDriver  = true
 	driverName = "sqlite3"
 )
 

@@ -14,7 +14,7 @@ func TestShim(t *testing.T) {
 	sqldb, err := sqlOpen(t, sqliteshim.ShimName)
 	require.NoError(t, err)
 	_, err = sqldb.Exec("SELECT 1")
-	if !sqliteshim.HasDriver {
+	if !sqliteshim.HasDriver() {
 		assert.ErrorAs(t, err, new(*sqliteshim.UnsupportedError))
 		return
 	}
@@ -22,17 +22,17 @@ func TestShim(t *testing.T) {
 }
 
 func TestDriver(t *testing.T) {
-	if !sqliteshim.HasDriver {
+	if !sqliteshim.HasDriver() {
 		t.SkipNow()
 	}
-	sqldb, err := sqlOpen(t, sqliteshim.DriverName)
+	sqldb, err := sqlOpen(t, sqliteshim.DriverName())
 	require.NoError(t, err)
 	_, err = sqldb.Exec("SELECT 1")
 	require.NoError(t, err)
 }
 
 func TestNoImports(t *testing.T) {
-	if sqliteshim.HasDriver {
+	if sqliteshim.HasDriver() {
 		t.SkipNow()
 	}
 	drivers := []string{

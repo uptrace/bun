@@ -11,8 +11,7 @@ package sqliteshim
 import "modernc.org/sqlite"
 
 const (
-	needsCgo   = false
-	usesCgo    = false
+	hasDriver  = true
 	driverName = "sqlite"
 )
 
