@@ -2,8 +2,8 @@ package dbtest_test
 
 import (
 	"context"
-	"embed"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -362,11 +362,8 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 	}
 }
 
-//go:embed fixture.yaml
-var fixtureFS embed.FS
-
 func loadTestData(t *testing.T, db *bun.DB) {
 	fixture := dbfixture.New(db)
-	err := fixture.Load(context.TODO(), fixtureFS, "fixture.yaml")
+	err := fixture.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
 	require.NoError(t, err)
 }
