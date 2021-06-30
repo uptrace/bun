@@ -95,12 +95,12 @@ You also need to install a database/sql driver and the corresponding Bun
 
 ## Quickstart
 
-First you need to create a `sql.DB`. Here we using the SQLite3 driver.
+First you need to create a `sql.DB`. Here we are using the [SQLite3 driver](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim).
 
 ```go
-import _ "github.com/mattn/go-sqlite3"
+import _ "github.com/uptrace/bun/driver/sqliteshim"
 
-sqldb, err := sql.Open("sqlite3", ":memory:?cache=shared")
+sqldb, err := sql.Open("sqliteshim", "file::memory:?cache=shared")
 if err != nil {
 	panic(err)
 }
