@@ -1,7 +1,6 @@
 package dbtest_test
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -18,10 +17,10 @@ type Bench struct {
 }
 
 func BenchmarkSelectOne(b *testing.B) {
-	db := benchDB()
+	benchEachDB(b, benchmarkSelectOne)
+}
 
-	b.ResetTimer()
-
+func benchmarkSelectOne(b *testing.B, db *bun.DB) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			bench := new(Bench)
@@ -34,10 +33,10 @@ func BenchmarkSelectOne(b *testing.B) {
 }
 
 func BenchmarkSelectSlice(b *testing.B) {
-	db := benchDB()
+	benchEachDB(b, benchmarkSelectSlice)
+}
 
-	b.ResetTimer()
-
+func benchmarkSelectSlice(b *testing.B, db *bun.DB) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			var bs []Bench
@@ -50,10 +49,10 @@ func BenchmarkSelectSlice(b *testing.B) {
 }
 
 func BenchmarkSelectError(b *testing.B) {
-	db := benchDB()
+	benchEachDB(b, benchmarkSelectError)
+}
 
-	b.ResetTimer()
-
+func benchmarkSelectError(b *testing.B, db *bun.DB) {
 	b.RunParallel(func(pb *testing.PB) {
 		var i int
 		for pb.Next() {
@@ -71,28 +70,23 @@ func BenchmarkSelectError(b *testing.B) {
 	})
 }
 
-var (
-	dbOnce sync.Once
-	db     *bun.DB
-)
+func benchEachDB(b *testing.B, f func(b *testing.B, db *bun.DB)) {
+	for name, newDB := range allDBs {
+		b.Run(name, func(b *testing.B) {
+			db := newDB(b)
+			db.SetMaxOpenConns(64)
+			db.SetMaxIdleConns(64)
 
-func benchDB() *bun.DB {
-	dbOnce.Do(func() {
-		db = pg()
-		db.SetMaxOpenConns(64)
-		db.SetMaxIdleConns(64)
+			err := resetBenchSchema(db)
+			require.NoError(b, err)
 
-		if err := resetBenchSchema(); err != nil {
-			panic(err)
-		}
-	})
-	return db
+			b.ResetTimer()
+			f(b, db)
+		})
+	}
 }
 
-func resetBenchSchema() error {
-	db := pg()
-	defer db.Close()
-
+func resetBenchSchema(db *bun.DB) error {
 	if err := db.ResetModel(ctx, (*Bench)(nil)); err != nil {
 		return err
 	}

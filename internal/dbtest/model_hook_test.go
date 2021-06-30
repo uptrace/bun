@@ -35,13 +35,7 @@ func (es *Events) Flush() []string {
 }
 
 func TestModelHook(t *testing.T) {
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
-
-			testModelHook(t, db)
-		})
-	}
+	testEachDB(t, testModelHook)
 }
 
 func testModelHook(t *testing.T, db *bun.DB) {
