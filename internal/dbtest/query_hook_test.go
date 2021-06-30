@@ -12,13 +12,7 @@ import (
 )
 
 func TestQueryHook(t *testing.T) {
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
-
-			testQueryHook(t, db)
-		})
-	}
+	testEachDB(t, testQueryHook)
 }
 
 func testQueryHook(t *testing.T, db *bun.DB) {

@@ -10,11 +10,21 @@ services:
       - MYSQL_ROOT_PASSWORD=pass
     ports:
       - 3306:3306
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping" ]
+      timeout: 5s
+      interval: 10s
+      retries: 3
   postgres:
     image: postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=test
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      timeout: 5s
+      interval: 10s
+      retries: 5
     ports:
       - 5432:5432

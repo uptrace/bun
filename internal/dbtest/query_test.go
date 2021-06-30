@@ -13,6 +13,10 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+func init() {
+	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory("testdata"))
+}
+
 func TestQuery(t *testing.T) {
 	type Model struct {
 		ID  int64
@@ -424,21 +428,19 @@ func TestQuery(t *testing.T) {
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}'`)
 
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			for i, fn := range queries {
-				t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-					q := fn(db)
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		for i, fn := range queries {
+			t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+				q := fn(db)
 
-					query, err := q.AppendQuery(db.Formatter(), nil)
-					if err != nil {
-						cupaloy.SnapshotT(t, err.Error())
-					} else {
-						query = timeRE.ReplaceAll(query, []byte("[TIME]"))
-						cupaloy.SnapshotT(t, string(query))
-					}
-				})
-			}
-		})
-	}
+				query, err := q.AppendQuery(db.Formatter(), nil)
+				if err != nil {
+					cupaloy.SnapshotT(t, err.Error())
+				} else {
+					query = timeRE.ReplaceAll(query, []byte("[TIME]"))
+					cupaloy.SnapshotT(t, string(query))
+				}
+			})
+		}
+	})
 }

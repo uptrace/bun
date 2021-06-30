@@ -2,8 +2,8 @@ package dbtest_test
 
 import (
 	"context"
+	"embed"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,20 +29,16 @@ func TestORM(t *testing.T) {
 		{"testBulkUpdate", testBulkUpdate},
 	}
 
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		createTestSchema(t, db)
+		loadTestData(t, db)
 
-			createTestSchema(t, db)
-			loadTestData(t, db)
-
-			for _, test := range tests {
-				t.Run(test.name, func(t *testing.T) {
-					test.fn(t, db)
-				})
-			}
-		})
-	}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				test.fn(t, db)
+			})
+		}
+	})
 }
 
 func testBookRelations(t *testing.T, db *bun.DB) {
@@ -366,8 +362,11 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 	}
 }
 
+//go:embed fixture.yaml
+var fixtureFS embed.FS
+
 func loadTestData(t *testing.T, db *bun.DB) {
 	fixture := dbfixture.New(db)
-	err := fixture.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
+	err := fixture.Load(context.TODO(), fixtureFS, "fixture.yaml")
 	require.NoError(t, err)
 }
