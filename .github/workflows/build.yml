@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.16.x]
+        mysql-version: [5.7, 8.0]
 
     services:
       postgres:
@@ -24,7 +25,7 @@ jobs:
         ports:
           - 5432:5432
       mysql:
-        image: mysql:8.0
+        image: mysql:${{ matrix.mysql-version }}
         env:
           MYSQL_DATABASE: test
           MYSQL_USER: user
@@ -41,6 +42,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
+          mysql-version: ${{ matrix.mysql-version }}
 
       - name: Checkout code
         uses: actions/checkout@v2
