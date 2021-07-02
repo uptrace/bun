@@ -1,6 +1,7 @@
 package pgdialect
 
 import (
+	"database/sql"
 	"reflect"
 	"strconv"
 	"sync"
@@ -27,11 +28,14 @@ func New() *Dialect {
 		feature.DefaultPlaceholder |
 		feature.DoubleColonCast |
 		feature.InsertTableAlias |
+		feature.DeleteTableAlias |
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate
 	return d
 }
+
+func (d *Dialect) Init(*sql.DB) {}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.PG

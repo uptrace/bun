@@ -1,6 +1,7 @@
 package sqlitedialect
 
 import (
+	"database/sql"
 	"reflect"
 	"sync"
 
@@ -21,9 +22,11 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Returning | feature.InsertTableAlias
+	d.features = feature.Returning | feature.InsertTableAlias | feature.DeleteTableAlias
 	return d
 }
+
+func (d *Dialect) Init(*sql.DB) {}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.SQLite
