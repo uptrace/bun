@@ -6,18 +6,18 @@ import (
 	"os"
 
 	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/example/migrate/migrations"
 	"github.com/uptrace/bun/extra/bundebug"
 	"github.com/uptrace/bun/migrate"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/urfave/cli/v2"
 
 	"github.com/uptrace/bun"
 )
 
 func main() {
-	sqldb, err := sql.Open("sqlite3", "file:test.s3db?cache=shared")
+	sqldb, err := sql.Open(sqliteshim.ShimName, "file:test.s3db?cache=shared")
 	if err != nil {
 		panic(err)
 	}
