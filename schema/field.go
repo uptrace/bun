@@ -11,9 +11,9 @@ import (
 type Field struct {
 	StructField reflect.StructField
 
-	Tag   tagparser.Tag
-	Type  reflect.Type
-	Index []int
+	Tag          tagparser.Tag
+	IndirectType reflect.Type
+	Index        []int
 
 	Name    string // SQL name, .e.g. id
 	SQLName Safe   // escaped SQL name, e.g. "id"
@@ -81,7 +81,7 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 
 func (f *Field) ScanWithCheck(fv reflect.Value, src interface{}) error {
 	if f.Scan == nil {
-		return fmt.Errorf("bun: Scan(unsupported %s)", f.Type)
+		return fmt.Errorf("bun: Scan(unsupported %s)", f.IndirectType)
 	}
 	return f.Scan(fv, src)
 }

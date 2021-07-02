@@ -61,14 +61,14 @@ func fieldSQLType(field *schema.Field) string {
 	}
 
 	if _, ok := field.Tag.Options["array"]; ok {
-		switch field.Type.Kind() {
+		switch field.IndirectType.Kind() {
 		case reflect.Slice, reflect.Array:
-			sqlType := sqlType(field.Type.Elem())
+			sqlType := sqlType(field.IndirectType.Elem())
 			return sqlType + "[]"
 		}
 	}
 
-	return sqlType(field.Type)
+	return sqlType(field.IndirectType)
 }
 
 func sqlType(typ reflect.Type) string {
