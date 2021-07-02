@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"database/sql"
 	"reflect"
 	"sync"
 
@@ -9,6 +10,8 @@ import (
 )
 
 type Dialect interface {
+	Init(db *sql.DB)
+
 	Name() dialect.Name
 	Features() feature.Feature
 
@@ -37,6 +40,8 @@ func newNopDialect() *nopDialect {
 	d.features = feature.Returning
 	return d
 }
+
+func (d *nopDialect) Init(*sql.DB) {}
 
 func (d *nopDialect) Name() dialect.Name {
 	return dialect.Invalid

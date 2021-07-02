@@ -1,13 +1,17 @@
 package mysqldialect
 
 import (
+	"database/sql"
+	"log"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/schema"
+	"golang.org/x/mod/semver"
 )
 
 type Dialect struct {
@@ -28,6 +32,26 @@ func New() *Dialect {
 		feature.TableTruncate |
 		feature.OnDuplicateKey
 	return d
+}
+
+func (d *Dialect) Init(db *sql.DB) {
+	var version string
+	if err := db.QueryRow("SELECT version()").Scan(&version); err != nil {
+		log.Printf("can't discover MySQL version: %s", err)
+		return
+	}
+
+	version = semver.MajorMinor("v" + cleanupVersion(version))
+	if semver.Compare(version, "v8.0") >= 0 {
+		d.features |= feature.DeleteTableAlias
+	}
+}
+
+func cleanupVersion(s string) string {
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		return s[:i]
+	}
+	return s
 }
 
 func (d *Dialect) Name() dialect.Name {
