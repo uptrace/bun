@@ -859,6 +859,11 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
 	switch field.Type {
 	case timeType:
 		return func(fv reflect.Value) error {
+			if fv.Kind() == reflect.Ptr {
+				now := time.Now()
+				fv.Set(reflect.ValueOf(&now))
+				return nil
+			}
 			ptr := fv.Addr().Interface().(*time.Time)
 			*ptr = time.Now()
 			return nil
