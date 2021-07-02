@@ -5,7 +5,14 @@
 sqliteshim automatically loads [modernc.org/sqlite](https://modernc.org/sqlite/) or
 [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) depending on your platform.
 
-You can install it with:
+Currently sqliteshim uses packages in the following order:
+
+- [modernc.org/sqlite](https://modernc.org/sqlite/) on supported platforms.
+- [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) if Cgo is enabled.
+
+Otherwise it registers a driver that returns an error on unsupported platforms.
+
+You can install sqliteshim with:
 
 ```shell
 go get github.com/uptrace/bun/driver/sqliteshim
