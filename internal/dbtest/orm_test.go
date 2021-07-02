@@ -13,6 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
+	"github.com/uptrace/bun/dialect"
 )
 
 func TestORM(t *testing.T) {
@@ -221,6 +222,10 @@ func testTranslationRelations(t *testing.T, db *bun.DB) {
 }
 
 func testBulkUpdate(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	var books []Book
 	err := db.NewSelect().Model(&books).Scan(ctx)
 	require.NoError(t, err)

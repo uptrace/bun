@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -14,7 +15,11 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const datetimeType = "DATETIME"
+
 type Dialect struct {
+	name dialect.Name
+
 	tables   *schema.Tables
 	features feature.Feature
 
@@ -24,6 +29,7 @@ type Dialect struct {
 
 func New() *Dialect {
 	d := new(Dialect)
+	d.name = dialect.MySQL5
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
 		feature.DefaultPlaceholder |
@@ -43,6 +49,7 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	version = semver.MajorMinor("v" + cleanupVersion(version))
 	if semver.Compare(version, "v8.0") >= 0 {
+		d.name = dialect.MySQL8
 		d.features |= feature.DeleteTableAlias
 	}
 }
@@ -55,7 +62,7 @@ func cleanupVersion(s string) string {
 }
 
 func (d *Dialect) Name() dialect.Name {
-	return dialect.MySQL8
+	return d.name
 }
 
 func (d *Dialect) Features() feature.Feature {
@@ -77,7 +84,12 @@ func (d *Dialect) IdentQuote() byte {
 }
 
 func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
-	return schema.Append(fmter, b, v)
+	switch v := v.(type) {
+	case time.Time:
+		return appendTime(b, v)
+	default:
+		return schema.Append(fmter, b, v)
+	}
 }
 
 func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
@@ -85,7 +97,7 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 		return v.(schema.AppenderFunc)
 	}
 
-	fn := schema.Appender(typ)
+	fn := appender(typ)
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(schema.AppenderFunc)
@@ -111,7 +123,7 @@ func sqlType(field *schema.Field) string {
 	case sqltype.VarChar:
 		return field.DiscoveredSQLType + "(255)"
 	case sqltype.Timestamp:
-		return "DATETIME"
+		return datetimeType
 	}
 	return field.DiscoveredSQLType
 }

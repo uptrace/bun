@@ -428,7 +428,7 @@ func TestQuery(t *testing.T) {
 		},
 	}
 
-	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}'`)
+	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
 		for i, fn := range queries {

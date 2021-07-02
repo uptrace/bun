@@ -39,7 +39,7 @@ func (tm *CustomTime) IsZero() bool {
 type Video struct {
 	ID        int64
 	Name      string
-	DeletedAt CustomTime `bun:"type:timestamp,soft_delete"`
+	DeletedAt time.Time `bun:",soft_delete"`
 }
 
 func testSoftDelete(t *testing.T, db *bun.DB) {

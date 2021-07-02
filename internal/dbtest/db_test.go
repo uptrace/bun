@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -73,9 +74,9 @@ func sqlite(tb testing.TB) *bun.DB {
 }
 
 func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
-	for name, newDB := range allDBs {
-		t.Run(name, func(t *testing.T) {
-			db := newDB(t)
+	for _, newDB := range allDBs {
+		db := newDB(t)
+		t.Run(db.Dialect().Name().String(), func(t *testing.T) {
 			if _, ok := os.LookupEnv("DEBUG"); ok {
 				db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 			}
@@ -138,11 +139,15 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, 10, num)
 
-	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, &num)
+	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
@@ -171,6 +176,10 @@ func testSelectMap(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMapSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
 		{"column1": 2},
@@ -205,7 +214,7 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	require.Equal(t, 10, model.Num)
 	require.Equal(t, "hello", model.Str)
 
-	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, model)
+	err = db.NewSelect().TableExpr("(SELECT 42) AS t").Where("FALSE").Scan(ctx, model)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
@@ -266,6 +275,10 @@ func testSelectNestedStructPtr(t *testing.T, db *bun.DB) {
 }
 
 func testSelectStructSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	type Model struct {
 		Num int `bun:"column1"`
 	}
@@ -289,6 +302,10 @@ func testSelectStructSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectSingleSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
 		{"column1": 2},
@@ -305,6 +322,10 @@ func testSelectSingleSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMultiSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"a": 1, "b": "foo"},
 		{"a": 2, "b": "bar"},
@@ -383,6 +404,10 @@ func testScanSingleRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
@@ -413,6 +438,10 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanRows(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
