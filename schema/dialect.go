@@ -4,11 +4,12 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 )
 
 type Dialect interface {
-	Name() string
+	Name() dialect.Name
 	Features() feature.Feature
 
 	Tables() *Tables
@@ -37,8 +38,8 @@ func newNopDialect() *nopDialect {
 	return d
 }
 
-func (d *nopDialect) Name() string {
-	return ""
+func (d *nopDialect) Name() dialect.Name {
+	return dialect.Invalid
 }
 
 func (d *nopDialect) Features() feature.Feature {

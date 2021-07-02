@@ -30,8 +30,8 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Name() string {
-	return dialect.MySQL
+func (d *Dialect) Name() dialect.Name {
+	return dialect.MySQL8
 }
 
 func (d *Dialect) Features() feature.Feature {

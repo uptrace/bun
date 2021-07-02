@@ -480,7 +480,7 @@ func (tx Tx) NewDropColumn() *DropColumnQuery {
 //------------------------------------------------------------------------------0
 
 func (db *DB) supportsDeleteTableAlias() bool {
-	if db.dialect.Name() == dialect.MySQL {
+	if db.dialect.Name() == dialect.MySQL8 {
 		return semver.Compare(db.mysqlVersion(), "v8.0") >= 0
 	}
 	return true

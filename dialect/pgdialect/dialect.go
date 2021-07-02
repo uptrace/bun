@@ -33,7 +33,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Name() string {
+func (d *Dialect) Name() dialect.Name {
 	return dialect.PG
 }
 
