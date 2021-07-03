@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun/driver/sqliteshim)](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim)
 
-sqliteshim automatically loads [modernc.org/sqlite](https://modernc.org/sqlite/) or
+sqliteshim automatically imports [modernc.org/sqlite](https://modernc.org/sqlite/) or
 [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) depending on your platform.
 
 Currently sqliteshim uses packages in the following order:
