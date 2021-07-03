@@ -426,6 +426,15 @@ func TestQuery(t *testing.T) {
 				Model(&models).
 				Bulk()
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   string `bun:",pk"`
+				Name string
+			}
+			return db.NewCreateTable().
+				Model((*Model)(nil)).
+				IfNotExists()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
