@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -95,7 +96,12 @@ func newDBCommand(migrations *migrate.Migrations, db *bun.DB) *cli.Command {
 				Name:  "status",
 				Usage: "print migrations status",
 				Action: func(c *cli.Context) error {
-					return migrations.Status(c.Context, db)
+					status, err := migrations.Status(c.Context, db)
+					if err != nil {
+						return err
+					}
+					fmt.Println(status.String())
+					return nil
 				},
 			},
 			{

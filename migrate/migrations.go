@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -282,50 +283,91 @@ func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-func (m *Migrations) Status(ctx context.Context, db *bun.DB) error {
-	allMigrations := m.sortedMigrations()
-	if len(allMigrations) > 0 {
-		fmt.Printf("In total you have %d migrations: %s\n",
-			len(allMigrations), migrationNames(allMigrations))
-	} else {
-		fmt.Println("You don't have any migrations")
-		return nil
+type Status struct {
+	Migrations           []Migration
+	NewMigrations        []Migration
+	LastMigrationGroup   []Migration
+	LastMigrationGroupID int64
+}
+
+func (s Status) String() string {
+	var sb strings.Builder
+
+	if len(s.Migrations) == 0 {
+		sb.WriteString("No migrations available")
+		return sb.String()
+	}
+
+	sb.WriteString("Total number of migrations: ")
+	sb.WriteString(strconv.Itoa(len(s.Migrations)))
+	sb.WriteString(" (")
+	sb.WriteString(migrationNames(s.Migrations))
+	sb.WriteString(")\n")
+
+	if s.LastMigrationGroupID == 0 {
+		sb.WriteString("No migrations to rollback")
+		return sb.String()
+	}
+
+	sb.WriteString("Last migration group: ")
+	sb.WriteString(strconv.FormatInt(s.LastMigrationGroupID, 10))
+	sb.WriteString(" (")
+	sb.WriteString(migrationNames(s.LastMigrationGroup))
+	sb.WriteString(")\n")
+
+	if len(s.NewMigrations) == 0 {
+		sb.WriteString("Database is up to date")
+		return sb.String()
+	}
+
+	sb.WriteString("Number of new migrations: ")
+	sb.WriteString(strconv.Itoa(len(s.NewMigrations)))
+	sb.WriteString(" (")
+	sb.WriteString(migrationNames(s.NewMigrations))
+	sb.WriteString(")")
+
+	return sb.String()
+}
+
+func (m *Migrations) Status(ctx context.Context, db *bun.DB) (*Status, error) {
+	status := new(Status)
+	status.Migrations = m.sortedMigrations()
+	if len(status.Migrations) == 0 {
+		return status, nil
 	}
 
 	lastGroup, lastGroupID, err := m.selectLastGroup(ctx, db)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if lastGroupID != 0 {
-		fmt.Printf("The last migration group is #%d: %s\n", lastGroupID, migrationNames(lastGroup))
-	} else {
-		fmt.Println("You don't have any migrations to rollback")
-	}
+
+	status.LastMigrationGroup = lastGroup
+	status.LastMigrationGroupID = lastGroupID
 
 	newMigrations, _, err := m.selectNewMigrations(ctx, db)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if len(newMigrations) > 0 {
-		fmt.Printf("You have %d new migrations: %s\n",
-			len(newMigrations), migrationNames(newMigrations))
-	} else {
-		fmt.Println("You don't have new migrations (database is up to date)")
-	}
+	status.NewMigrations = newMigrations
 
-	return nil
+	return status, nil
 }
 
 func migrationNames(migrations []Migration) string {
-	names := make([]string, len(migrations))
+	if len(migrations) > 5 {
+		return migrations[0].Name + " ... " + migrations[len(migrations)-1].Name
+	}
+
+	var sb strings.Builder
 	for i := range migrations {
-		names[i] = migrations[i].Name
+		sb.WriteString(migrations[i].Name)
+		if i+1 != len(migrations) {
+			sb.WriteString(", ")
+		}
 	}
-	if len(names) <= 5 {
-		return strings.Join(names, " ")
-	}
-	return names[0] + " ... " + names[len(names)-1]
+
+	return sb.String()
 }
 
 func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) error {
