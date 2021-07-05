@@ -537,7 +537,6 @@ func (m *Migrations) Lock(ctx context.Context, db *bun.DB) error {
 		Model(lock).
 		ModelTableExpr(m.locksTableNameWithAlias()).
 		Exec(ctx); err != nil {
-
 		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
 	}
 	return nil
