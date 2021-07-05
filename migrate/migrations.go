@@ -35,11 +35,18 @@ func WithLocksTableName(table string) MigrationsOption {
 	}
 }
 
+func WithDirectory(directory string) MigrationsOption {
+	return func(m *Migrations) {
+		m.directory = directory
+	}
+}
+
 type Migrations struct {
 	ms []Migration
 
 	table      string
 	locksTable string
+	directory  string
 }
 
 func NewMigrations(opts ...MigrationsOption) *Migrations {
@@ -335,7 +342,7 @@ func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) erro
 	}
 
 	fname := name + ".go"
-	fpath := filepath.Join(migrationsDir(), fname)
+	fpath := filepath.Join(m.migrationsDir(), fname)
 
 	fmt.Printf("creating %s...\n", fname)
 	return ioutil.WriteFile(fpath, []byte(goTemplate), 0o644)
@@ -348,7 +355,7 @@ func (m *Migrations) CreateSQL(ctx context.Context, db *bun.DB, name string) err
 	}
 
 	fname := name + ".up.sql"
-	fpath := filepath.Join(migrationsDir(), fname)
+	fpath := filepath.Join(m.migrationsDir(), fname)
 
 	fmt.Printf("creating %s...\n", fname)
 	return ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644)
@@ -408,6 +415,13 @@ func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migrati
 		Where("id = ?", migration.ID).
 		Exec(ctx)
 	return err
+}
+
+func (m *Migrations) migrationsDir() string {
+	if m.directory == "" {
+		return filepath.Dir(migrationFile())
+	}
+	return m.directory
 }
 
 // selectCompletedMigrations selects completed migrations in descending order
@@ -536,10 +550,6 @@ func migrationFile() string {
 	}
 
 	return ""
-}
-
-func migrationsDir() string {
-	return filepath.Dir(migrationFile())
 }
 
 var fnameRE = regexp.MustCompile(`^(\d{14})_[0-9a-z_\-]+\.`)
