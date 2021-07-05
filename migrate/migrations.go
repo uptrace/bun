@@ -284,9 +284,6 @@ func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 }
 
 type Status struct {
-	UpToDate bool
-	Locked   bool
-
 	Migrations           []Migration
 	NewMigrations        []Migration
 	LastMigrationGroup   []Migration
@@ -295,11 +292,6 @@ type Status struct {
 
 func (s Status) String() string {
 	var sb strings.Builder
-	if s.Locked {
-		sb.WriteString("Migration table is locked\n")
-	} else {
-		sb.WriteString("Migration table is unlocked\n")
-	}
 
 	if len(s.Migrations) == 0 {
 		sb.WriteString("No migrations available")
@@ -339,18 +331,6 @@ func (s Status) String() string {
 
 func (m *Migrations) Status(ctx context.Context, db *bun.DB) (*Status, error) {
 	status := new(Status)
-
-	tableName := m.formattedTableName(db)
-	locked, err := db.NewSelect().
-		Model((*migrationLock)(nil)).
-		ModelTableExpr(m.locksTableNameWithAlias()).
-		Where("? = ?", bun.Ident("table_name"), tableName).
-		Count(ctx)
-	if err != nil {
-		return nil, err
-	}
-	status.Locked = locked == 1
-
 	status.Migrations = m.sortedMigrations()
 	if len(status.Migrations) == 0 {
 		return status, nil
@@ -370,7 +350,6 @@ func (m *Migrations) Status(ctx context.Context, db *bun.DB) (*Status, error) {
 	}
 
 	status.NewMigrations = newMigrations
-	status.UpToDate = len(newMigrations) == 0
 
 	return status, nil
 }
@@ -558,6 +537,7 @@ func (m *Migrations) Lock(ctx context.Context, db *bun.DB) error {
 		Model(lock).
 		ModelTableExpr(m.locksTableNameWithAlias()).
 		Exec(ctx); err != nil {
+
 		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
 	}
 	return nil
