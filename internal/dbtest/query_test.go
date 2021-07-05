@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -12,6 +13,11 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
+
+func init() {
+	snapshotsDir := filepath.Join("testdata", "snapshots")
+	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory(snapshotsDir))
+}
 
 func TestQuery(t *testing.T) {
 	type Model struct {
@@ -420,25 +426,32 @@ func TestQuery(t *testing.T) {
 				Model(&models).
 				Bulk()
 		},
-	}
-
-	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}'`)
-
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			for i, fn := range queries {
-				t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-					q := fn(db)
-
-					query, err := q.AppendQuery(db.Formatter(), nil)
-					if err != nil {
-						cupaloy.SnapshotT(t, err.Error())
-					} else {
-						query = timeRE.ReplaceAll(query, []byte("[TIME]"))
-						cupaloy.SnapshotT(t, string(query))
-					}
-				})
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   string `bun:",pk"`
+				Name string
 			}
-		})
+			return db.NewCreateTable().
+				Model((*Model)(nil)).
+				IfNotExists()
+		},
 	}
+
+	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
+
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		for i, fn := range queries {
+			t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+				q := fn(db)
+
+				query, err := q.AppendQuery(db.Formatter(), nil)
+				if err != nil {
+					cupaloy.SnapshotT(t, err.Error())
+				} else {
+					query = timeRE.ReplaceAll(query, []byte("[TIME]"))
+					cupaloy.SnapshotT(t, string(query))
+				}
+			})
+		}
+	})
 }

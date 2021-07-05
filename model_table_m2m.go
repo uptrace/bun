@@ -105,7 +105,7 @@ func (m *m2mModel) Scan(src interface{}) error {
 func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
 	for _, field := range m.rel.M2MBaseFields {
 		if field.Name == column {
-			dest := reflect.New(field.Type).Elem()
+			dest := reflect.New(field.IndirectType).Elem()
 			if err := field.Scan(dest, src); err != nil {
 				return err
 			}

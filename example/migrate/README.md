@@ -1,5 +1,11 @@
 # bun migrations example
 
+To run migrations:
+
+```shell
+go run main.go db migrate
+```
+
 To get help:
 
 ```shell

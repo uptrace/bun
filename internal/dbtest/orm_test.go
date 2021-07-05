@@ -13,6 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
+	"github.com/uptrace/bun/dialect"
 )
 
 func TestORM(t *testing.T) {
@@ -29,20 +30,16 @@ func TestORM(t *testing.T) {
 		{"testBulkUpdate", testBulkUpdate},
 	}
 
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		createTestSchema(t, db)
+		loadTestData(t, db)
 
-			createTestSchema(t, db)
-			loadTestData(t, db)
-
-			for _, test := range tests {
-				t.Run(test.name, func(t *testing.T) {
-					test.fn(t, db)
-				})
-			}
-		})
-	}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				test.fn(t, db)
+			})
+		}
+	})
 }
 
 func testBookRelations(t *testing.T, db *bun.DB) {
@@ -225,6 +222,10 @@ func testTranslationRelations(t *testing.T, db *bun.DB) {
 }
 
 func testBulkUpdate(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	var books []Book
 	err := db.NewSelect().Model(&books).Scan(ctx)
 	require.NoError(t, err)

@@ -13,6 +13,7 @@ const (
 	ValuesRow
 	UpdateMultiTable
 	InsertTableAlias
+	DeleteTableAlias
 	AutoIncrement
 	TableCascade
 	TableIdentity

@@ -12,19 +12,7 @@ import (
 )
 
 func TestSoftDelete(t *testing.T) {
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
-
-			_, err := db.NewDropTable().Model((*Video)(nil)).IfExists().Exec(ctx)
-			require.NoError(t, err)
-
-			_, err = db.NewCreateTable().Model((*Video)(nil)).Exec(ctx)
-			require.NoError(t, err)
-
-			testSoftDelete(t, db)
-		})
-	}
+	testEachDB(t, testSoftDelete)
 }
 
 type CustomTime struct {
@@ -51,14 +39,20 @@ func (tm *CustomTime) IsZero() bool {
 type Video struct {
 	ID        int64
 	Name      string
-	DeletedAt CustomTime `bun:"type:timestamp,soft_delete"`
+	DeletedAt time.Time `bun:",soft_delete"`
 }
 
 func testSoftDelete(t *testing.T, db *bun.DB) {
+	_, err := db.NewDropTable().Model((*Video)(nil)).IfExists().Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().Model((*Video)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
 	video1 := &Video{
 		ID: 1,
 	}
-	_, err := db.NewInsert().Model(video1).Exec(ctx)
+	_, err = db.NewInsert().Model(video1).Exec(ctx)
 	require.NoError(t, err)
 
 	// Count visible videos.

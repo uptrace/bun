@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.14 - Jul 01 2021
+
+- Added [sqliteshim](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim) by
+  [Ivan Trubach](https://github.com/tie).
+- Added support for MySQL 5.7 in addition to MySQL 8.
+
 ## v0.2.12 - Jun 29 2021
 
 - Fixed scanners for net.IP and net.IPNet.

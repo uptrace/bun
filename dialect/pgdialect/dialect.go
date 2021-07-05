@@ -1,6 +1,7 @@
 package pgdialect
 
 import (
+	"database/sql"
 	"reflect"
 	"strconv"
 	"sync"
@@ -27,13 +28,16 @@ func New() *Dialect {
 		feature.DefaultPlaceholder |
 		feature.DoubleColonCast |
 		feature.InsertTableAlias |
+		feature.DeleteTableAlias |
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate
 	return d
 }
 
-func (d *Dialect) Name() string {
+func (d *Dialect) Init(*sql.DB) {}
+
+func (d *Dialect) Name() dialect.Name {
 	return dialect.PG
 }
 
@@ -66,8 +70,8 @@ func (d *Dialect) onField(field *schema.Field) {
 	}
 
 	if field.Tag.HasOption("array") {
-		field.Append = arrayAppender(field.Type)
-		field.Scan = arrayScanner(field.Type)
+		field.Append = arrayAppender(field.IndirectType)
+		field.Scan = arrayScanner(field.IndirectType)
 	}
 }
 

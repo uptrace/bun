@@ -19,8 +19,7 @@ func TestPGArray(t *testing.T) {
 		Array []string `bun:",array"`
 	}
 
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
 	require.NoError(t, err)
@@ -70,8 +69,7 @@ type IngredientRecipe struct {
 }
 
 func TestPGMultiTenant(t *testing.T) {
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	db = db.WithNamedArg("tenant", bun.Safe("public"))
 	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())
@@ -118,8 +116,7 @@ func TestPGInsertNoRows(t *testing.T) {
 		ID int64
 	}
 
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	err := db.ResetModel(ctx, (*User)(nil))
 	require.NoError(t, err)
@@ -156,8 +153,7 @@ func TestPGScanIgnoredField(t *testing.T) {
 		Array []string `bun:"-,array"`
 	}
 
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	model := new(Model)
 	err := db.NewSelect().
@@ -178,8 +174,7 @@ func TestPGScanUUID(t *testing.T) {
 		Array []uuid.UUID `bun:"type:uuid[],array"`
 	}
 
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	ids := []uuid.UUID{uuid.New(), uuid.New()}
 
@@ -204,8 +199,7 @@ func TestPGScanUUID(t *testing.T) {
 }
 
 func TestPGInvalidQuery(t *testing.T) {
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	_, err := db.Exec("invalid query")
 	require.Error(t, err)
@@ -216,8 +210,7 @@ func TestPGInvalidQuery(t *testing.T) {
 }
 
 func TestPGTransaction(t *testing.T) {
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	type Model struct {
 		ID int64
@@ -245,8 +238,7 @@ func TestPGTransaction(t *testing.T) {
 }
 
 func TestPGScanWithoutResult(t *testing.T) {
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	type Model struct {
 		ID int64
@@ -265,8 +257,7 @@ func TestIPNet(t *testing.T) {
 		Network net.IPNet `bun:"type:inet"`
 	}
 
-	db := pg()
-	defer db.Close()
+	db := pg(t)
 
 	err := db.ResetModel(ctx, (*Model)(nil))
 	require.NoError(t, err)

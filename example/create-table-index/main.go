@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
+	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
@@ -31,7 +30,7 @@ func (*Book) AfterCreateTable(ctx context.Context, query *bun.CreateTableQuery) 
 func main() {
 	ctx := context.Background()
 
-	sqlite, err := sql.Open("sqlite3", ":memory:?cache=shared")
+	sqlite, err := sql.Open(sqliteshim.ShimName, "file::memory:?cache=shared")
 	if err != nil {
 		panic(err)
 	}

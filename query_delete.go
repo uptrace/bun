@@ -138,7 +138,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 
 	q = q.WhereAllWithDeleted()
-	withAlias := q.db.supportsDeleteTableAlias()
+	withAlias := q.db.features.Has(feature.DeleteTableAlias)
 
 	b, err = q.appendWith(fmter, b)
 	if err != nil {

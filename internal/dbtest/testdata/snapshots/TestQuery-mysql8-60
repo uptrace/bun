@@ -1,0 +1,1 @@
+INSERT INTO `models` (`bytes`) VALUES ('\x00000000000000000000')

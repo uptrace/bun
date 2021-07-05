@@ -191,7 +191,11 @@ func (t *Table) initFields() {
 		}
 	}
 	if len(t.PKs) == 1 {
-		t.PKs[0].AutoIncrement = true
+		switch t.PKs[0].IndirectType.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			t.PKs[0].AutoIncrement = true
+		}
 	}
 }
 
@@ -310,9 +314,9 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	field := &Field{
 		StructField: f,
 
-		Tag:   tag,
-		Type:  indirectType(f.Type),
-		Index: index,
+		Tag:          tag,
+		IndirectType: indirectType(f.Type),
+		Index:        index,
 
 		Name:    sqlName,
 		GoName:  f.Name,
@@ -343,7 +347,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	if s, ok := field.Tag.Options["type"]; ok {
 		field.UserSQLType = s
 	}
-	field.DiscoveredSQLType = DiscoverSQLType(field.Type)
+	field.DiscoveredSQLType = DiscoverSQLType(field.IndirectType)
 	field.Append = FieldAppender(t.dialect, field)
 	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = FieldZeroChecker(field)
@@ -370,7 +374,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 
 func (t *Table) initInlines() {
 	for _, f := range t.skippedFields {
-		if f.Type.Kind() == reflect.Struct {
+		if f.IndirectType.Kind() == reflect.Struct {
 			t.inlineFields(f, nil)
 		}
 	}
@@ -388,7 +392,7 @@ func (t *Table) initRelations() {
 			i++
 		}
 
-		if f.Type.Kind() == reflect.Struct {
+		if f.IndirectType.Kind() == reflect.Struct {
 			t.inlineFields(f, nil)
 		}
 	}
@@ -439,7 +443,7 @@ func (t *Table) addRelation(rel *Relation) {
 }
 
 func (t *Table) belongsToRelation(field *Field) *Relation {
-	joinTable := t.dialect.Tables().Ref(field.Type)
+	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	if err := joinTable.CheckPKs(); err != nil {
 		panic(err)
 	}
@@ -504,7 +508,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		panic(err)
 	}
 
-	joinTable := t.dialect.Tables().Ref(field.Type)
+	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	rel := &Relation{
 		Type:      BelongsToRelation,
 		Field:     field,
@@ -563,14 +567,14 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 	if err := t.CheckPKs(); err != nil {
 		panic(err)
 	}
-	if field.Type.Kind() != reflect.Slice {
+	if field.IndirectType.Kind() != reflect.Slice {
 		panic(fmt.Errorf(
 			"bun: %s.%s has-many relation requires slice, got %q",
-			t.TypeName, field.GoName, field.Type.Kind(),
+			t.TypeName, field.GoName, field.IndirectType.Kind(),
 		))
 	}
 
-	joinTable := t.dialect.Tables().Ref(indirectType(field.Type.Elem()))
+	joinTable := t.dialect.Tables().Ref(indirectType(field.IndirectType.Elem()))
 	polymorphicValue, isPolymorphic := field.Tag.Options["polymorphic"]
 	rel := &Relation{
 		Type:      HasManyRelation,
@@ -653,13 +657,13 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 }
 
 func (t *Table) m2mRelation(field *Field) *Relation {
-	if field.Type.Kind() != reflect.Slice {
+	if field.IndirectType.Kind() != reflect.Slice {
 		panic(fmt.Errorf(
 			"bun: %s.%s m2m relation requires slice, got %q",
-			t.TypeName, field.GoName, field.Type.Kind(),
+			t.TypeName, field.GoName, field.IndirectType.Kind(),
 		))
 	}
-	joinTable := t.dialect.Tables().Ref(indirectType(field.Type.Elem()))
+	joinTable := t.dialect.Tables().Ref(indirectType(field.IndirectType.Elem()))
 
 	if err := t.CheckPKs(); err != nil {
 		panic(err)
@@ -727,25 +731,25 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	return rel
 }
 
-func (t *Table) inlineFields(strct *Field, path map[reflect.Type]struct{}) {
+func (t *Table) inlineFields(field *Field, path map[reflect.Type]struct{}) {
 	if path == nil {
 		path = map[reflect.Type]struct{}{
 			t.Type: {},
 		}
 	}
 
-	if _, ok := path[strct.Type]; ok {
+	if _, ok := path[field.IndirectType]; ok {
 		return
 	}
-	path[strct.Type] = struct{}{}
+	path[field.IndirectType] = struct{}{}
 
-	joinTable := t.dialect.Tables().Ref(strct.Type)
+	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	for _, f := range joinTable.allFields {
 		f = f.Clone()
-		f.GoName = strct.GoName + "_" + f.GoName
-		f.Name = strct.Name + "__" + f.Name
+		f.GoName = field.GoName + "_" + f.GoName
+		f.Name = field.Name + "__" + f.Name
 		f.SQLName = t.quoteIdent(f.Name)
-		f.Index = appendNew(strct.Index, f.Index...)
+		f.Index = appendNew(field.Index, f.Index...)
 
 		t.fieldsMapMu.Lock()
 		if _, ok := t.FieldMap[f.Name]; !ok {
@@ -753,11 +757,11 @@ func (t *Table) inlineFields(strct *Field, path map[reflect.Type]struct{}) {
 		}
 		t.fieldsMapMu.Unlock()
 
-		if f.Type.Kind() != reflect.Struct {
+		if f.IndirectType.Kind() != reflect.Struct {
 			continue
 		}
 
-		if _, ok := path[f.Type]; !ok {
+		if _, ok := path[f.IndirectType]; !ok {
 			t.inlineFields(f, path)
 		}
 	}
@@ -856,7 +860,9 @@ func parseRelationJoin(join string) ([]string, []string) {
 //------------------------------------------------------------------------------
 
 func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
-	switch field.Type {
+	typ := field.StructField.Type
+
+	switch typ {
 	case timeType:
 		return func(fv reflect.Value) error {
 			ptr := fv.Addr().Interface().(*time.Time)
@@ -877,7 +883,7 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
 		}
 	}
 
-	switch field.Type.Kind() {
+	switch field.IndirectType.Kind() {
 	case reflect.Int64:
 		return func(fv reflect.Value) error {
 			ptr := fv.Addr().Interface().(*int64)
@@ -885,12 +891,10 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
 			return nil
 		}
 	case reflect.Ptr:
-		break
+		typ = typ.Elem()
 	default:
 		return softDeleteFieldUpdaterFallback(field)
 	}
-
-	typ := field.Type.Elem()
 
 	switch typ { //nolint:gocritic
 	case timeType:

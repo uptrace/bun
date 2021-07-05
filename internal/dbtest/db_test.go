@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -18,25 +19,53 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var ctx = context.TODO()
 
-func pg() *bun.DB {
+var allDBs = map[string]func(tb testing.TB) *bun.DB{
+	"pg":     pg,
+	"mysql":  mysql,
+	"sqlite": sqlite,
+}
+
+func pg(tb testing.TB) *bun.DB {
 	dsn := os.Getenv("PG")
 	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test"
+		dsn = "postgres://postgres:postgres@localhost:5432/test?sslmode=disable"
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-	db := bun.NewDB(sqldb, pgdialect.New())
-	return db
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
+
+	return bun.NewDB(sqldb, pgdialect.New())
 }
 
-func sqlite(t *testing.T) *bun.DB {
-	sqldb, err := sql.Open(sqliteshim.ShimName, "file::memory:?cache=shared")
-	require.NoError(t, err)
+func mysql(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("MYSQL")
+	if dsn == "" {
+		dsn = "user:pass@/test"
+	}
+
+	sqldb, err := sql.Open("mysql", dsn)
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
+
+	return bun.NewDB(sqldb, mysqldialect.New())
+}
+
+func sqlite(tb testing.TB) *bun.DB {
+	sqldb, err := sql.Open(sqliteshim.DriverName(), "file::memory:?cache=shared")
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
 
 	sqldb.SetMaxIdleConns(1000)
 	sqldb.SetConnMaxLifetime(0)
@@ -44,32 +73,16 @@ func sqlite(t *testing.T) *bun.DB {
 	return bun.NewDB(sqldb, sqlitedialect.New())
 }
 
-func mysql(t *testing.T) *bun.DB {
-	dsn := os.Getenv("MYSQL")
-	if dsn == "" {
-		dsn = "root:pass@/test"
+func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
+	for _, newDB := range allDBs {
+		db := newDB(t)
+		t.Run(db.Dialect().Name().String(), func(t *testing.T) {
+			if _, ok := os.LookupEnv("DEBUG"); ok {
+				db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+			}
+			f(t, db)
+		})
 	}
-
-	sqldb, err := sql.Open("mysql", dsn)
-	require.NoError(t, err)
-
-	return bun.NewDB(sqldb, mysqldialect.New())
-}
-
-func dbs(t *testing.T) []*bun.DB {
-	dbs := []*bun.DB{
-		pg(),
-		sqlite(t),
-		mysql(t),
-	}
-
-	if false {
-		for _, db := range dbs {
-			db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
-		}
-	}
-
-	return dbs
 }
 
 func TestDB(t *testing.T) {
@@ -100,17 +113,13 @@ func TestDB(t *testing.T) {
 		{"testRunInTx", testRunInTx},
 	}
 
-	for _, db := range dbs(t) {
-		t.Run(db.Dialect().Name(), func(t *testing.T) {
-			defer db.Close()
-
-			for _, test := range tests {
-				t.Run(test.name, func(t *testing.T) {
-					test.run(t, db)
-				})
-			}
-		})
-	}
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				test.run(t, db)
+			})
+		}
+	})
 }
 
 func testPing(t *testing.T, db *bun.DB) {
@@ -130,11 +139,15 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, 10, num)
 
-	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, &num)
+	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
@@ -163,6 +176,10 @@ func testSelectMap(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMapSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
 		{"column1": 2},
@@ -197,7 +214,7 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	require.Equal(t, 10, model.Num)
 	require.Equal(t, "hello", model.Str)
 
-	err = db.NewSelect().ColumnExpr("42").Where("FALSE").Scan(ctx, model)
+	err = db.NewSelect().TableExpr("(SELECT 42) AS t").Where("FALSE").Scan(ctx, model)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
@@ -258,6 +275,10 @@ func testSelectNestedStructPtr(t *testing.T, db *bun.DB) {
 }
 
 func testSelectStructSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	type Model struct {
 		Num int `bun:"column1"`
 	}
@@ -281,6 +302,10 @@ func testSelectStructSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectSingleSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
 		{"column1": 2},
@@ -297,6 +322,10 @@ func testSelectSingleSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMultiSlice(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"a": 1, "b": "foo"},
 		{"a": 2, "b": "bar"},
@@ -375,6 +404,10 @@ func testScanSingleRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},
@@ -405,6 +438,10 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanRows(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL5 {
+		t.Skip()
+	}
+
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
 		{"num": 2},

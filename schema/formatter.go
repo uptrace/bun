@@ -68,7 +68,7 @@ func (f Formatter) String() string {
 }
 
 func (f Formatter) IsNop() bool {
-	return f.dialect.Name() == ""
+	return f.dialect.Name() == dialect.Invalid
 }
 
 func (f Formatter) Dialect() Dialect {
