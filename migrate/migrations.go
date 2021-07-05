@@ -18,6 +18,14 @@ import (
 	"github.com/uptrace/bun"
 )
 
+var log = func(format string, a ...interface{}) {
+	fmt.Printf(format, a...)
+}
+
+func SetLogFn(fn func(format string, a ...interface{})) {
+	log = fn
+}
+
 type Command struct {
 	Name string
 }
@@ -125,7 +133,7 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 			return nil
 		}
 
-		return errors.New("not reached")
+		return errors.New("migrate: not reached")
 	})
 }
 
@@ -161,7 +169,7 @@ func (m *Migrations) Init(ctx context.Context, db *bun.DB) error {
 
 func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("migrate: there are no any migrations")
+		return errors.New("migrate: there are no migrations to run")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -175,12 +183,12 @@ func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 	}
 
 	if len(migrations) == 0 {
-		fmt.Printf("nothing to run - database is up to date\n")
+		log("nothing to run - database is up to date")
 		return nil
 	}
 
 	groupID := lastGroupID + 1
-	fmt.Printf("running group #%d with %d migrations...\n", groupID, len(migrations))
+	log("running group #%d with %d migrations...", groupID, len(migrations))
 
 	for i := range migrations {
 		migration := &migrations[i]
@@ -195,7 +203,7 @@ func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 
 func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("migrate: there are no any migrations")
+		return errors.New("migrate: there are no migrations to rollback")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -208,10 +216,10 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 		return err
 	}
 	if lastGroupID == 0 {
-		return errors.New("migrate: there are no any migrations to rollback")
+		return errors.New("migrate: there are no migrations to rollback")
 	}
 
-	fmt.Printf("rolling back group #%d with %d migrations...\n", lastGroupID, len(lastGroup))
+	log("rolling back group #%d with %d migrations...", lastGroupID, len(lastGroup))
 
 	for i := range lastGroup {
 		if err := m.runDown(ctx, db, &lastGroup[i]); err != nil {
@@ -257,7 +265,7 @@ func (m *Migrations) selectLastGroup(ctx context.Context, db *bun.DB) ([]Migrati
 
 func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	if len(m.ms) == 0 {
-		return errors.New("migrate: there are no any migrations")
+		return errors.New("migrate: there are no migrations")
 	}
 
 	if err := m.Lock(ctx, db); err != nil {
@@ -271,12 +279,12 @@ func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	}
 
 	if len(migrations) == 0 {
-		fmt.Printf("nothing to run - database is up to date\n")
+		log("nothing to run - database is up to date")
 		return nil
 	}
 
 	groupID := lastGroupID + 1
-	fmt.Printf("marking group #%d with %d migrations as completed...\n", groupID, len(migrations))
+	log("marking group #%d with %d migrations as completed...", groupID, len(migrations))
 
 	for i := range migrations {
 		migration := &migrations[i]
@@ -386,7 +394,7 @@ func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) erro
 	fname := name + ".go"
 	fpath := filepath.Join(m.migrationsDir(), fname)
 
-	fmt.Printf("creating %s...\n", fname)
+	log("creating %s...", fname)
 	return ioutil.WriteFile(fpath, []byte(goTemplate), 0o644)
 }
 
@@ -399,7 +407,7 @@ func (m *Migrations) CreateSQL(ctx context.Context, db *bun.DB, name string) err
 	fname := name + ".up.sql"
 	fpath := filepath.Join(m.migrationsDir(), fname)
 
-	fmt.Printf("creating %s...\n", fname)
+	log("creating %s...", fname)
 	return ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644)
 }
 
@@ -409,10 +417,10 @@ func (m *Migrations) genMigrationName(name string) (string, error) {
 	const timeFormat = "20060102150405"
 
 	if name == "" {
-		return "", errors.New("create requires a migration name")
+		return "", errors.New("migrate: create requires a migration name")
 	}
 	if !nameRE.MatchString(name) {
-		return "", fmt.Errorf("invalid migration name: %q", name)
+		return "", fmt.Errorf("migrate: invalid migration name: %q", name)
 	}
 
 	version := time.Now().UTC().Format(timeFormat)
@@ -420,16 +428,16 @@ func (m *Migrations) genMigrationName(name string) (string, error) {
 }
 
 func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
-	fmt.Printf("\trunning migration %s... ", migration.Name)
+	log("running migration %s... ", migration.Name)
 	if migration.Up != nil {
 		if err := migration.Up(ctx, db); err != nil {
-			fmt.Printf("%s\n", err)
+			log("unable to run migration %s: %s", migration.Name, err)
 			return err
 		} else {
-			fmt.Printf("OK\n")
+			log("done running migration %s", migration.Name)
 		}
 	} else {
-		fmt.Printf("nothing to run\n")
+		log("nothing to run")
 	}
 
 	_, err := db.NewInsert().Model(migration).
@@ -439,16 +447,16 @@ func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration
 }
 
 func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
-	fmt.Printf("\trolling back migration %s... ", migration.Name)
+	log("rolling back migration %s... ", migration.Name)
 	if migration.Down != nil {
 		if err := migration.Down(ctx, db); err != nil {
-			fmt.Printf("%s\n", err)
+			log("unable to roll back migration %s: %s", migration.Name, err)
 			return err
 		} else {
-			fmt.Printf("OK\n")
+			log("done rolling back migration %s", migration.Name)
 		}
 	} else {
-		fmt.Printf("nothing to run\n")
+		log("nothing to run")
 	}
 
 	_, err := db.NewDelete().
@@ -551,7 +559,7 @@ func (m *Migrations) Lock(ctx context.Context, db *bun.DB) error {
 		Model(lock).
 		ModelTableExpr(m.locksTableNameWithAlias()).
 		Exec(ctx); err != nil {
-		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
+		return fmt.Errorf("migrate: migrations table is already locked (%w)", err)
 	}
 	return nil
 }
@@ -601,7 +609,7 @@ func extractMigrationName(fpath string) (string, error) {
 
 	matches := fnameRE.FindStringSubmatch(fname)
 	if matches == nil {
-		return "", fmt.Errorf("unsupported migration name format: %q", fname)
+		return "", fmt.Errorf("migrate: unsupported migration name format: %q", fname)
 	}
 
 	return matches[1], nil
