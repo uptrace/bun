@@ -433,7 +433,7 @@ func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration
 	}
 
 	_, err := db.NewInsert().Model(migration).
-		ModelTableExpr(m.tableNameWithAlias()).
+		ModelTableExpr(m.table).
 		Exec(ctx)
 	return err
 }
@@ -453,7 +453,7 @@ func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migrati
 
 	_, err := db.NewDelete().
 		Model(migration).
-		ModelTableExpr(m.tableNameWithAlias()).
+		ModelTableExpr(m.table).
 		Where("id = ?", migration.ID).
 		Exec(ctx)
 	return err
@@ -473,9 +473,10 @@ func (m *Migrations) selectCompletedMigrations(
 ) ([]Migration, int64, error) {
 	var ms []Migration
 	if err := db.NewSelect().
+		ColumnExpr("*").
 		Model(&ms).
-		ModelTableExpr(m.tableNameWithAlias()).
-		OrderExpr("m.id DESC").
+		ModelTableExpr(m.table).
+		OrderExpr("id DESC").
 		Scan(ctx); err != nil {
 		return nil, 0, err
 	}
@@ -528,18 +529,10 @@ func (m *Migrations) formattedTableName(db *bun.DB) string {
 	return db.Formatter().FormatQuery(m.table)
 }
 
-func (m *Migrations) tableNameWithAlias() string {
-	return m.table + " AS m"
-}
-
-func (m *Migrations) locksTableNameWithAlias() string {
-	return m.locksTable + " AS l"
-}
-
 //------------------------------------------------------------------------------
 
 type migrationLock struct {
-	ID        int64  `bun:"alias:l"`
+	ID        int64
 	TableName string `bun:",unique"`
 }
 
@@ -549,7 +542,7 @@ func (m *Migrations) Lock(ctx context.Context, db *bun.DB) error {
 	}
 	if _, err := db.NewInsert().
 		Model(lock).
-		ModelTableExpr(m.locksTableNameWithAlias()).
+		ModelTableExpr(m.locksTable).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("bun: migrations table is already locked (%w)", err)
 	}
@@ -560,7 +553,7 @@ func (m *Migrations) Unlock(ctx context.Context, db *bun.DB) error {
 	tableName := m.formattedTableName(db)
 	_, err := db.NewDelete().
 		Model((*migrationLock)(nil)).
-		ModelTableExpr(m.locksTableNameWithAlias()).
+		ModelTableExpr(m.locksTable).
 		Where("? = ?", bun.Ident("table_name"), tableName).
 		Exec(ctx)
 	return err

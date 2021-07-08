@@ -13,7 +13,7 @@ import (
 )
 
 type Migration struct {
-	bun.BaseModel `bun:"alias:m"`
+	bun.BaseModel
 
 	ID         int64
 	Name       string
