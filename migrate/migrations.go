@@ -18,12 +18,14 @@ import (
 	"github.com/uptrace/bun"
 )
 
-var log = func(format string, a ...interface{}) {
-	fmt.Printf(format, a...)
+type Printer interface {
+	Printf(format string, args ...interface{})
 }
 
-func SetLogFn(fn func(format string, a ...interface{})) {
-	log = fn
+type printer struct{}
+
+func (printer) Printf(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
 }
 
 type Command struct {
@@ -50,18 +52,27 @@ func WithDirectory(directory string) MigrationsOption {
 	}
 }
 
+func WithLogger(p Printer) MigrationsOption {
+	return func(m *Migrations) {
+		m.log = p
+	}
+}
+
 type Migrations struct {
 	ms []Migration
 
 	table      string
 	locksTable string
 	directory  string
+
+	log Printer
 }
 
 func NewMigrations(opts ...MigrationsOption) *Migrations {
 	m := &Migrations{
 		table:      "bun_migrations",
 		locksTable: "bun_migration_locks",
+		log:        new(printer),
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -183,12 +194,12 @@ func (m *Migrations) Migrate(ctx context.Context, db *bun.DB) error {
 	}
 
 	if len(migrations) == 0 {
-		log("nothing to run - database is up to date")
+		m.log.Printf("nothing to run - database is up to date")
 		return nil
 	}
 
 	groupID := lastGroupID + 1
-	log("running group #%d with %d migrations...", groupID, len(migrations))
+	m.log.Printf("running group #%d with %d migrations...", groupID, len(migrations))
 
 	for i := range migrations {
 		migration := &migrations[i]
@@ -219,7 +230,7 @@ func (m *Migrations) Rollback(ctx context.Context, db *bun.DB) error {
 		return errors.New("migrate: there are no migrations to rollback")
 	}
 
-	log("rolling back group #%d with %d migrations...", lastGroupID, len(lastGroup))
+	m.log.Printf("rolling back group #%d with %d migrations...", lastGroupID, len(lastGroup))
 
 	for i := range lastGroup {
 		if err := m.runDown(ctx, db, &lastGroup[i]); err != nil {
@@ -279,12 +290,12 @@ func (m *Migrations) MarkCompleted(ctx context.Context, db *bun.DB) error {
 	}
 
 	if len(migrations) == 0 {
-		log("nothing to run - database is up to date")
+		m.log.Printf("nothing to run - database is up to date")
 		return nil
 	}
 
 	groupID := lastGroupID + 1
-	log("marking group #%d with %d migrations as completed...", groupID, len(migrations))
+	m.log.Printf("marking group #%d with %d migrations as completed...", groupID, len(migrations))
 
 	for i := range migrations {
 		migration := &migrations[i]
@@ -394,7 +405,7 @@ func (m *Migrations) CreateGo(ctx context.Context, db *bun.DB, name string) erro
 	fname := name + ".go"
 	fpath := filepath.Join(m.migrationsDir(), fname)
 
-	log("creating %s...", fname)
+	m.log.Printf("creating %s...", fname)
 	return ioutil.WriteFile(fpath, []byte(goTemplate), 0o644)
 }
 
@@ -407,7 +418,7 @@ func (m *Migrations) CreateSQL(ctx context.Context, db *bun.DB, name string) err
 	fname := name + ".up.sql"
 	fpath := filepath.Join(m.migrationsDir(), fname)
 
-	log("creating %s...", fname)
+	m.log.Printf("creating %s...", fname)
 	return ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644)
 }
 
@@ -428,16 +439,16 @@ func (m *Migrations) genMigrationName(name string) (string, error) {
 }
 
 func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
-	log("running migration %s... ", migration.Name)
+	m.log.Printf("running migration %s... ", migration.Name)
 	if migration.Up != nil {
 		if err := migration.Up(ctx, db); err != nil {
-			log("unable to run migration %s: %s", migration.Name, err)
+			m.log.Printf("unable to run migration %s: %s", migration.Name, err)
 			return err
 		} else {
-			log("done running migration %s", migration.Name)
+			m.log.Printf("done running migration %s", migration.Name)
 		}
 	} else {
-		log("nothing to run")
+		m.log.Printf("nothing to run")
 	}
 
 	_, err := db.NewInsert().Model(migration).
@@ -447,16 +458,16 @@ func (m *Migrations) runUp(ctx context.Context, db *bun.DB, migration *Migration
 }
 
 func (m *Migrations) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
-	log("rolling back migration %s... ", migration.Name)
+	m.log.Printf("rolling back migration %s... ", migration.Name)
 	if migration.Down != nil {
 		if err := migration.Down(ctx, db); err != nil {
-			log("unable to roll back migration %s: %s", migration.Name, err)
+			m.log.Printf("unable to roll back migration %s: %s", migration.Name, err)
 			return err
 		} else {
-			log("done rolling back migration %s", migration.Name)
+			m.log.Printf("done rolling back migration %s", migration.Name)
 		}
 	} else {
-		log("nothing to run")
+		m.log.Printf("nothing to run")
 	}
 
 	_, err := db.NewDelete().
