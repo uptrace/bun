@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.0 - Jul 09 2021
+
+- Changed migrate package to return structured data instead of logging the progress. See
+  [migrate](https://github.com/uptrace/bun/tree/master/example/migrate) example for details.
+
 ## v0.2.14 - Jul 01 2021
 
 - Added [sqliteshim](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim) by
