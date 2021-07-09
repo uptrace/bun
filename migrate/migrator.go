@@ -53,6 +53,14 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 	return m
 }
 
+func (m *Migrator) DB() *bun.DB {
+	return m.db
+}
+
+func (m *Migrator) Migrations() *Migrations {
+	return m.migrations
+}
+
 func (m *Migrator) Init(ctx context.Context) error {
 	if _, err := m.db.NewCreateTable().
 		Model((*Migration)(nil)).
