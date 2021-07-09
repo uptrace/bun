@@ -1,4 +1,4 @@
-# bun migrations example
+# Bun migrations example
 
 To run migrations:
 
@@ -20,7 +20,7 @@ USAGE:
 COMMANDS:
    init        create migration tables
    migrate     migrate database
-   rollback    rollback the last migration batch
+   rollback    rollback the last migration group
    unlock      unlock migrations
    create_go   create a Go migration
    create_sql  create a SQL migration

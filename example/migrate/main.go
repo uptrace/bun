@@ -68,7 +68,7 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 			},
 			{
 				Name:  "rollback",
-				Usage: "rollback the last migration batch",
+				Usage: "rollback the last migration group",
 				Action: func(c *cli.Context) error {
 					group, err := migrator.Rollback(c.Context)
 					if err != nil {
