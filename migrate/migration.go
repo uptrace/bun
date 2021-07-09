@@ -24,6 +24,10 @@ type Migration struct {
 	Down MigrationFunc `bun:"-"`
 }
 
+func (m *Migration) String() string {
+	return m.Name
+}
+
 type MigrationFunc func(ctx context.Context, db *bun.DB) error
 
 func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
@@ -106,3 +110,46 @@ const sqlTemplate = `SELECT 1
 
 SELECT 2
 `
+
+//------------------------------------------------------------------------------
+
+type MigrationSlice []Migration
+
+func (ms MigrationSlice) String() string {
+	if len(ms) == 0 {
+		return "empty"
+	}
+
+	if len(ms) > 5 {
+		return fmt.Sprintf("%d migrations (%s ... %s)", len(ms), ms[0].Name, ms[len(ms)-1].Name)
+	}
+
+	var sb strings.Builder
+
+	for i := range ms {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(ms[i].Name)
+	}
+
+	return sb.String()
+}
+
+type MigrationGroup struct {
+	ID         int64
+	Migrations MigrationSlice
+}
+
+func (g *MigrationGroup) String() string {
+	if g.ID == 0 && len(g.Migrations) == 0 {
+		return "nil"
+	}
+	return fmt.Sprintf("group #%d (%s)", g.ID, g.Migrations)
+}
+
+type MigrationFile struct {
+	FileName string
+	FilePath string
+	Content  string
+}

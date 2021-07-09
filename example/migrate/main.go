@@ -30,7 +30,7 @@ func main() {
 		Name: "bun",
 
 		Commands: []*cli.Command{
-			newDBCommand(migrations.Migrations, db),
+			newDBCommand(migrate.NewMigrator(db, migrations.Migrations)),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
@@ -38,7 +38,7 @@ func main() {
 	}
 }
 
-func newDBCommand(migrations *migrate.Migrations, db *bun.DB) *cli.Command {
+func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 	return &cli.Command{
 		Name:  "db",
 		Usage: "database migrations",
@@ -47,60 +47,90 @@ func newDBCommand(migrations *migrate.Migrations, db *bun.DB) *cli.Command {
 				Name:  "init",
 				Usage: "create migration tables",
 				Action: func(c *cli.Context) error {
-					return migrations.Init(c.Context, db)
+					return migrator.Init(c.Context)
 				},
 			},
 			{
 				Name:  "migrate",
 				Usage: "migrate database",
 				Action: func(c *cli.Context) error {
-					return migrations.Migrate(c.Context, db)
+					group, err := migrator.Migrate(c.Context)
+					if err != nil {
+						return err
+					}
+					if group.ID == 0 {
+						fmt.Printf("there are no new migrations to run\n")
+						return nil
+					}
+					fmt.Printf("migrated to %s\n", group)
+					return nil
 				},
 			},
 			{
 				Name:  "rollback",
 				Usage: "rollback the last migration batch",
 				Action: func(c *cli.Context) error {
-					return migrations.Rollback(c.Context, db)
+					group, err := migrator.Rollback(c.Context)
+					if err != nil {
+						return err
+					}
+					if group.ID == 0 {
+						fmt.Printf("there are no groups to roll back\n")
+						return nil
+					}
+					fmt.Printf("rolled back %s\n", group)
+					return nil
 				},
 			},
 			{
 				Name:  "lock",
 				Usage: "lock migrations",
 				Action: func(c *cli.Context) error {
-					return migrations.Lock(c.Context, db)
+					return migrator.Lock(c.Context)
 				},
 			},
 			{
 				Name:  "unlock",
 				Usage: "unlock migrations",
 				Action: func(c *cli.Context) error {
-					return migrations.Unlock(c.Context, db)
+					return migrator.Unlock(c.Context)
 				},
 			},
 			{
 				Name:  "create_go",
 				Usage: "create Go migration",
 				Action: func(c *cli.Context) error {
-					return migrations.CreateGo(c.Context, db, c.Args().Get(0))
+					mf, err := migrator.CreateGo(c.Context, c.Args().Get(0))
+					if err != nil {
+						return err
+					}
+					fmt.Printf("created migration %s (%s)\n", mf.FileName, mf.FilePath)
+					return nil
 				},
 			},
 			{
 				Name:  "create_sql",
 				Usage: "create SQL migration",
 				Action: func(c *cli.Context) error {
-					return migrations.CreateSQL(c.Context, db, c.Args().Get(0))
+					mf, err := migrator.CreateSQL(c.Context, c.Args().Get(0))
+					if err != nil {
+						return err
+					}
+					fmt.Printf("created migration %s (%s)\n", mf.FileName, mf.FilePath)
+					return nil
 				},
 			},
 			{
 				Name:  "status",
 				Usage: "print migrations status",
 				Action: func(c *cli.Context) error {
-					status, err := migrations.Status(c.Context, db)
+					status, err := migrator.Status(c.Context)
 					if err != nil {
 						return err
 					}
-					fmt.Println(status.String())
+					fmt.Printf("migrations: %s\n", status.Migrations)
+					fmt.Printf("new migrations: %s\n", status.NewMigrations)
+					fmt.Printf("last group: %s\n", status.LastGroup)
 					return nil
 				},
 			},
@@ -108,7 +138,16 @@ func newDBCommand(migrations *migrate.Migrations, db *bun.DB) *cli.Command {
 				Name:  "mark_completed",
 				Usage: "mark migrations as completed without actually running them",
 				Action: func(c *cli.Context) error {
-					return migrations.MarkCompleted(c.Context, db)
+					group, err := migrator.MarkCompleted(c.Context)
+					if err != nil {
+						return err
+					}
+					if group.ID == 0 {
+						fmt.Printf("there are no new migrations to mark as completed\n")
+						return nil
+					}
+					fmt.Printf("marked as completed %s\n", group)
+					return nil
 				},
 			},
 		},
