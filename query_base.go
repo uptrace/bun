@@ -680,6 +680,10 @@ func (q *whereBaseQuery) appendWherePK(
 func (q *whereBaseQuery) appendWherePKStruct(
 	fmter schema.Formatter, b []byte, model *structTableModel, withAlias bool,
 ) (_ []byte, err error) {
+	if !model.strct.IsValid() {
+		return nil, errNilModel
+	}
+
 	isTemplate := fmter.IsNop()
 	b = append(b, '(')
 	for i, f := range q.table.PKs {
