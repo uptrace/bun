@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.1
+
+- Renamed `alias` field struct tag to `alt` so it is not confused with column alias.
+
 ## v0.3.0 - Jul 09 2021
 
 - Changed migrate package to return structured data instead of logging the progress. See

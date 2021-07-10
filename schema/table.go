@@ -357,7 +357,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = FieldZeroChecker(field)
 
-	if v, ok := tag.Options["alias"]; ok {
+	if v, ok := tag.Options["alt"]; ok {
 		t.FieldMap[v] = field
 	}
 
