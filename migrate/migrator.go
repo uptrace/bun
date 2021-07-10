@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -78,7 +79,9 @@ func (m *Migrator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
+func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
+	cfg := newMigrationConfig(opts)
+
 	if err := m.validate(); err != nil {
 		return nil, err
 	}
@@ -106,7 +109,14 @@ func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
 	for i := range migrations {
 		migration := &migrations[i]
 		migration.GroupID = group.ID
-		if err := m.runUp(ctx, m.db, migration); err != nil {
+
+		if !cfg.dryRun && migration.Up != nil {
+			if err := migration.Up(ctx, m.db); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := m.MarkDone(ctx, migration); err != nil {
 			return nil, err
 		}
 	}
@@ -114,7 +124,9 @@ func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
 	return group, nil
 }
 
-func (m *Migrator) Rollback(ctx context.Context) (*MigrationGroup, error) {
+func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
+	cfg := newMigrationConfig(opts)
+
 	if err := m.validate(); err != nil {
 		return nil, err
 	}
@@ -124,13 +136,21 @@ func (m *Migrator) Rollback(ctx context.Context) (*MigrationGroup, error) {
 	}
 	defer m.Unlock(ctx) //nolint:errcheck
 
-	lastGroup, err := m.selectLastGroup(ctx)
+	lastGroup, err := m.SelectLastGroup(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := range lastGroup.Migrations {
-		if err := m.runDown(ctx, m.db, &lastGroup.Migrations[i]); err != nil {
+		migration := &lastGroup.Migrations[i]
+
+		if !cfg.dryRun && migration.Down != nil {
+			if err := migration.Down(ctx, m.db); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := m.MarkUndone(ctx, migration); err != nil {
 			return nil, err
 		}
 	}
@@ -138,23 +158,24 @@ func (m *Migrator) Rollback(ctx context.Context) (*MigrationGroup, error) {
 	return lastGroup, nil
 }
 
-func (m *Migrator) selectLastGroup(ctx context.Context) (*MigrationGroup, error) {
-	completed, lastGroupID, err := m.selectCompletedMigrations(ctx)
+// SelectLastGroup selects the last applied migration group.
+func (m *Migrator) SelectLastGroup(ctx context.Context) (*MigrationGroup, error) {
+	done, err := m.SelectDoneMigrations(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	group := &MigrationGroup{
-		ID: lastGroupID,
+		ID: lastGroupID(done),
 	}
 	if group.ID == 0 {
 		return group, nil
 	}
 
 	migrationMap := migrationMap(m.ms)
-	for i := range completed {
-		migration := &completed[i]
-		if migration.GroupID != lastGroupID {
+	for i := range done {
+		migration := &done[i]
+		if migration.GroupID != group.ID {
 			continue
 		}
 
@@ -174,39 +195,10 @@ func (m *Migrator) selectLastGroup(ctx context.Context) (*MigrationGroup, error)
 }
 
 func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
-	if err := m.validate(); err != nil {
-		return nil, err
-	}
-
-	if err := m.Lock(ctx); err != nil {
-		return nil, err
-	}
-	defer m.Unlock(ctx) //nolint:errcheck
-
-	migrations, lastGroupID, err := m.selectNewMigrations(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(migrations) == 0 {
-		return new(MigrationGroup), nil
-	}
-
-	group := &MigrationGroup{
-		ID:         lastGroupID + 1,
-		Migrations: migrations,
-	}
-
-	for i := range migrations {
-		migration := &migrations[i]
-		migration.GroupID = group.ID
-		migration.Up = nil
-		if err := m.runUp(ctx, m.db, migration); err != nil {
-			return nil, err
-		}
-	}
-
-	return group, nil
+	log.Printf(
+		"DEPRECATED: bun: replace MarkCompleted(ctx) with " +
+			"Migrate(ctx, migrate.WithMigrationDryRun())")
+	return m.Migrate(ctx, WithMigrationDryRun())
 }
 
 type MigrationStatus struct {
@@ -219,7 +211,7 @@ func (m *Migrator) Status(ctx context.Context) (*MigrationStatus, error) {
 	status := new(MigrationStatus)
 	status.Migrations = m.migrations.Sorted()
 
-	lastGroup, err := m.selectLastGroup(ctx)
+	lastGroup, err := m.SelectLastGroup(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -292,27 +284,17 @@ func (m *Migrator) genMigrationName(name string) (string, error) {
 	return fmt.Sprintf("%s_%s", version, name), nil
 }
 
-func (m *Migrator) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
-	if migration.Up != nil {
-		if err := migration.Up(ctx, db); err != nil {
-			return err
-		}
-	}
-
-	_, err := db.NewInsert().Model(migration).
+// MarkDone marks the migration as done (applied).
+func (m *Migrator) MarkDone(ctx context.Context, migration *Migration) error {
+	_, err := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table).
 		Exec(ctx)
 	return err
 }
 
-func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
-	if migration.Down != nil {
-		if err := migration.Down(ctx, db); err != nil {
-			return err
-		}
-	}
-
-	_, err := db.NewDelete().
+// MarkUndone marks the migration as undone (new).
+func (m *Migrator) MarkUndone(ctx context.Context, migration *Migration) error {
+	_, err := m.db.NewDelete().
 		Model(migration).
 		ModelTableExpr(m.table).
 		Where("id = ?", migration.ID).
@@ -320,9 +302,9 @@ func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration
 	return err
 }
 
-// selectCompletedMigrations selects completed migrations in descending order
-// (the order is used for rollbacks).
-func (m *Migrator) selectCompletedMigrations(ctx context.Context) (MigrationSlice, int64, error) {
+// SelectDoneMigrations selects done (applied) migrations in descending order
+// (the order is important and is used in Rollback).
+func (m *Migrator) SelectDoneMigrations(ctx context.Context) (MigrationSlice, error) {
 	var ms MigrationSlice
 	if err := m.db.NewSelect().
 		ColumnExpr("*").
@@ -330,38 +312,41 @@ func (m *Migrator) selectCompletedMigrations(ctx context.Context) (MigrationSlic
 		ModelTableExpr(m.table).
 		OrderExpr("id DESC").
 		Scan(ctx); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
+	return ms, nil
+}
 
-	var lastGroupID int64
-
-	for i := range ms {
-		groupID := ms[i].GroupID
-		if groupID > lastGroupID {
-			lastGroupID = groupID
-		}
+func (m *Migrator) selectDoneMigrations(ctx context.Context) (MigrationSlice, error) {
+	var ms MigrationSlice
+	if err := m.db.NewSelect().
+		ColumnExpr("*").
+		Model(&ms).
+		ModelTableExpr(m.table).
+		OrderExpr("id DESC").
+		Scan(ctx); err != nil {
+		return nil, err
 	}
-
-	return ms, lastGroupID, nil
+	return ms, nil
 }
 
 func (m *Migrator) selectNewMigrations(ctx context.Context) (MigrationSlice, int64, error) {
 	migrations := m.migrations.Sorted()
 
-	completed, lastGroupID, err := m.selectCompletedMigrations(ctx)
+	done, err := m.selectDoneMigrations(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	completedMap := migrationMap(completed)
+	doneMap := migrationMap(done)
 	for i := len(migrations) - 1; i >= 0; i-- {
 		migration := &migrations[i]
-		if _, ok := completedMap[migration.Name]; ok {
+		if _, ok := doneMap[migration.Name]; ok {
 			migrations = append(migrations[:i], migrations[i+1:]...)
 		}
 	}
 
-	return migrations, lastGroupID, nil
+	return migrations, lastGroupID(done), nil
 }
 
 func (m *Migrator) formattedTableName(db *bun.DB) string {
@@ -412,4 +397,15 @@ func migrationMap(ms MigrationSlice) map[string]*Migration {
 		mp[m.Name] = m
 	}
 	return mp
+}
+
+func lastGroupID(ms MigrationSlice) int64 {
+	var lastGroupID int64
+	for i := range ms {
+		groupID := ms[i].GroupID
+		if groupID > lastGroupID {
+			lastGroupID = groupID
+		}
+	}
+	return lastGroupID
 }

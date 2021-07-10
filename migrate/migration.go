@@ -153,3 +153,25 @@ type MigrationFile struct {
 	FilePath string
 	Content  string
 }
+
+//------------------------------------------------------------------------------
+
+type migrationConfig struct {
+	dryRun bool
+}
+
+func newMigrationConfig(opts []MigrationOption) *migrationConfig {
+	cfg := new(migrationConfig)
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+type MigrationOption func(cfg *migrationConfig)
+
+func WithMigrationDryRun() MigrationOption {
+	return func(cfg *migrationConfig) {
+		cfg.dryRun = true
+	}
+}
