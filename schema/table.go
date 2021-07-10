@@ -19,7 +19,12 @@ const (
 	afterScanHookFlag
 )
 
-var tableNameInflector = inflection.Plural
+var (
+	baseModelType      = reflect.TypeOf((*BaseModel)(nil)).Elem()
+	tableNameInflector = inflection.Plural
+)
+
+type BaseModel struct{}
 
 // SetTableNameInflector overrides the default func that pluralizes
 // model name to get table name, e.g. my_article becomes my_articles.
@@ -211,7 +216,7 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 			if f.Tag.Get("bun") == "-" {
 				continue
 			}
-			if f.Name == "BaseModel" {
+			if f.Name == "BaseModel" && f.Type == baseModelType {
 				if len(index) == 0 {
 					t.processBaseModelField(f)
 				}

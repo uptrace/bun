@@ -15,7 +15,7 @@ type (
 
 type NullTime = schema.NullTime
 
-type BaseModel struct{}
+type BaseModel = schema.BaseModel
 
 type (
 	BeforeScanHook = schema.BeforeScanHook
