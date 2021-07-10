@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -218,7 +217,7 @@ type MigrationStatus struct {
 
 func (m *Migrator) Status(ctx context.Context) (*MigrationStatus, error) {
 	status := new(MigrationStatus)
-	status.Migrations = m.sortedMigrations()
+	status.Migrations = m.migrations.Sorted()
 
 	lastGroup, err := m.selectLastGroup(ctx)
 	if err != nil {
@@ -347,7 +346,7 @@ func (m *Migrator) selectCompletedMigrations(ctx context.Context) (MigrationSlic
 }
 
 func (m *Migrator) selectNewMigrations(ctx context.Context) (MigrationSlice, int64, error) {
-	migrations := m.sortedMigrations()
+	migrations := m.migrations.Sorted()
 
 	completed, lastGroupID, err := m.selectCompletedMigrations(ctx)
 	if err != nil {
@@ -363,17 +362,6 @@ func (m *Migrator) selectNewMigrations(ctx context.Context) (MigrationSlice, int
 	}
 
 	return migrations, lastGroupID, nil
-}
-
-func (m *Migrator) sortedMigrations() MigrationSlice {
-	migrations := make(MigrationSlice, len(m.ms))
-	copy(migrations, m.ms)
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Name < migrations[j].Name
-	})
-
-	return migrations
 }
 
 func (m *Migrator) formattedTableName(db *bun.DB) string {
