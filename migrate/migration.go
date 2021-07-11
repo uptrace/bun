@@ -157,7 +157,7 @@ type MigrationFile struct {
 //------------------------------------------------------------------------------
 
 type migrationConfig struct {
-	dryRun bool
+	withoutMigrationFunc bool
 }
 
 func newMigrationConfig(opts []MigrationOption) *migrationConfig {
@@ -170,8 +170,8 @@ func newMigrationConfig(opts []MigrationOption) *migrationConfig {
 
 type MigrationOption func(cfg *migrationConfig)
 
-func WithMigrationDryRun() MigrationOption {
+func WithoutMigrationFunc() MigrationOption {
 	return func(cfg *migrationConfig) {
-		cfg.dryRun = true
+		cfg.withoutMigrationFunc = true
 	}
 }

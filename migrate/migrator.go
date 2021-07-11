@@ -110,7 +110,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		migration := &migrations[i]
 		migration.GroupID = group.ID
 
-		if !cfg.dryRun && migration.Up != nil {
+		if !cfg.withoutMigrationFunc && migration.Up != nil {
 			if err := migration.Up(ctx, m.db); err != nil {
 				return nil, err
 			}
@@ -144,7 +144,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	for i := range lastGroup.Migrations {
 		migration := &lastGroup.Migrations[i]
 
-		if !cfg.dryRun && migration.Down != nil {
+		if !cfg.withoutMigrationFunc && migration.Down != nil {
 			if err := migration.Down(ctx, m.db); err != nil {
 				return nil, err
 			}
@@ -197,8 +197,8 @@ func (m *Migrator) SelectLastGroup(ctx context.Context) (*MigrationGroup, error)
 func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
 	log.Printf(
 		"DEPRECATED: bun: replace MarkCompleted(ctx) with " +
-			"Migrate(ctx, migrate.WithMigrationDryRun())")
-	return m.Migrate(ctx, WithMigrationDryRun())
+			"Migrate(ctx, migrate.WithoutMigrationFunc())")
+	return m.Migrate(ctx, WithoutMigrationFunc())
 }
 
 type MigrationStatus struct {
