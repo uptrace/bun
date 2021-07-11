@@ -138,7 +138,7 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "mark_applied",
 				Usage: "mark migrations as applied without actually running them",
 				Action: func(c *cli.Context) error {
-					group, err := migrator.Migrate(c.Context, migrate.WithoutMigrationFunc())
+					group, err := migrator.Migrate(c.Context, migrate.WithNopMigration())
 					if err != nil {
 						return err
 					}
@@ -146,7 +146,7 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 						fmt.Printf("there are no new migrations to mark as applied\n")
 						return nil
 					}
-					fmt.Printf("marked as completed %s\n", group)
+					fmt.Printf("marked as applied %s\n", group)
 					return nil
 				},
 			},

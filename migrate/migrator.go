@@ -124,7 +124,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		migration := &group.Migrations[i]
 		migration.GroupID = group.ID
 
-		if !cfg.withoutMigrationFunc && migration.Up != nil {
+		if !cfg.nop && migration.Up != nil {
 			if err := migration.Up(ctx, m.db); err != nil {
 				return nil, err
 			}
@@ -160,7 +160,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	for i := range lastGroup.Migrations {
 		migration := &lastGroup.Migrations[i]
 
-		if !cfg.withoutMigrationFunc && migration.Down != nil {
+		if !cfg.nop && migration.Down != nil {
 			if err := migration.Down(ctx, m.db); err != nil {
 				return nil, err
 			}
@@ -199,9 +199,9 @@ func (m *Migrator) Status(ctx context.Context) (*MigrationStatus, error) {
 func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
 	log.Printf(
 		"DEPRECATED: bun: replace MarkCompleted(ctx) with " +
-			"Migrate(ctx, migrate.WithoutMigrationFunc())")
+			"Migrate(ctx, migrate.WithNopMigration())")
 
-	return m.Migrate(ctx, WithoutMigrationFunc())
+	return m.Migrate(ctx, WithNopMigration())
 }
 
 func (m *Migrator) CreateGo(ctx context.Context, name string) (*MigrationFile, error) {

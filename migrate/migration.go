@@ -154,7 +154,7 @@ func (ms MigrationSlice) Applied() MigrationSlice {
 	return applied
 }
 
-// Unrone returns unapplied migrations in ascending order
+// Unapplied returns unapplied migrations in ascending order
 // (the order is important and is used in Migrate).
 func (ms MigrationSlice) Unapplied() MigrationSlice {
 	var unapplied MigrationSlice
@@ -221,7 +221,7 @@ type MigrationFile struct {
 //------------------------------------------------------------------------------
 
 type migrationConfig struct {
-	withoutMigrationFunc bool
+	nop bool
 }
 
 func newMigrationConfig(opts []MigrationOption) *migrationConfig {
@@ -234,9 +234,9 @@ func newMigrationConfig(opts []MigrationOption) *migrationConfig {
 
 type MigrationOption func(cfg *migrationConfig)
 
-func WithoutMigrationFunc() MigrationOption {
+func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
-		cfg.withoutMigrationFunc = true
+		cfg.nop = true
 	}
 }
 
