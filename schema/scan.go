@@ -371,9 +371,17 @@ func ptrScanner(fn ScannerFunc) ScannerFunc {
 }
 
 func scanNull(dest reflect.Value) error {
-	if dest.IsNil() {
+	if nilable(dest.Kind()) && dest.IsNil() {
 		return nil
 	}
 	dest.Set(reflect.New(dest.Type()).Elem())
 	return nil
+}
+
+func nilable(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return true
+	}
+	return false
 }

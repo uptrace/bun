@@ -104,7 +104,8 @@ func TestDB(t *testing.T) {
 		{"testSelectStructSlice", testSelectStructSlice},
 		{"testSelectSingleSlice", testSelectSingleSlice},
 		{"testSelectMultiSlice", testSelectMultiSlice},
-		{"testSelectJSON", testSelectJSON},
+		{"testSelectJSONMap", testSelectJSONMap},
+		{"testSelectJSONStruct", testSelectJSONStruct},
 		{"testSelectRawMessage", testSelectRawMessage},
 		{"testScanNullVar", testScanNullVar},
 		{"testScanSingleRow", testScanSingleRow},
@@ -343,7 +344,7 @@ func testSelectMultiSlice(t *testing.T, db *bun.DB) {
 	require.Equal(t, []string{"foo", "bar", ""}, ss)
 }
 
-func testSelectJSON(t *testing.T, db *bun.DB) {
+func testSelectJSONMap(t *testing.T, db *bun.DB) {
 	type Model struct {
 		Map map[string]string
 	}
@@ -360,6 +361,29 @@ func testSelectJSON(t *testing.T, db *bun.DB) {
 		Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string(nil), model.Map)
+}
+
+func testSelectJSONStruct(t *testing.T, db *bun.DB) {
+	type Struct struct {
+		Hello string
+	}
+
+	type Model struct {
+		Struct Struct
+	}
+
+	model := new(Model)
+	err := db.NewSelect().
+		ColumnExpr("? AS struct", Struct{Hello: "world"}).
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, Struct{Hello: "world"}, model.Struct)
+
+	err = db.NewSelect().
+		ColumnExpr("NULL AS struct").
+		Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, Struct{}, model.Struct)
 }
 
 func testSelectRawMessage(t *testing.T, db *bun.DB) {
