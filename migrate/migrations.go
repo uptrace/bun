@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
 	"strings"
 )
 
@@ -37,11 +36,7 @@ func NewMigrations(opts ...MigrationsOption) *Migrations {
 func (m *Migrations) Sorted() MigrationSlice {
 	migrations := make(MigrationSlice, len(m.ms))
 	copy(migrations, m.ms)
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Name < migrations[j].Name
-	})
-
+	sortAsc(migrations)
 	return migrations
 }
 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,6 +27,10 @@ type Migration struct {
 
 func (m *Migration) String() string {
 	return m.Name
+}
+
+func (m *Migration) IsApplied() bool {
+	return m.ID > 0
 }
 
 type MigrationFunc func(ctx context.Context, db *bun.DB) error
@@ -136,13 +141,72 @@ func (ms MigrationSlice) String() string {
 	return sb.String()
 }
 
+// Applied returns applied migrations in descending order
+// (the order is important and is used in Rollback).
+func (ms MigrationSlice) Applied() MigrationSlice {
+	var applied MigrationSlice
+	for i := range ms {
+		if ms[i].IsApplied() {
+			applied = append(applied, ms[i])
+		}
+	}
+	sortDesc(applied)
+	return applied
+}
+
+// Unrone returns unapplied migrations in ascending order
+// (the order is important and is used in Migrate).
+func (ms MigrationSlice) Unapplied() MigrationSlice {
+	var unapplied MigrationSlice
+	for i := range ms {
+		if !ms[i].IsApplied() {
+			unapplied = append(unapplied, ms[i])
+		}
+	}
+	sortAsc(unapplied)
+	return unapplied
+}
+
+// LastGroupID returns the last applied migration group id.
+// The id is 0 when there are no migration groups.
+func (ms MigrationSlice) LastGroupID() int64 {
+	var lastGroupID int64
+	for i := range ms {
+		groupID := ms[i].GroupID
+		if groupID != 0 && groupID > lastGroupID {
+			lastGroupID = groupID
+		}
+	}
+	return lastGroupID
+}
+
+// LastGroup returns the last applied migration group.
+func (ms MigrationSlice) LastGroup() *MigrationGroup {
+	group := &MigrationGroup{
+		ID: ms.LastGroupID(),
+	}
+	if group.ID == 0 {
+		return group
+	}
+	for i := range ms {
+		if ms[i].GroupID == group.ID {
+			group.Migrations = append(group.Migrations, ms[i])
+		}
+	}
+	return group
+}
+
 type MigrationGroup struct {
 	ID         int64
 	Migrations MigrationSlice
 }
 
+func (g *MigrationGroup) IsZero() bool {
+	return g.ID == 0 && len(g.Migrations) == 0
+}
+
 func (g *MigrationGroup) String() string {
-	if g.ID == 0 && len(g.Migrations) == 0 {
+	if g.IsZero() {
 		return "nil"
 	}
 	return fmt.Sprintf("group #%d (%s)", g.ID, g.Migrations)
@@ -174,4 +238,18 @@ func WithoutMigrationFunc() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.withoutMigrationFunc = true
 	}
+}
+
+//------------------------------------------------------------------------------
+
+func sortAsc(ms MigrationSlice) {
+	sort.Slice(ms, func(i, j int) bool {
+		return ms[i].Name < ms[j].Name
+	})
+}
+
+func sortDesc(ms MigrationSlice) {
+	sort.Slice(ms, func(i, j int) bool {
+		return ms[i].Name > ms[j].Name
+	})
 }

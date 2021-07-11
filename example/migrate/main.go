@@ -58,8 +58,8 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 					if err != nil {
 						return err
 					}
-					if group.ID == 0 {
-						fmt.Printf("there are no new migrations to run\n")
+					if group.IsZero() {
+						fmt.Printf("there are no new migrations to run (database is up to date)\n")
 						return nil
 					}
 					fmt.Printf("migrated to %s\n", group)
@@ -74,7 +74,7 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 					if err != nil {
 						return err
 					}
-					if group.ID == 0 {
+					if group.IsZero() {
 						fmt.Printf("there are no groups to roll back\n")
 						return nil
 					}
@@ -124,26 +124,26 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "status",
 				Usage: "print migrations status",
 				Action: func(c *cli.Context) error {
-					status, err := migrator.Status(c.Context)
+					ms, err := migrator.MigrationsWithStatus(c.Context)
 					if err != nil {
 						return err
 					}
-					fmt.Printf("migrations: %s\n", status.Migrations)
-					fmt.Printf("new migrations: %s\n", status.NewMigrations)
-					fmt.Printf("last group: %s\n", status.LastGroup)
+					fmt.Printf("migrations: %s\n", ms)
+					fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())
+					fmt.Printf("last migration group: %s\n", ms.LastGroup())
 					return nil
 				},
 			},
 			{
-				Name:  "mark_completed",
-				Usage: "mark migrations as completed without actually running them",
+				Name:  "mark_applied",
+				Usage: "mark migrations as applied without actually running them",
 				Action: func(c *cli.Context) error {
-					group, err := migrator.MarkCompleted(c.Context)
+					group, err := migrator.Migrate(c.Context, migrate.WithoutMigrationFunc())
 					if err != nil {
 						return err
 					}
-					if group.ID == 0 {
-						fmt.Printf("there are no new migrations to mark as completed\n")
+					if group.IsZero() {
+						fmt.Printf("there are no new migrations to mark as applied\n")
 						return nil
 					}
 					fmt.Printf("marked as completed %s\n", group)
