@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -99,6 +102,46 @@ func TestStmtNoParams(t *testing.T) {
 
 	err = db.Close()
 	require.NoError(t, err)
+}
+
+func TestCancel(t *testing.T) {
+	db := sqlDB()
+	defer db.Close()
+
+	var wg sync.WaitGroup
+	var stopped uint32
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for atomic.LoadUint32(&stopped) == 0 {
+				ctx := context.Background()
+				ctx, cancel := context.WithCancel(ctx)
+				go func() {
+					time.Sleep(10 * time.Millisecond) // same as pg_sleep
+					cancel()
+				}()
+				_, _ = db.ExecContext(ctx, "select pg_sleep(0.01)")
+			}
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for atomic.LoadUint32(&stopped) == 0 {
+			ctx := context.Background()
+			_, err := db.ExecContext(ctx, "select pg_sleep(0.01)")
+			require.NoError(t, err)
+		}
+	}()
+
+	time.Sleep(5 * time.Second)
+	atomic.StoreUint32(&stopped, 1)
+	wg.Wait()
 }
 
 func sqlDB() *sql.DB {
