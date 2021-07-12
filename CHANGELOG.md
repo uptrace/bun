@@ -1,8 +1,10 @@
 # Changelog
 
-## v0.3.1
+## v0.3.1 - Jul 12 2021
 
 - Renamed `alias` field struct tag to `alt` so it is not confused with column alias.
+- Reworked migrate package API. See
+  [migrate](https://github.com/uptrace/bun/tree/master/example/migrate) example for details.
 
 ## v0.3.0 - Jul 09 2021
 
