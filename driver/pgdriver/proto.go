@@ -597,9 +597,10 @@ func readQueryData(ctx context.Context, cn *Conn) (*rows, error) {
 var rowDescPool sync.Pool
 
 type rowDescription struct {
-	buf   []byte
-	names []string
-	types []int32
+	buf      []byte
+	names    []string
+	types    []int32
+	numInput int16
 }
 
 func newRowDescription(numCol int) *rowDescription {
@@ -738,6 +739,7 @@ func writeParseDescribeSync(ctx context.Context, cn *Conn, name, query string) e
 
 func readParseDescribeSync(ctx context.Context, cn *Conn) (*rowDescription, error) {
 	rd := cn.reader(ctx, -1)
+	var numParam int16
 	var rowDesc *rowDescription
 	var firstErr error
 	for {
@@ -756,9 +758,17 @@ func readParseDescribeSync(ctx context.Context, cn *Conn) (*rowDescription, erro
 			if err != nil {
 				return nil, err
 			}
+			rowDesc.numInput = numParam
 		case parameterDescriptionMsg: // response to DESCRIBE message.
-			if err := rd.Discard(msgLen); err != nil {
+			numParam, err = readInt16(rd)
+			if err != nil {
 				return nil, err
+			}
+
+			for i := 0; i < int(numParam); i++ {
+				if _, err := readInt32(rd); err != nil {
+					return nil, err
+				}
 			}
 		case noDataMsg: // response to DESCRIBE message.
 			if err := rd.Discard(msgLen); err != nil {

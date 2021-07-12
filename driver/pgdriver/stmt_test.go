@@ -37,14 +37,14 @@ func TestConnector(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestStmt(t *testing.T) {
+func TestStmtSelect(t *testing.T) {
 	ctx := context.Background()
 	db := sqlDB()
 
 	stmt, err := db.Prepare("SELECT $1")
 	require.NoError(t, err)
 
-	res, err := stmt.ExecContext(ctx, "hello")
+	res, err := stmt.Exec("hello")
 	require.NoError(t, err)
 
 	n, err := res.RowsAffected()
@@ -69,11 +69,32 @@ func TestStmt(t *testing.T) {
 	err = stmt.Close()
 	require.NoError(t, err)
 
-	_, err = stmt.ExecContext(ctx, "hello")
+	_, err = stmt.Exec("hello")
 	require.Error(t, err)
 	require.Equal(t, "sql: statement is closed", err.Error())
 
 	err = db.Ping()
+	require.NoError(t, err)
+
+	err = db.Close()
+	require.NoError(t, err)
+}
+
+func TestStmtNoParams(t *testing.T) {
+	db := sqlDB()
+	defer db.Close()
+
+	stmt, err := db.Prepare("SELECT 1")
+	require.NoError(t, err)
+
+	res, err := stmt.Exec()
+	require.NoError(t, err)
+
+	n, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.Equal(t, int64(1), n)
+
+	err = stmt.Close()
 	require.NoError(t, err)
 
 	err = db.Close()

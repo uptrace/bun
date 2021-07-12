@@ -571,7 +571,7 @@ func (stmt *stmt) NumInput() int {
 	if stmt.rowDesc == nil {
 		return -1
 	}
-	return len(stmt.rowDesc.names)
+	return int(stmt.rowDesc.numInput)
 }
 
 func (stmt *stmt) Exec(args []driver.Value) (driver.Result, error) {
