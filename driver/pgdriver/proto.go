@@ -85,26 +85,24 @@ type reader struct {
 func newReader(r io.Reader) *reader {
 	return &reader{
 		Reader: bufio.NewReader(r),
-		buf:    make([]byte, 64),
+		buf:    make([]byte, 128),
 	}
 }
 
 func (r *reader) ReadN(n int) ([]byte, error) {
-	b := r.buf[:n]
-	if _, err := io.ReadFull(r.Reader, b); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func (r *reader) Discard(n int) error {
 	if n <= len(r.buf) {
-		_, err := r.ReadN(n)
-		return err
+		b := r.buf[:n]
+		_, err := io.ReadFull(r.Reader, b)
+		return b, err
 	}
 
 	b := make([]byte, n)
 	_, err := io.ReadFull(r.Reader, b)
+	return b, err
+}
+
+func (r *reader) Discard(n int) error {
+	_, err := r.ReadN(n)
 	return err
 }
 
