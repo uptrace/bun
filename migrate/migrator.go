@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -56,8 +57,24 @@ func (m *Migrator) DB() *bun.DB {
 	return m.db
 }
 
-func (m *Migrator) Migrations() *Migrations {
-	return m.migrations
+// MigrationsWithStatus returns migrations with status in ascending order.
+func (m *Migrator) MigrationsWithStatus(ctx context.Context) (MigrationSlice, error) {
+	sorted := m.migrations.Sorted()
+
+	applied, err := m.selectAppliedMigrations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	appliedMap := migrationMap(applied)
+	for i := range sorted {
+		name := sorted[i].Name
+		if m2, ok := appliedMap[name]; ok {
+			sorted[i] = *m2
+		}
+	}
+
+	return sorted, nil
 }
 
 func (m *Migrator) Init(ctx context.Context) error {
@@ -78,7 +95,9 @@ func (m *Migrator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
+func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
+	cfg := newMigrationConfig(opts)
+
 	if err := m.validate(); err != nil {
 		return nil, err
 	}
@@ -88,25 +107,30 @@ func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
 	}
 	defer m.Unlock(ctx) //nolint:errcheck
 
-	migrations, lastGroupID, err := m.selectNewMigrations(ctx)
+	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	group := &MigrationGroup{
-		Migrations: migrations,
+		Migrations: migrations.Unapplied(),
 	}
-
-	if len(migrations) == 0 {
+	if len(group.Migrations) == 0 {
 		return group, nil
 	}
+	group.ID = migrations.LastGroupID() + 1
 
-	group.ID = lastGroupID + 1
-
-	for i := range migrations {
-		migration := &migrations[i]
+	for i := range group.Migrations {
+		migration := &group.Migrations[i]
 		migration.GroupID = group.ID
-		if err := m.runUp(ctx, m.db, migration); err != nil {
+
+		if !cfg.nop && migration.Up != nil {
+			if err := migration.Up(ctx, m.db); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := m.MarkApplied(ctx, migration); err != nil {
 			return nil, err
 		}
 	}
@@ -114,7 +138,9 @@ func (m *Migrator) Migrate(ctx context.Context) (*MigrationGroup, error) {
 	return group, nil
 }
 
-func (m *Migrator) Rollback(ctx context.Context) (*MigrationGroup, error) {
+func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
+	cfg := newMigrationConfig(opts)
+
 	if err := m.validate(); err != nil {
 		return nil, err
 	}
@@ -124,89 +150,28 @@ func (m *Migrator) Rollback(ctx context.Context) (*MigrationGroup, error) {
 	}
 	defer m.Unlock(ctx) //nolint:errcheck
 
-	lastGroup, err := m.selectLastGroup(ctx)
+	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	lastGroup := migrations.LastGroup()
+
 	for i := range lastGroup.Migrations {
-		if err := m.runDown(ctx, m.db, &lastGroup.Migrations[i]); err != nil {
+		migration := &lastGroup.Migrations[i]
+
+		if !cfg.nop && migration.Down != nil {
+			if err := migration.Down(ctx, m.db); err != nil {
+				return nil, err
+			}
+		}
+
+		if err := m.MarkUnapplied(ctx, migration); err != nil {
 			return nil, err
 		}
 	}
 
 	return lastGroup, nil
-}
-
-func (m *Migrator) selectLastGroup(ctx context.Context) (*MigrationGroup, error) {
-	completed, lastGroupID, err := m.selectCompletedMigrations(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	group := &MigrationGroup{
-		ID: lastGroupID,
-	}
-	if group.ID == 0 {
-		return group, nil
-	}
-
-	migrationMap := migrationMap(m.ms)
-	for i := range completed {
-		migration := &completed[i]
-		if migration.GroupID != lastGroupID {
-			continue
-		}
-
-		id := migration.ID
-		name := migration.Name
-
-		migration, ok := migrationMap[name]
-		if !ok {
-			return nil, fmt.Errorf("migrate: can't find migration %q", name)
-		}
-
-		migration.ID = id
-		group.Migrations = append(group.Migrations, *migration)
-	}
-
-	return group, nil
-}
-
-func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
-	if err := m.validate(); err != nil {
-		return nil, err
-	}
-
-	if err := m.Lock(ctx); err != nil {
-		return nil, err
-	}
-	defer m.Unlock(ctx) //nolint:errcheck
-
-	migrations, lastGroupID, err := m.selectNewMigrations(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(migrations) == 0 {
-		return new(MigrationGroup), nil
-	}
-
-	group := &MigrationGroup{
-		ID:         lastGroupID + 1,
-		Migrations: migrations,
-	}
-
-	for i := range migrations {
-		migration := &migrations[i]
-		migration.GroupID = group.ID
-		migration.Up = nil
-		if err := m.runUp(ctx, m.db, migration); err != nil {
-			return nil, err
-		}
-	}
-
-	return group, nil
 }
 
 type MigrationStatus struct {
@@ -216,22 +181,27 @@ type MigrationStatus struct {
 }
 
 func (m *Migrator) Status(ctx context.Context) (*MigrationStatus, error) {
-	status := new(MigrationStatus)
-	status.Migrations = m.migrations.Sorted()
+	log.Printf(
+		"DEPRECATED: bun: replace Status(ctx) with " +
+			"MigrationsWithStatus(ctx)")
 
-	lastGroup, err := m.selectLastGroup(ctx)
+	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
-	status.LastGroup = lastGroup
+	return &MigrationStatus{
+		Migrations:    migrations,
+		NewMigrations: migrations.Unapplied(),
+		LastGroup:     migrations.LastGroup(),
+	}, nil
+}
 
-	newMigrations, _, err := m.selectNewMigrations(ctx)
-	if err != nil {
-		return nil, err
-	}
-	status.NewMigrations = newMigrations
+func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
+	log.Printf(
+		"DEPRECATED: bun: replace MarkCompleted(ctx) with " +
+			"Migrate(ctx, migrate.WithNopMigration())")
 
-	return status, nil
+	return m.Migrate(ctx, WithNopMigration())
 }
 
 func (m *Migrator) CreateGo(ctx context.Context, name string) (*MigrationFile, error) {
@@ -292,27 +262,17 @@ func (m *Migrator) genMigrationName(name string) (string, error) {
 	return fmt.Sprintf("%s_%s", version, name), nil
 }
 
-func (m *Migrator) runUp(ctx context.Context, db *bun.DB, migration *Migration) error {
-	if migration.Up != nil {
-		if err := migration.Up(ctx, db); err != nil {
-			return err
-		}
-	}
-
-	_, err := db.NewInsert().Model(migration).
+// MarkApplied marks the migration as applied (applied).
+func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error {
+	_, err := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table).
 		Exec(ctx)
 	return err
 }
 
-func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration) error {
-	if migration.Down != nil {
-		if err := migration.Down(ctx, db); err != nil {
-			return err
-		}
-	}
-
-	_, err := db.NewDelete().
+// MarkUnapplied marks the migration as unapplied (new).
+func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) error {
+	_, err := m.db.NewDelete().
 		Model(migration).
 		ModelTableExpr(m.table).
 		Where("id = ?", migration.ID).
@@ -320,48 +280,17 @@ func (m *Migrator) runDown(ctx context.Context, db *bun.DB, migration *Migration
 	return err
 }
 
-// selectCompletedMigrations selects completed migrations in descending order
-// (the order is used for rollbacks).
-func (m *Migrator) selectCompletedMigrations(ctx context.Context) (MigrationSlice, int64, error) {
+// selectAppliedMigrations selects applied (applied) migrations in descending order.
+func (m *Migrator) selectAppliedMigrations(ctx context.Context) (MigrationSlice, error) {
 	var ms MigrationSlice
 	if err := m.db.NewSelect().
 		ColumnExpr("*").
 		Model(&ms).
 		ModelTableExpr(m.table).
-		OrderExpr("id DESC").
 		Scan(ctx); err != nil {
-		return nil, 0, err
+		return nil, err
 	}
-
-	var lastGroupID int64
-
-	for i := range ms {
-		groupID := ms[i].GroupID
-		if groupID > lastGroupID {
-			lastGroupID = groupID
-		}
-	}
-
-	return ms, lastGroupID, nil
-}
-
-func (m *Migrator) selectNewMigrations(ctx context.Context) (MigrationSlice, int64, error) {
-	migrations := m.migrations.Sorted()
-
-	completed, lastGroupID, err := m.selectCompletedMigrations(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	completedMap := migrationMap(completed)
-	for i := len(migrations) - 1; i >= 0; i-- {
-		migration := &migrations[i]
-		if _, ok := completedMap[migration.Name]; ok {
-			migrations = append(migrations[:i], migrations[i+1:]...)
-		}
-	}
-
-	return migrations, lastGroupID, nil
+	return ms, nil
 }
 
 func (m *Migrator) formattedTableName(db *bun.DB) string {
