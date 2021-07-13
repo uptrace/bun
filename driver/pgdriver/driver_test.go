@@ -104,6 +104,55 @@ func TestStmtNoParams(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestStmtConcurrency(t *testing.T) {
+	db := sqlDB()
+	defer db.Close()
+
+	var wg sync.WaitGroup
+	var stopped uint32
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for atomic.LoadUint32(&stopped) == 0 {
+			stmt1, err := db.Prepare("SELECT $1")
+			require.NoError(t, err)
+
+			var n1 int
+			err = stmt1.QueryRow(123).Scan(&n1)
+			require.NoError(t, err)
+			require.Equal(t, 123, n1)
+
+			err = stmt1.Close()
+			require.NoError(t, err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for atomic.LoadUint32(&stopped) == 0 {
+			stmt2, err := db.Prepare("SELECT $1, $2")
+			require.NoError(t, err)
+
+			var n1, n2 int
+			err = stmt2.QueryRow(456, 789).Scan(&n1, &n2)
+			require.NoError(t, err)
+			require.Equal(t, 456, n1)
+			require.Equal(t, 789, n2)
+
+			err = stmt2.Close()
+			require.NoError(t, err)
+		}
+	}()
+
+	time.Sleep(time.Second)
+	atomic.StoreUint32(&stopped, 1)
+	wg.Wait()
+}
+
 func TestCancel(t *testing.T) {
 	db := sqlDB()
 	defer db.Close()
@@ -139,7 +188,7 @@ func TestCancel(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 	atomic.StoreUint32(&stopped, 1)
 	wg.Wait()
 }

@@ -555,7 +555,7 @@ func readQueryData(ctx context.Context, cn *Conn) (*rows, error) {
 			if err != nil {
 				return nil, err
 			}
-			return newRows(cn, rowDesc), nil
+			return newRows(cn, rowDesc, true), nil
 		case commandCompleteMsg:
 			if err := rd.Discard(msgLen); err != nil {
 				return nil, err
@@ -606,9 +606,10 @@ func newRowDescription(numCol int) *rowDescription {
 		numCol = 16
 	}
 	return &rowDescription{
-		buf:   make([]byte, 0, 16*numCol),
-		names: make([]string, 0, numCol),
-		types: make([]int32, 0, numCol),
+		buf:      make([]byte, 0, 16*numCol),
+		names:    make([]string, 0, numCol),
+		types:    make([]int32, 0, numCol),
+		numInput: -1,
 	}
 }
 
@@ -616,6 +617,7 @@ func (d *rowDescription) reset(numCol int) {
 	d.buf = make([]byte, 0, 16*numCol)
 	d.names = d.names[:0]
 	d.types = d.types[:0]
+	d.numInput = -1
 }
 
 func (d *rowDescription) addName(name []byte) {
@@ -910,7 +912,7 @@ func readExtQueryData(ctx context.Context, cn *Conn, rowDesc *rowDescription) (*
 			if err := rd.Discard(msgLen); err != nil {
 				return nil, err
 			}
-			return newRows(cn, rowDesc), nil
+			return newRows(cn, rowDesc, false), nil
 		case commandCompleteMsg: // response to EXECUTE message.
 			if err := rd.Discard(msgLen); err != nil {
 				return nil, err

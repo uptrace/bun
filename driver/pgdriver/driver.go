@@ -359,17 +359,19 @@ func (cn *Conn) checkBadConn(err error) error {
 //------------------------------------------------------------------------------
 
 type rows struct {
-	cn      *Conn
-	rowDesc *rowDescription
-	closed  bool
+	cn       *Conn
+	rowDesc  *rowDescription
+	reusable bool
+	closed   bool
 }
 
 var _ driver.Rows = (*rows)(nil)
 
-func newRows(cn *Conn, rowDesc *rowDescription) *rows {
+func newRows(cn *Conn, rowDesc *rowDescription, reusable bool) *rows {
 	return &rows{
-		cn:      cn,
-		rowDesc: rowDesc,
+		cn:       cn,
+		rowDesc:  rowDesc,
+		reusable: reusable,
 	}
 }
 
@@ -401,7 +403,9 @@ func (r *rows) close() {
 	r.closed = true
 
 	if r.rowDesc != nil {
-		rowDescPool.Put(r.rowDesc)
+		if r.reusable {
+			rowDescPool.Put(r.rowDesc)
+		}
 		r.rowDesc = nil
 	}
 }
@@ -471,7 +475,7 @@ func (r *rows) readDataRow(rd *reader, dest []driver.Value) error {
 	}
 
 	if len(dest) != int(numCol) {
-		return fmt.Errorf("pgdriver: query returned %d columns, but dest has %d items",
+		return fmt.Errorf("pgdriver: query returned %d columns, but Scan dest has %d items",
 			numCol, len(dest))
 	}
 
