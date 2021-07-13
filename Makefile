@@ -9,6 +9,15 @@ test:
 	done
 
 tag:
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) dialect/pgdialect/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) dialect/mysqldialect/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) dialect/sqlitedialect/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) driver/pgdriver/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) dbfixture/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) extra/bundebug/go.mod
+	go mod edit -require github.com/uptrace/bun@v$(VERSION) extra/bunotel/go.mod
+	git add \*.mod
+	git commit -m "Bump to version $(VERSION)"
 	git tag $(VERSION)
 	git tag dialect/pgdialect/$(VERSION)
 	git tag dialect/mysqldialect/$(VERSION)
