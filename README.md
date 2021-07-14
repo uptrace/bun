@@ -257,3 +257,11 @@ if err := db.NewSelect().
 ```
 
 For more details, please consult [docs](https://bun.uptrace.dev/) and check [examples](example).
+
+## Contributors
+
+Thanks to all the people who already contributed!
+
+<a href="https://github.com/uptrace/bun/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=uptrace/bun" />
+</a>
