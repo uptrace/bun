@@ -252,7 +252,7 @@ func (m *Migrator) genMigrationName(name string) (string, error) {
 	const timeFormat = "20060102150405"
 
 	if name == "" {
-		return "", errors.New("migrate: create requires a migration name")
+		return "", errors.New("migrate: migration name can't be empty")
 	}
 	if !nameRE.MatchString(name) {
 		return "", fmt.Errorf("migrate: invalid migration name: %q", name)

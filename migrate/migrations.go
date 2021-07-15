@@ -15,21 +15,23 @@ type MigrationsOption func(m *Migrations)
 
 func WithMigrationsDirectory(directory string) MigrationsOption {
 	return func(m *Migrations) {
-		m.directory = directory
+		m.explicitDirectory = directory
 	}
 }
 
 type Migrations struct {
 	ms MigrationSlice
 
-	directory string
+	explicitDirectory string
+	implicitDirectory string
 }
 
 func NewMigrations(opts ...MigrationsOption) *Migrations {
-	m := &Migrations{}
+	m := new(Migrations)
 	for _, opt := range opts {
 		opt(m)
 	}
+	m.implicitDirectory = filepath.Dir(migrationFile())
 	return m
 }
 
@@ -117,10 +119,13 @@ func (m *Migrations) getOrCreateMigration(name string) *Migration {
 }
 
 func (m *Migrations) getDirectory() string {
-	if m.directory == "" {
-		return filepath.Dir(migrationFile())
+	if m.explicitDirectory != "" {
+		return m.explicitDirectory
 	}
-	return m.directory
+	if m.implicitDirectory != "" {
+		return m.implicitDirectory
+	}
+	return filepath.Dir(migrationFile())
 }
 
 func migrationFile() string {
