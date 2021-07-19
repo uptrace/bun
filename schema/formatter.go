@@ -64,7 +64,7 @@ func (f Formatter) String() string {
 	for i, arg := range f.namedArgs {
 		ss[i] = fmt.Sprintf("%s=%v", arg.name, arg.value)
 	}
-	return " " + strings.Join(ss, " ")
+	return strings.Join(ss, " ")
 }
 
 func (f Formatter) IsNop() bool {

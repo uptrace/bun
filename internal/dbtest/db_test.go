@@ -42,7 +42,9 @@ func pg(tb testing.TB) *bun.DB {
 		assert.NoError(tb, sqldb.Close())
 	})
 
-	return bun.NewDB(sqldb, pgdialect.New())
+	db := bun.NewDB(sqldb, pgdialect.New())
+	require.Equal(tb, "DB<dialect=pg>", db.String())
+	return db
 }
 
 func mysql(tb testing.TB) *bun.DB {
@@ -70,7 +72,9 @@ func sqlite(tb testing.TB) *bun.DB {
 	sqldb.SetMaxIdleConns(1000)
 	sqldb.SetConnMaxLifetime(0)
 
-	return bun.NewDB(sqldb, sqlitedialect.New())
+	db := bun.NewDB(sqldb, sqlitedialect.New())
+	require.Equal(tb, "DB<dialect=sqlite>", db.String())
+	return db
 }
 
 func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {

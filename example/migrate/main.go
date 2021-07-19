@@ -112,7 +112,7 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 			},
 			{
 				Name:  "create_sql",
-				Usage: "create SQL migration",
+				Usage: "create up and down SQL migrations",
 				Action: func(c *cli.Context) error {
 					name := strings.Join(c.Args().Slice(), "_")
 					files, err := migrator.CreateSQLMigrations(c.Context, name)

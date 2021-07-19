@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync/atomic"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -58,6 +59,18 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	}
 
 	return db
+}
+
+func (db *DB) String() string {
+	var b strings.Builder
+	b.WriteString("DB<dialect=")
+	b.WriteString(db.dialect.Name().String())
+	if s := db.fmter.String(); s != "" {
+		b.WriteString(" ")
+		b.WriteString(s)
+	}
+	b.WriteString(">")
+	return b.String()
 }
 
 func (db *DB) DBStats() DBStats {
