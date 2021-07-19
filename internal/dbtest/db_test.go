@@ -106,6 +106,7 @@ func TestDB(t *testing.T) {
 		{"testSelectMultiSlice", testSelectMultiSlice},
 		{"testSelectJSONMap", testSelectJSONMap},
 		{"testSelectJSONStruct", testSelectJSONStruct},
+		{"testJSONSpecialChars", testJSONSpecialChars},
 		{"testSelectRawMessage", testSelectRawMessage},
 		{"testScanNullVar", testScanNullVar},
 		{"testScanSingleRow", testScanSingleRow},
@@ -525,4 +526,38 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
+}
+
+func testJSONSpecialChars(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID    int
+		Attrs map[string]interface{} `bun:"type:json"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{
+		Attrs: map[string]interface{}{
+			"hello": "\000world\nworld\u0000",
+		},
+	}
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+
+	model = new(Model)
+	err = db.NewSelect().Model(model).Scan(ctx)
+	require.NoError(t, err)
+	switch db.Dialect().Name() {
+	case dialect.MySQL5, dialect.MySQL8:
+		require.Equal(t, map[string]interface{}{
+			"hello": "\x00world\nworld\x00",
+		}, model.Attrs)
+	default:
+		require.Equal(t, map[string]interface{}{
+			"hello": "\\u0000world\nworld\\u0000",
+		}, model.Attrs)
+	}
 }

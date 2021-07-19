@@ -18,7 +18,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	return dialect.Appender(field.StructField.Type)
 }
 
-func Append(fmter Formatter, b []byte, v interface{}) []byte {
+func Append(fmter Formatter, b []byte, v interface{}, custom CustomAppender) []byte {
 	switch v := v.(type) {
 	case nil:
 		return dialect.AppendNull(b)
@@ -49,7 +49,12 @@ func Append(fmter Formatter, b []byte, v interface{}) []byte {
 	case QueryAppender:
 		return AppendQueryAppender(fmter, b, v)
 	default:
-		return appendValue(fmter, b, reflect.ValueOf(v))
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Ptr && vv.IsNil() {
+			return dialect.AppendNull(b)
+		}
+		appender := Appender(vv.Type(), custom)
+		return appender(fmter, b, vv)
 	}
 }
 
