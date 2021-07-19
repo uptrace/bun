@@ -15,6 +15,10 @@ func appender(typ reflect.Type) schema.AppenderFunc {
 	if typ == timeType {
 		return appendTimeValue
 	}
+	switch typ.Kind() {
+	case reflect.Bool:
+		return appendBoolValue
+	}
 	return schema.Appender(typ, customAppender)
 }
 
@@ -38,6 +42,17 @@ func appendTime(b []byte, tm time.Time) []byte {
 	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999")
 	b = append(b, '\'')
 	return b
+}
+
+func appendBoolValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return appendBool(b, v.Bool())
+}
+
+func appendBool(b []byte, v bool) []byte {
+	if v {
+		return append(b, 49)
+	}
+	return append(b, 48)
 }
 
 func appendJSONValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
