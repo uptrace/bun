@@ -28,30 +28,14 @@ var (
 	sliceFloat64Type = reflect.TypeOf([]float64(nil))
 )
 
-func appender(typ reflect.Type, pgArray bool) schema.AppenderFunc {
+func customAppender(typ reflect.Type) schema.AppenderFunc {
 	switch typ.Kind() {
 	case reflect.Uint32:
 		return appendUint32ValueAsInt
 	case reflect.Uint, reflect.Uint64:
 		return appendUint64ValueAsInt
-	case reflect.Ptr:
-		return ptrAppenderFunc(typ, pgArray)
-	case reflect.Slice:
-		if pgArray {
-			return arrayAppender(typ)
-		}
 	}
-	return schema.Appender(typ)
-}
-
-func ptrAppenderFunc(typ reflect.Type, pgArray bool) schema.AppenderFunc {
-	appender := appender(typ.Elem(), pgArray)
-	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-		if v.IsNil() {
-			return dialect.AppendNull(b)
-		}
-		return appender(fmter, b, v.Elem())
-	}
+	return nil
 }
 
 func appendUint32ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -88,12 +72,10 @@ func arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 	if typ.Kind() == reflect.String {
 		return arrayAppendStringValue
 	}
-
 	if typ.Implements(driverValuerType) {
 		return arrayAppendDriverValue
 	}
-
-	return schema.Appender(typ)
+	return schema.Appender(typ, customAppender)
 }
 
 func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {

@@ -111,6 +111,9 @@ func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte
 		return schema.AppendQueryAppender(fmter, b, v)
 	default:
 		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Ptr && vv.IsNil() {
+			return dialect.AppendNull(b)
+		}
 		appender := d.Appender(vv.Type())
 		return appender(fmter, b, vv)
 	}
@@ -121,7 +124,7 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 		return v.(schema.AppenderFunc)
 	}
 
-	fn := appender(typ, false)
+	fn := schema.Appender(typ, customAppender)
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(schema.AppenderFunc)

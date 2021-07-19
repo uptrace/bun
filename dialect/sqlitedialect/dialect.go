@@ -60,7 +60,7 @@ func (d *Dialect) IdentQuote() byte {
 }
 
 func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
-	return schema.Append(fmter, b, v)
+	return schema.Append(fmter, b, v, nil)
 }
 
 func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
@@ -68,7 +68,7 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 		return v.(schema.AppenderFunc)
 	}
 
-	fn := schema.Appender(typ)
+	fn := schema.Appender(typ, nil)
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(schema.AppenderFunc)

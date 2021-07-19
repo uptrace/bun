@@ -64,7 +64,7 @@ func (d *nopDialect) IdentQuote() byte {
 }
 
 func (d *nopDialect) Append(fmter Formatter, b []byte, v interface{}) []byte {
-	return Append(fmter, b, v)
+	return Append(fmter, b, v, nil)
 }
 
 func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {
@@ -72,7 +72,7 @@ func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {
 		return v.(AppenderFunc)
 	}
 
-	fn := Appender(typ)
+	fn := Appender(typ, nil)
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(AppenderFunc)
