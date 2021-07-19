@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/sqliteshim"
@@ -100,11 +101,12 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "create_go",
 				Usage: "create Go migration",
 				Action: func(c *cli.Context) error {
-					mf, err := migrator.CreateGo(c.Context, c.Args().Get(0))
+					name := strings.Join(c.Args().Slice(), "_")
+					mf, err := migrator.CreateGoMigration(c.Context, name)
 					if err != nil {
 						return err
 					}
-					fmt.Printf("created migration %s (%s)\n", mf.FileName, mf.FilePath)
+					fmt.Printf("created migration %s (%s)\n", mf.Name, mf.Path)
 					return nil
 				},
 			},
@@ -112,11 +114,16 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "create_sql",
 				Usage: "create SQL migration",
 				Action: func(c *cli.Context) error {
-					mf, err := migrator.CreateSQL(c.Context, c.Args().Get(0))
+					name := strings.Join(c.Args().Slice(), "_")
+					files, err := migrator.CreateSQLMigrations(c.Context, name)
 					if err != nil {
 						return err
 					}
-					fmt.Printf("created migration %s (%s)\n", mf.FileName, mf.FilePath)
+
+					for _, mf := range files {
+						fmt.Printf("created migration %s (%s)\n", mf.Name, mf.Path)
+					}
+
 					return nil
 				},
 			},

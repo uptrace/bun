@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.4 - Jul 19 2021
+
+- Renamed `migrate.CreateGo` to `CreateGoMigration`.
+- Added `migrate.WithPackageName` to customize the Go package name in generated migrations.
+- Renamed `migrate.CreateSQL` to `CreateSQLMigrations` and changed `CreateSQLMigrations` to create
+  both up and down migration files.
+
 ## v0.3.1 - Jul 12 2021
 
 - Renamed `alias` field struct tag to `alt` so it is not confused with column alias.

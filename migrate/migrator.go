@@ -204,7 +204,29 @@ func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
 	return m.Migrate(ctx, WithNopMigration())
 }
 
-func (m *Migrator) CreateGo(ctx context.Context, name string) (*MigrationFile, error) {
+type goMigrationConfig struct {
+	packageName string
+}
+
+type GoMigrationOption func(cfg *goMigrationConfig)
+
+func WithPackageName(name string) GoMigrationOption {
+	return func(cfg *goMigrationConfig) {
+		cfg.packageName = name
+	}
+}
+
+// CreateGoMigration creates a Go migration file.
+func (m *Migrator) CreateGoMigration(
+	ctx context.Context, name string, opts ...GoMigrationOption,
+) (*MigrationFile, error) {
+	cfg := &goMigrationConfig{
+		packageName: "migrations",
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	name, err := m.genMigrationName(name)
 	if err != nil {
 		return nil, err
@@ -212,26 +234,41 @@ func (m *Migrator) CreateGo(ctx context.Context, name string) (*MigrationFile, e
 
 	fname := name + ".go"
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
+	content := fmt.Sprintf(goTemplate, cfg.packageName)
 
-	if err := ioutil.WriteFile(fpath, []byte(goTemplate), 0o644); err != nil {
+	if err := ioutil.WriteFile(fpath, []byte(content), 0o644); err != nil {
 		return nil, err
 	}
 
 	mf := &MigrationFile{
-		FileName: fname,
-		FilePath: fpath,
-		Content:  goTemplate,
+		Name:    fname,
+		Path:    fpath,
+		Content: content,
 	}
 	return mf, nil
 }
 
-func (m *Migrator) CreateSQL(ctx context.Context, name string) (*MigrationFile, error) {
+// CreateSQLMigrations creates an up and down SQL migration files.
+func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
 	name, err := m.genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
 
-	fname := name + ".up.sql"
+	up, err := m.createSQL(ctx, name+".up.sql")
+	if err != nil {
+		return nil, err
+	}
+
+	down, err := m.createSQL(ctx, name+".down.sql")
+	if err != nil {
+		return nil, err
+	}
+
+	return []*MigrationFile{up, down}, nil
+}
+
+func (m *Migrator) createSQL(ctx context.Context, fname string) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
 	if err := ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
@@ -239,9 +276,9 @@ func (m *Migrator) CreateSQL(ctx context.Context, name string) (*MigrationFile, 
 	}
 
 	mf := &MigrationFile{
-		FileName: fname,
-		FilePath: fpath,
-		Content:  goTemplate,
+		Name:    fname,
+		Path:    fpath,
+		Content: goTemplate,
 	}
 	return mf, nil
 }
