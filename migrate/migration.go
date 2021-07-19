@@ -106,7 +106,7 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 	}
 }
 
-const goTemplate = `package migrations
+const goTemplate = `package %s
 
 import (
 	"context"
@@ -230,9 +230,9 @@ func (g *MigrationGroup) String() string {
 }
 
 type MigrationFile struct {
-	FileName string
-	FilePath string
-	Content  string
+	Name    string
+	Path    string
+	Content string
 }
 
 //------------------------------------------------------------------------------
