@@ -21,6 +21,7 @@ type Dialect interface {
 	IdentQuote() byte
 	Append(fmter Formatter, b []byte, v interface{}) []byte
 	Appender(typ reflect.Type) AppenderFunc
+	FieldAppender(field *Field) AppenderFunc
 	Scanner(typ reflect.Type) ScannerFunc
 }
 
@@ -78,6 +79,10 @@ func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {
 		return v.(AppenderFunc)
 	}
 	return fn
+}
+
+func (d *nopDialect) FieldAppender(field *Field) AppenderFunc {
+	return FieldAppender(d, field)
 }
 
 func (d *nopDialect) Scanner(typ reflect.Type) ScannerFunc {

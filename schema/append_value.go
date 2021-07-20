@@ -114,8 +114,12 @@ func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 
 func ifaceAppenderFunc(typ reflect.Type, custom func(reflect.Type) AppenderFunc) AppenderFunc {
 	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
-		appender := Appender(v.Type(), custom)
-		return appender(fmter, b, v)
+		if v.IsNil() {
+			return dialect.AppendNull(b)
+		}
+		elem := v.Elem()
+		appender := Appender(elem.Type(), custom)
+		return appender(fmter, b, elem)
 	}
 }
 

@@ -9,4 +9,6 @@ const (
 	DoublePrecision = "DOUBLE PRECISION"
 	VarChar         = "VARCHAR"
 	Timestamp       = "TIMESTAMP"
+	JSON            = "JSON"
+	JSONB           = "JSONB"
 )

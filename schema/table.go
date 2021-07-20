@@ -353,7 +353,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		field.UserSQLType = s
 	}
 	field.DiscoveredSQLType = DiscoverSQLType(field.IndirectType)
-	field.Append = FieldAppender(t.dialect, field)
+	field.Append = t.dialect.FieldAppender(field)
 	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = FieldZeroChecker(field)
 

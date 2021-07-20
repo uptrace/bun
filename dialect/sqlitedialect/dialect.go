@@ -76,6 +76,10 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 	return fn
 }
 
+func (d *Dialect) FieldAppender(field *schema.Field) schema.AppenderFunc {
+	return schema.FieldAppender(d, field)
+}
+
 func (d *Dialect) Scanner(typ reflect.Type) schema.ScannerFunc {
 	if v, ok := d.scannerMap.Load(typ); ok {
 		return v.(schema.ScannerFunc)

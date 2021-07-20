@@ -117,6 +117,7 @@ func TestDB(t *testing.T) {
 		{"testScanSingleRowByRow", testScanSingleRowByRow},
 		{"testScanRows", testScanRows},
 		{"testRunInTx", testRunInTx},
+		{"testInsertIface", testInsertIface},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -564,4 +565,26 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 			"hello": "\\u0000world\nworld\\u0000",
 		}, model.Attrs)
 	}
+}
+
+func testInsertIface(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID    int
+		Value interface{} `bun:"type:json"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := new(Model)
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+
+	model = &Model{
+		Value: "hello",
+	}
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
 }
