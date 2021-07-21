@@ -1,0 +1,1 @@
+SELECT "model"."str" FROM "models" AS "model"

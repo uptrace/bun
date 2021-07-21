@@ -1,0 +1,1 @@
+UPDATE "soft_deletes" AS "soft_delete" SET "deleted_at" = [TIME] WHERE "deleted_at" IS NULL AND ("id" = NULL)
