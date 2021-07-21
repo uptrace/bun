@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         go-version: [1.16.x]
-        mysql-version: [5.7, 8.0]
 
     services:
       postgres:
@@ -24,8 +23,8 @@ jobs:
           --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
         ports:
           - 5432:5432
-      mysql:
-        image: mysql:${{ matrix.mysql-version }}
+      mysql8:
+        image: mysql:8.0
         env:
           MYSQL_DATABASE: test
           MYSQL_USER: user
@@ -33,6 +32,18 @@ jobs:
           MYSQL_ROOT_PASSWORD: pass
         ports:
           - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s
+          --health-retries=3
+      mysql5:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: test
+          MYSQL_USER: user
+          MYSQL_PASSWORD: pass
+          MYSQL_ROOT_PASSWORD: pass
+        ports:
+          - 53306:3306
         options: >-
           --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s
           --health-retries=3
