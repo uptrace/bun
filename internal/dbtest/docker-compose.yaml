@@ -1,7 +1,7 @@
 version: '3.9'
 
 services:
-  mysql:
+  mysql8:
     image: mysql:8.0
     environment:
       - MYSQL_DATABASE=test
@@ -10,6 +10,20 @@ services:
       - MYSQL_ROOT_PASSWORD=pass
     ports:
       - 3306:3306
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping']
+      timeout: 5s
+      interval: 10s
+      retries: 3
+  mysql5:
+    image: mysql:5.7
+    environment:
+      - MYSQL_DATABASE=test
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=pass
+      - MYSQL_ROOT_PASSWORD=pass
+    ports:
+      - 53306:3306
     healthcheck:
       test: ['CMD', 'mysqladmin', 'ping']
       timeout: 5s

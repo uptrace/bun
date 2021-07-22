@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/uptrace/bun"
@@ -27,7 +28,9 @@ var ctx = context.TODO()
 
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
 	"pg":     pg,
-	"mysql":  mysql,
+	"pgx":    pgx,
+	"mysql8": mysql8,
+	"mysql5": mysql5,
 	"sqlite": sqlite,
 }
 
@@ -47,7 +50,24 @@ func pg(tb testing.TB) *bun.DB {
 	return db
 }
 
-func mysql(tb testing.TB) *bun.DB {
+func pgx(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("PG")
+	if dsn == "" {
+		dsn = "postgres://postgres:postgres@localhost:5432/test?sslmode=disable"
+	}
+
+	sqldb, err := sql.Open("pgx", dsn)
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
+
+	db := bun.NewDB(sqldb, pgdialect.New())
+	require.Equal(tb, "DB<dialect=pg>", db.String())
+	return db
+}
+
+func mysql8(tb testing.TB) *bun.DB {
 	dsn := os.Getenv("MYSQL")
 	if dsn == "" {
 		dsn = "user:pass@/test"
@@ -59,18 +79,34 @@ func mysql(tb testing.TB) *bun.DB {
 		assert.NoError(tb, sqldb.Close())
 	})
 
-	return bun.NewDB(sqldb, mysqldialect.New())
+	db := bun.NewDB(sqldb, mysqldialect.New())
+	require.Equal(tb, "DB<dialect=mysql8>", db.String())
+	return db
 }
 
-func sqlite(tb testing.TB) *bun.DB {
-	sqldb, err := sql.Open(sqliteshim.DriverName(), "file::memory:?cache=shared")
+func mysql5(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("MYSQL5")
+	if dsn == "" {
+		dsn = "user:pass@tcp(localhost:53306)/test"
+	}
+
+	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
 		assert.NoError(tb, sqldb.Close())
 	})
 
-	sqldb.SetMaxIdleConns(1000)
-	sqldb.SetConnMaxLifetime(0)
+	db := bun.NewDB(sqldb, mysqldialect.New())
+	require.Equal(tb, "DB<dialect=mysql5>", db.String())
+	return db
+}
+
+func sqlite(tb testing.TB) *bun.DB {
+	sqldb, err := sql.Open(sqliteshim.DriverName(), filepath.Join(tb.TempDir(), "sqlite.db"))
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	require.Equal(tb, "DB<dialect=sqlite>", db.String())
@@ -78,9 +114,9 @@ func sqlite(tb testing.TB) *bun.DB {
 }
 
 func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
-	for _, newDB := range allDBs {
-		db := newDB(t)
-		t.Run(db.Dialect().Name().String(), func(t *testing.T) {
+	for name, newDB := range allDBs {
+		t.Run(name, func(t *testing.T) {
+			db := newDB(t)
 			if _, ok := os.LookupEnv("DEBUG"); ok {
 				db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 			}
