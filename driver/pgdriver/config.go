@@ -73,6 +73,9 @@ func WithTLSConfig(cfg *tls.Config) DriverOption {
 }
 
 func WithUser(user string) DriverOption {
+	if user == "" {
+		panic("user is empty")
+	}
 	return func(d *driverConnector) {
 		d.cfg.User = user
 	}
@@ -208,10 +211,7 @@ func env(key, defValue string) string {
 // it can be extended to check other parameters
 func (c *Config) verify() error {
 	if c.User == "" {
-		return errors.New(
-			`pgdriver: username is required. 
-		 	 Check your config and make sure User is not left blank.`,
-		)
+		return errors.New("pgdriver: User option is empty (to configure, use WithUser).")
 	}
 	return nil
 }
