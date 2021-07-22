@@ -80,9 +80,8 @@ type driverConnector struct {
 }
 
 func NewConnector(opts ...DriverOption) driver.Connector {
-	d := &driverConnector{
-		cfg: newDefaultConfig(),
-	}
+
+	d := newDriverConnector(newDefaultConfig())
 
 	d.cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
@@ -99,12 +98,18 @@ func NewConnector(opts ...DriverOption) driver.Connector {
 	return d
 }
 
+func newDriverConnector(cfg Config) *driverConnector {
+	return &driverConnector{cfg: cfg}
+}
+
 var _ driver.Connector = (*driverConnector)(nil)
 
 func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	if d.cfg.User == "" {
-		return nil, errors.New("pgdriver: user name is required")
+
+	if err := d.cfg.verify(); err != nil {
+		return nil, err
 	}
+
 	return newConn(ctx, d)
 }
 
