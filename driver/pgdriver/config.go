@@ -202,3 +202,16 @@ func env(key, defValue string) string {
 	}
 	return defValue
 }
+
+// verify is a method to make sure if the config is legitimate
+// in the case it detects any errors, it returns with a non-nil error
+// it can be extended to check other parameters
+func (c *Config) verify() error {
+	if c.User == "" {
+		return errors.New(
+			`pgdriver: username is required. 
+		 	 Check your config and make sure User is not left blank.`,
+		)
+	}
+	return nil
+}
