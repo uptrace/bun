@@ -102,6 +102,11 @@ func scanBool(dest reflect.Value, src interface{}) error {
 	case int64:
 		dest.SetBool(src != 0)
 		return nil
+	case []byte:
+		if len(src) == 1 {
+			dest.SetBool(src[0] != '0')
+			return nil
+		}
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
