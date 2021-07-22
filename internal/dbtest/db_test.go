@@ -154,6 +154,7 @@ func TestDB(t *testing.T) {
 		{"testScanRows", testScanRows},
 		{"testRunInTx", testRunInTx},
 		{"testInsertIface", testInsertIface},
+		{"testSelectBool", testSelectBool},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -623,4 +624,15 @@ func testInsertIface(t *testing.T, db *bun.DB) {
 	}
 	_, err = db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
+}
+
+func testSelectBool(t *testing.T, db *bun.DB) {
+	var flag bool
+	err := db.NewSelect().ColumnExpr("1").Scan(ctx, &flag)
+	require.NoError(t, err)
+	require.True(t, flag)
+
+	err = db.NewSelect().ColumnExpr("0").Scan(ctx, &flag)
+	require.NoError(t, err)
+	require.False(t, flag)
 }
