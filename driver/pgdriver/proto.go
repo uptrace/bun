@@ -229,7 +229,10 @@ func auth(ctx context.Context, cn *Conn, rd *reader) error {
 	case authenticationMD5Password:
 		return authMD5(ctx, cn, rd)
 	case authenticationSASL:
-		return authSASL(ctx, cn, rd)
+		if err := authSASL(ctx, cn, rd); err != nil {
+			return fmt.Errorf("pgdriver: SASL: %w", err)
+		}
+		return nil
 	default:
 		return fmt.Errorf("pgdriver: unknown authentication message: %q", num)
 	}
@@ -312,7 +315,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 		return err
 	}
 	if s != "SCRAM-SHA-256" {
-		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", s, "SCRAM-SHA-256")
+		return fmt.Errorf("got %q, wanted %q", s, "SCRAM-SHA-256")
 	}
 
 	c0, err := rd.ReadByte()
@@ -320,7 +323,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 		return err
 	}
 	if c0 != 0 {
-		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c0, 0)
+		return fmt.Errorf("got %q, wanted %q", c0, 0)
 	}
 
 	creds := sasl.Credentials(func() (Username, Password, Identity []byte) {
@@ -330,7 +333,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 
 	_, resp, err := client.Step(nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("client.Step 1 failed: %w", err)
 	}
 
 	if err := saslWriteInitialResponse(ctx, cn, resp); err != nil {
@@ -349,7 +352,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 			return err
 		}
 		if c11 != 11 {
-			return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, 11)
+			return fmt.Errorf("got %q, wanted %q", c, 11)
 		}
 
 		b, err := rd.ReadN(msgLen - 4)
@@ -359,26 +362,24 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 
 		_, resp, err = client.Step(b)
 		if err != nil {
-			return err
+			return fmt.Errorf("client.Step 2 failed: %w", err)
 		}
 
 		if err := saslWriteResponse(ctx, cn, resp); err != nil {
 			return err
 		}
 
-		resp, err := saslReadAuthFinal(cn, rd)
+		resp, err = saslReadAuthFinal(cn, rd)
 		if err != nil {
 			return err
 		}
 
-		_, _, err = client.Step(resp)
-		if err != nil {
-			return err
+		if _, _, err := client.Step(resp); err != nil {
+			return fmt.Errorf("client.Step 3 failed: %w", err)
 		}
 
 		if client.State() != sasl.ValidServerResponse {
-			return fmt.Errorf("pgdriver: SASL: state=%q, wanted %q",
-				client.State(), sasl.ValidServerResponse)
+			return fmt.Errorf("got state=%q, wanted %q", client.State(), sasl.ValidServerResponse)
 		}
 
 		return nil
@@ -389,7 +390,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 		}
 		return e
 	default:
-		return fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, authenticationSASLContinueMsg)
+		return fmt.Errorf("got %q, wanted %q", c, authenticationSASLContinueMsg)
 	}
 }
 
@@ -440,15 +441,19 @@ func saslReadAuthFinal(cn *Conn, rd *reader) ([]byte, error) {
 			return nil, err
 		}
 		if c12 != 12 {
-			return nil, fmt.Errorf("pgdriver: SASL: got %q, wanted %q", c, 12)
+			return nil, fmt.Errorf("got %q, wanted %q", c, 12)
 		}
 
-		resp, err := rd.ReadN(msgLen - 4)
-		if err != nil {
+		resp := make([]byte, msgLen-4)
+		if _, err := io.ReadFull(rd, resp); err != nil {
 			return nil, err
 		}
 
-		return resp, readAuthOK(cn, rd)
+		if err := readAuthOK(cn, rd); err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	case errorResponseMsg:
 		e, err := readError(rd)
 		if err != nil {
@@ -456,8 +461,7 @@ func saslReadAuthFinal(cn *Conn, rd *reader) ([]byte, error) {
 		}
 		return nil, e
 	default:
-		return nil, fmt.Errorf(
-			"pgdriver: SASL: got %q, wanted %q", c, authenticationSASLFinalMsg)
+		return nil, fmt.Errorf("got %q, wanted %q", c, authenticationSASLFinalMsg)
 	}
 }
 
