@@ -89,7 +89,7 @@ func newReader(r io.Reader) *reader {
 	}
 }
 
-func (r *reader) ReadN(n int) ([]byte, error) {
+func (r *reader) ReadTemp(n int) ([]byte, error) {
 	if n <= len(r.buf) {
 		b := r.buf[:n]
 		_, err := io.ReadFull(r.Reader, b)
@@ -102,7 +102,7 @@ func (r *reader) ReadN(n int) ([]byte, error) {
 }
 
 func (r *reader) Discard(n int) error {
-	_, err := r.ReadN(n)
+	_, err := r.ReadTemp(n)
 	return err
 }
 
@@ -275,7 +275,7 @@ func readAuthOK(cn *Conn, rd *reader) error {
 //------------------------------------------------------------------------------
 
 func authMD5(ctx context.Context, cn *Conn, rd *reader) error {
-	b, err := rd.ReadN(4)
+	b, err := rd.ReadTemp(4)
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 			return fmt.Errorf("got %q, wanted %q", c, 11)
 		}
 
-		b, err := rd.ReadN(msgLen - 4)
+		b, err := rd.ReadTemp(msgLen - 4)
 		if err != nil {
 			return err
 		}
@@ -514,7 +514,7 @@ func readQuery(ctx context.Context, cn *Conn) (sql.Result, error) {
 				firstErr = errEmptyQuery
 			}
 		case commandCompleteMsg:
-			tmp, err := rd.ReadN(msgLen)
+			tmp, err := rd.ReadTemp(msgLen)
 			if err != nil {
 				firstErr = err
 				break
@@ -658,7 +658,7 @@ func readRowDescription(rd *reader) (*rowDescription, error) {
 		}
 		rowDesc.addName(name[:len(name)-1])
 
-		if _, err := rd.ReadN(6); err != nil {
+		if _, err := rd.ReadTemp(6); err != nil {
 			return nil, err
 		}
 
@@ -668,7 +668,7 @@ func readRowDescription(rd *reader) (*rowDescription, error) {
 		}
 		rowDesc.addType(dataType)
 
-		if _, err := rd.ReadN(8); err != nil {
+		if _, err := rd.ReadTemp(8); err != nil {
 			return nil, err
 		}
 	}
@@ -859,7 +859,7 @@ func readExtQuery(ctx context.Context, cn *Conn) (driver.Result, error) {
 				return nil, err
 			}
 		case commandCompleteMsg: // response to EXECUTE message.
-			tmp, err := rd.ReadN(msgLen)
+			tmp, err := rd.ReadTemp(msgLen)
 			if err != nil {
 				return nil, err
 			}
@@ -1011,7 +1011,7 @@ func readMessageType(rd *reader) (byte, int, error) {
 }
 
 func readInt16(rd *reader) (int16, error) {
-	b, err := rd.ReadN(2)
+	b, err := rd.ReadTemp(2)
 	if err != nil {
 		return 0, err
 	}
@@ -1019,7 +1019,7 @@ func readInt16(rd *reader) (int16, error) {
 }
 
 func readInt32(rd *reader) (int32, error) {
-	b, err := rd.ReadN(4)
+	b, err := rd.ReadTemp(4)
 	if err != nil {
 		return 0, err
 	}

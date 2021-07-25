@@ -66,7 +66,7 @@ func readColumnValue(rd *reader, dataType int32, dataLen int) (interface{}, erro
 }
 
 func readBoolCol(rd *reader, n int) (interface{}, error) {
-	tmp, err := rd.ReadN(n)
+	tmp, err := rd.ReadTemp(n)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func readInt64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, nil
 	}
 
-	tmp, err := rd.ReadN(n)
+	tmp, err := rd.ReadTemp(n)
 	if err != nil {
 		return 0, err
 	}
@@ -91,7 +91,7 @@ func readFloat64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, nil
 	}
 
-	tmp, err := rd.ReadN(n)
+	tmp, err := rd.ReadTemp(n)
 	if err != nil {
 		return 0, err
 	}
@@ -118,7 +118,7 @@ func readBytesCol(rd *reader, n int) (interface{}, error) {
 		return []byte{}, nil
 	}
 
-	tmp, err := rd.ReadN(n)
+	tmp, err := rd.ReadTemp(n)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func readTimeCol(rd *reader, n int) (interface{}, error) {
 		return time.Time{}, nil
 	}
 
-	tmp, err := rd.ReadN(n)
+	tmp, err := rd.ReadTemp(n)
 	if err != nil {
 		return time.Time{}, err
 	}
