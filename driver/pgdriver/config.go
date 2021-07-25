@@ -41,11 +41,11 @@ type Config struct {
 	WriteTimeout time.Duration
 }
 
-func newDefaultConfig() Config {
+func newDefaultConfig() *Config {
 	host := env("PGHOST", "localhost")
 	port := env("PGPORT", "5432")
 
-	return Config{
+	cfg := &Config{
 		Network:     "tcp",
 		Addr:        net.JoinHostPort(host, port),
 		DialTimeout: 5 * time.Second,
@@ -56,18 +56,31 @@ func newDefaultConfig() Config {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
+
+	cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		netDialer := &net.Dialer{
+			Timeout:   cfg.DialTimeout,
+			KeepAlive: 5 * time.Minute,
+		}
+		return netDialer.DialContext(ctx, network, addr)
+	}
+
+	return cfg
 }
 
-type DriverOption func(*driverConnector)
+type DriverOption func(*Connector)
 
 func WithAddr(addr string) DriverOption {
-	return func(d *driverConnector) {
+	if addr == "" {
+		panic("addr is empty")
+	}
+	return func(d *Connector) {
 		d.cfg.Addr = addr
 	}
 }
 
 func WithTLSConfig(cfg *tls.Config) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.TLSConfig = cfg
 	}
 }
@@ -76,31 +89,34 @@ func WithUser(user string) DriverOption {
 	if user == "" {
 		panic("user is empty")
 	}
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.User = user
 	}
 }
 
 func WithPassword(password string) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.Password = password
 	}
 }
 
 func WithDatabase(database string) DriverOption {
-	return func(d *driverConnector) {
+	if database == "" {
+		panic("database is empty")
+	}
+	return func(d *Connector) {
 		d.cfg.Database = database
 	}
 }
 
 func WithApplicationName(appName string) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.AppName = appName
 	}
 }
 
 func WithTimeout(timeout time.Duration) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.DialTimeout = timeout
 		d.cfg.ReadTimeout = timeout
 		d.cfg.WriteTimeout = timeout
@@ -108,25 +124,25 @@ func WithTimeout(timeout time.Duration) DriverOption {
 }
 
 func WithDialTimeout(dialTimeout time.Duration) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.DialTimeout = dialTimeout
 	}
 }
 
 func WithReadTimeout(readTimeout time.Duration) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.ReadTimeout = readTimeout
 	}
 }
 
 func WithWriteTimeout(writeTimeout time.Duration) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		d.cfg.WriteTimeout = writeTimeout
 	}
 }
 
 func WithDSN(dsn string) DriverOption {
-	return func(d *driverConnector) {
+	return func(d *Connector) {
 		opts, err := parseDSN(dsn)
 		if err != nil {
 			panic(err)

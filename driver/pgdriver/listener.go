@@ -20,7 +20,7 @@ var (
 
 type Listener struct {
 	db     *bun.DB
-	driver *driverConnector
+	driver *Connector
 
 	channels []string
 

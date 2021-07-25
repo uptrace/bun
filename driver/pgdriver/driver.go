@@ -41,7 +41,7 @@ var Logger logging = &logger{
 //------------------------------------------------------------------------------
 
 type Driver struct {
-	connector *driverConnector
+	connector *Connector
 }
 
 var _ driver.DriverContext = (*Driver)(nil)
@@ -73,39 +73,23 @@ type DriverStats struct {
 	Errors  uint64
 }
 
-type driverConnector struct {
-	cfg Config
+type Connector struct {
+	cfg *Config
 
 	stats DriverStats
 }
 
-func NewConnector(opts ...DriverOption) driver.Connector {
-
-	d := newDriverConnector(newDefaultConfig())
-
-	d.cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		netDialer := &net.Dialer{
-			Timeout:   d.cfg.DialTimeout,
-			KeepAlive: 5 * time.Minute,
-		}
-		return netDialer.DialContext(ctx, network, addr)
-	}
-
+func NewConnector(opts ...DriverOption) *Connector {
+	d := &Connector{cfg: newDefaultConfig()}
 	for _, opt := range opts {
 		opt(d)
 	}
-
 	return d
 }
 
-func newDriverConnector(cfg Config) *driverConnector {
-	return &driverConnector{cfg: cfg}
-}
+var _ driver.Connector = (*Connector)(nil)
 
-var _ driver.Connector = (*driverConnector)(nil)
-
-func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
-
+func (d *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	if err := d.cfg.verify(); err != nil {
 		return nil, err
 	}
@@ -113,15 +97,15 @@ func (d *driverConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	return newConn(ctx, d)
 }
 
-func (d *driverConnector) Driver() driver.Driver {
+func (d *Connector) Driver() driver.Driver {
 	return Driver{connector: d}
 }
 
-func (d *driverConnector) Config() Config {
+func (d *Connector) Config() *Config {
 	return d.cfg
 }
 
-func (d *driverConnector) Stats() DriverStats {
+func (d *Connector) Stats() DriverStats {
 	return DriverStats{
 		Queries: atomic.LoadUint64(&d.stats.Queries),
 		Errors:  atomic.LoadUint64(&d.stats.Errors),
@@ -131,7 +115,7 @@ func (d *driverConnector) Stats() DriverStats {
 //------------------------------------------------------------------------------
 
 type Conn struct {
-	driver *driverConnector
+	driver *Connector
 
 	netConn net.Conn
 	rd      *reader
@@ -144,7 +128,7 @@ type Conn struct {
 	closed int32
 }
 
-func newConn(ctx context.Context, driver *driverConnector) (*Conn, error) {
+func newConn(ctx context.Context, driver *Connector) (*Conn, error) {
 	netConn, err := driver.cfg.Dialer(ctx, driver.cfg.Network, driver.cfg.Addr)
 	if err != nil {
 		return nil, err
