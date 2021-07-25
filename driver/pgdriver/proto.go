@@ -314,8 +314,16 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 	if err != nil {
 		return err
 	}
-	if s != "SCRAM-SHA-256" {
-		return fmt.Errorf("got %q, wanted %q", s, "SCRAM-SHA-256")
+
+	var saslMech sasl.Mechanism
+
+	switch s {
+	case sasl.ScramSha256.Name:
+		saslMech = sasl.ScramSha256
+	case sasl.ScramSha256Plus.Name:
+		saslMech = sasl.ScramSha256Plus
+	default:
+		return fmt.Errorf("got %q, wanted %q", s, sasl.ScramSha256.Name)
 	}
 
 	c0, err := rd.ReadByte()
@@ -329,14 +337,14 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 	creds := sasl.Credentials(func() (Username, Password, Identity []byte) {
 		return []byte(cn.driver.cfg.User), []byte(cn.driver.cfg.Password), nil
 	})
-	client := sasl.NewClient(sasl.ScramSha256, creds)
+	client := sasl.NewClient(saslMech, creds)
 
 	_, resp, err := client.Step(nil)
 	if err != nil {
 		return fmt.Errorf("client.Step 1 failed: %w", err)
 	}
 
-	if err := saslWriteInitialResponse(ctx, cn, resp); err != nil {
+	if err := saslWriteInitialResponse(ctx, cn, saslMech, resp); err != nil {
 		return err
 	}
 
@@ -394,12 +402,14 @@ func authSASL(ctx context.Context, cn *Conn, rd *reader) error {
 	}
 }
 
-func saslWriteInitialResponse(ctx context.Context, cn *Conn, resp []byte) error {
+func saslWriteInitialResponse(
+	ctx context.Context, cn *Conn, saslMech sasl.Mechanism, resp []byte,
+) error {
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
 	wb.StartMessage(saslInitialResponseMsg)
-	wb.WriteString("SCRAM-SHA-256")
+	wb.WriteString(saslMech.Name)
 	wb.WriteInt32(int32(len(resp)))
 	if _, err := wb.Write(resp); err != nil {
 		return err
