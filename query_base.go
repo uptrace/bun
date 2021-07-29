@@ -638,7 +638,7 @@ func appendWhere(
 	fmter schema.Formatter, b []byte, where []schema.QueryWithSep,
 ) (_ []byte, err error) {
 	for i, where := range where {
-		if i > 0 {
+		if i > 0 || where.Sep == "(" {
 			b = append(b, where.Sep...)
 		}
 
