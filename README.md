@@ -18,7 +18,7 @@ Main features are:
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
 - [Selecting](/example/basic/) into a map, struct, slice of maps/structs/vars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/queries.html#insert).
-- [Bulk updates](https://bun.uptrace.dev/guide/queries.html#update) using common table expression.
+- [Bulk updates](https://bun.uptrace.dev/guide/queries.html#update) using common table expressions.
 - [Bulk deletes](https://bun.uptrace.dev/guide/queries.html#delete).
 - [Fixtures](https://bun.uptrace.dev/guide/fixtures.html).
 - [Migrations](https://bun.uptrace.dev/guide/migrations.html).

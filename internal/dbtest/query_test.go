@@ -445,6 +445,15 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewCreateTable().Model(new(Model))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().
+				WhereGroup("", func(q *bun.WhereQuery) {
+					q.Where("a = 1").Where("b = 1")
+				}).
+				WhereGroup(" OR ", func(q *bun.WhereQuery) {
+					q.Where("a = 2").Where("b = 2")
+				})
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
