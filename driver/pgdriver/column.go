@@ -96,7 +96,7 @@ func readFloat64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseFloat(bytesToString(tmp), 32)
+	return strconv.ParseFloat(bytesToString(tmp), 64)
 }
 
 func readStringCol(rd *reader, n int) (interface{}, error) {
