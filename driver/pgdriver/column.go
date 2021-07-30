@@ -37,15 +37,15 @@ func readColumnValue(rd *reader, dataType int32, dataLen int) (interface{}, erro
 	case pgBool:
 		return readBoolCol(rd, dataLen)
 	case pgInt2:
-		return readInt64Col(rd, dataLen, 16)
+		return readIntCol(rd, dataLen, 16)
 	case pgInt4:
-		return readInt64Col(rd, dataLen, 32)
+		return readIntCol(rd, dataLen, 32)
 	case pgInt8:
-		return readInt64Col(rd, dataLen, 64)
+		return readIntCol(rd, dataLen, 64)
 	case pgFloat4:
-		return readFloat64Col(rd, dataLen, 32)
+		return readFloatCol(rd, dataLen, 32)
 	case pgFloat8:
-		return readFloat64Col(rd, dataLen, 64)
+		return readFloatCol(rd, dataLen, 64)
 	case pgTimestamp:
 		return readTimeCol(rd, dataLen)
 	case pgTimestamptz:
@@ -73,7 +73,7 @@ func readBoolCol(rd *reader, n int) (interface{}, error) {
 	return len(tmp) == 1 && (tmp[0] == 't' || tmp[0] == '1'), nil
 }
 
-func readInt64Col(rd *reader, n int, bitSize int) (interface{}, error) {
+func readIntCol(rd *reader, n int, bitSize int) (interface{}, error) {
 	if n <= 0 {
 		return 0, nil
 	}
@@ -86,7 +86,7 @@ func readInt64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 	return strconv.ParseInt(bytesToString(tmp), 10, bitSize)
 }
 
-func readFloat64Col(rd *reader, n int, bitSize int) (interface{}, error) {
+func readFloatCol(rd *reader, n int, bitSize int) (interface{}, error) {
 	if n <= 0 {
 		return 0, nil
 	}
@@ -96,7 +96,7 @@ func readFloat64Col(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseFloat(bytesToString(tmp), 64)
+	return strconv.ParseFloat(bytesToString(tmp), bitSize)
 }
 
 func readStringCol(rd *reader, n int) (interface{}, error) {
