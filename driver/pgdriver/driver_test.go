@@ -193,6 +193,16 @@ func TestCancel(t *testing.T) {
 	wg.Wait()
 }
 
+func TestFloat64(t *testing.T) {
+	db := sqlDB()
+	defer db.Close()
+
+	var f float64
+	err := db.QueryRow("SELECT 1.1::float AS f").Scan(&f)
+	require.NoError(t, err)
+	require.Equal(t, 1.1, f)
+}
+
 func sqlDB() *sql.DB {
 	db, err := sql.Open("pg", dsn())
 	if err != nil {
