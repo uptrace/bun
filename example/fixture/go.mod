@@ -8,6 +8,8 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
+replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+
 replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
 require (

@@ -10,6 +10,8 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
+replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+
 require (
 	github.com/uptrace/bun v0.1.1
 	github.com/uptrace/bun/dbfixture v0.0.0-00010101000000-000000000000
