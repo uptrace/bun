@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.0 - Aug 11 2021
+
+- Changed `WhereGroup` function to accept `*SelectQuery`.
+- Fixed query hooks for count queries.
+
 ## v0.3.4 - Jul 19 2021
 
 - Renamed `migrate.CreateGo` to `CreateGoMigration`.
