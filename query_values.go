@@ -16,6 +16,8 @@ type ValuesQuery struct {
 	withOrder bool
 }
 
+var _ schema.NamedArgAppender = (*ValuesQuery)(nil)
+
 func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
@@ -37,7 +39,7 @@ func (q *ValuesQuery) WithOrder() *ValuesQuery {
 	return q
 }
 
-func (q *ValuesQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
+func (q *ValuesQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
 	switch name {
 	case "Columns":
 		bb, err := q.AppendColumns(fmter, b)

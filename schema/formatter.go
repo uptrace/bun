@@ -12,10 +12,6 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
-type ArgAppender interface {
-	AppendArg(fmter Formatter, b []byte, name string) ([]byte, bool)
-}
-
 type namedArg struct {
 	name  string
 	value interface{}
@@ -41,7 +37,7 @@ var nopFormatter = Formatter{
 
 type Formatter struct {
 	dialect   Dialect
-	model     ArgAppender
+	model     NamedArgAppender
 	namedArgs namedArgs
 }
 
@@ -102,7 +98,7 @@ func (f Formatter) clone() Formatter {
 	return clone
 }
 
-func (f Formatter) WithModel(model ArgAppender) Formatter {
+func (f Formatter) WithModel(model NamedArgAppender) Formatter {
 	clone := f.clone()
 	clone.model = model
 	return clone
@@ -138,12 +134,16 @@ func (f Formatter) hasNoArgs() bool {
 }
 
 func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []byte {
-	var model ArgAppender
-	if len(args) > 0 {
-		model, _ = args[0].(ArgAppender)
+	var namedArgs NamedArgAppender
+	if len(args) == 1 {
+		var ok bool
+		namedArgs, ok = args[0].(NamedArgAppender)
+		if !ok {
+			namedArgs, _ = newStructArgs(f, args[0])
+		}
 	}
 
-	var argsIndex int
+	var argIndex int
 	for p.Valid() {
 		b, ok := p.ReadSep('?')
 		if !ok {
@@ -180,9 +180,9 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []by
 				}
 			}
 
-			if model != nil {
+			if namedArgs != nil {
 				var ok bool
-				dst, ok = model.AppendArg(f, dst, name)
+				dst, ok = namedArgs.AppendNamedArg(f, dst, name)
 				if ok {
 					continue
 				}
@@ -190,7 +190,7 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []by
 
 			if f.model != nil {
 				var ok bool
-				dst, ok = f.model.AppendArg(f, dst, name)
+				dst, ok = f.model.AppendNamedArg(f, dst, name)
 				if ok {
 					continue
 				}
@@ -202,13 +202,13 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []by
 			continue
 		}
 
-		if argsIndex >= len(args) {
+		if argIndex >= len(args) {
 			dst = append(dst, '?')
 			continue
 		}
 
-		arg := args[argsIndex]
-		argsIndex++
+		arg := args[argIndex]
+		argIndex++
 
 		dst = f.appendArg(dst, arg)
 	}
@@ -227,4 +227,42 @@ func (f Formatter) appendArg(b []byte, arg interface{}) []byte {
 	default:
 		return f.dialect.Append(f, b, arg)
 	}
+}
+
+//------------------------------------------------------------------------------
+
+type NamedArgAppender interface {
+	AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool)
+}
+
+var _ NamedArgAppender = (*structArgs)(nil)
+
+type structArgs struct {
+	table *Table
+	strct reflect.Value
+}
+
+func newStructArgs(fmter Formatter, strct interface{}) (*structArgs, bool) {
+	v := reflect.ValueOf(strct)
+	if !v.IsValid() {
+		return nil, false
+	}
+
+	v = reflect.Indirect(v)
+	if v.Kind() != reflect.Struct {
+		return nil, false
+	}
+
+	return &structArgs{
+		table: fmter.Dialect().Tables().Get(v.Type()),
+		strct: v,
+	}, true
+}
+
+func (m *structArgs) AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool) {
+	field, ok := m.table.FieldMap[name]
+	if ok {
+		return fmter.appendArg(b, field.Value(m.strct).Interface()), true
+	}
+	return b, false
 }

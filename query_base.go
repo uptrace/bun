@@ -481,7 +481,7 @@ func (q *baseQuery) exec(
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) AppendArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
+func (q *baseQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
 	if q.table == nil {
 		return b, false
 	}
@@ -525,9 +525,7 @@ func appendColumns(b []byte, table schema.Safe, fields []*schema.Field) []byte {
 	return b
 }
 
-func formatterWithModel(
-	fmter schema.Formatter, model schema.ArgAppender,
-) schema.Formatter {
+func formatterWithModel(fmter schema.Formatter, model schema.NamedArgAppender) schema.Formatter {
 	if fmter.IsNop() {
 		return fmter
 	}

@@ -454,6 +454,18 @@ func TestQuery(t *testing.T) {
 					q.Where("a = 2").Where("b = 2")
 				})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			params := struct {
+				A     int
+				B     float32
+				Alias bun.Ident
+			}{
+				A:     1,
+				B:     2.34,
+				Alias: bun.Ident("sum"),
+			}
+			return db.NewSelect().Where("?a + ?b AS ?alias", params)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
