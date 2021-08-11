@@ -10,6 +10,8 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
+replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/uptrace/bun v0.1.1

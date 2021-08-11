@@ -8,6 +8,8 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
+replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
