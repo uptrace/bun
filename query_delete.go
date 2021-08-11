@@ -80,8 +80,17 @@ func (q *DeleteQuery) WhereOr(query string, args ...interface{}) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) WhereGroup(sep string, fn func(*WhereQuery)) *DeleteQuery {
-	q.addWhereGroup(sep, fn)
+func (q *DeleteQuery) WhereGroup(sep string, fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
+	saved := q.where
+	q.where = nil
+
+	q = fn(q)
+
+	where := q.where
+	q.where = saved
+
+	q.addWhereGroup(sep, where)
+
 	return q
 }
 

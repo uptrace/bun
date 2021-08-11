@@ -534,46 +534,26 @@ func formatterWithModel(fmter schema.Formatter, model schema.NamedArgAppender) s
 
 //------------------------------------------------------------------------------
 
-type WhereQuery struct {
+type whereBaseQuery struct {
+	baseQuery
+
 	where []schema.QueryWithSep
 }
 
-func (q *WhereQuery) Where(query string, args ...interface{}) *WhereQuery {
-	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
-	return q
-}
-
-func (q *WhereQuery) WhereOr(query string, args ...interface{}) *WhereQuery {
-	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
-	return q
-}
-
-func (q *WhereQuery) addWhere(where schema.QueryWithSep) {
+func (q *whereBaseQuery) addWhere(where schema.QueryWithSep) {
 	q.where = append(q.where, where)
 }
 
-func (q *WhereQuery) WhereGroup(sep string, fn func(*WhereQuery)) {
-	q.addWhereGroup(sep, fn)
-}
-
-func (q *WhereQuery) addWhereGroup(sep string, fn func(*WhereQuery)) {
-	q2 := new(WhereQuery)
-	fn(q2)
-
-	if len(q2.where) > 0 {
-		q2.where[0].Sep = ""
-
-		q.addWhere(schema.SafeQueryWithSep("", nil, sep+"("))
-		q.where = append(q.where, q2.where...)
-		q.addWhere(schema.SafeQueryWithSep("", nil, ")"))
+func (q *whereBaseQuery) addWhereGroup(sep string, where []schema.QueryWithSep) {
+	if len(where) == 0 {
+		return
 	}
-}
 
-//------------------------------------------------------------------------------
+	where[0].Sep = ""
 
-type whereBaseQuery struct {
-	baseQuery
-	WhereQuery
+	q.addWhere(schema.SafeQueryWithSep("", nil, sep+"("))
+	q.where = append(q.where, where...)
+	q.addWhere(schema.SafeQueryWithSep("", nil, ")"))
 }
 
 func (q *whereBaseQuery) mustAppendWhere(

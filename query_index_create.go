@@ -140,11 +140,6 @@ func (q *CreateIndexQuery) WhereOr(query string, args ...interface{}) *CreateInd
 	return q
 }
 
-func (q *CreateIndexQuery) WhereGroup(sep string, fn func(*WhereQuery)) *CreateIndexQuery {
-	q.addWhereGroup(sep, fn)
-	return q
-}
-
 //------------------------------------------------------------------------------
 
 func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {

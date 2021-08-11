@@ -241,12 +241,12 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Model(new(Model)).
 				Where("1").
 				WhereOr("2").
-				WhereGroup(" OR ", func(q *bun.WhereQuery) {
-					q.
+				WhereGroup(" OR ", func(q *bun.SelectQuery) *bun.SelectQuery {
+					return q.
 						WhereOr("3").
 						WhereOr("4").
-						WhereGroup(" OR NOT ", func(q *bun.WhereQuery) {
-							q.
+						WhereGroup(" OR NOT ", func(q *bun.SelectQuery) *bun.SelectQuery {
+							return q.
 								WhereOr("5").
 								WhereOr("6")
 						})
@@ -447,11 +447,11 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().
-				WhereGroup("", func(q *bun.WhereQuery) {
-					q.Where("a = 1").Where("b = 1")
+				WhereGroup("", func(q *bun.SelectQuery) *bun.SelectQuery {
+					return q.Where("a = 1").Where("b = 1")
 				}).
-				WhereGroup(" OR ", func(q *bun.WhereQuery) {
-					q.Where("a = 2").Where("b = 2")
+				WhereGroup(" OR ", func(q *bun.SelectQuery) *bun.SelectQuery {
+					return q.Where("a = 2").Where("b = 2")
 				})
 		},
 		func(db *bun.DB) schema.QueryAppender {

@@ -117,8 +117,17 @@ func (q *UpdateQuery) WhereOr(query string, args ...interface{}) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) WhereGroup(sep string, fn func(*WhereQuery)) *UpdateQuery {
-	q.addWhereGroup(sep, fn)
+func (q *UpdateQuery) WhereGroup(sep string, fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
+	saved := q.where
+	q.where = nil
+
+	q = fn(q)
+
+	where := q.where
+	q.where = saved
+
+	q.addWhereGroup(sep, where)
+
 	return q
 }
 
