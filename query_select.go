@@ -726,18 +726,22 @@ func (q *SelectQuery) afterSelectHook(ctx context.Context) error {
 }
 
 func (q *SelectQuery) Count(ctx context.Context) (int, error) {
-	query, err := q.appendQuery(q.db.fmter, nil, true)
+	qq := countQuery{q}
+
+	queryBytes, err := qq.appendQuery(q.db.fmter, nil, true)
 	if err != nil {
 		return 0, err
 	}
 
+	query := internal.String(queryBytes)
+	ctx, event := q.db.beforeQuery(ctx, qq, query, nil)
+
 	var num int
+	err = q.conn.QueryRowContext(ctx, query).Scan(&num)
 
-	if err := q.conn.QueryRowContext(ctx, internal.String(query)).Scan(&num); err != nil {
-		return 0, err
-	}
+	q.db.afterQuery(ctx, event, nil, err)
 
-	return num, nil
+	return num, err
 }
 
 func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
@@ -812,4 +816,14 @@ func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err
 	}
 
 	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+type countQuery struct {
+	*SelectQuery
+}
+
+func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.appendQuery(formatterWithModel(fmter, q), b, true)
 }

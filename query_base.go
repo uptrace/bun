@@ -450,13 +450,14 @@ func (q *baseQuery) scan(
 		q.db.afterQuery(ctx, event, nil, err)
 		return res, err
 	}
-	res.n = n
 
+	res.n = n
 	if n == 0 && hasDest && isSingleRowModel(model) {
 		err = sql.ErrNoRows
 	}
 
 	q.db.afterQuery(ctx, event, nil, err)
+
 	return res, err
 }
 
