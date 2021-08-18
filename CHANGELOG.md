@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1 - Aug 18 2021
+
+- Fixed migrate package to properly rollback migrations.
+- Added `allowzero` tag option that undoes `nullzero` option.
+
 ## v0.4.0 - Aug 11 2021
 
 - Changed `WhereGroup` function to accept `*SelectQuery`.
