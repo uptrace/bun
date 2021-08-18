@@ -49,6 +49,11 @@ func (q *DropTableQuery) TableExpr(query string, args ...interface{}) *DropTable
 	return q
 }
 
+func (q *DropTableQuery) ModelTableExpr(query string, args ...interface{}) *DropTableQuery {
+	q.modelTable = schema.SafeQuery(query, args)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DropTableQuery) IfExists() *DropTableQuery {
