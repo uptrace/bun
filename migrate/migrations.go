@@ -55,13 +55,20 @@ func (m *Migrations) Register(up, down MigrationFunc) error {
 		return err
 	}
 
-	m.ms = append(m.ms, Migration{
+	m.Add(Migration{
 		Name: name,
 		Up:   up,
 		Down: down,
 	})
 
 	return nil
+}
+
+func (m *Migrations) Add(migration Migration) {
+	if migration.Name == "" {
+		panic("migration name is required")
+	}
+	m.ms = append(m.ms, migration)
 }
 
 func (m *Migrations) DiscoverCaller() error {

@@ -68,9 +68,11 @@ func (m *Migrator) MigrationsWithStatus(ctx context.Context) (MigrationSlice, er
 
 	appliedMap := migrationMap(applied)
 	for i := range sorted {
-		name := sorted[i].Name
-		if m2, ok := appliedMap[name]; ok {
-			sorted[i] = *m2
+		m1 := &sorted[i]
+		if m2, ok := appliedMap[m1.Name]; ok {
+			m1.ID = m2.ID
+			m1.GroupID = m2.GroupID
+			m1.MigratedAt = m2.MigratedAt
 		}
 	}
 
@@ -93,6 +95,24 @@ func (m *Migrator) Init(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (m *Migrator) Reset(ctx context.Context) error {
+	if _, err := m.db.NewDropTable().
+		Model((*Migration)(nil)).
+		ModelTableExpr(m.table).
+		IfExists().
+		Exec(ctx); err != nil {
+		return err
+	}
+	if _, err := m.db.NewDropTable().
+		Model((*migrationLock)(nil)).
+		ModelTableExpr(m.locksTable).
+		IfExists().
+		Exec(ctx); err != nil {
+		return err
+	}
+	return m.Init(ctx)
 }
 
 func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
