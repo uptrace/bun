@@ -101,7 +101,6 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 func (f *Field) markAsPK() {
 	f.IsPK = true
 	f.NotNull = true
-	f.NullZero = true
 }
 
 func indexEqual(ind1, ind2 []int) bool {
