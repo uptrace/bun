@@ -64,5 +64,5 @@ func testMigrate(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1), group.ID)
 	require.Len(t, group.Migrations, 2)
-	require.Equal(t, []string{"down1", "down2"}, history)
+	require.Equal(t, []string{"down2", "down1"}, history)
 }
