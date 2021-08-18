@@ -177,7 +177,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 
 	lastGroup := migrations.LastGroup()
 
-	for i := range lastGroup.Migrations {
+	for i := len(lastGroup.Migrations) - 1; i >= 0; i-- {
 		migration := &lastGroup.Migrations[i]
 
 		if !cfg.nop && migration.Down != nil {
