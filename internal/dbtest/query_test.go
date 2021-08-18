@@ -466,6 +466,12 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewSelect().Where("?a + ?b AS ?alias", params)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID int `bun:",pk,allowzero"`
+			}
+			return db.NewInsert().Model(new(Model))
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)

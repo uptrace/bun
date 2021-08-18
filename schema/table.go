@@ -334,6 +334,15 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	if tag.HasOption("pk") {
 		field.markAsPK()
 	}
+	if tag.HasOption("allowzero") {
+		if tag.HasOption("nullzero") {
+			internal.Warn.Printf(
+				"%s.%s: nullzero and allowzero options are mutually exclusive",
+				t.TypeName, f.Name,
+			)
+		}
+		field.NullZero = false
+	}
 
 	if v, ok := tag.Options["unique"]; ok {
 		// Split the value by comma, this will allow multiple names to be specified.
