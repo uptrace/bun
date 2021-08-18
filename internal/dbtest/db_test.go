@@ -155,6 +155,7 @@ func TestDB(t *testing.T) {
 		{"testRunInTx", testRunInTx},
 		{"testInsertIface", testInsertIface},
 		{"testSelectBool", testSelectBool},
+		{"testFKViolation", testFKViolation},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -635,4 +636,47 @@ func testSelectBool(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().ColumnExpr("0").Scan(ctx, &flag)
 	require.NoError(t, err)
 	require.False(t, flag)
+}
+
+func testFKViolation(t *testing.T, db *bun.DB) {
+	type Deck struct {
+		ID     int
+		UserID int
+	}
+
+	type User struct {
+		ID int
+	}
+
+	if db.Dialect().Name() == dialect.SQLite {
+		_, err := db.Exec("PRAGMA foreign_keys = ON;")
+		require.NoError(t, err)
+	}
+
+	_, err := db.NewCreateTable().
+		Model((*User)(nil)).
+		IfNotExists().
+		Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().
+		Model((*Deck)(nil)).
+		IfNotExists().
+		ForeignKey("(user_id) REFERENCES users (id) ON DELETE CASCADE").
+		Exec(ctx)
+	require.NoError(t, err)
+
+	// Create a deck that violates the user_id FK contraint
+	deck := &Deck{UserID: 42}
+
+	_, err = db.NewInsert().Model(deck).Exec(ctx)
+	require.Error(t, err)
+
+	decks := []*Deck{deck}
+	_, err = db.NewInsert().Model(&decks).Exec(ctx)
+	require.Error(t, err)
+
+	n, err := db.NewSelect().Model((*Deck)(nil)).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, n)
 }
