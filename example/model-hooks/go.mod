@@ -14,9 +14,9 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/uptrace/bun v0.4.1
-	github.com/uptrace/bun/dbfixture v0.4.1
-	github.com/uptrace/bun/dialect/sqlitedialect v0.4.1
-	github.com/uptrace/bun/driver/sqliteshim v0.4.1
-	github.com/uptrace/bun/extra/bundebug v0.4.1
+	github.com/uptrace/bun v0.4.2
+	github.com/uptrace/bun/dbfixture v0.4.2
+	github.com/uptrace/bun/dialect/sqlitedialect v0.4.2
+	github.com/uptrace/bun/driver/sqliteshim v0.4.2
+	github.com/uptrace/bun/extra/bundebug v0.4.2
 )
