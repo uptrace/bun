@@ -1,0 +1,1 @@
+INSERT INTO "users" AS "user" ("name") VALUES ('Hello') ON CONFLICT DO UPDATE SET name = 'Hello' RETURNING "id"

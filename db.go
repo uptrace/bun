@@ -65,10 +65,6 @@ func (db *DB) String() string {
 	var b strings.Builder
 	b.WriteString("DB<dialect=")
 	b.WriteString(db.dialect.Name().String())
-	if s := db.fmter.String(); s != "" {
-		b.WriteString(" ")
-		b.WriteString(s)
-	}
 	b.WriteString(">")
 	return b.String()
 }
@@ -191,12 +187,8 @@ func (db *DB) clone() *DB {
 
 func (db *DB) WithNamedArg(name string, value interface{}) *DB {
 	clone := db.clone()
-	clone.fmter = clone.fmter.WithArg(name, value)
+	clone.fmter = clone.fmter.WithNamedArg(name, value)
 	return clone
-}
-
-func (db *DB) NamedArg(name string) interface{} {
-	return db.fmter.Arg(name)
 }
 
 func (db *DB) Formatter() schema.Formatter {

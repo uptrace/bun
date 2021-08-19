@@ -792,6 +792,15 @@ func (t *Table) HasAfterScanHook() bool  { return t.flags.Has(afterScanHookFlag)
 
 //------------------------------------------------------------------------------
 
+func (t *Table) AppendNamedArg(
+	fmter Formatter, b []byte, name string, strct reflect.Value,
+) ([]byte, bool) {
+	if field, ok := t.FieldMap[name]; ok {
+		return fmter.appendArg(b, field.Value(strct).Interface()), true
+	}
+	return b, false
+}
+
 func (t *Table) quoteTableName(s string) Safe {
 	// Don't quote if table name contains placeholder (?) or parentheses.
 	if strings.IndexByte(s, '?') >= 0 ||
@@ -832,6 +841,7 @@ func isKnownFieldOption(name string) bool {
 		"msgpack",
 		"notnull",
 		"nullzero",
+		"allowzero",
 		"default",
 		"unique",
 		"soft_delete",
