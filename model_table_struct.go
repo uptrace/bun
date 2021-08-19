@@ -320,6 +320,12 @@ func (m *structTableModel) scanColumn(column string, src interface{}) (bool, err
 	return false, nil
 }
 
+func (m *structTableModel) AppendNamedArg(
+	fmter schema.Formatter, b []byte, name string,
+) ([]byte, bool) {
+	return m.table.AppendNamedArg(fmter, b, name, m.strct)
+}
+
 // sqlite3 sometimes does not unquote columns.
 func unquote(s string) string {
 	if s == "" {

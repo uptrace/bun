@@ -164,6 +164,7 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.err != nil {
 		return nil, q.err
 	}
+	fmter = formatterWithModel(fmter, q)
 
 	withAlias := fmter.HasFeature(feature.UpdateMultiTable)
 

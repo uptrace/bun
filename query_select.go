@@ -356,7 +356,7 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []join) error {
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	return q.appendQuery(formatterWithModel(fmter, q), b, false)
+	return q.appendQuery(fmter, b, false)
 }
 
 func (q *SelectQuery) appendQuery(
@@ -365,6 +365,7 @@ func (q *SelectQuery) appendQuery(
 	if q.err != nil {
 		return nil, q.err
 	}
+	fmter = formatterWithModel(fmter, q)
 
 	cteCount := count && (len(q.group) > 0 || q.distinctOn != nil)
 	if cteCount {
@@ -825,5 +826,5 @@ type countQuery struct {
 }
 
 func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	return q.appendQuery(formatterWithModel(fmter, q), b, true)
+	return q.appendQuery(fmter, b, true)
 }

@@ -487,6 +487,12 @@ func (q *baseQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string
 		return b, false
 	}
 
+	if m, ok := q.tableModel.(*structTableModel); ok {
+		if b, ok := m.AppendNamedArg(fmter, b, name); ok {
+			return b, ok
+		}
+	}
+
 	switch name {
 	case "TableName":
 		b = fmter.AppendQuery(b, string(q.table.SQLName))
@@ -530,7 +536,7 @@ func formatterWithModel(fmter schema.Formatter, model schema.NamedArgAppender) s
 	if fmter.IsNop() {
 		return fmter
 	}
-	return fmter.WithModel(model)
+	return fmter.WithArg(model)
 }
 
 //------------------------------------------------------------------------------

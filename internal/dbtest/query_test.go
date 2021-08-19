@@ -472,6 +472,18 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(new(Model))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			user := &User{Name: "Hello"}
+			return db.NewUpdate().Model(user).Set("name = ?name").Where("id = ?id")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			user := &User{ID: 42}
+			return db.NewDelete().Model(user).Where("id = ?id")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			user := &User{Name: "Hello"}
+			return db.NewInsert().Model(user).On("CONFLICT DO UPDATE").Set("name = ?name")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
