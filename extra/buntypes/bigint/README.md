@@ -5,7 +5,7 @@ Disclaimer: math/big does not implement database/sql scan/value methods and it c
 
 ## Example use with bun
 
-**go-pg** is an amazing orm for gophers to utilize postgres. This package is used to help **go-pg** users implement **math/big** functionalities.
+
 
 ```
 
