@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uptrace/bun/buntypes/bigint"
+	"github.com/uptrace/bun/extra/buntypes/bigint"
 )
 
 func TestMathOperations(t *testing.T) {
