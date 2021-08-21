@@ -4,15 +4,15 @@
   </a>
 </p>
 
-# Simple and performant SQL database client
+# Simple and performant client for PostgreSQL, MySQL, and SQLite
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
 [![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
-Status: API freeze (release candidate). Note that all sub-packages (mainly extra/\* packages) are
-not part of the API freeze and are developed independently. You can think of them as 3-rd party
+**Status**: API freeze (release candidate). Note that all sub-packages (mainly extra/\* packages)
+are not part of the API freeze and are developed independently. You can think of them as 3-rd party
 packages.
 
 Main features are:
