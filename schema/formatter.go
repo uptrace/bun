@@ -89,10 +89,10 @@ func (f Formatter) AppendQuery(dst []byte, query string, args ...interface{}) []
 func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []byte {
 	var namedArgs NamedArgAppender
 	if len(args) == 1 {
-		var ok bool
-		namedArgs, ok = args[0].(NamedArgAppender)
-		if !ok {
-			namedArgs, _ = newStructArgs(f, args[0])
+		if v, ok := args[0].(NamedArgAppender); ok {
+			namedArgs = v
+		} else if v, ok := newStructArgs(f, args[0]); ok {
+			namedArgs = v
 		}
 	}
 
