@@ -179,7 +179,7 @@ func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 			return err
 		}
 
-		if err := f.decodeField(strct, field, value); err != nil {
+		if err := f.decodeField(strct, field, &value); err != nil {
 			return fmt.Errorf("dbfixture: decoding %s failed: %w", key, err)
 		}
 	}
@@ -209,7 +209,7 @@ func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 	return nil
 }
 
-func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value yaml.Node) error {
+func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value *yaml.Node) error {
 	fv := field.Value(strct)
 	iface := fv.Addr().Interface()
 
@@ -231,6 +231,10 @@ func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value ya
 		if str != value.Value {
 			return field.ScanValue(strct, str)
 		}
+	}
+
+	if v, ok := iface.(yaml.Unmarshaler); ok {
+		return v.UnmarshalYAML(value)
 	}
 
 	if _, ok := iface.(sql.Scanner); ok {
