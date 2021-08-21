@@ -16,9 +16,10 @@ import (
 
 type User struct {
 	ID        int64
-	Name      string
+	Name      sql.NullString
 	Email     string
 	CreatedAt time.Time
+	UpdatedAt sql.NullTime
 }
 
 type Org struct {
