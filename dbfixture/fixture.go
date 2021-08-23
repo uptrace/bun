@@ -3,6 +3,7 @@ package dbfixture
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"io/fs"
 	"reflect"
@@ -16,6 +17,11 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
+)
+
+var (
+	funcNameRE = regexp.MustCompile(`^\{\{ (\w+) \}\}$`)
+	tplRE      = regexp.MustCompile(`\{\{ .+ \}\}`)
 )
 
 type FixtureOption func(l *Fixture)
@@ -60,26 +66,26 @@ type Fixture struct {
 }
 
 func New(db *bun.DB, opts ...FixtureOption) *Fixture {
-	l := &Fixture{
+	f := &Fixture{
 		db: db,
 
 		funcMap:   defaultFuncs(),
 		modelRows: make(map[string]map[string]interface{}),
 	}
 	for _, opt := range opts {
-		opt(l)
+		opt(f)
 	}
-	return l
+	return f
 }
 
-func (l *Fixture) Row(id string) (interface{}, error) {
+func (f *Fixture) Row(id string) (interface{}, error) {
 	ss := strings.Split(id, ".")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("fixture: invalid row id: %q", id)
 	}
 	model, rowID := ss[0], ss[1]
 
-	rows, ok := l.modelRows[model]
+	rows, ok := f.modelRows[model]
 	if !ok {
 		return nil, fmt.Errorf("fixture: unknown model=%q", model)
 	}
@@ -92,24 +98,24 @@ func (l *Fixture) Row(id string) (interface{}, error) {
 	return row, nil
 }
 
-func (l *Fixture) MustRow(id string) interface{} {
-	row, err := l.Row(id)
+func (f *Fixture) MustRow(id string) interface{} {
+	row, err := f.Row(id)
 	if err != nil {
 		panic(err)
 	}
 	return row
 }
 
-func (l *Fixture) Load(ctx context.Context, fsys fs.FS, names ...string) error {
+func (f *Fixture) Load(ctx context.Context, fsys fs.FS, names ...string) error {
 	for _, name := range names {
-		if err := l.load(ctx, fsys, name); err != nil {
+		if err := f.load(ctx, fsys, name); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (l *Fixture) load(ctx context.Context, fsys fs.FS, name string) error {
+func (f *Fixture) load(ctx context.Context, fsys fs.FS, name string) error {
 	fh, err := fsys.Open(name)
 	if err != nil {
 		return err
@@ -123,7 +129,7 @@ func (l *Fixture) load(ctx context.Context, fsys fs.FS, name string) error {
 	}
 
 	for i := range fixtures {
-		if err := l.addFixture(ctx, &fixtures[i]); err != nil {
+		if err := f.addFixture(ctx, &fixtures[i]); err != nil {
 			return err
 		}
 	}
@@ -131,24 +137,24 @@ func (l *Fixture) load(ctx context.Context, fsys fs.FS, name string) error {
 	return nil
 }
 
-func (l *Fixture) addFixture(ctx context.Context, data *fixtureData) error {
-	table := l.db.Dialect().Tables().ByModel(data.Model)
+func (f *Fixture) addFixture(ctx context.Context, data *fixtureData) error {
+	table := f.db.Dialect().Tables().ByModel(data.Model)
 	if table == nil {
 		return fmt.Errorf("fixture: can't find model=%q (use db.RegisterModel)", data.Model)
 	}
 
-	if l.recreateTables {
-		if err := l.dropTable(ctx, table); err != nil {
+	if f.recreateTables {
+		if err := f.dropTable(ctx, table); err != nil {
 			return err
 		}
-	} else if l.truncateTables {
-		if err := l.truncateTable(ctx, table); err != nil {
+	} else if f.truncateTables {
+		if err := f.truncateTable(ctx, table); err != nil {
 			return err
 		}
 	}
 
 	for _, row := range data.Rows {
-		if err := l.addRow(ctx, table, row); err != nil {
+		if err := f.addRow(ctx, table, row); err != nil {
 			return err
 		}
 	}
@@ -156,7 +162,7 @@ func (l *Fixture) addFixture(ctx context.Context, data *fixtureData) error {
 	return nil
 }
 
-func (l *Fixture) addRow(ctx context.Context, table *schema.Table, row row) error {
+func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) error {
 	var rowID string
 	strct := reflect.New(table.Type).Elem()
 
@@ -173,28 +179,13 @@ func (l *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 			return err
 		}
 
-		if value.Tag == "!!str" && isTemplate(value.Value) {
-			res, err := l.eval(value.Value)
-			if err != nil {
-				return err
-			}
-
-			if res != value.Value {
-				if err := field.ScanValue(strct, res); err != nil {
-					return err
-				}
-				continue
-			}
-		}
-
-		fv := field.Value(strct)
-		if err := value.Decode(fv.Addr().Interface()); err != nil {
-			return err
+		if err := f.decodeField(strct, field, &value); err != nil {
+			return fmt.Errorf("dbfixture: decoding %s failed: %w", key, err)
 		}
 	}
 
 	iface := strct.Addr().Interface()
-	if _, err := l.db.NewInsert().
+	if _, err := f.db.NewInsert().
 		Model(iface).
 		Exec(ctx); err != nil {
 		return err
@@ -207,10 +198,10 @@ func (l *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 	}
 
 	if rowID != "" {
-		rows, ok := l.modelRows[table.TypeName]
+		rows, ok := f.modelRows[table.TypeName]
 		if !ok {
 			rows = make(map[string]interface{})
-			l.modelRows[table.TypeName] = rows
+			f.modelRows[table.TypeName] = rows
 		}
 		rows[rowID] = iface
 	}
@@ -218,20 +209,59 @@ func (l *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 	return nil
 }
 
-func (l *Fixture) dropTable(ctx context.Context, table *schema.Table) error {
-	if _, ok := l.seenTables[table.Name]; ok {
+func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value *yaml.Node) error {
+	fv := field.Value(strct)
+	iface := fv.Addr().Interface()
+
+	if value.Tag != "!!str" {
+		return value.Decode(iface)
+	}
+
+	if ss := funcNameRE.FindStringSubmatch(value.Value); len(ss) > 0 {
+		if fn, ok := f.funcMap[ss[1]].(func() interface{}); ok {
+			return field.ScanValue(strct, fn())
+		}
+	}
+
+	if tplRE.MatchString(value.Value) {
+		str, err := f.eval(value.Value)
+		if err != nil {
+			return err
+		}
+		if str != value.Value {
+			return field.ScanValue(strct, str)
+		}
+	}
+
+	if v, ok := iface.(yaml.Unmarshaler); ok {
+		return v.UnmarshalYAML(value)
+	}
+
+	if _, ok := iface.(sql.Scanner); ok {
+		var str string
+		if err := value.Decode(&str); err != nil {
+			return err
+		}
+		return field.ScanValue(strct, str)
+	}
+
+	return value.Decode(iface)
+}
+
+func (f *Fixture) dropTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := f.seenTables[table.Name]; ok {
 		return nil
 	}
-	l.seenTables[table.Name] = struct{}{}
+	f.seenTables[table.Name] = struct{}{}
 
-	if _, err := l.db.NewDropTable().
+	if _, err := f.db.NewDropTable().
 		Model(table.ZeroIface).
 		IfExists().
 		Exec(ctx); err != nil {
 		return err
 	}
 
-	if _, err := l.db.NewCreateTable().
+	if _, err := f.db.NewCreateTable().
 		Model(table.ZeroIface).
 		Exec(ctx); err != nil {
 		return err
@@ -240,13 +270,13 @@ func (l *Fixture) dropTable(ctx context.Context, table *schema.Table) error {
 	return nil
 }
 
-func (l *Fixture) truncateTable(ctx context.Context, table *schema.Table) error {
-	if _, ok := l.seenTables[table.Name]; ok {
+func (f *Fixture) truncateTable(ctx context.Context, table *schema.Table) error {
+	if _, ok := f.seenTables[table.Name]; ok {
 		return nil
 	}
-	l.seenTables[table.Name] = struct{}{}
+	f.seenTables[table.Name] = struct{}{}
 
-	if _, err := l.db.NewTruncateTable().
+	if _, err := f.db.NewTruncateTable().
 		Model(table.ZeroIface).
 		Exec(ctx); err != nil {
 		return err
@@ -255,15 +285,15 @@ func (l *Fixture) truncateTable(ctx context.Context, table *schema.Table) error 
 	return nil
 }
 
-func (l *Fixture) eval(templ string) (string, error) {
-	tpl, err := template.New("").Funcs(l.funcMap).Parse(templ)
+func (f *Fixture) eval(templ string) (string, error) {
+	tpl, err := template.New("").Funcs(f.funcMap).Parse(templ)
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
 
-	if err := tpl.Execute(&buf, l.modelRows); err != nil {
+	if err := tpl.Execute(&buf, f.modelRows); err != nil {
 		return "", err
 	}
 
@@ -277,32 +307,26 @@ type fixtureData struct {
 
 type row map[string]yaml.Node
 
-var tplRE = regexp.MustCompile(`\{\{ .+ \}\}`)
-
-func isTemplate(s string) bool {
-	return tplRE.MatchString(s)
-}
-
 func asString(rv reflect.Value) string {
 	switch rv.Kind() {
+	case reflect.Bool:
+		return strconv.FormatBool(rv.Bool())
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(rv.Int(), 10)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return strconv.FormatUint(rv.Uint(), 10)
-	case reflect.Float64:
-		return strconv.FormatFloat(rv.Float(), 'g', -1, 64)
 	case reflect.Float32:
 		return strconv.FormatFloat(rv.Float(), 'g', -1, 32)
-	case reflect.Bool:
-		return strconv.FormatBool(rv.Bool())
+	case reflect.Float64:
+		return strconv.FormatFloat(rv.Float(), 'g', -1, 64)
 	}
 	return fmt.Sprintf("%v", rv.Interface())
 }
 
 func defaultFuncs() template.FuncMap {
 	return template.FuncMap{
-		"now": func() string {
-			return time.Now().Format(time.RFC3339Nano)
+		"now": func() interface{} {
+			return time.Now()
 		},
 	}
 }
