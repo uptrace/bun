@@ -1,5 +1,5 @@
 
-**bigint** is a wrapper around math/big package to let us use big.int type in bun
+**bunbig** is a wrapper around math/big package to let us use big.int type in bun
 
 Disclaimer: math/big does not implement database/sql scan/value methods and it can't be used in bun. This package uses math/big in its heart and extends its usefulness even into postgres.
 
@@ -10,7 +10,7 @@ Disclaimer: math/big does not implement database/sql scan/value methods and it c
 	type TableWithBigint struct {
 		Id        uint64
 		Name      string
-		Deposit   *bigint.Bigint
+		Deposit   *bunbig.Int
 	}
 
 ```
@@ -42,7 +42,7 @@ Example :
 For extracting math/big's bigint you can simply do as follows:
 
 ```
-    d:= bigint.ToMathBig(x)
+    d:= bunbig.ToMathBig(x)
 ```
 
 Now you can do your calculations and convert it back to buntypes/bigint with:
