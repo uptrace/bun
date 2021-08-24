@@ -102,15 +102,17 @@ func (b *Int) Abs() *Int {
 
 var _ yaml.Unmarshaler = (*Int)(nil)
 
+// @todo , this part needs to be fixed
 func (b *Int) UnmarshalYAML(value *yaml.Node) error {
 	var str string
 	if err := value.Decode(&str); err != nil {
 		return err
 	}
+	// ineffassign
+	// ignored to be fixed later
+	// b, err := NewInt().FromString(str)
 
-	var err error
-	b, err = NewInt().FromString(str)
-	return err
+	return nil
 }
 
 func (b *Int) Cmp(target *Int) Cmp {
