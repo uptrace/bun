@@ -9,4 +9,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc
 	github.com/vmihailenco/msgpack/v5 v5.3.4
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )

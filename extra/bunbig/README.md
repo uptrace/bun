@@ -1,16 +1,23 @@
 
-**bigint** is a wrapper around math/big package to let us use big.int type in bun
+**bunbig** is a wrapper around math/big package to let us use big.int type in bun
 
 Disclaimer: math/big does not implement database/sql scan/value methods and it can't be used in bun. This package uses math/big in its heart and extends its usefulness even into postgres.
+## Types
 
-## Example use with bun
+* Int
+  - Int wraps around big.Int and supports its base functionalities
+* Float
+  - Float is a bun counterpart of big.Float
+
+## Example use
 
 ```
 
 	type TableWithBigint struct {
-		Id        uint64
+		ID        uint64
 		Name      string
-		Deposit   *bigint.Bigint
+		Deposit   *bunbig.Int
+		Residue *bunbig.Float
 	}
 
 ```
@@ -22,8 +29,8 @@ This package supports basic mathematical operations such as addition, subtractio
 Example : 
 
 ```
-	x := bigint.FromInt64(100)
-	y , err := bigint.FromString("9999999999999999999999999999999999999999")
+	x := bunbig.FromInt64(100)
+	y , err := bunbig.FromString("9999999999999999999999999999999999999999")
 
 	if err!=nil {
 		panic(err)
@@ -33,30 +40,30 @@ Example :
 	y.Sub(x) // 9999999999999999999999999999999999999999 - 100
 	y.Neg() //  -9999999999999999999999999999999999999999
 	// on the fly operation
-	c:= biginit.FromInt64(100).Mul(y) // 100 * 100 = 10000
+	c:= bunbig.FromInt64(100).Mul(y) // 100 * 100 = 10000
 	c.Div(x) // 10000/100 = 100
 	c.Neg().Abs() // |-10000| = 10000
 
 ```
 
-For extracting math/big's bigint you can simply do as follows:
+For extracting math/big's Int you can simply do as follows:
 
 ```
-    d:= bigint.ToMathBig(x)
+    d:= bunbig.ToMathBig(x)
 ```
 
-Now you can do your calculations and convert it back to buntypes/bigint with:
+Now you can do your calculations and convert it back to bunbig with:
 
 ```
-   x = bigint.FromBigint(d)
+   x = bunbig.FromBigint(d)
 ```
 
 ### comparisons:
 
 let we have x , y as two bigint.Bigint numbers in buntypes. 
 ```
-   x:= bigint.FromInt64(100)
-   y:= bigint.FromInt64(90)
+   x:= bunbig.FromInt64(100)
+   y:= bunbig.FromInt64(90)
 ```
 
 For comparing the above numbers, we can do as follow:
