@@ -113,7 +113,8 @@ if err != nil {
 }
 ```
 
-And then create a `bun.DB` on top of it using the corresponding SQLite dialect:
+And then create a `bun.DB` on top of it using the corresponding SQLite
+[dialect](https://bun.uptrace.dev/guide/drivers.html) that comes with Bun:
 
 ```go
 import (

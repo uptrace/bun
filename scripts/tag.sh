@@ -31,10 +31,11 @@ PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
   | sed 's/^\.\///' \
   | sort)
 
-git tag -a ${TAG} -m "Version ${TAG} (tag.sh)"
+git commit --allow-empty -m "Version ${TAG} (tag.sh)"
+git tag -a ${TAG}
 
 for dir in $PACKAGE_DIRS
 do
     printf "tagging ${dir}/${TAG}\n"
-    git tag ${dir}/${TAG}
+    git tag -a ${dir}/${TAG}
 done
