@@ -262,7 +262,10 @@ func (q *baseQuery) _excludeColumn(column string) bool {
 //------------------------------------------------------------------------------
 
 func (q *baseQuery) modelHasTableName() bool {
-	return !q.modelTable.IsZero() || q.table != nil
+	if !q.modelTable.IsZero() {
+		return q.modelTable.Query != ""
+	}
+	return q.table != nil
 }
 
 func (q *baseQuery) hasTables() bool {
@@ -627,7 +630,7 @@ func appendWhere(
 			b = append(b, where.Sep...)
 		}
 
-		if where.Query == "" && where.Args == nil {
+		if where.Query == "" {
 			continue
 		}
 

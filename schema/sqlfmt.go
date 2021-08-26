@@ -40,7 +40,7 @@ type QueryWithArgs struct {
 var _ QueryAppender = QueryWithArgs{}
 
 func SafeQuery(query string, args []interface{}) QueryWithArgs {
-	if query != "" && args == nil {
+	if args == nil {
 		args = make([]interface{}, 0)
 	}
 	return QueryWithArgs{Query: query, Args: args}
