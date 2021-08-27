@@ -84,6 +84,8 @@ func Scanner(typ reflect.Type) ScannerFunc {
 		return scanIP
 	case ipNetType:
 		return scanIPNet
+	case bytesType:
+		return scanBytes
 	case jsonRawMessageType:
 		return scanJSONRawMessage
 	}
@@ -191,6 +193,21 @@ func scanString(dest reflect.Value, src interface{}) error {
 		return nil
 	case []byte:
 		dest.SetString(string(src))
+		return nil
+	}
+	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
+}
+
+func scanBytes(dest reflect.Value, src interface{}) error {
+	switch src := src.(type) {
+	case nil:
+		dest.SetBytes(nil)
+		return nil
+	case string:
+		dest.SetBytes([]byte(src))
+		return nil
+	case []byte:
+		dest.SetBytes(src)
 		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())

@@ -239,6 +239,7 @@ func TestPGTransaction(t *testing.T) {
 
 func TestPGScanWithoutResult(t *testing.T) {
 	db := pg(t)
+	defer db.Close()
 
 	type Model struct {
 		ID int64
@@ -258,6 +259,7 @@ func TestIPNet(t *testing.T) {
 	}
 
 	db := pg(t)
+	defer db.Close()
 
 	err := db.ResetModel(ctx, (*Model)(nil))
 	require.NoError(t, err)
@@ -272,4 +274,24 @@ func TestIPNet(t *testing.T) {
 	err = db.NewSelect().Model(model).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, *ipv4Net, model.Network)
+}
+
+func TestBytea(t *testing.T) {
+	type Model struct {
+		Bytes []byte
+	}
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Model{Bytes: []byte("hello")}).Exec(ctx)
+	require.NoError(t, err)
+
+	model := new(Model)
+	err = db.NewSelect().Model(model).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []byte("hello"), model.Bytes)
 }
