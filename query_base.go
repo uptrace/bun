@@ -559,10 +559,12 @@ func (q *whereBaseQuery) addWhereGroup(sep string, where []schema.QueryWithSep) 
 		return
 	}
 
-	where[0].Sep = ""
+	q.addWhere(schema.SafeQueryWithSep("", nil, sep))
+	q.addWhere(schema.SafeQueryWithSep("", nil, "("))
 
-	q.addWhere(schema.SafeQueryWithSep("", nil, sep+"("))
+	where[0].Sep = ""
 	q.where = append(q.where, where...)
+
 	q.addWhere(schema.SafeQueryWithSep("", nil, ")"))
 }
 
@@ -626,7 +628,7 @@ func appendWhere(
 	fmter schema.Formatter, b []byte, where []schema.QueryWithSep,
 ) (_ []byte, err error) {
 	for i, where := range where {
-		if i > 0 || where.Sep == "(" {
+		if i > 0 {
 			b = append(b, where.Sep...)
 		}
 

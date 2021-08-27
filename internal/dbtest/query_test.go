@@ -484,6 +484,11 @@ func TestQuery(t *testing.T) {
 			user := &User{Name: "Hello"}
 			return db.NewInsert().Model(user).On("CONFLICT DO UPDATE").Set("name = ?name")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+				return q.WhereOr("one").WhereOr("two")
+			})
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
