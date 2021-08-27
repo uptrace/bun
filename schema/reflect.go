@@ -1,6 +1,23 @@
 package schema
 
-import "reflect"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"net"
+	"reflect"
+	"time"
+)
+
+var (
+	bytesType          = reflect.TypeOf((*[]byte)(nil)).Elem()
+	timeType           = reflect.TypeOf((*time.Time)(nil)).Elem()
+	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
+	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
+	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
+
+	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+	queryAppenderType = reflect.TypeOf((*QueryAppender)(nil)).Elem()
+)
 
 func indirectType(t reflect.Type) reflect.Type {
 	if t.Kind() == reflect.Ptr {

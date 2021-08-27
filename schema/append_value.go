@@ -2,7 +2,6 @@ package schema
 
 import (
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -12,16 +11,6 @@ import (
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
-)
-
-var (
-	timeType           = reflect.TypeOf((*time.Time)(nil)).Elem()
-	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
-	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
-	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
-
-	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
-	queryAppenderType = reflect.TypeOf((*QueryAppender)(nil)).Elem()
 )
 
 type (
@@ -60,6 +49,8 @@ var appenders = []AppenderFunc{
 
 func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 	switch typ {
+	case bytesType:
+		return appendBytesValue
 	case timeType:
 		return appendTimeValue
 	case ipType:
