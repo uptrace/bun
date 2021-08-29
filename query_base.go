@@ -390,18 +390,10 @@ func (q *baseQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *baseQuery) getFields() ([]*schema.Field, error) {
-	table := q.tableModel.Table()
-
 	if len(q.columns) == 0 {
-		return table.Fields, nil
+		return q.table.Fields, nil
 	}
-
-	fields, err := q._getFields(false)
-	if err != nil {
-		return nil, err
-	}
-
-	return fields, nil
+	return q._getFields(false)
 }
 
 func (q *baseQuery) getDataFields() ([]*schema.Field, error) {

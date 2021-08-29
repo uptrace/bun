@@ -321,16 +321,27 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
+	set, err := q.updateSliceSet(model)
+	if err != nil {
+		q.setErr(err)
+		return q
+	}
+
 	return q.With("_data", q.db.NewValues(model)).
 		Model(model).
 		TableExpr("_data").
-		Set(q.updateSliceSet(model)).
+		Set(set).
 		Where(q.updateSliceWhere(model))
 }
 
-func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) string {
+func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) (string, error) {
+	fields, err := q.getDataFields()
+	if err != nil {
+		return "", err
+	}
+
 	var b []byte
-	for i, field := range model.table.DataFields {
+	for i, field := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
@@ -342,7 +353,7 @@ func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) string {
 		b = append(b, " = _data."...)
 		b = append(b, field.SQLName...)
 	}
-	return internal.String(b)
+	return internal.String(b), nil
 }
 
 func (db *UpdateQuery) updateSliceWhere(model *sliceTableModel) string {

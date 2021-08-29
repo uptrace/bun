@@ -489,6 +489,22 @@ func TestQuery(t *testing.T) {
 				return q.WhereOr("one").WhereOr("two")
 			})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   int64
+				Str1 string
+				Str2 string
+			}
+
+			models := []Model{
+				{42, "hello", "world"},
+				{43, "foo", "bar"},
+			}
+			return db.NewUpdate().
+				Model(&models).
+				Column("str2").
+				Bulk()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
