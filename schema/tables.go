@@ -67,6 +67,7 @@ func (t *Tables) Ref(typ reflect.Type) *Table {
 }
 
 func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
+	typ = indirectType(typ)
 	if typ.Kind() != reflect.Struct {
 		panic(fmt.Errorf("got %s, wanted %s", typ.Kind(), reflect.Struct))
 	}

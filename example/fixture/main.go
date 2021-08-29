@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -41,13 +42,41 @@ func main() {
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
 
+	// Register models before loading fixtures.
 	db.RegisterModel((*User)(nil), (*Org)(nil))
 
+	// Automatically create tables.
 	fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
-	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
+
+	// Load fixtures.
+	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yml"); err != nil {
 		panic(err)
 	}
 
+	// You can access fixtures by _id and by a primary key.
 	fmt.Println("Smith", fixture.MustRow("User.smith").(*User))
 	fmt.Println("Org with id=1", fixture.MustRow("Org.pk1").(*Org))
+
+	// Load users and orgs from the database.
+	var users []User
+	var orgs []Org
+
+	if err := db.NewSelect().Model(&users).OrderExpr("id").Scan(ctx); err != nil {
+		panic(err)
+	}
+	if err := db.NewSelect().Model(&orgs).OrderExpr("id").Scan(ctx); err != nil {
+		panic(err)
+	}
+
+	// And encode the loaded data back as YAML.
+
+	var buf bytes.Buffer
+	enc := dbfixture.NewEncoder(db, &buf)
+
+	if err := enc.Encode(users, orgs); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("")
+	fmt.Println(buf.String())
 }
