@@ -54,13 +54,20 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 
 	attrs := make([]attribute.KeyValue, 0, 10)
 	attrs = append(attrs,
-		attribute.String("db.system", dbSystem(event.DB)),
 		attribute.String("db.statement", query),
-
 		attribute.String("code.function", fn),
 		attribute.String("code.filepath", file),
 		attribute.Int("code.lineno", line),
 	)
+
+	if s := dbSystem(event.DB); s != "" {
+		attrs = append(attrs, attribute.String("db.system", s))
+	}
+	if event.Result != nil {
+		if n, _ := event.Result.RowsAffected(); n > 0 {
+			attrs = append(attrs, attribute.Int64("db.rows_affected", n))
+		}
+	}
 
 	if event.Err != nil {
 		switch event.Err {
@@ -163,6 +170,6 @@ func dbSystem(db *bun.DB) string {
 	case dialect.SQLite:
 		return "sqlite"
 	default:
-		return "unknown"
+		return ""
 	}
 }
