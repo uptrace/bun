@@ -695,7 +695,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	if res.n > 0 {
+	if n, _ := res.RowsAffected(); n > 0 {
 		if tableModel, ok := model.(tableModel); ok {
 			if err := q.selectJoins(ctx, tableModel.GetJoins()); err != nil {
 				return err

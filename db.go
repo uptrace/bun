@@ -3,7 +3,6 @@ package bun
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -473,30 +472,9 @@ func (tx Tx) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(tx.db).Conn(tx)
 }
 
-//------------------------------------------------------------------------------0
+//------------------------------------------------------------------------------
 
 func (db *DB) makeQueryBytes() []byte {
 	// TODO: make this configurable?
 	return make([]byte, 0, 4096)
-}
-
-//------------------------------------------------------------------------------
-
-type result struct {
-	r sql.Result
-	n int
-}
-
-func (r result) RowsAffected() (int64, error) {
-	if r.r != nil {
-		return r.r.RowsAffected()
-	}
-	return int64(r.n), nil
-}
-
-func (r result) LastInsertId() (int64, error) {
-	if r.r != nil {
-		return r.r.LastInsertId()
-	}
-	return 0, errors.New("LastInsertId is not available")
 }
