@@ -45,8 +45,8 @@ func (m *sliceTableModel) init(sliceType reflect.Type) {
 	}
 }
 
-func (m *sliceTableModel) Join(name string, apply func(*SelectQuery) *SelectQuery) *join {
-	return m.join(m.slice, name, apply)
+func (m *sliceTableModel) Join(name string) *relationJoin {
+	return m.join(m.slice, name)
 }
 
 func (m *sliceTableModel) Bind(bind reflect.Value) {

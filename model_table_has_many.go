@@ -21,7 +21,7 @@ type hasManyModel struct {
 
 var _ tableModel = (*hasManyModel)(nil)
 
-func newHasManyModel(j *join) *hasManyModel {
+func newHasManyModel(j *relationJoin) *hasManyModel {
 	baseTable := j.BaseModel.Table()
 	joinModel := j.JoinModel.(*sliceTableModel)
 	baseValues := baseValues(joinModel, j.Relation.BaseFields)

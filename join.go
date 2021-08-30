@@ -8,18 +8,18 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-type join struct {
-	Parent    *join
+type relationJoin struct {
+	Parent    *relationJoin
 	BaseModel tableModel
 	JoinModel tableModel
 	Relation  *schema.Relation
 
-	ApplyQueryFunc func(*SelectQuery) *SelectQuery
-	columns        []schema.QueryWithArgs
+	apply   func(*SelectQuery) *SelectQuery
+	columns []schema.QueryWithArgs
 }
 
-func (j *join) applyQuery(q *SelectQuery) {
-	if j.ApplyQueryFunc == nil {
+func (j *relationJoin) applyTo(q *SelectQuery) {
+	if j.apply == nil {
 		return
 	}
 
@@ -30,24 +30,20 @@ func (j *join) applyQuery(q *SelectQuery) {
 	table, q.table = q.table, j.JoinModel.Table()
 	columns, q.columns = q.columns, nil
 
-	q = j.ApplyQueryFunc(q)
+	q = j.apply(q)
 
 	// Restore state.
 	q.table = table
 	j.columns, q.columns = q.columns, columns
 }
 
-func (j *join) Select(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) Select(ctx context.Context, q *SelectQuery) error {
 	switch j.Relation.Type {
-	case schema.HasManyRelation:
-		return j.selectMany(ctx, q)
-	case schema.ManyToManyRelation:
-		return j.selectM2M(ctx, q)
 	}
 	panic("not reached")
 }
 
-func (j *join) selectMany(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) selectMany(ctx context.Context, q *SelectQuery) error {
 	q = j.manyQuery(q)
 	if q == nil {
 		return nil
@@ -55,7 +51,7 @@ func (j *join) selectMany(ctx context.Context, q *SelectQuery) error {
 	return q.Scan(ctx)
 }
 
-func (j *join) manyQuery(q *SelectQuery) *SelectQuery {
+func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 	hasManyModel := newHasManyModel(j)
 	if hasManyModel == nil {
 		return nil
@@ -86,13 +82,13 @@ func (j *join) manyQuery(q *SelectQuery) *SelectQuery {
 		q = q.Where("? = ?", j.Relation.PolymorphicField.SQLName, j.Relation.PolymorphicValue)
 	}
 
-	j.applyQuery(q)
+	j.applyTo(q)
 	q = q.Apply(j.hasManyColumns)
 
 	return q
 }
 
-func (j *join) hasManyColumns(q *SelectQuery) *SelectQuery {
+func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
 	if j.Relation.M2MTable != nil {
 		q = q.ColumnExpr(string(j.Relation.M2MTable.SQLAlias) + ".*")
 	}
@@ -122,7 +118,7 @@ func (j *join) hasManyColumns(q *SelectQuery) *SelectQuery {
 	return q
 }
 
-func (j *join) selectM2M(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) selectM2M(ctx context.Context, q *SelectQuery) error {
 	q = j.m2mQuery(q)
 	if q == nil {
 		return nil
@@ -130,7 +126,7 @@ func (j *join) selectM2M(ctx context.Context, q *SelectQuery) error {
 	return q.Scan(ctx)
 }
 
-func (j *join) m2mQuery(q *SelectQuery) *SelectQuery {
+func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	fmter := q.db.fmter
 
 	m2mModel := newM2MModel(j)
@@ -170,13 +166,13 @@ func (j *join) m2mQuery(q *SelectQuery) *SelectQuery {
 			j.Relation.M2MTable.SQLAlias, m2mJoinField.SQLName)
 	}
 
-	j.applyQuery(q)
+	j.applyTo(q)
 	q = q.Apply(j.hasManyColumns)
 
 	return q
 }
 
-func (j *join) hasParent() bool {
+func (j *relationJoin) hasParent() bool {
 	if j.Parent != nil {
 		switch j.Parent.Relation.Type {
 		case schema.HasOneRelation, schema.BelongsToRelation:
@@ -186,7 +182,7 @@ func (j *join) hasParent() bool {
 	return false
 }
 
-func (j *join) appendAlias(fmter schema.Formatter, b []byte) []byte {
+func (j *relationJoin) appendAlias(fmter schema.Formatter, b []byte) []byte {
 	quote := fmter.IdentQuote()
 
 	b = append(b, quote)
@@ -195,7 +191,7 @@ func (j *join) appendAlias(fmter schema.Formatter, b []byte) []byte {
 	return b
 }
 
-func (j *join) appendAliasColumn(fmter schema.Formatter, b []byte, column string) []byte {
+func (j *relationJoin) appendAliasColumn(fmter schema.Formatter, b []byte, column string) []byte {
 	quote := fmter.IdentQuote()
 
 	b = append(b, quote)
@@ -206,7 +202,7 @@ func (j *join) appendAliasColumn(fmter schema.Formatter, b []byte, column string
 	return b
 }
 
-func (j *join) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
+func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
 	quote := fmter.IdentQuote()
 
 	if j.hasParent() {
@@ -218,7 +214,7 @@ func (j *join) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
 	return append(b, j.BaseModel.Table().SQLAlias...)
 }
 
-func (j *join) appendSoftDelete(b []byte, flags internal.Flag) []byte {
+func (j *relationJoin) appendSoftDelete(b []byte, flags internal.Flag) []byte {
 	b = append(b, '.')
 	b = append(b, j.JoinModel.Table().SoftDeleteField.SQLName...)
 	if flags.Has(deletedFlag) {
@@ -229,7 +225,7 @@ func (j *join) appendSoftDelete(b []byte, flags internal.Flag) []byte {
 	return b
 }
 
-func appendAlias(b []byte, j *join) []byte {
+func appendAlias(b []byte, j *relationJoin) []byte {
 	if j.hasParent() {
 		b = appendAlias(b, j.Parent)
 		b = append(b, "__"...)
@@ -238,7 +234,7 @@ func appendAlias(b []byte, j *join) []byte {
 	return b
 }
 
-func (j *join) appendHasOneJoin(
+func (j *relationJoin) appendHasOneJoin(
 	fmter schema.Formatter, b []byte, q *SelectQuery,
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)

@@ -16,7 +16,7 @@ type structTableModel struct {
 	table *schema.Table
 
 	rel   *schema.Relation
-	joins []join
+	joins []relationJoin
 
 	dest  interface{}
 	root  reflect.Value
@@ -151,7 +151,7 @@ func (m *structTableModel) AfterScan(ctx context.Context) error {
 	return firstErr
 }
 
-func (m *structTableModel) GetJoin(name string) *join {
+func (m *structTableModel) GetJoin(name string) *relationJoin {
 	for i := range m.joins {
 		j := &m.joins[i]
 		if j.Relation.Field.Name == name || j.Relation.Field.GoName == name {
@@ -161,30 +161,28 @@ func (m *structTableModel) GetJoin(name string) *join {
 	return nil
 }
 
-func (m *structTableModel) GetJoins() []join {
+func (m *structTableModel) GetJoins() []relationJoin {
 	return m.joins
 }
 
-func (m *structTableModel) AddJoin(j join) *join {
+func (m *structTableModel) AddJoin(j relationJoin) *relationJoin {
 	m.joins = append(m.joins, j)
 	return &m.joins[len(m.joins)-1]
 }
 
-func (m *structTableModel) Join(name string, apply func(*SelectQuery) *SelectQuery) *join {
-	return m.join(m.strct, name, apply)
+func (m *structTableModel) Join(name string) *relationJoin {
+	return m.join(m.strct, name)
 }
 
-func (m *structTableModel) join(
-	bind reflect.Value, name string, apply func(*SelectQuery) *SelectQuery,
-) *join {
+func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
 	path := strings.Split(name, ".")
 	index := make([]int, 0, len(path))
 
-	currJoin := join{
+	currJoin := relationJoin{
 		BaseModel: m,
 		JoinModel: m,
 	}
-	var lastJoin *join
+	var lastJoin *relationJoin
 
 	for _, name := range path {
 		relation, ok := currJoin.JoinModel.Table().Relations[name]
@@ -212,14 +210,6 @@ func (m *structTableModel) join(
 
 			lastJoin = currJoin.BaseModel.AddJoin(currJoin)
 		}
-	}
-
-	// No joins with such name.
-	if lastJoin == nil {
-		return nil
-	}
-	if apply != nil {
-		lastJoin.ApplyQueryFunc = apply
 	}
 
 	return lastJoin

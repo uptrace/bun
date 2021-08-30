@@ -38,10 +38,10 @@ type tableModel interface {
 	Table() *schema.Table
 	Relation() *schema.Relation
 
-	Join(string, func(*SelectQuery) *SelectQuery) *join
-	GetJoin(string) *join
-	GetJoins() []join
-	AddJoin(join) *join
+	Join(string) *relationJoin
+	GetJoin(string) *relationJoin
+	GetJoins() []relationJoin
+	AddJoin(relationJoin) *relationJoin
 
 	Root() reflect.Value
 	ParentIndex() []int
