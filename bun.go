@@ -5,19 +5,17 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
 type (
 	Safe  = schema.Safe
 	Ident = schema.Ident
-)
 
-type NullTime = schema.NullTime
+	NullTime  = schema.NullTime
+	BaseModel = schema.BaseModel
 
-type BaseModel = schema.BaseModel
-
-type (
 	BeforeScanHook = schema.BeforeScanHook
 	AfterScanHook  = schema.AfterScanHook
 )
@@ -68,6 +66,11 @@ type BeforeDropTableHook interface {
 
 type AfterDropTableHook interface {
 	AfterDropTable(ctx context.Context, query *DropTableQuery) error
+}
+
+// SetLogger overwriters default Bun logger.
+func SetLogger(logger internal.Logging) {
+	internal.Logger = logger
 }
 
 //------------------------------------------------------------------------------
