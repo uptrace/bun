@@ -12,7 +12,7 @@
 
 - model: Org
   rows:
-    - name: "{{ $.User.smith.Name }}'s Org"
+    - name: "{{ $.User.smith.Name.String }}'s Org"
       owner_id: '{{ $.User.smith.ID }}'
-    - name: "{{ $.User.doe.Name }}'s Org"
+    - name: "{{ $.User.doe.Name.String }}'s Org"
       owner_id: '{{ $.User.doe.ID }}'
