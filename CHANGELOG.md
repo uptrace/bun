@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.0 - Sep 01 2021
+
+- First stable release.
+
 ## v0.4.1 - Aug 18 2021
 
 - Fixed migrate package to properly rollback migrations.

@@ -11,9 +11,9 @@
 [![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
-**Status**: API freeze (release candidate). Note that all sub-packages (mainly extra/\* packages)
-are not part of the API freeze and are developed independently. You can think of them as 3-rd party
-packages.
+**Status**: API freeze (stable release). Note that all sub-packages (mainly extra/\* packages) are
+not part of the API freeze and are developed independently. You can think of them as 3-rd party
+packages that share one repo with the core.
 
 Main features are:
 
