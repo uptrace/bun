@@ -34,6 +34,16 @@ func (q *ValuesQuery) Conn(db IConn) *ValuesQuery {
 	return q
 }
 
+// Value overwrites model value for the column.
+func (q *ValuesQuery) Value(column string, expr string, args ...interface{}) *ValuesQuery {
+	if q.table == nil {
+		q.err = errNilModel
+		return q
+	}
+	q.addValue(q.table, column, expr, args)
+	return q
+}
+
 func (q *ValuesQuery) WithOrder() *ValuesQuery {
 	q.withOrder = true
 	return q

@@ -88,13 +88,13 @@ func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
 	return q
 }
 
-// Value overwrites model value for the column in INSERT and UPDATE queries.
-func (q *InsertQuery) Value(column string, value string, args ...interface{}) *InsertQuery {
+// Value overwrites model value for the column.
+func (q *InsertQuery) Value(column string, expr string, args ...interface{}) *InsertQuery {
 	if q.table == nil {
 		q.err = errNilModel
 		return q
 	}
-	q.addValue(q.table, column, value, args)
+	q.addValue(q.table, column, expr, args)
 	return q
 }
 

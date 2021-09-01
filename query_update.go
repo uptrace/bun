@@ -90,13 +90,13 @@ func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
 	return q
 }
 
-// Value overwrites model value for the column in INSERT and UPDATE queries.
-func (q *UpdateQuery) Value(column string, value string, args ...interface{}) *UpdateQuery {
+// Value overwrites model value for the column.
+func (q *UpdateQuery) Value(column string, expr string, args ...interface{}) *UpdateQuery {
 	if q.table == nil {
 		q.err = errNilModel
 		return q
 	}
-	q.addValue(q.table, column, value, args)
+	q.addValue(q.table, column, expr, args)
 	return q
 }
 
@@ -327,7 +327,10 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	return q.With("_data", q.db.NewValues(model)).
+	values := q.db.NewValues(model)
+	values.customValueQuery = q.customValueQuery
+
+	return q.With("_data", values).
 		Model(model).
 		TableExpr("_data").
 		Set(set).
