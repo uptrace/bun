@@ -653,6 +653,11 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 	}
 
+	for _, model := range []interface{}{(*Deck)(nil), (*User)(nil)} {
+		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
+		require.NoError(t, err)
+	}
+
 	_, err := db.NewCreateTable().
 		Model((*User)(nil)).
 		IfNotExists().
@@ -665,6 +670,10 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 		ForeignKey("(user_id) REFERENCES users (id) ON DELETE CASCADE").
 		Exec(ctx)
 	require.NoError(t, err)
+
+	// Empty deck should violate FK constraint.
+	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
+	require.Error(t, err)
 
 	// Create a deck that violates the user_id FK contraint
 	deck := &Deck{UserID: 42}

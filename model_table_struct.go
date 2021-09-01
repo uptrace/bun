@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -225,20 +224,24 @@ func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, e
 		return 0, rows.Err()
 	}
 
+	var n int
+
 	if err := m.ScanRow(ctx, rows); err != nil {
 		return 0, err
 	}
+	n++
 
-	// For inserts, SQLite3 can return a row like it was inserted sucessfully and then
-	// an actual error for the next row. See issues/100.
-	if m.db.dialect.Name() == dialect.SQLite {
-		_ = rows.Next()
-		if err := rows.Err(); err != nil {
-			return 0, err
-		}
+	// And discard the rest. This is especially important for SQLite3, which can return
+	// a row like it was inserted sucessfully and then return an actual error for the next row.
+	// See issues/100.
+	for rows.Next() {
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
 	}
 
-	return 1, nil
+	return n, nil
 }
 
 func (m *structTableModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
