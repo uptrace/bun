@@ -135,10 +135,7 @@ func writeSSLMsg(ctx context.Context, cn *Conn) error {
 	wb.WriteInt32(80877103)
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 //------------------------------------------------------------------------------
@@ -207,10 +204,7 @@ func writeStartup(ctx context.Context, cn *Conn) error {
 	wb.WriteString("")
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 //------------------------------------------------------------------------------
@@ -296,10 +290,7 @@ func writePassword(ctx context.Context, cn *Conn, password string) error {
 	wb.WriteString(password)
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func md5s(s string) string {
@@ -416,10 +407,7 @@ func saslWriteInitialResponse(
 	}
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func saslWriteResponse(ctx context.Context, cn *Conn, resp []byte) error {
@@ -432,10 +420,7 @@ func saslWriteResponse(ctx context.Context, cn *Conn, resp []byte) error {
 	}
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func saslReadAuthFinal(cn *Conn, rd *reader) ([]byte, error) {
@@ -478,25 +463,14 @@ func saslReadAuthFinal(cn *Conn, rd *reader) ([]byte, error) {
 //------------------------------------------------------------------------------
 
 func writeQuery(ctx context.Context, cn *Conn, query string) error {
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		if err := wr.WriteByte(queryMsg); err != nil {
-			return err
-		}
+	wb := getWriteBuffer()
+	defer putWriteBuffer(wb)
 
-		binary.BigEndian.PutUint32(cn.rd.buf, uint32(len(query)+5))
-		if _, err := wr.Write(cn.rd.buf[:4]); err != nil {
-			return err
-		}
+	wb.StartMessage(queryMsg)
+	wb.WriteString(query)
+	wb.FinishMessage()
 
-		if _, err := wr.WriteString(query); err != nil {
-			return err
-		}
-		if err := wr.WriteByte(0x0); err != nil {
-			return err
-		}
-
-		return nil
-	})
+	return cn.write(ctx, wb)
 }
 
 func readQuery(ctx context.Context, cn *Conn) (sql.Result, error) {
@@ -745,10 +719,7 @@ func writeParseDescribeSync(ctx context.Context, cn *Conn, name, query string) e
 	wb.StartMessage(syncMsg)
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func readParseDescribeSync(ctx context.Context, cn *Conn) (*rowDescription, error) {
@@ -847,10 +818,7 @@ func writeBindExecute(ctx context.Context, cn *Conn, name string, args []driver.
 	wb.StartMessage(syncMsg)
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func readExtQuery(ctx context.Context, cn *Conn) (driver.Result, error) {
@@ -973,10 +941,7 @@ func writeCloseStmt(ctx context.Context, cn *Conn, name string) error {
 	wb.StartMessage(flushMsg)
 	wb.FinishMessage()
 
-	return cn.withWriter(ctx, -1, func(wr *bufio.Writer) error {
-		_, err := wr.Write(wb.Bytes)
-		return err
-	})
+	return cn.write(ctx, wb)
 }
 
 func readCloseStmtComplete(ctx context.Context, cn *Conn) error {

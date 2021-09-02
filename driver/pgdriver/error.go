@@ -1,6 +1,7 @@
 package pgdriver
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"net"
 )
@@ -39,8 +40,11 @@ func (err Error) Error() string {
 }
 
 func isBadConn(err error, allowTimeout bool) bool {
-	if err == nil {
+	switch err {
+	case nil:
 		return false
+	case driver.ErrBadConn:
+		return true
 	}
 
 	if err, ok := err.(Error); ok {
