@@ -18,17 +18,16 @@ import (
 
 func TestORM(t *testing.T) {
 	type Test struct {
-		name string
-		fn   func(*testing.T, *bun.DB)
+		fn func(*testing.T, *bun.DB)
 	}
 
 	tests := []Test{
-		{"testBookRelations", testBookRelations},
-		{"testAuthorRelations", testAuthorRelations},
-		{"testGenreRelations", testGenreRelations},
-		{"testTranslationRelations", testTranslationRelations},
-		{"testBulkUpdate", testBulkUpdate},
-		{"testRelationColumn", testRelationColumn},
+		{testBookRelations},
+		{testAuthorRelations},
+		{testGenreRelations},
+		{testTranslationRelations},
+		{testBulkUpdate},
+		{testRelationColumn},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -37,7 +36,7 @@ func TestORM(t *testing.T) {
 		for _, test := range tests {
 			loadTestData(t, ctx, db)
 
-			t.Run(test.name, func(t *testing.T) {
+			t.Run(funcName(t), func(t *testing.T) {
 				test.fn(t, db)
 			})
 		}

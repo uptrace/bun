@@ -7,6 +7,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/uptrace/bun"
@@ -125,42 +128,49 @@ func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
 	}
 }
 
+func funcName(x interface{}) string {
+	s := runtime.FuncForPC(reflect.ValueOf(x).Pointer()).Name()
+	if i := strings.LastIndexByte(s, '.'); i >= 0 {
+		return s[i+1:]
+	}
+	return s
+}
+
 func TestDB(t *testing.T) {
 	type Test struct {
-		name string
-		run  func(t *testing.T, db *bun.DB)
+		run func(t *testing.T, db *bun.DB)
 	}
 
 	tests := []Test{
-		{"testPing", testPing},
-		{"testNilModel", testNilModel},
-		{"testSelectScan", testSelectScan},
-		{"testSelectCount", testSelectCount},
-		{"testSelectMap", testSelectMap},
-		{"testSelectMapSlice", testSelectMapSlice},
-		{"testSelectStruct", testSelectStruct},
-		{"testSelectNestedStructValue", testSelectNestedStructValue},
-		{"testSelectNestedStructPtr", testSelectNestedStructPtr},
-		{"testSelectStructSlice", testSelectStructSlice},
-		{"testSelectSingleSlice", testSelectSingleSlice},
-		{"testSelectMultiSlice", testSelectMultiSlice},
-		{"testSelectJSONMap", testSelectJSONMap},
-		{"testSelectJSONStruct", testSelectJSONStruct},
-		{"testJSONSpecialChars", testJSONSpecialChars},
-		{"testSelectRawMessage", testSelectRawMessage},
-		{"testScanNullVar", testScanNullVar},
-		{"testScanSingleRow", testScanSingleRow},
-		{"testScanSingleRowByRow", testScanSingleRowByRow},
-		{"testScanRows", testScanRows},
-		{"testRunInTx", testRunInTx},
-		{"testInsertIface", testInsertIface},
-		{"testSelectBool", testSelectBool},
-		{"testFKViolation", testFKViolation},
+		{testPing},
+		{testNilModel},
+		{testSelectScan},
+		{testSelectCount},
+		{testSelectMap},
+		{testSelectMapSlice},
+		{testSelectStruct},
+		{testSelectNestedStructValue},
+		{testSelectNestedStructPtr},
+		{testSelectStructSlice},
+		{testSelectSingleSlice},
+		{testSelectMultiSlice},
+		{testSelectJSONMap},
+		{testSelectJSONStruct},
+		{testJSONSpecialChars},
+		{testSelectRawMessage},
+		{testScanNullVar},
+		{testScanSingleRow},
+		{testScanSingleRowByRow},
+		{testScanRows},
+		{testRunInTx},
+		{testInsertIface},
+		{testSelectBool},
+		{testFKViolation},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
 		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
+			t.Run(funcName(test.run), func(t *testing.T) {
 				test.run(t, db)
 			})
 		}

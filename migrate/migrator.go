@@ -115,6 +115,7 @@ func (m *Migrator) Reset(ctx context.Context) error {
 	return m.Init(ctx)
 }
 
+// Migrate runs unapplied migrations. If a migration fails, migrate immediately exits.
 func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	cfg := newMigrationConfig(opts)
 
@@ -146,7 +147,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 
 		if !cfg.nop && migration.Up != nil {
 			if err := migration.Up(ctx, m.db); err != nil {
-				return nil, err
+				return group, err
 			}
 		}
 

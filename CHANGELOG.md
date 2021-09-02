@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.1 - Sep 02 2021
+
+- pgdriver: added erroneous zero writes retry.
+- Improved column handling in Relation callback.
+
 ## v1.0.0 - Sep 01 2021
 
 - First stable release.
