@@ -100,7 +100,7 @@ You also need to install a database/sql driver and the corresponding Bun
 ## Quickstart
 
 First you need to create a `sql.DB`. Here we are using the
-[sqliteshim](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim) driver which choses
+[sqliteshim](https://pkg.go.dev/github.com/uptrace/bun/driver/sqliteshim) driver which chooses
 between [modernc.org/sqlite](https://modernc.org/sqlite/) and
 [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) depending on your platform.
 
