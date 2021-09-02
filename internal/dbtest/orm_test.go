@@ -28,13 +28,15 @@ func TestORM(t *testing.T) {
 		{"testGenreRelations", testGenreRelations},
 		{"testTranslationRelations", testTranslationRelations},
 		{"testBulkUpdate", testBulkUpdate},
+		{"testRelationColumn", testRelationColumn},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
 		createTestSchema(t, db)
-		loadTestData(t, db)
 
 		for _, test := range tests {
+			loadTestData(t, ctx, db)
+
 			t.Run(test.name, func(t *testing.T) {
 				test.fn(t, db)
 			})
@@ -257,6 +259,28 @@ func testBulkUpdate(t *testing.T, db *bun.DB) {
 	}
 }
 
+func testRelationColumn(t *testing.T, db *bun.DB) {
+	book := new(Book)
+	err := db.NewSelect().
+		Model(book).
+		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.Column("name")
+		}).
+		OrderExpr("book.id").
+		Limit(1).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, &Book{
+		ID:       100,
+		Title:    "book 1",
+		AuthorID: 10,
+		Author: Author{
+			Name: "author 1",
+		},
+		EditorID: 11,
+	}, book)
+}
+
 type Genre struct {
 	ID     int
 	Name   string
@@ -367,8 +391,8 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 	}
 }
 
-func loadTestData(t *testing.T, db *bun.DB) {
-	fixture := dbfixture.New(db)
-	err := fixture.Load(context.TODO(), os.DirFS("testdata"), "fixture.yaml")
+func loadTestData(t *testing.T, ctx context.Context, db *bun.DB) {
+	fixture := dbfixture.New(db, dbfixture.WithTruncateTables())
+	err := fixture.Load(ctx, os.DirFS("testdata"), "fixture.yaml")
 	require.NoError(t, err)
 }

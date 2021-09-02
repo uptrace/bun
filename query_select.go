@@ -576,13 +576,14 @@ func (q *SelectQuery) appendHasOneColumns(
 	join.applyTo(q)
 
 	if join.columns != nil {
+		table := join.JoinModel.Table()
 		for i, col := range join.columns {
 			if i > 0 {
 				b = append(b, ", "...)
 			}
 
 			if col.Args == nil {
-				if field, ok := q.table.FieldMap[col.Query]; ok {
+				if field, ok := table.FieldMap[col.Query]; ok {
 					b = join.appendAlias(fmter, b)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
