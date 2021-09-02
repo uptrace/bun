@@ -1,7 +1,6 @@
 package pgdriver
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"database/sql"
@@ -13,7 +12,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -158,24 +156,17 @@ func (cn *Conn) reader(ctx context.Context, timeout time.Duration) *reader {
 	return cn.rd
 }
 
-func (cn *Conn) withWriter(
-	ctx context.Context,
-	timeout time.Duration,
-	fn func(wr *bufio.Writer) error,
-) error {
-	wr := getBufioWriter()
+func (cn *Conn) write(ctx context.Context, wb *writeBuffer) error {
+	cn.setWriteDeadline(ctx, -1)
 
-	cn.setWriteDeadline(ctx, timeout)
-	wr.Reset(cn.netConn)
-
-	err := fn(wr)
-	if err == nil {
-		err = wr.Flush()
+	n, err := cn.netConn.Write(wb.Bytes)
+	if err != nil {
+		if n == 0 {
+			return driver.ErrBadConn
+		}
+		return err
 	}
-
-	putBufioWriter(wr)
-
-	return err
+	return nil
 }
 
 var _ driver.Conn = (*Conn)(nil)
@@ -587,20 +578,4 @@ func (stmt *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (d
 		return nil, err
 	}
 	return readExtQueryData(ctx, stmt.cn, stmt.rowDesc)
-}
-
-//------------------------------------------------------------------------------
-
-var bufioWriterPool = sync.Pool{
-	New: func() interface{} {
-		return bufio.NewWriter(nil)
-	},
-}
-
-func getBufioWriter() *bufio.Writer {
-	return bufioWriterPool.Get().(*bufio.Writer)
-}
-
-func putBufioWriter(wr *bufio.Writer) {
-	bufioWriterPool.Put(wr)
 }

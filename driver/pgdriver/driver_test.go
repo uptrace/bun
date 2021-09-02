@@ -14,6 +14,20 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
+func BenchmarkExec(b *testing.B) {
+	db, err := sql.Open("pg", dsn())
+	require.NoError(b, err)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := db.Exec("SELECT 1")
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestSQLOpen(t *testing.T) {
 	db, err := sql.Open("pg", dsn())
 	require.NoError(t, err)
