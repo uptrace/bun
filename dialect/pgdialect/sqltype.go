@@ -88,6 +88,8 @@ func sqlType(typ reflect.Type) string {
 	}
 
 	switch typ.Kind() {
+	case reflect.Interface:
+		return pgTypeJSONB
 	case reflect.Map, reflect.Struct:
 		if sqlType == sqltype.VarChar {
 			return pgTypeJSONB

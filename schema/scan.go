@@ -19,32 +19,35 @@ var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 
 type ScannerFunc func(dest reflect.Value, src interface{}) error
 
-var scanners = []ScannerFunc{
-	reflect.Bool:          scanBool,
-	reflect.Int:           scanInt64,
-	reflect.Int8:          scanInt64,
-	reflect.Int16:         scanInt64,
-	reflect.Int32:         scanInt64,
-	reflect.Int64:         scanInt64,
-	reflect.Uint:          scanUint64,
-	reflect.Uint8:         scanUint64,
-	reflect.Uint16:        scanUint64,
-	reflect.Uint32:        scanUint64,
-	reflect.Uint64:        scanUint64,
-	reflect.Uintptr:       scanUint64,
-	reflect.Float32:       scanFloat64,
-	reflect.Float64:       scanFloat64,
-	reflect.Complex64:     nil,
-	reflect.Complex128:    nil,
-	reflect.Array:         nil,
-	reflect.Chan:          nil,
-	reflect.Func:          nil,
-	reflect.Map:           scanJSON,
-	reflect.Ptr:           nil,
-	reflect.Slice:         scanJSON,
-	reflect.String:        scanString,
-	reflect.Struct:        scanJSON,
-	reflect.UnsafePointer: nil,
+var scanners []ScannerFunc
+
+func init() {
+	scanners = []ScannerFunc{
+		reflect.Bool:          scanBool,
+		reflect.Int:           scanInt64,
+		reflect.Int8:          scanInt64,
+		reflect.Int16:         scanInt64,
+		reflect.Int32:         scanInt64,
+		reflect.Int64:         scanInt64,
+		reflect.Uint:          scanUint64,
+		reflect.Uint8:         scanUint64,
+		reflect.Uint16:        scanUint64,
+		reflect.Uint32:        scanUint64,
+		reflect.Uint64:        scanUint64,
+		reflect.Uintptr:       scanUint64,
+		reflect.Float32:       scanFloat64,
+		reflect.Float64:       scanFloat64,
+		reflect.Complex64:     nil,
+		reflect.Complex128:    nil,
+		reflect.Array:         nil,
+		reflect.Interface:     scanInterface,
+		reflect.Map:           scanJSON,
+		reflect.Ptr:           nil,
+		reflect.Slice:         scanJSON,
+		reflect.String:        scanString,
+		reflect.Struct:        scanJSON,
+		reflect.UnsafePointer: nil,
+	}
 }
 
 func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
@@ -398,6 +401,27 @@ func scanNull(dest reflect.Value) error {
 	}
 	dest.Set(reflect.New(dest.Type()).Elem())
 	return nil
+}
+
+func scanInterface(dest reflect.Value, src interface{}) error {
+	if dest.IsNil() {
+		if src == nil {
+			return nil
+		}
+
+		b, err := toBytes(src)
+		if err != nil {
+			return err
+		}
+
+		return bunjson.Unmarshal(b, dest.Addr().Interface())
+	}
+
+	dest = dest.Elem()
+	if fn := Scanner(dest.Type()); fn != nil {
+		return fn(dest, src)
+	}
+	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
 
 func nilable(kind reflect.Kind) bool {
