@@ -50,6 +50,11 @@ func pg(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 	require.Equal(tb, "DB<dialect=pg>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
 	return db
 }
 
@@ -67,6 +72,11 @@ func pgx(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 	require.Equal(tb, "DB<dialect=pg>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
 	return db
 }
 
@@ -84,6 +94,11 @@ func mysql8(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
 	require.Equal(tb, "DB<dialect=mysql8>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
 	return db
 }
 
@@ -101,6 +116,11 @@ func mysql5(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
 	require.Equal(tb, "DB<dialect=mysql5>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
 	return db
 }
 
@@ -113,6 +133,11 @@ func sqlite(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	require.Equal(tb, "DB<dialect=sqlite>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
 	return db
 }
 
@@ -120,9 +145,6 @@ func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
 	for name, newDB := range allDBs {
 		t.Run(name, func(t *testing.T) {
 			db := newDB(t)
-			if _, ok := os.LookupEnv("DEBUG"); ok {
-				db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
-			}
 			f(t, db)
 		})
 	}

@@ -295,3 +295,25 @@ func TestBytea(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte("hello"), model.Bytes)
 }
+
+func TestPGInterface(t *testing.T) {
+	type Model struct {
+		Value interface{}
+	}
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := new(Model)
+
+	err = db.NewSelect().ColumnExpr("NULL AS value").Scan(ctx, model)
+	require.NoError(t, err)
+	require.Nil(t, model.Value)
+
+	err = db.NewSelect().ColumnExpr(`'"hello"' AS value`).Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, "hello", model.Value)
+}
