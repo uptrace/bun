@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.2 - Sep 04 2021
+
+- Changed to completely ignore fields marked with `bun:"-"`. If you want to be able to scan into
+  such columns, use `bun:",scanonly"`.
+- pgdriver: fixed SASL authentication handling.
+
 ## v1.0.1 - Sep 02 2021
 
 - pgdriver: added erroneous zero writes retry.
