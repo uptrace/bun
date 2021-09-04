@@ -343,7 +343,7 @@ func testRelationExcludeAll(t *testing.T, db *bun.DB) {
 type Genre struct {
 	ID     int
 	Name   string
-	Rating int `bun:"-"`
+	Rating int `bun:",scanonly"`
 
 	Books []Book `bun:"m2m:book_genres"`
 

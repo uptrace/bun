@@ -148,9 +148,9 @@ func TestPGInsertNoRows(t *testing.T) {
 	}
 }
 
-func TestPGScanIgnoredField(t *testing.T) {
+func TestPGScanonlyField(t *testing.T) {
 	type Model struct {
-		Array []string `bun:"-,array"`
+		Array []string `bun:",scanonly,array"`
 	}
 
 	db := pg(t)
