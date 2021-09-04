@@ -62,8 +62,7 @@ type Table struct {
 	SoftDeleteField       *Field
 	UpdateSoftDeleteField func(fv reflect.Value) error
 
-	allFields     []*Field // read only
-	skippedFields []*Field
+	allFields []*Field // read only
 
 	flags internal.Flag
 }
@@ -104,9 +103,7 @@ func (t *Table) init1() {
 }
 
 func (t *Table) init2() {
-	t.initInlines()
 	t.initRelations()
-	t.skippedFields = nil
 }
 
 func (t *Table) setName(name string) {
@@ -207,15 +204,20 @@ func (t *Table) initFields() {
 func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+		unexported := f.PkgPath != ""
 
-		// Make a copy so slice is not shared between fields.
+		if unexported && !f.Anonymous { // unexported
+			continue
+		}
+		if f.Tag.Get("bun") == "-" {
+			continue
+		}
+
+		// Make a copy so the slice is not shared between fields.
 		index := make([]int, len(baseIndex))
 		copy(index, baseIndex)
 
 		if f.Anonymous {
-			if f.Tag.Get("bun") == "-" {
-				continue
-			}
 			if f.Name == "BaseModel" && f.Type == baseModelType {
 				if len(index) == 0 {
 					t.processBaseModelField(f)
@@ -243,8 +245,7 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 			continue
 		}
 
-		field := t.newField(f, index)
-		if field != nil {
+		if field := t.newField(f, index); field != nil {
 			t.addField(field)
 		}
 	}
@@ -284,11 +285,10 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	tag := tagparser.Parse(f.Tag.Get("bun"))
 
-	if f.PkgPath != "" {
-		return nil
-	}
-
 	sqlName := internal.Underscore(f.Name)
+	if tag.Name != "" {
+		sqlName = tag.Name
+	}
 
 	if tag.Name != sqlName && isKnownFieldOption(tag.Name) {
 		internal.Warn.Printf(
@@ -301,11 +301,6 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		if !isKnownFieldOption(name) {
 			internal.Warn.Printf("%s.%s has unknown tag option: %q", t.TypeName, f.Name, name)
 		}
-	}
-
-	skip := tag.Name == "-"
-	if !skip && tag.Name != "" {
-		sqlName = tag.Name
 	}
 
 	index = append(index, f.Index...)
@@ -371,9 +366,11 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	}
 
 	t.allFields = append(t.allFields, field)
-	if skip {
-		t.skippedFields = append(t.skippedFields, field)
+	if tag.HasOption("scanonly") {
 		t.FieldMap[field.Name] = field
+		if field.IndirectType.Kind() == reflect.Struct {
+			t.inlineFields(field, nil)
+		}
 		return nil
 	}
 
@@ -384,14 +381,6 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	}
 
 	return field
-}
-
-func (t *Table) initInlines() {
-	for _, f := range t.skippedFields {
-		if f.IndirectType.Kind() == reflect.Struct {
-			t.inlineFields(f, nil)
-		}
-	}
 }
 
 //---------------------------------------------------------------------------------------
@@ -745,17 +734,15 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	return rel
 }
 
-func (t *Table) inlineFields(field *Field, path map[reflect.Type]struct{}) {
-	if path == nil {
-		path = map[reflect.Type]struct{}{
-			t.Type: {},
-		}
+func (t *Table) inlineFields(field *Field, seen map[reflect.Type]struct{}) {
+	if seen == nil {
+		seen = map[reflect.Type]struct{}{t.Type: {}}
 	}
 
-	if _, ok := path[field.IndirectType]; ok {
+	if _, ok := seen[field.IndirectType]; ok {
 		return
 	}
-	path[field.IndirectType] = struct{}{}
+	seen[field.IndirectType] = struct{}{}
 
 	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	for _, f := range joinTable.allFields {
@@ -775,18 +762,15 @@ func (t *Table) inlineFields(field *Field, path map[reflect.Type]struct{}) {
 			continue
 		}
 
-		if _, ok := path[f.IndirectType]; !ok {
-			t.inlineFields(f, path)
+		if _, ok := seen[f.IndirectType]; !ok {
+			t.inlineFields(f, seen)
 		}
 	}
 }
 
 //------------------------------------------------------------------------------
 
-func (t *Table) Dialect() Dialect { return t.dialect }
-
-//------------------------------------------------------------------------------
-
+func (t *Table) Dialect() Dialect        { return t.dialect }
 func (t *Table) HasBeforeScanHook() bool { return t.flags.Has(beforeScanHookFlag) }
 func (t *Table) HasAfterScanHook() bool  { return t.flags.Has(afterScanHookFlag) }
 
@@ -845,6 +829,7 @@ func isKnownFieldOption(name string) bool {
 		"default",
 		"unique",
 		"soft_delete",
+		"scanonly",
 
 		"pk",
 		"autoincrement",
