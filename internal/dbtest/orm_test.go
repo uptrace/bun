@@ -28,6 +28,7 @@ func TestORM(t *testing.T) {
 		{testTranslationRelations},
 		{testBulkUpdate},
 		{testRelationColumn},
+		{testRelationExcludeAll},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -36,7 +37,7 @@ func TestORM(t *testing.T) {
 		for _, test := range tests {
 			loadTestData(t, ctx, db)
 
-			t.Run(funcName(t), func(t *testing.T) {
+			t.Run(funcName(test.fn), func(t *testing.T) {
 				test.fn(t, db)
 			})
 		}
@@ -277,6 +278,65 @@ func testRelationColumn(t *testing.T, db *bun.DB) {
 			Name: "author 1",
 		},
 		EditorID: 11,
+	}, book)
+}
+
+func testRelationExcludeAll(t *testing.T, db *bun.DB) {
+	book := new(Book)
+	err := db.NewSelect().
+		Model(book).
+		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.ExcludeColumn("*")
+		}).
+		Relation("Author.Avatar").
+		Relation("Editor").
+		OrderExpr("book.id").
+		Limit(1).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, &Book{
+		ID:       100,
+		Title:    "book 1",
+		AuthorID: 10,
+		Author: Author{
+			Avatar: Image{
+				ID:   1,
+				Path: "/path/to/1.jpg",
+			},
+		},
+		EditorID: 11,
+		Editor: &Author{
+			ID:       11,
+			Name:     "author 2",
+			AvatarID: 2,
+		},
+	}, book)
+
+	book = new(Book)
+	err = db.NewSelect().
+		Model(book).
+		ExcludeColumn("*").
+		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.ExcludeColumn("*")
+		}).
+		Relation("Author.Avatar").
+		Relation("Editor").
+		OrderExpr("book.id").
+		Limit(1).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, &Book{
+		Author: Author{
+			Avatar: Image{
+				ID:   1,
+				Path: "/path/to/1.jpg",
+			},
+		},
+		Editor: &Author{
+			ID:       11,
+			Name:     "author 2",
+			AvatarID: 2,
+		},
 	}, book)
 }
 

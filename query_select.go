@@ -549,13 +549,13 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 		b = append(b, '*')
 	}
 
-	if err := q.forEachHasOneJoin(func(j *relationJoin) error {
+	if err := q.forEachHasOneJoin(func(join *relationJoin) error {
 		if len(b) != start {
 			b = append(b, ", "...)
 			start = len(b)
 		}
 
-		b, err = q.appendHasOneColumns(fmter, b, j)
+		b, err = q.appendHasOneColumns(fmter, b, join)
 		if err != nil {
 			return err
 		}
