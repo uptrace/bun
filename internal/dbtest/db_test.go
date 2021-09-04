@@ -188,6 +188,8 @@ func TestDB(t *testing.T) {
 		{testInsertIface},
 		{testSelectBool},
 		{testFKViolation},
+		{testInterfaceAny},
+		{testInterfaceJSON},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -720,4 +722,46 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 	n, err := db.NewSelect().Model((*Deck)(nil)).Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, n)
+}
+
+func testInterfaceAny(t *testing.T, db *bun.DB) {
+	switch db.Dialect().Name() {
+	case dialect.MySQL5, dialect.MySQL8:
+		t.Skip()
+	}
+
+	type Model struct {
+		Value interface{}
+	}
+
+	model := new(Model)
+	err := db.NewSelect().ColumnExpr("NULL AS value").Scan(ctx, model)
+	require.NoError(t, err)
+	require.Nil(t, model.Value)
+
+	model = new(Model)
+	err = db.NewSelect().ColumnExpr(`'hello' AS value`).Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, "hello", model.Value)
+
+	model = new(Model)
+	err = db.NewSelect().ColumnExpr(`42 AS value`).Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, int64(42), model.Value)
+}
+
+func testInterfaceJSON(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Value interface{} `bun:"type:json"`
+	}
+
+	model := new(Model)
+	err := db.NewSelect().ColumnExpr("NULL AS value").Scan(ctx, model)
+	require.NoError(t, err)
+	require.Nil(t, model.Value)
+
+	model = new(Model)
+	err = db.NewSelect().ColumnExpr(`'"hello"' AS value`).Scan(ctx, model)
+	require.NoError(t, err)
+	require.Equal(t, "hello", model.Value)
 }

@@ -7,10 +7,12 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vmihailenco/msgpack/v5"
 
+	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
 )
@@ -56,6 +58,12 @@ func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	}
 	if field.Tag.HasOption("json_use_number") {
 		return scanJSONUseNumber
+	}
+	if field.StructField.Type.Kind() == reflect.Interface {
+		switch strings.ToUpper(field.UserSQLType) {
+		case sqltype.JSON, sqltype.JSONB:
+			return scanJSONIntoInterface
+		}
 	}
 	return dialect.Scanner(field.StructField.Type)
 }
@@ -403,7 +411,7 @@ func scanNull(dest reflect.Value) error {
 	return nil
 }
 
-func scanInterface(dest reflect.Value, src interface{}) error {
+func scanJSONIntoInterface(dest reflect.Value, src interface{}) error {
 	if dest.IsNil() {
 		if src == nil {
 			return nil
@@ -415,6 +423,22 @@ func scanInterface(dest reflect.Value, src interface{}) error {
 		}
 
 		return bunjson.Unmarshal(b, dest.Addr().Interface())
+	}
+
+	dest = dest.Elem()
+	if fn := Scanner(dest.Type()); fn != nil {
+		return fn(dest, src)
+	}
+	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
+}
+
+func scanInterface(dest reflect.Value, src interface{}) error {
+	if dest.IsNil() {
+		if src == nil {
+			return nil
+		}
+		dest.Set(reflect.ValueOf(src))
+		return nil
 	}
 
 	dest = dest.Elem()
