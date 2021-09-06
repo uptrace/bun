@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"testing"
@@ -12,7 +13,21 @@ import (
 )
 
 func TestSoftDelete(t *testing.T) {
-	testEachDB(t, testSoftDelete)
+	type Test struct {
+		run func(t *testing.T, db *bun.DB)
+	}
+
+	tests := []Test{
+		{run: testSoftDeleteAPI},
+		{run: testSoftDeleteBulk},
+	}
+	testEachDB(t, func(t *testing.T, db *bun.DB) {
+		for _, test := range tests {
+			t.Run(funcName(test.run), func(t *testing.T) {
+				test.run(t, db)
+			})
+		}
+	})
 }
 
 type CustomTime struct {
@@ -42,11 +57,10 @@ type Video struct {
 	DeletedAt time.Time `bun:",soft_delete"`
 }
 
-func testSoftDelete(t *testing.T, db *bun.DB) {
-	_, err := db.NewDropTable().Model((*Video)(nil)).IfExists().Exec(ctx)
-	require.NoError(t, err)
+func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
 
-	_, err = db.NewCreateTable().Model((*Video)(nil)).Exec(ctx)
+	err := db.ResetModel(ctx, (*Video)(nil))
 	require.NoError(t, err)
 
 	video1 := &Video{
@@ -94,6 +108,27 @@ func testSoftDelete(t *testing.T, db *bun.DB) {
 
 	// Count deleted.
 	count, err = db.NewSelect().Model((*Video)(nil)).WhereDeleted().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+}
+
+func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Video)(nil))
+	require.NoError(t, err)
+
+	videos := []Video{
+		{Name: "video1"},
+		{Name: "video2"},
+	}
+	_, err = db.NewInsert().Model(&videos).Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewDelete().Model(&videos).WherePK().Exec(ctx)
+	require.NoError(t, err)
+
+	count, err := db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, count)
 }

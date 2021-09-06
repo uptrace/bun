@@ -60,7 +60,7 @@ type Table struct {
 	Unique    map[string][]*Field
 
 	SoftDeleteField       *Field
-	UpdateSoftDeleteField func(fv reflect.Value) error
+	UpdateSoftDeleteField func(fv reflect.Value, tm time.Time) error
 
 	allFields []*Field // read only
 
@@ -868,35 +868,35 @@ func parseRelationJoin(join string) ([]string, []string) {
 
 //------------------------------------------------------------------------------
 
-func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
+func softDeleteFieldUpdater(field *Field) func(fv reflect.Value, tm time.Time) error {
 	typ := field.StructField.Type
 
 	switch typ {
 	case timeType:
-		return func(fv reflect.Value) error {
+		return func(fv reflect.Value, tm time.Time) error {
 			ptr := fv.Addr().Interface().(*time.Time)
-			*ptr = time.Now()
+			*ptr = tm
 			return nil
 		}
 	case nullTimeType:
-		return func(fv reflect.Value) error {
+		return func(fv reflect.Value, tm time.Time) error {
 			ptr := fv.Addr().Interface().(*sql.NullTime)
-			*ptr = sql.NullTime{Time: time.Now()}
+			*ptr = sql.NullTime{Time: tm}
 			return nil
 		}
 	case nullIntType:
-		return func(fv reflect.Value) error {
+		return func(fv reflect.Value, tm time.Time) error {
 			ptr := fv.Addr().Interface().(*sql.NullInt64)
-			*ptr = sql.NullInt64{Int64: time.Now().UnixNano()}
+			*ptr = sql.NullInt64{Int64: tm.UnixNano()}
 			return nil
 		}
 	}
 
 	switch field.IndirectType.Kind() {
 	case reflect.Int64:
-		return func(fv reflect.Value) error {
+		return func(fv reflect.Value, tm time.Time) error {
 			ptr := fv.Addr().Interface().(*int64)
-			*ptr = time.Now().UnixNano()
+			*ptr = tm.UnixNano()
 			return nil
 		}
 	case reflect.Ptr:
@@ -907,17 +907,16 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
 
 	switch typ { //nolint:gocritic
 	case timeType:
-		return func(fv reflect.Value) error {
-			now := time.Now()
-			fv.Set(reflect.ValueOf(&now))
+		return func(fv reflect.Value, tm time.Time) error {
+			fv.Set(reflect.ValueOf(&tm))
 			return nil
 		}
 	}
 
 	switch typ.Kind() { //nolint:gocritic
 	case reflect.Int64:
-		return func(fv reflect.Value) error {
-			utime := time.Now().UnixNano()
+		return func(fv reflect.Value, tm time.Time) error {
+			utime := tm.UnixNano()
 			fv.Set(reflect.ValueOf(&utime))
 			return nil
 		}
@@ -926,8 +925,8 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value) error {
 	return softDeleteFieldUpdaterFallback(field)
 }
 
-func softDeleteFieldUpdaterFallback(field *Field) func(fv reflect.Value) error {
-	return func(fv reflect.Value) error {
-		return field.ScanWithCheck(fv, time.Now())
+func softDeleteFieldUpdaterFallback(field *Field) func(fv reflect.Value, tm time.Time) error {
+	return func(fv reflect.Value, tm time.Time) error {
+		return field.ScanWithCheck(fv, tm)
 	}
 }

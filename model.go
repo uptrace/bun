@@ -47,7 +47,7 @@ type tableModel interface {
 	ParentIndex() []int
 	Mount(reflect.Value)
 
-	updateSoftDeleteField() error
+	updateSoftDeleteField(time.Time) error
 }
 
 func newModel(db *DB, dest []interface{}) (model, error) {

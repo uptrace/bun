@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"reflect"
+	"time"
 
 	"github.com/uptrace/bun/schema"
 )
@@ -100,12 +101,12 @@ var (
 	_ schema.AfterScanHook  = (*sliceTableModel)(nil)
 )
 
-func (m *sliceTableModel) updateSoftDeleteField() error {
+func (m *sliceTableModel) updateSoftDeleteField(tm time.Time) error {
 	sliceLen := m.slice.Len()
 	for i := 0; i < sliceLen; i++ {
 		strct := indirect(m.slice.Index(i))
 		fv := m.table.SoftDeleteField.Value(strct)
-		if err := m.table.UpdateSoftDeleteField(fv); err != nil {
+		if err := m.table.UpdateSoftDeleteField(fv, tm); err != nil {
 			return err
 		}
 	}
