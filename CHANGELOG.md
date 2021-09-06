@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.3 - Sep 06 2021
+
+- Fixed bulk soft deletes.
+- pgdialect: fixed scanning into an array pointer.
+
 ## v1.0.2 - Sep 04 2021
 
 - Changed to completely ignore fields marked with `bun:"-"`. If you want to be able to scan into
