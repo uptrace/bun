@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun/schema"
 )
@@ -214,9 +215,9 @@ func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
 	return lastJoin
 }
 
-func (m *structTableModel) updateSoftDeleteField() error {
+func (m *structTableModel) updateSoftDeleteField(tm time.Time) error {
 	fv := m.table.SoftDeleteField.Value(m.strct)
-	return m.table.UpdateSoftDeleteField(fv)
+	return m.table.UpdateSoftDeleteField(fv, tm)
 }
 
 func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {

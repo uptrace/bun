@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -135,15 +136,18 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	fmter = formatterWithModel(fmter, q)
 
 	if q.isSoftDelete() {
-		if err := q.tableModel.updateSoftDeleteField(); err != nil {
+		now := time.Now()
+
+		if err := q.tableModel.updateSoftDeleteField(now); err != nil {
 			return nil, err
 		}
 
-		upd := UpdateQuery{
+		upd := &UpdateQuery{
 			whereBaseQuery: q.whereBaseQuery,
 			returningQuery: q.returningQuery,
 		}
-		upd.Column(q.table.SoftDeleteField.Name)
+		upd.Set(q.softDeleteSet(fmter, now))
+
 		return upd.AppendQuery(fmter, b)
 	}
 
@@ -191,6 +195,18 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 func (q *DeleteQuery) isSoftDelete() bool {
 	return q.tableModel != nil && q.table.SoftDeleteField != nil && !q.flags.Has(forceDeleteFlag)
+}
+
+func (q *DeleteQuery) softDeleteSet(fmter schema.Formatter, tm time.Time) string {
+	b := make([]byte, 0, 32)
+	if fmter.HasFeature(feature.UpdateMultiTable) {
+		b = append(b, q.table.SQLAlias...)
+		b = append(b, '.')
+	}
+	b = append(b, q.table.SoftDeleteField.SQLName...)
+	b = append(b, " = "...)
+	b = q.db.Dialect().Append(fmter, b, tm)
+	return internal.String(b)
 }
 
 //------------------------------------------------------------------------------

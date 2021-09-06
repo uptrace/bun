@@ -321,7 +321,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	set, err := q.updateSliceSet(model)
+	set, err := q.updateSliceSet(q.db.fmter, model)
 	if err != nil {
 		q.setErr(err)
 		return q
@@ -337,7 +337,9 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		Where(q.updateSliceWhere(model))
 }
 
-func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) (string, error) {
+func (q *UpdateQuery) updateSliceSet(
+	fmter schema.Formatter, model *sliceTableModel,
+) (string, error) {
 	fields, err := q.getDataFields()
 	if err != nil {
 		return "", err
@@ -348,7 +350,7 @@ func (q *UpdateQuery) updateSliceSet(model *sliceTableModel) (string, error) {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		if q.db.fmter.HasFeature(feature.UpdateMultiTable) {
+		if fmter.HasFeature(feature.UpdateMultiTable) {
 			b = append(b, model.table.SQLAlias...)
 			b = append(b, '.')
 		}
