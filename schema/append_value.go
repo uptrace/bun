@@ -84,7 +84,9 @@ func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 	case reflect.Interface:
 		return ifaceAppenderFunc(typ, custom)
 	case reflect.Ptr:
-		return ptrAppenderFunc(typ, custom)
+		if fn := Appender(typ.Elem(), custom); fn != nil {
+			return PtrAppender(fn)
+		}
 	case reflect.Slice:
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return appendBytesValue
@@ -114,13 +116,12 @@ func ifaceAppenderFunc(typ reflect.Type, custom func(reflect.Type) AppenderFunc)
 	}
 }
 
-func ptrAppenderFunc(typ reflect.Type, custom func(reflect.Type) AppenderFunc) AppenderFunc {
-	appender := Appender(typ.Elem(), custom)
+func PtrAppender(fn AppenderFunc) AppenderFunc {
 	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
 			return dialect.AppendNull(b)
 		}
-		return appender(fmter, b, v.Elem())
+		return fn(fmter, b, v.Elem())
 	}
 }
 

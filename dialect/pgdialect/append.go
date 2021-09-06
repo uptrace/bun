@@ -94,12 +94,12 @@ func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) [
 
 func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()
-	if kind == reflect.Ptr {
-		typ = typ.Elem()
-		kind = typ.Kind()
-	}
 
 	switch kind {
+	case reflect.Ptr:
+		if fn := arrayAppender(typ.Elem()); fn != nil {
+			return schema.PtrAppender(fn)
+		}
 	case reflect.Slice, reflect.Array:
 		// ok:
 	default:

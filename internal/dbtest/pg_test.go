@@ -15,8 +15,10 @@ import (
 
 func TestPGArray(t *testing.T) {
 	type Model struct {
-		ID    int
-		Array []string `bun:",array"`
+		ID     int
+		Array1 []string  `bun:",array"`
+		Array2 *[]string `bun:",array"`
+		Array3 *[]string `bun:",array"`
 	}
 
 	db := pg(t)
@@ -28,8 +30,9 @@ func TestPGArray(t *testing.T) {
 	require.NoError(t, err)
 
 	model1 := &Model{
-		ID:    123,
-		Array: []string{"one", "two", "three"},
+		ID:     123,
+		Array1: []string{"one", "two", "three"},
+		Array2: &[]string{"hello", "world"},
 	}
 	_, err = db.NewInsert().Model(model1).Exec(ctx)
 	require.NoError(t, err)
@@ -40,9 +43,17 @@ func TestPGArray(t *testing.T) {
 	require.Equal(t, model1, model2)
 
 	var strs []string
-	err = db.NewSelect().Model((*Model)(nil)).Column("array").Scan(ctx, pgdialect.Array(&strs))
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array1").
+		Scan(ctx, pgdialect.Array(&strs))
 	require.NoError(t, err)
 	require.Equal(t, []string{"one", "two", "three"}, strs)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array3").
+		Scan(ctx, pgdialect.Array(&strs))
+	require.NoError(t, err)
+	require.Nil(t, strs)
 }
 
 type Recipe struct {
