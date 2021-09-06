@@ -73,7 +73,7 @@ func Scanner(typ reflect.Type) ScannerFunc {
 
 	if kind == reflect.Ptr {
 		if fn := Scanner(typ.Elem()); fn != nil {
-			return ptrScanner(fn)
+			return PtrScanner(fn)
 		}
 	}
 
@@ -380,7 +380,7 @@ func toBytes(src interface{}) ([]byte, error) {
 	}
 }
 
-func ptrScanner(fn ScannerFunc) ScannerFunc {
+func PtrScanner(fn ScannerFunc) ScannerFunc {
 	return func(dest reflect.Value, src interface{}) error {
 		if src == nil {
 			if !dest.CanAddr() {

@@ -70,8 +70,8 @@ func (d *Dialect) onField(field *schema.Field) {
 	}
 
 	if field.Tag.HasOption("array") {
-		field.Append = arrayAppender(field.IndirectType)
-		field.Scan = arrayScanner(field.IndirectType)
+		field.Append = arrayAppender(field.StructField.Type)
+		field.Scan = arrayScanner(field.StructField.Type)
 	}
 }
 

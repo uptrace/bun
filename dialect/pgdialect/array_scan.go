@@ -12,12 +12,12 @@ import (
 
 func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	kind := typ.Kind()
-	if kind == reflect.Ptr {
-		typ = typ.Elem()
-		kind = typ.Kind()
-	}
 
 	switch kind {
+	case reflect.Ptr:
+		if fn := arrayScanner(typ.Elem()); fn != nil {
+			return schema.PtrScanner(fn)
+		}
 	case reflect.Slice, reflect.Array:
 		// ok:
 	default:
