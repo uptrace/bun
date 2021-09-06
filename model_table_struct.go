@@ -298,6 +298,9 @@ func (m *structTableModel) scanColumn(column string, src interface{}) (bool, err
 	}
 
 	if field, ok := m.table.FieldMap[column]; ok {
+		if src == nil && m.isNil() {
+			return true, nil
+		}
 		return true, field.ScanValue(m.strct, src)
 	}
 
@@ -305,12 +308,17 @@ func (m *structTableModel) scanColumn(column string, src interface{}) (bool, err
 		if join := m.GetJoin(joinName); join != nil {
 			return true, join.JoinModel.ScanColumn(column, src)
 		}
+
 		if m.table.ModelName == joinName {
 			return true, m.ScanColumn(column, src)
 		}
 	}
 
 	return false, nil
+}
+
+func (m *structTableModel) isNil() bool {
+	return m.strct.Kind() == reflect.Ptr && m.strct.IsNil()
 }
 
 func (m *structTableModel) AppendNamedArg(

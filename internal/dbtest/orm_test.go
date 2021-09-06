@@ -29,6 +29,7 @@ func TestORM(t *testing.T) {
 		{testBulkUpdate},
 		{testRelationColumn},
 		{testRelationExcludeAll},
+		{testRelationBelongsToSelf},
 	}
 
 	testEachDB(t, func(t *testing.T, db *bun.DB) {
@@ -338,6 +339,34 @@ func testRelationExcludeAll(t *testing.T, db *bun.DB) {
 			AvatarID: 2,
 		},
 	}, book)
+}
+
+func testRelationBelongsToSelf(t *testing.T, db *bun.DB) {
+	type Model struct {
+		bun.BaseModel `bun:"alias:m"`
+
+		ID      int64
+		ModelID int64
+		Model   *Model `bun:"rel:belongs-to"`
+	}
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	models := []Model{
+		{ID: 1},
+		{ID: 2, ModelID: 1},
+	}
+	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	require.NoError(t, err)
+
+	models = nil
+	err = db.NewSelect().Model(&models).Relation("Model").OrderExpr("m.id ASC").Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []Model{
+		{ID: 1},
+		{ID: 2, ModelID: 1, Model: &Model{ID: 1}},
+	}, models)
 }
 
 type Genre struct {
