@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -16,7 +17,7 @@ type InsertQuery struct {
 	returningQuery
 	customValueQuery
 
-	onConflict schema.QueryWithArgs
+	on schema.QueryWithArgs
 	setQuery
 
 	ignore  bool
@@ -162,7 +163,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 	b = append(b, "INTO "...)
 
-	if q.db.features.Has(feature.InsertTableAlias) && !q.onConflict.IsZero() {
+	if q.db.features.Has(feature.InsertTableAlias) && !q.on.IsZero() {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
 	} else {
 		b, err = q.appendFirstTable(fmter, b)
@@ -382,7 +383,7 @@ func (q *InsertQuery) appendFields(
 //------------------------------------------------------------------------------
 
 func (q *InsertQuery) On(s string, args ...interface{}) *InsertQuery {
-	q.onConflict = schema.SafeQuery(s, args)
+	q.on = schema.SafeQuery(s, args)
 	return q
 }
 
@@ -392,12 +393,12 @@ func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
 }
 
 func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if q.onConflict.IsZero() {
+	if q.on.IsZero() {
 		return b, nil
 	}
 
 	b = append(b, " ON "...)
-	b, err = q.onConflict.AppendQuery(fmter, b)
+	b, err = q.on.AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +414,7 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		if err != nil {
 			return nil, err
 		}
-	} else if len(q.columns) > 0 {
+	} else if q.onConflictDoUpdate() {
 		fields, err := q.getDataFields()
 		if err != nil {
 			return nil, err
@@ -432,6 +433,10 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 	}
 
 	return b, nil
+}
+
+func (q *InsertQuery) onConflictDoUpdate() bool {
+	return strings.HasSuffix(strings.ToUpper(q.on.Query), " DO UPDATE")
 }
 
 func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte {

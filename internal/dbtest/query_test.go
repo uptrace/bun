@@ -524,6 +524,12 @@ func TestQuery(t *testing.T) {
 				Value("str", "?", "custom").
 				Bulk()
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			model := &Model{42, "hello"}
+			return db.NewInsert().
+				Model(model).
+				On("CONFLICT (id) DO UPDATE")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
