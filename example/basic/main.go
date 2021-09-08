@@ -67,7 +67,7 @@ func main() {
 		Scan(ctx, &m); err != nil {
 		panic(err)
 	}
-	fmt.Printf("story map: %v\n\n", m)
+	fmt.Printf("user map: %v\n\n", m)
 
 	// Select all users scanning each column into a separate slice.
 	var ids []int64

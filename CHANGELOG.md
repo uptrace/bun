@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.4 - Sep 06 2021
+
+- Added support for MariaDB.
+- Restored default `SET` for `ON CONFLICT DO UPDATE` queries.
+
 ## v1.0.3 - Sep 06 2021
 
 - Fixed bulk soft deletes.
