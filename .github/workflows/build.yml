@@ -47,13 +47,24 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s
           --health-retries=3
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MARIADB_DATABASE: test
+          MARIADB_USER: user
+          MARIADB_PASSWORD: pass
+          MARIADB_ROOT_PASSWORD: pass
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping" --health-interval=10s --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Set up ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-          mysql-version: ${{ matrix.mysql-version }}
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -63,3 +74,5 @@ jobs:
         env:
           PG: postgres://postgres:postgres@localhost/postgres?sslmode=disable
           MYSQL: user:pass@/test
+          MYSQL5: user:pass@tcp(localhost:53306)/test
+          MARIADB: user:pass@tcp(localhost:13306)/test

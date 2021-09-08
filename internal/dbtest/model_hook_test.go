@@ -38,7 +38,7 @@ func TestModelHook(t *testing.T) {
 	testEachDB(t, testModelHook)
 }
 
-func testModelHook(t *testing.T, db *bun.DB) {
+func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 	_, err := db.NewDropTable().Model((*ModelHookTest)(nil)).IfExists().Exec(ctx)
 	require.NoError(t, err)
 

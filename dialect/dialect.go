@@ -8,10 +8,8 @@ func (n Name) String() string {
 		return "pg"
 	case SQLite:
 		return "sqlite"
-	case MySQL5:
-		return "mysql5"
-	case MySQL8:
-		return "mysql8"
+	case MySQL:
+		return "mysql"
 	default:
 		return "invalid"
 	}
@@ -21,6 +19,5 @@ const (
 	Invalid Name = iota
 	PG
 	SQLite
-	MySQL5
-	MySQL8
+	MySQL
 )

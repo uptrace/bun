@@ -15,7 +15,7 @@ func TestQueryHook(t *testing.T) {
 	testEachDB(t, testQueryHook)
 }
 
-func testQueryHook(t *testing.T, db *bun.DB) {
+func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 	hook := &queryHook{}
 	db.AddQueryHook(hook)
 

@@ -22,7 +22,10 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.Returning | feature.InsertTableAlias | feature.DeleteTableAlias
+	d.features = feature.CTE |
+		feature.Returning |
+		feature.InsertTableAlias |
+		feature.DeleteTableAlias
 	return d
 }
 
