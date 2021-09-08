@@ -13,7 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
-	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/dialect/feature"
 )
 
 func TestORM(t *testing.T) {
@@ -32,7 +32,7 @@ func TestORM(t *testing.T) {
 		{testRelationBelongsToSelf},
 	}
 
-	testEachDB(t, func(t *testing.T, db *bun.DB) {
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		createTestSchema(t, db)
 
 		for _, test := range tests {
@@ -225,7 +225,7 @@ func testTranslationRelations(t *testing.T, db *bun.DB) {
 }
 
 func testBulkUpdate(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -29,12 +30,22 @@ import (
 
 var ctx = context.TODO()
 
+const (
+	pgName      = "pg"
+	pgxName     = "pgx"
+	mysql5Name  = "mysql5"
+	mysql8Name  = "mysql8"
+	mariadbName = "mariadb"
+	sqliteName  = "sqlite"
+)
+
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
-	"pg":     pg,
-	"pgx":    pgx,
-	"mysql8": mysql8,
-	"mysql5": mysql5,
-	"sqlite": sqlite,
+	pgName:      pg,
+	pgxName:     pgx,
+	mysql5Name:  mysql5,
+	mysql8Name:  mysql8,
+	mariadbName: mariadb,
+	sqliteName:  sqlite,
 }
 
 func pg(tb testing.TB) *bun.DB {
@@ -93,7 +104,7 @@ func mysql8(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
-	require.Equal(tb, "DB<dialect=mysql8>", db.String())
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
 		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
@@ -115,7 +126,29 @@ func mysql5(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
-	require.Equal(tb, "DB<dialect=mysql5>", db.String())
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
+
+	if _, ok := os.LookupEnv("DEBUG"); ok {
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	}
+
+	return db
+}
+
+func mariadb(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("MYSQL5")
+	if dsn == "" {
+		dsn = "user:pass@tcp(localhost:13306)/test"
+	}
+
+	sqldb, err := sql.Open("mysql", dsn)
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		assert.NoError(tb, sqldb.Close())
+	})
+
+	db := bun.NewDB(sqldb, mysqldialect.New())
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
 		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
@@ -141,11 +174,10 @@ func sqlite(tb testing.TB) *bun.DB {
 	return db
 }
 
-func testEachDB(t *testing.T, f func(t *testing.T, db *bun.DB)) {
-	for name, newDB := range allDBs {
-		t.Run(name, func(t *testing.T) {
-			db := newDB(t)
-			f(t, db)
+func testEachDB(t *testing.T, f func(t *testing.T, dbName string, db *bun.DB)) {
+	for dbName, newDB := range allDBs {
+		t.Run(dbName, func(t *testing.T) {
+			f(t, dbName, newDB(t))
 		})
 	}
 }
@@ -192,7 +224,7 @@ func TestDB(t *testing.T) {
 		{testInterfaceJSON},
 	}
 
-	testEachDB(t, func(t *testing.T, db *bun.DB) {
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, test := range tests {
 			t.Run(funcName(test.run), func(t *testing.T) {
 				test.run(t, db)
@@ -223,7 +255,7 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -249,13 +281,18 @@ func testSelectMap(t *testing.T, db *bun.DB) {
 		ColumnExpr("10 AS num").
 		Scan(ctx, &m)
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{
-		"num": int64(10),
-	}, m)
+	switch v := m["num"]; v.(type) {
+	case int32:
+		require.Equal(t, int32(10), v)
+	case int64:
+		require.Equal(t, int64(10), v)
+	default:
+		t.Fail()
+	}
 }
 
 func testSelectMapSlice(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -354,7 +391,7 @@ func testSelectNestedStructPtr(t *testing.T, db *bun.DB) {
 }
 
 func testSelectStructSlice(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -381,7 +418,7 @@ func testSelectStructSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectSingleSlice(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -401,7 +438,7 @@ func testSelectSingleSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMultiSlice(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -506,7 +543,7 @@ func testScanSingleRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -540,7 +577,7 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanRows(t *testing.T, db *bun.DB) {
-	if db.Dialect().Name() == dialect.MySQL5 {
+	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
 
@@ -628,7 +665,7 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(model).Scan(ctx)
 	require.NoError(t, err)
 	switch db.Dialect().Name() {
-	case dialect.MySQL5, dialect.MySQL8:
+	case dialect.MySQL:
 		require.Equal(t, map[string]interface{}{
 			"hello": "\x00world\nworld\x00",
 		}, model.Attrs)
@@ -726,7 +763,7 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 
 func testInterfaceAny(t *testing.T, db *bun.DB) {
 	switch db.Dialect().Name() {
-	case dialect.MySQL5, dialect.MySQL8:
+	case dialect.MySQL:
 		t.Skip()
 	}
 

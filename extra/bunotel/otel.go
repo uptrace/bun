@@ -165,7 +165,7 @@ func dbSystem(db *bun.DB) string {
 	switch db.Dialect().Name() {
 	case dialect.PG:
 		return "postgresql"
-	case dialect.MySQL5, dialect.MySQL8:
+	case dialect.MySQL:
 		return "mysql"
 	case dialect.SQLite:
 		return "sqlite"

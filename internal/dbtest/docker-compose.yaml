@@ -42,3 +42,17 @@ services:
       retries: 5
     ports:
       - 5432:5432
+  mariadb:
+    image: mariadb:10.6
+    environment:
+      - MARIADB_DATABASE=test
+      - MARIADB_USER=user
+      - MARIADB_PASSWORD=pass
+      - MARIADB_ROOT_PASSWORD=pass
+    ports:
+      - 13306:3306
+    healthcheck:
+      test: ['CMD', 'mariadb-admin', 'ping']
+      timeout: 5s
+      interval: 10s
+      retries: 3

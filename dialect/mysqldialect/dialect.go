@@ -19,8 +19,6 @@ import (
 const datetimeType = "DATETIME"
 
 type Dialect struct {
-	name dialect.Name
-
 	tables   *schema.Tables
 	features feature.Feature
 
@@ -30,7 +28,6 @@ type Dialect struct {
 
 func New() *Dialect {
 	d := new(Dialect)
-	d.name = dialect.MySQL5
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
 		feature.DefaultPlaceholder |
@@ -48,10 +45,13 @@ func (d *Dialect) Init(db *sql.DB) {
 		return
 	}
 
+	if strings.Contains(version, "MariaDB") {
+		return
+	}
+
 	version = semver.MajorMinor("v" + cleanupVersion(version))
 	if semver.Compare(version, "v8.0") >= 0 {
-		d.name = dialect.MySQL8
-		d.features |= feature.DeleteTableAlias
+		d.features |= feature.CTE | feature.DeleteTableAlias
 	}
 }
 
@@ -63,7 +63,7 @@ func cleanupVersion(s string) string {
 }
 
 func (d *Dialect) Name() dialect.Name {
-	return d.name
+	return dialect.MySQL
 }
 
 func (d *Dialect) Features() feature.Feature {

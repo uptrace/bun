@@ -20,7 +20,7 @@ func TestMigrate(t *testing.T) {
 		{run: testMigrateUpError},
 	}
 
-	testEachDB(t, func(t *testing.T, db *bun.DB) {
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, test := range tests {
 			t.Run(funcName(test.run), func(t *testing.T) {
 				test.run(t, db)

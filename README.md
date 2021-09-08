@@ -18,7 +18,7 @@ packages that share one repo with the core.
 Main features are:
 
 - Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
-  [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql),
+  [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
 - [Selecting](/example/basic/) into a map, struct, slice of maps/structs/vars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/queries.html#insert).
