@@ -37,7 +37,10 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 		return ctx
 	}
 
-	ctx, _ = tracer.Start(ctx, "")
+	operation := eventOperation(event)
+	ctx, span := tracer.Start(ctx, operation)
+	span.SetAttributes(attribute.String("db.operation", operation))
+
 	return ctx
 }
 
@@ -48,8 +51,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	}
 	defer span.End()
 
-	operation := eventOperation(event)
-	query := eventQuery(event, operation)
+	query := eventQuery(event)
 	fn, file, line := funcFileLine("github.com/uptrace/bun")
 
 	attrs := make([]attribute.KeyValue, 0, 10)
@@ -135,7 +137,7 @@ func queryOperation(name string) string {
 	return name
 }
 
-func eventQuery(event *bun.QueryEvent, operation string) string {
+func eventQuery(event *bun.QueryEvent) string {
 	const softQueryLimit = 5000
 	const hardQueryLimit = 10000
 
