@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender schema.QueryAppender
+	QueryAppender schema.Query
 	Query         string
 	QueryArgs     []interface{}
 
@@ -24,6 +25,23 @@ type QueryEvent struct {
 	Stash map[interface{}]interface{}
 }
 
+func (e *QueryEvent) Operation() string {
+	if e.QueryAppender != nil {
+		return e.QueryAppender.Operation()
+	}
+	return queryOperation(e.Query)
+}
+
+func queryOperation(query string) string {
+	if idx := strings.IndexByte(query, ' '); idx > 0 {
+		query = query[:idx]
+	}
+	if len(query) > 16 {
+		query = query[:16]
+	}
+	return query
+}
+
 type QueryHook interface {
 	BeforeQuery(context.Context, *QueryEvent) context.Context
 	AfterQuery(context.Context, *QueryEvent)
@@ -31,7 +49,7 @@ type QueryHook interface {
 
 func (db *DB) beforeQuery(
 	ctx context.Context,
-	queryApp schema.QueryAppender,
+	queryApp schema.Query,
 	query string,
 	queryArgs []interface{},
 ) (context.Context, *QueryEvent) {

@@ -142,6 +142,10 @@ func (q *CreateIndexQuery) WhereOr(query string, args ...interface{}) *CreateInd
 
 //------------------------------------------------------------------------------
 
+func (q *CreateIndexQuery) Operation() string {
+	return "CREATE INDEX"
+}
+
 func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

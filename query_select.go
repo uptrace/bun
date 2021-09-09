@@ -359,6 +359,10 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 
 //------------------------------------------------------------------------------
 
+func (q *SelectQuery) Operation() string {
+	return "SELECT"
+}
+
 func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	return q.appendQuery(fmter, b, false)
 }

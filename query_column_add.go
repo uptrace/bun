@@ -61,6 +61,10 @@ func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColum
 
 //------------------------------------------------------------------------------
 
+func (q *AddColumnQuery) Operation() string {
+	return "ADD COLUMN"
+}
+
 func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

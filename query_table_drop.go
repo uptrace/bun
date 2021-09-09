@@ -68,6 +68,10 @@ func (q *DropTableQuery) Restrict() *DropTableQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *DropTableQuery) Operation() string {
+	return "DROP TABLE"
+}
+
 func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

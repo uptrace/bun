@@ -68,6 +68,10 @@ func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropCol
 
 //------------------------------------------------------------------------------
 
+func (q *DropColumnQuery) Operation() string {
+	return "DROP COLUMN"
+}
+
 func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

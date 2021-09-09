@@ -85,6 +85,10 @@ func (q *CreateTableQuery) ForeignKey(query string, args ...interface{}) *Create
 	return q
 }
 
+func (q *CreateTableQuery) Operation() string {
+	return "CREATE TABLE"
+}
+
 func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

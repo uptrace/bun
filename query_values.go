@@ -94,6 +94,10 @@ func (q *ValuesQuery) AppendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 	return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 }
 
+func (q *ValuesQuery) Operation() string {
+	return "SELECT"
+}
+
 func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

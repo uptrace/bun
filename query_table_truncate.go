@@ -64,6 +64,10 @@ func (q *TruncateTableQuery) Restrict() *TruncateTableQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *TruncateTableQuery) Operation() string {
+	return "TRUNCATE TABLE"
+}
+
 func (q *TruncateTableQuery) AppendQuery(
 	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {

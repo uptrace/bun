@@ -72,24 +72,13 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 }
 
 func formatOperation(event *bun.QueryEvent) string {
-	operation := eventOperation(event)
+	operation := event.Operation()
 	return operationColor(operation).Sprintf(" %-16s ", operation)
 }
 
 func eventOperation(event *bun.QueryEvent) string {
-	switch event.QueryAppender.(type) {
-	case *bun.SelectQuery:
-		return "SELECT"
-	case *bun.InsertQuery:
-		return "INSERT"
-	case *bun.UpdateQuery:
-		return "UPDATE"
-	case *bun.DeleteQuery:
-		return "DELETE"
-	case *bun.CreateTableQuery:
-		return "CREATE TABLE"
-	case *bun.DropTableQuery:
-		return "DROP TABLE"
+	if event.QueryAppender != nil {
+		return event.QueryAppender.Operation()
 	}
 	return queryOperation(event.Query)
 }

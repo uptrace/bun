@@ -427,7 +427,7 @@ func (q *baseQuery) _getFields(omitPK bool) ([]*schema.Field, error) {
 
 func (q *baseQuery) scan(
 	ctx context.Context,
-	queryApp schema.QueryAppender,
+	queryApp schema.Query,
 	query string,
 	model model,
 	hasDest bool,
@@ -459,7 +459,7 @@ func (q *baseQuery) scan(
 
 func (q *baseQuery) exec(
 	ctx context.Context,
-	queryApp schema.QueryAppender,
+	queryApp schema.Query,
 	query string,
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil)

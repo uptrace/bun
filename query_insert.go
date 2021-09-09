@@ -142,6 +142,10 @@ func (q *InsertQuery) Replace() *InsertQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *InsertQuery) Operation() string {
+	return "INSERT"
+}
+
 func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err

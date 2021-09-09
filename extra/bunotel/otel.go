@@ -37,7 +37,7 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 		return ctx
 	}
 
-	operation := eventOperation(event)
+	operation := event.Operation()
 	ctx, span := tracer.Start(ctx, operation)
 	span.SetAttributes(attribute.String("db.operation", operation))
 
@@ -107,34 +107,6 @@ func funcFileLine(pkg string) (string, string, int) {
 	}
 
 	return fn, file, line
-}
-
-func eventOperation(event *bun.QueryEvent) string {
-	switch event.QueryAppender.(type) {
-	case *bun.SelectQuery:
-		return "SELECT"
-	case *bun.InsertQuery:
-		return "INSERT"
-	case *bun.UpdateQuery:
-		return "UPDATE"
-	case *bun.DeleteQuery:
-		return "DELETE"
-	case *bun.CreateTableQuery:
-		return "CREATE TABLE"
-	case *bun.DropTableQuery:
-		return "DROP TABLE"
-	}
-	return queryOperation(event.Query)
-}
-
-func queryOperation(name string) string {
-	if idx := strings.IndexByte(name, ' '); idx > 0 {
-		name = name[:idx]
-	}
-	if len(name) > 16 {
-		name = name[:16]
-	}
-	return name
 }
 
 func eventQuery(event *bun.QueryEvent) string {

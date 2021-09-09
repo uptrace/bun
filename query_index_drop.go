@@ -62,6 +62,10 @@ func (q *DropIndexQuery) Index(query string, args ...interface{}) *DropIndexQuer
 
 //------------------------------------------------------------------------------
 
+func (q *DropIndexQuery) Operation() string {
+	return "DROP INDEX"
+}
+
 func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
