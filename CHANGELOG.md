@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.0.4 - Sep 06 2021
+## v1.0.5 - Sep 09 2021
+
+- chore: tweak bundebug colors
+- fix: check if table is present when appending columns
+- fix: copy []byte when scanning
+
+## v1.0.4 - Sep 08 2021
 
 - Added support for MariaDB.
 - Restored default `SET` for `ON CONFLICT DO UPDATE` queries.
