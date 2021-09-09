@@ -107,14 +107,14 @@ func queryOperation(name string) string {
 func operationColor(operation string) *color.Color {
 	switch operation {
 	case "SELECT":
-		return color.New(color.BgGreen)
+		return color.New(color.BgGreen, color.FgHiWhite)
 	case "INSERT":
-		return color.New(color.BgBlue)
+		return color.New(color.BgBlue, color.FgHiWhite)
 	case "UPDATE":
-		return color.New(color.BgYellow)
+		return color.New(color.BgYellow, color.FgHiBlack)
 	case "DELETE":
-		return color.New(color.BgRed)
+		return color.New(color.BgMagenta, color.FgHiWhite)
 	default:
-		return color.New(color.FgBlack, color.BgWhite)
+		return color.New(color.BgWhite, color.FgHiBlack)
 	}
 }
