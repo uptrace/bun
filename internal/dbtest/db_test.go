@@ -253,6 +253,13 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 
 	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
+
+	var flag bool
+	err = db.NewSelect().
+		ColumnExpr("EXISTS (?)", db.NewSelect().ColumnExpr("1")).
+		Scan(ctx, &flag)
+	require.NoError(t, err)
+	require.Equal(t, true, flag)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
