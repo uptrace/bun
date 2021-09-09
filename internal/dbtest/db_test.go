@@ -265,6 +265,7 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 func testSelectCount(t *testing.T, db *bun.DB) {
 	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
+		return
 	}
 
 	values := db.NewValues(&[]map[string]interface{}{
@@ -273,12 +274,19 @@ func testSelectCount(t *testing.T, db *bun.DB) {
 		{"num": 3},
 	})
 
-	count, err := db.NewSelect().
+	q := db.NewSelect().
 		With("t", values).
+		Column("t.num").
 		TableExpr("t").
 		OrderExpr("t.num DESC").
-		Limit(1).
-		Count(ctx)
+		Limit(1)
+
+	var num int
+	err := q.Scan(ctx, &num)
+	require.NoError(t, err)
+	require.Equal(t, 3, num)
+
+	count, err := q.Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 3, count)
 }
