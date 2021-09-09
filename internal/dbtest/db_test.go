@@ -222,6 +222,7 @@ func TestDB(t *testing.T) {
 		{testFKViolation},
 		{testInterfaceAny},
 		{testInterfaceJSON},
+		{testScanBytes},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -801,4 +802,34 @@ func testInterfaceJSON(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().ColumnExpr(`'"hello"' AS value`).Scan(ctx, model)
 	require.NoError(t, err)
 	require.Equal(t, "hello", model.Value)
+}
+
+func testScanBytes(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID    int64
+		Value json.RawMessage
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	models := []Model{
+		{Value: json.RawMessage(`"hello"`)},
+		{Value: json.RawMessage(`"world"`)},
+	}
+	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	require.NoError(t, err)
+
+	var models1 []Model
+	err = db.NewSelect().Model(&models1).Order("id ASC").Scan(ctx)
+	require.NoError(t, err)
+
+	var models2 []Model
+	err = db.NewSelect().Model(&models2).Order("id ASC").Scan(ctx)
+	require.NoError(t, err)
+
+	require.Equal(t, models, models1)
+	require.Equal(t, models, models2)
 }

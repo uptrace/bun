@@ -77,6 +77,17 @@ func Scanner(typ reflect.Type) ScannerFunc {
 		}
 	}
 
+	switch typ {
+	case timeType:
+		return scanTime
+	case ipType:
+		return scanIP
+	case ipNetType:
+		return scanIPNet
+	case jsonRawMessageType:
+		return scanBytes
+	}
+
 	if typ.Implements(scannerType) {
 		return scanScanner
 	}
@@ -88,17 +99,8 @@ func Scanner(typ reflect.Type) ScannerFunc {
 		}
 	}
 
-	switch typ {
-	case timeType:
-		return scanTime
-	case ipType:
-		return scanIP
-	case ipNetType:
-		return scanIPNet
-	case bytesType:
+	if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
 		return scanBytes
-	case jsonRawMessageType:
-		return scanJSONRawMessage
 	}
 
 	return scanners[kind]
@@ -218,7 +220,10 @@ func scanBytes(dest reflect.Value, src interface{}) error {
 		dest.SetBytes([]byte(src))
 		return nil
 	case []byte:
-		dest.SetBytes(src)
+		clone := make([]byte, len(src))
+		copy(clone, src)
+
+		dest.SetBytes(clone)
 		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
@@ -342,21 +347,6 @@ func scanIPNet(dest reflect.Value, src interface{}) error {
 	ptr := dest.Addr().Interface().(*net.IPNet)
 	*ptr = *ipnet
 
-	return nil
-}
-
-func scanJSONRawMessage(dest reflect.Value, src interface{}) error {
-	if src == nil {
-		dest.SetBytes(nil)
-		return nil
-	}
-
-	b, err := toBytes(src)
-	if err != nil {
-		return err
-	}
-
-	dest.SetBytes(b)
 	return nil
 }
 
