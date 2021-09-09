@@ -827,9 +827,8 @@ func testScanBytes(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	var models2 []Model
-	err = db.NewSelect().Model(&models2).Order("id ASC").Scan(ctx)
+	err = db.NewSelect().Model(&models2).Order("id DESC").Scan(ctx)
 	require.NoError(t, err)
 
 	require.Equal(t, models, models1)
-	require.Equal(t, models, models2)
 }
