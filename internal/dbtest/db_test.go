@@ -223,6 +223,7 @@ func TestDB(t *testing.T) {
 		{testInterfaceAny},
 		{testInterfaceJSON},
 		{testScanBytes},
+		{testPointers},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -846,4 +847,29 @@ func testScanBytes(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	require.Equal(t, models, models1)
+}
+
+func testPointers(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID  *int64 `bun:",allowzero,default:0"`
+		Str *string
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	id := int64(1)
+	str := "hello"
+	models := []Model{
+		{},
+		{ID: &id, Str: &str},
+	}
+	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	require.NoError(t, err)
+
+	var models2 []Model
+	err = db.NewSelect().Model(&models2).Order("id ASC").Scan(ctx)
+	require.NoError(t, err)
 }
