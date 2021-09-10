@@ -13,10 +13,6 @@ type isZeroer interface {
 
 type IsZeroerFunc func(reflect.Value) bool
 
-func FieldZeroChecker(field *Field) IsZeroerFunc {
-	return zeroChecker(field.IndirectType)
-}
-
 func zeroChecker(typ reflect.Type) IsZeroerFunc {
 	if typ.Implements(isZeroerType) {
 		return isZeroInterface
