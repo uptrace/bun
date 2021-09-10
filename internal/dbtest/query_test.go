@@ -530,6 +530,15 @@ func TestQuery(t *testing.T) {
 				Model(model).
 				On("CONFLICT (id) DO UPDATE")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Foo   string `bun:",unique"`
+				Bar   string `bun:",unique"`
+				Hello string `bun:"unique:group"`
+				World string `bun:"unique:group"`
+			}
+			return db.NewCreateTable().Model((*Model)(nil))
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)

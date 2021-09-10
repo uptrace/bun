@@ -186,14 +186,20 @@ func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []b
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		b = q.appendUniqueConstraint(fmter, b, key, unique[key])
+		if key == "" {
+			for _, field := range unique[key] {
+				b = q.appendUniqueConstraint(fmter, b, key, field)
+			}
+			continue
+		}
+		b = q.appendUniqueConstraint(fmter, b, key, unique[key]...)
 	}
 
 	return b
 }
 
 func (q *CreateTableQuery) appendUniqueConstraint(
-	fmter schema.Formatter, b []byte, name string, fields []*schema.Field,
+	fmter schema.Formatter, b []byte, name string, fields ...*schema.Field,
 ) []byte {
 	if name != "" {
 		b = append(b, ", CONSTRAINT "...)
@@ -204,7 +210,6 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 	b = append(b, " UNIQUE ("...)
 	b = appendColumns(b, "", fields)
 	b = append(b, ")"...)
-
 	return b
 }
 
