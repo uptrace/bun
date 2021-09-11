@@ -1,5 +1,3 @@
-# Changelog
-
 ## v1.0.5 - Sep 09 2021
 
 - chore: tweak bundebug colors
