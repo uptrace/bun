@@ -9,21 +9,46 @@ import (
 )
 
 func TestParseDSN(t *testing.T) {
-	c := pgdriver.NewConnector(
-		pgdriver.WithDSN("postgres://postgres:1@localhost:5432/testDatabase?sslmode=disable"),
-	)
+	type Test struct {
+		dsn string
+		cfg *pgdriver.Config
+	}
 
-	cfg := c.Config()
-	cfg.Dialer = nil
+	tests := []Test{
+		{
+			dsn: "postgres://postgres:1@localhost:5432/testDatabase?sslmode=disable",
+			cfg: &pgdriver.Config{
+				Network:      "tcp",
+				Addr:         "localhost:5432",
+				User:         "postgres",
+				Password:     "1",
+				Database:     "testDatabase",
+				DialTimeout:  5 * time.Second,
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 5 * time.Second,
+			},
+		},
+		{
+			dsn: "postgres://postgres:password@app.xxx.us-east-1.rds.amazonaws.com:5432/test?sslmode=disable",
+			cfg: &pgdriver.Config{
+				Network:      "tcp",
+				Addr:         "app.xxx.us-east-1.rds.amazonaws.com:5432",
+				User:         "postgres",
+				Password:     "password",
+				Database:     "test",
+				DialTimeout:  5 * time.Second,
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 5 * time.Second,
+			},
+		},
+	}
 
-	require.Equal(t, &pgdriver.Config{
-		Network:      "tcp",
-		Addr:         "localhost:5432",
-		User:         "postgres",
-		Password:     "1",
-		Database:     "testDatabase",
-		DialTimeout:  5 * time.Second,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 5 * time.Second,
-	}, cfg)
+	for _, test := range tests {
+		c := pgdriver.NewConnector(pgdriver.WithDSN(test.dsn))
+
+		cfg := c.Config()
+		cfg.Dialer = nil
+
+		require.Equal(t, test.cfg, cfg)
+	}
 }
