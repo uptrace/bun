@@ -12,4 +12,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ncipollo/release-action@v1
         with:
-          body: Check CHANGELOG.md for details
+          body:
+            Check [CHANGELOG.md](https://github.com/uptrace/bun/blob/master/CHANGELOG.md) for
+            details
