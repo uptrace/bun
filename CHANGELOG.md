@@ -1,3 +1,13 @@
+## [1.0.6](https://github.com/uptrace/bun/compare/v1.0.5...v1.0.6) (2021-09-11)
+
+
+### Bug Fixes
+
+* change unique tag to create a separate unique constraint ([8401615](https://github.com/uptrace/bun/commit/84016155a77ca77613cc054277fefadae3098757))
+* improve zero checker for ptr values ([2b3623d](https://github.com/uptrace/bun/commit/2b3623dd665d873911fd20ca707016929921e862))
+
+
+
 ## v1.0.5 - Sep 09 2021
 
 - chore: tweak bundebug colors
