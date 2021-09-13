@@ -738,7 +738,7 @@ func (q *SelectQuery) afterSelectHook(ctx context.Context) error {
 func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	qq := countQuery{q}
 
-	queryBytes, err := qq.appendQuery(q.db.fmter, nil, true)
+	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -794,6 +794,25 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (in
 	return count, firstErr
 }
 
+func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
+	qq := existsQuery{q}
+
+	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	if err != nil {
+		return false, err
+	}
+
+	query := internal.String(queryBytes)
+	ctx, event := q.db.beforeQuery(ctx, qq, query, nil)
+
+	var exists bool
+	err = q.conn.QueryRowContext(ctx, query).Scan(&exists)
+
+	q.db.afterQuery(ctx, event, nil, err)
+
+	return exists, err
+}
+
 //------------------------------------------------------------------------------
 
 type joinQuery struct {
@@ -836,4 +855,23 @@ type countQuery struct {
 
 func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	return q.appendQuery(fmter, b, true)
+}
+
+//------------------------------------------------------------------------------
+
+type existsQuery struct {
+	*SelectQuery
+}
+
+func (q existsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, "SELECT EXISTS ("...)
+
+	b, err = q.appendQuery(fmter, b, false)
+	if err != nil {
+		return nil, err
+	}
+
+	b = append(b, ")"...)
+
+	return b, nil
 }
