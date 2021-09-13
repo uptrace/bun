@@ -224,6 +224,7 @@ func TestDB(t *testing.T) {
 		{testInterfaceJSON},
 		{testScanBytes},
 		{testPointers},
+		{testExists},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -872,4 +873,16 @@ func testPointers(t *testing.T, db *bun.DB) {
 	var models2 []Model
 	err = db.NewSelect().Model(&models2).Order("id ASC").Scan(ctx)
 	require.NoError(t, err)
+}
+
+func testExists(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+
+	exists, err := db.NewSelect().ColumnExpr("1").Exists(ctx)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 0").Exists(ctx)
+	require.NoError(t, err)
+	require.False(t, exists)
 }
