@@ -109,16 +109,22 @@ func (tm *NullTime) Scan(src interface{}) error {
 	}
 
 	switch src := src.(type) {
+	case time.Time:
+		tm.Time = src
+		return nil
+	case string:
+		newtm, err := internal.ParseTime(src)
+		if err != nil {
+			return err
+		}
+		tm.Time = newtm
+		return nil
 	case []byte:
 		newtm, err := internal.ParseTime(internal.String(src))
 		if err != nil {
 			return err
 		}
-
 		tm.Time = newtm
-		return nil
-	case time.Time:
-		tm.Time = src
 		return nil
 	default:
 		return fmt.Errorf("bun: can't scan %#v into NullTime", src)

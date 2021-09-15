@@ -5,6 +5,7 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -315,4 +316,19 @@ func TestPGDate(t *testing.T) {
 	err := db.NewSelect().ColumnExpr("'2021-09-15'::DATE").Scan(ctx, &str)
 	require.NoError(t, err)
 	require.Equal(t, "2021-09-15", str)
+
+	str = ""
+	err = db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP::date").Scan(ctx, &str)
+	require.NoError(t, err)
+	require.NotZero(t, str)
+
+	var tm time.Time
+	err = db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP::date").Scan(ctx, &tm)
+	require.NoError(t, err)
+	require.NotZero(t, tm)
+
+	var nullTime bun.NullTime
+	err = db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP::date").Scan(ctx, &nullTime)
+	require.NoError(t, err)
+	require.False(t, nullTime.IsZero())
 }
