@@ -225,6 +225,7 @@ func TestDB(t *testing.T) {
 		{testScanBytes},
 		{testPointers},
 		{testExists},
+		{testScanTimeIntoString},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -885,4 +886,13 @@ func testExists(t *testing.T, db *bun.DB) {
 	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 0").Exists(ctx)
 	require.NoError(t, err)
 	require.False(t, exists)
+}
+
+func testScanTimeIntoString(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+
+	var str string
+	err := db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP").Scan(ctx, &str)
+	require.NoError(t, err)
+	require.NotZero(t, str)
 }

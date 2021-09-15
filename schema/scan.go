@@ -207,6 +207,9 @@ func scanString(dest reflect.Value, src interface{}) error {
 	case []byte:
 		dest.SetString(string(src))
 		return nil
+	case time.Time:
+		dest.SetString(src.Format(time.RFC3339Nano))
+		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
