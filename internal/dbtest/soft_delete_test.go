@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/feature"
 )
 
 func TestSoftDelete(t *testing.T) {
@@ -124,6 +125,15 @@ func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
 	}
 	_, err = db.NewInsert().Model(&videos).Exec(ctx)
 	require.NoError(t, err)
+
+	if db.Dialect().Features().Has(feature.CTE) {
+		_, err := db.NewUpdate().
+			Model(&videos).
+			Column("name").
+			Bulk().
+			Exec(ctx)
+		require.NoError(t, err)
+	}
 
 	_, err = db.NewDelete().Model(&videos).WherePK().Exec(ctx)
 	require.NoError(t, err)
