@@ -3,28 +3,13 @@ package schema
 import (
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/uptrace/bun/dialect"
-	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 )
-
-func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
-	if field.Tag.HasOption("msgpack") {
-		return appendMsgpack
-	}
-
-	switch strings.ToUpper(field.UserSQLType) {
-	case sqltype.JSON, sqltype.JSONB:
-		return AppendJSONValue
-	}
-
-	return dialect.Appender(field.StructField.Type)
-}
 
 func Append(fmter Formatter, b []byte, v interface{}, custom CustomAppender) []byte {
 	switch v := v.(type) {

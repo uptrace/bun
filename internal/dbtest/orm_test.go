@@ -264,6 +264,7 @@ func testRelationColumn(t *testing.T, db *bun.DB) {
 	book := new(Book)
 	err := db.NewSelect().
 		Model(book).
+		ExcludeColumn("created_at").
 		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Column("name")
 		}).
@@ -286,6 +287,7 @@ func testRelationExcludeAll(t *testing.T, db *bun.DB) {
 	book := new(Book)
 	err := db.NewSelect().
 		Model(book).
+		ExcludeColumn("created_at").
 		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.ExcludeColumn("*")
 		}).
@@ -420,7 +422,7 @@ type Book struct {
 	Author    Author `bun:"rel:belongs-to"`
 	EditorID  int
 	Editor    *Author   `bun:"rel:belongs-to"`
-	CreatedAt time.Time `bun:"default:current_timestamp"`
+	CreatedAt time.Time `bun:",nullzero,default:current_timestamp"`
 	UpdatedAt time.Time `bun:",nullzero"`
 
 	Genres       []Genre       `bun:"m2m:book_genres"` // many to many relation

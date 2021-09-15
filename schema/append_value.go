@@ -6,9 +6,11 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
 )
@@ -45,6 +47,19 @@ var appenders = []AppenderFunc{
 	reflect.String:        AppendStringValue,
 	reflect.Struct:        AppendJSONValue,
 	reflect.UnsafePointer: nil,
+}
+
+func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
+	if field.Tag.HasOption("msgpack") {
+		return appendMsgpack
+	}
+
+	switch strings.ToUpper(field.UserSQLType) {
+	case sqltype.JSON, sqltype.JSONB:
+		return AppendJSONValue
+	}
+
+	return dialect.Appender(field.StructField.Type)
 }
 
 func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
