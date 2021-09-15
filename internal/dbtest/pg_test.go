@@ -264,7 +264,7 @@ func TestPGScanWithoutResult(t *testing.T) {
 	require.Equal(t, sql.ErrNoRows, err)
 }
 
-func TestIPNet(t *testing.T) {
+func TestPGIPNet(t *testing.T) {
 	type Model struct {
 		Network net.IPNet `bun:"type:inet"`
 	}
@@ -287,7 +287,7 @@ func TestIPNet(t *testing.T) {
 	require.Equal(t, *ipv4Net, model.Network)
 }
 
-func TestBytea(t *testing.T) {
+func TestPGBytea(t *testing.T) {
 	type Model struct {
 		Bytes []byte
 	}
@@ -305,4 +305,14 @@ func TestBytea(t *testing.T) {
 	err = db.NewSelect().Model(model).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, []byte("hello"), model.Bytes)
+}
+
+func TestPGDate(t *testing.T) {
+	db := pg(t)
+	defer db.Close()
+
+	var str string
+	err := db.NewSelect().ColumnExpr("'2021-09-15'::DATE").Scan(ctx, &str)
+	require.NoError(t, err)
+	require.Equal(t, "2021-09-15", str)
 }

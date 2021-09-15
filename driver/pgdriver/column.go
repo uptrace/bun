@@ -51,7 +51,8 @@ func readColumnValue(rd *reader, dataType int32, dataLen int) (interface{}, erro
 	case pgTimestamptz:
 		return readTimeCol(rd, dataLen)
 	case pgDate:
-		return readTimeCol(rd, dataLen)
+		// Return a string and let the scanner to convert string to time.Time if necessary.
+		return readStringCol(rd, dataLen)
 	case pgText, pgVarchar:
 		return readStringCol(rd, dataLen)
 	case pgBytea:
