@@ -170,8 +170,6 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 	fmter = formatterWithModel(fmter, q)
 
-	withAlias := fmter.HasFeature(feature.UpdateMultiTable)
-
 	b, err = q.appendWith(fmter, b)
 	if err != nil {
 		return nil, err
@@ -179,7 +177,7 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	b = append(b, "UPDATE "...)
 
-	if withAlias {
+	if fmter.HasFeature(feature.UpdateMultiTable) {
 		b, err = q.appendTablesWithAlias(fmter, b)
 	} else {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
@@ -200,7 +198,7 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		}
 	}
 
-	b, err = q.mustAppendWhere(fmter, b, withAlias)
+	b, err = q.mustAppendWhere(fmter, b, true)
 	if err != nil {
 		return nil, err
 	}
