@@ -853,27 +853,31 @@ func testScanBytes(t *testing.T, db *bun.DB) {
 
 func testPointers(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID  *int64 `bun:",allowzero,default:0"`
+		ID  *int64 `bun:",default:0"`
 		Str *string
 	}
 
 	ctx := context.Background()
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	for _, id := range []int64{-1, 0, 1} {
+		err := db.ResetModel(ctx, (*Model)(nil))
+		require.NoError(t, err)
 
-	id := int64(1)
-	str := "hello"
-	models := []Model{
-		{},
-		{ID: &id, Str: &str},
+		var model Model
+		if id >= 0 {
+			str := "hello"
+			model.ID = &id
+			model.Str = &str
+
+		}
+
+		_, err = db.NewInsert().Model(&model).Exec(ctx)
+		require.NoError(t, err)
+
+		var model2 Model
+		err = db.NewSelect().Model(&model2).Order("id ASC").Scan(ctx)
+		require.NoError(t, err)
 	}
-	_, err = db.NewInsert().Model(&models).Exec(ctx)
-	require.NoError(t, err)
-
-	var models2 []Model
-	err = db.NewSelect().Model(&models2).Order("id ASC").Scan(ctx)
-	require.NoError(t, err)
 }
 
 func testExists(t *testing.T, db *bun.DB) {

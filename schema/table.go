@@ -181,17 +181,17 @@ func (t *Table) initFields() {
 	t.FieldMap = make(map[string]*Field, t.Type.NumField())
 	t.addFields(t.Type, nil)
 
-	if len(t.PKs) > 0 {
-		return
-	}
-	for _, name := range []string{"id", "uuid", "pk_" + t.ModelName} {
-		if field, ok := t.FieldMap[name]; ok {
-			field.markAsPK()
-			t.PKs = []*Field{field}
-			t.DataFields = removeField(t.DataFields, field)
-			break
+	if len(t.PKs) == 0 {
+		for _, name := range []string{"id", "uuid", "pk_" + t.ModelName} {
+			if field, ok := t.FieldMap[name]; ok {
+				field.markAsPK()
+				t.PKs = []*Field{field}
+				t.DataFields = removeField(t.DataFields, field)
+				break
+			}
 		}
 	}
+
 	if len(t.PKs) == 1 {
 		pk := t.PKs[0]
 		if pk.SQLDefault != "" {
