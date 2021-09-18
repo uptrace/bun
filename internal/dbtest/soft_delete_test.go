@@ -19,6 +19,7 @@ func TestSoftDelete(t *testing.T) {
 	}
 
 	tests := []Test{
+		{run: testSoftDeleteNilModel},
 		{run: testSoftDeleteAPI},
 		{run: testSoftDeleteBulk},
 	}
@@ -56,6 +57,19 @@ type Video struct {
 	ID        int64
 	Name      string
 	DeletedAt time.Time `bun:",soft_delete"`
+}
+
+func testSoftDeleteNilModel(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Video)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewDelete().Model((*Video)(nil)).Where("1 = 1").Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewDelete().Model((*Video)(nil)).Where("1 = 1").ForceDelete().Exec(ctx)
+	require.NoError(t, err)
 }
 
 func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
