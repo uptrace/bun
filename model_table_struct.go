@@ -216,6 +216,9 @@ func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
 }
 
 func (m *structTableModel) updateSoftDeleteField(tm time.Time) error {
+	if !m.strct.IsValid() {
+		return nil
+	}
 	fv := m.table.SoftDeleteField.Value(m.strct)
 	return m.table.UpdateSoftDeleteField(fv, tm)
 }
