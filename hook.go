@@ -53,7 +53,7 @@ func (db *DB) beforeQuery(
 	query string,
 	queryArgs []interface{},
 ) (context.Context, *QueryEvent) {
-	atomic.AddUint64(&db.stats.Queries, 1)
+	atomic.AddUint32(&db.stats.Queries, 1)
 
 	if len(db.queryHooks) == 0 {
 		return ctx, nil
@@ -86,7 +86,7 @@ func (db *DB) afterQuery(
 	case nil, sql.ErrNoRows:
 		// nothing
 	default:
-		atomic.AddUint64(&db.stats.Errors, 1)
+		atomic.AddUint32(&db.stats.Errors, 1)
 	}
 
 	if event == nil {

@@ -190,7 +190,7 @@ func (ms MigrationSlice) LastGroupID() int64 {
 	var lastGroupID int64
 	for i := range ms {
 		groupID := ms[i].GroupID
-		if groupID != 0 && groupID > lastGroupID {
+		if groupID > lastGroupID {
 			lastGroupID = groupID
 		}
 	}

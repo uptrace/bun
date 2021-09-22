@@ -18,8 +18,8 @@ const (
 )
 
 type DBStats struct {
-	Queries uint64
-	Errors  uint64
+	Queries uint32
+	Errors  uint32
 }
 
 type DBOption func(db *DB)
@@ -70,8 +70,8 @@ func (db *DB) String() string {
 
 func (db *DB) DBStats() DBStats {
 	return DBStats{
-		Queries: atomic.LoadUint64(&db.stats.Queries),
-		Errors:  atomic.LoadUint64(&db.stats.Errors),
+		Queries: atomic.LoadUint32(&db.stats.Queries),
+		Errors:  atomic.LoadUint32(&db.stats.Errors),
 	}
 }
 

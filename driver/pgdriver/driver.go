@@ -66,15 +66,8 @@ func (d Driver) Open(name string) (driver.Conn, error) {
 
 //------------------------------------------------------------------------------
 
-type DriverStats struct {
-	Queries uint64
-	Errors  uint64
-}
-
 type Connector struct {
 	cfg *Config
-
-	stats DriverStats
 }
 
 func NewConnector(opts ...DriverOption) *Connector {
@@ -101,13 +94,6 @@ func (d *Connector) Driver() driver.Driver {
 
 func (d *Connector) Config() *Config {
 	return d.cfg
-}
-
-func (d *Connector) Stats() DriverStats {
-	return DriverStats{
-		Queries: atomic.LoadUint64(&d.stats.Queries),
-		Errors:  atomic.LoadUint64(&d.stats.Errors),
-	}
 }
 
 //------------------------------------------------------------------------------
