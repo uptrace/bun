@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -66,11 +65,8 @@ func (ln *Listener) conn(ctx context.Context) (*Conn, error) {
 		return ln.cn, nil
 	}
 
-	atomic.AddUint64(&ln.driver.stats.Queries, 1)
-
 	cn, err := ln._conn(ctx)
 	if err != nil {
-		atomic.AddUint64(&ln.driver.stats.Errors, 1)
 		return nil, err
 	}
 
