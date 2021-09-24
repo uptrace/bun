@@ -32,7 +32,7 @@ Resources:
 
 - To ask questions, join [Discord](https://discord.gg/rWtp5Aj) or use
   [Discussions](https://github.com/uptrace/bun/discussions).
-- [Newsletter](https://blog.uptrace.dev/newsletter/) to get latest updates.
+- [Newsletter](https://blog.uptrace.dev/pages/newsletter.html) to get latest updates.
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
 - [Documentation](https://bun.uptrace.dev/)
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
