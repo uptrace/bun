@@ -3,7 +3,7 @@
 To run this example:
 
 ```shell
-go run main.go
+go run .
 ```
 
 See [docs](https://bun.uptrace.dev/) for details.

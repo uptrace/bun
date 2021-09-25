@@ -30,7 +30,7 @@ func main() {
 
 	// Create tables and load initial data.
 	fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
-	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
+	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yml"); err != nil {
 		panic(err)
 	}
 

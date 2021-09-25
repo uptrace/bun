@@ -420,6 +420,10 @@ func (r *rows) next(dest []driver.Value) (eof bool, _ error) {
 				return false, firstErr
 			}
 			return true, nil
+		case parameterStatusMsg, noticeResponseMsg:
+			if err := rd.Discard(msgLen); err != nil {
+				return false, err
+			}
 		case errorResponseMsg:
 			e, err := readError(rd)
 			if err != nil {

@@ -1,0 +1,27 @@
+- model: Book
+  rows:
+    - name: The Gods Themselves by Isaac Asimov
+      tags:
+        - moods:adventurous
+        - moods:challenging
+        - pace:medium
+    - name: Legend by David Gemmell
+      tags:
+        - moods:adventurous
+        - moods:emotional
+        - pace:fast
+    - name: Lord of Light by Roger Zelazny
+      tags:
+        - moods:adventurous
+        - moods:challenging
+        - pace:medium
+    - name: The Name of the Wind by Patrick Rothfuss
+      tags:
+        - moods:adventurous
+        - moods:mysterious
+        - pace:medium
+    - name: Hyperion by Dan Simmons
+      tags:
+        - moods:mysterious
+        - moods:adventurous
+        - pace:medium

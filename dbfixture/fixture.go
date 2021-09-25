@@ -54,12 +54,27 @@ func WithTemplateFuncs(funcMap template.FuncMap) FixtureOption {
 	}
 }
 
+type BeforeInsertData struct {
+	Query *bun.InsertQuery
+	Model interface{}
+}
+
+type BeforeInsertFunc func(ctx context.Context, data *BeforeInsertData) error
+
+func WithBeforeInsert(fn BeforeInsertFunc) FixtureOption {
+	return func(f *Fixture) {
+		f.beforeInsert = append(f.beforeInsert, fn)
+	}
+}
+
 type Fixture struct {
 	db *bun.DB
 
 	recreateTables bool
 	truncateTables bool
-	seenTables     map[string]struct{}
+	beforeInsert   []BeforeInsertFunc
+
+	seenTables map[string]struct{}
 
 	funcMap   template.FuncMap
 	modelRows map[string]map[string]interface{}
@@ -184,10 +199,20 @@ func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 		}
 	}
 
-	iface := strct.Addr().Interface()
-	if _, err := f.db.NewInsert().
-		Model(iface).
-		Exec(ctx); err != nil {
+	model := strct.Addr().Interface()
+	q := f.db.NewInsert().Model(model)
+
+	data := &BeforeInsertData{
+		Query: q,
+		Model: model,
+	}
+	for _, fn := range f.beforeInsert {
+		if err := fn(ctx, data); err != nil {
+			return err
+		}
+	}
+
+	if _, err := q.Exec(ctx); err != nil {
 		return err
 	}
 
@@ -203,7 +228,7 @@ func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 			rows = make(map[string]interface{})
 			f.modelRows[table.TypeName] = rows
 		}
-		rows[rowID] = iface
+		rows[rowID] = model
 	}
 
 	return nil

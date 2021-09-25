@@ -63,6 +63,11 @@ func (q *CreateTableQuery) ModelTableExpr(query string, args ...interface{}) *Cr
 	return q
 }
 
+func (q *CreateTableQuery) ColumnExpr(query string, args ...interface{}) *CreateTableQuery {
+	q.addColumn(schema.SafeQuery(query, args))
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Temp() *CreateTableQuery {
@@ -129,6 +134,14 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if field.SQLDefault != "" {
 			b = append(b, " DEFAULT "...)
 			b = append(b, field.SQLDefault...)
+		}
+	}
+
+	for _, col := range q.columns {
+		b = append(b, ", "...)
+		b, err = col.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
 		}
 	}
 
