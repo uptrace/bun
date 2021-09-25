@@ -65,8 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("\n")
-	fmt.Println("all facets:\n")
+	fmt.Printf("\n\nall facets:\n\n")
 	spew.Dump(facets)
 
 	facets, err = selectFacets(ctx, db, "moods:mysterious")
@@ -74,8 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("\n")
-	fmt.Println("moods:mysterious facets:\n")
+	fmt.Printf("\n\nmoods:mysterious facets:\n\n")
 	spew.Dump(facets)
 }
 
