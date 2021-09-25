@@ -24,12 +24,8 @@ type rowScanner interface {
 	ScanRow(ctx context.Context, rows *sql.Rows) error
 }
 
-type model interface {
+type TableModel interface {
 	Model
-}
-
-type tableModel interface {
-	model
 
 	schema.BeforeScanHook
 	schema.AfterScanHook
@@ -38,19 +34,19 @@ type tableModel interface {
 	Table() *schema.Table
 	Relation() *schema.Relation
 
-	Join(string) *relationJoin
-	GetJoin(string) *relationJoin
-	GetJoins() []relationJoin
-	AddJoin(relationJoin) *relationJoin
+	join(string) *relationJoin
+	getJoin(string) *relationJoin
+	getJoins() []relationJoin
+	addJoin(relationJoin) *relationJoin
 
-	Root() reflect.Value
-	ParentIndex() []int
-	Mount(reflect.Value)
+	rootValue() reflect.Value
+	parentIndex() []int
+	mount(reflect.Value)
 
 	updateSoftDeleteField(time.Time) error
 }
 
-func newModel(db *DB, dest []interface{}) (model, error) {
+func newModel(db *DB, dest []interface{}) (Model, error) {
 	if len(dest) == 1 {
 		return _newModel(db, dest[0], true)
 	}
@@ -74,11 +70,11 @@ func newModel(db *DB, dest []interface{}) (model, error) {
 	return newSliceModel(db, dest, values), nil
 }
 
-func newSingleModel(db *DB, dest interface{}) (model, error) {
+func newSingleModel(db *DB, dest interface{}) (Model, error) {
 	return _newModel(db, dest, false)
 }
 
-func _newModel(db *DB, dest interface{}, scan bool) (model, error) {
+func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 	switch dest := dest.(type) {
 	case nil:
 		return nil, errNilModel
@@ -150,7 +146,7 @@ func newTableModelIndex(
 	root reflect.Value,
 	index []int,
 	rel *schema.Relation,
-) (tableModel, error) {
+) (TableModel, error) {
 	typ := typeByIndex(table.Type, index)
 
 	if typ.Kind() == reflect.Struct {
@@ -195,7 +191,7 @@ func validMap(typ reflect.Type) error {
 
 //------------------------------------------------------------------------------
 
-func isSingleRowModel(m model) bool {
+func isSingleRowModel(m Model) bool {
 	switch m.(type) {
 	case *mapModel,
 		*structTableModel,

@@ -10,8 +10,8 @@ import (
 
 type relationJoin struct {
 	Parent    *relationJoin
-	BaseModel tableModel
-	JoinModel tableModel
+	BaseModel TableModel
+	JoinModel TableModel
 	Relation  *schema.Relation
 
 	apply   func(*SelectQuery) *SelectQuery
@@ -71,8 +71,8 @@ func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 	where = appendChildValues(
 		q.db.Formatter(),
 		where,
-		j.JoinModel.Root(),
-		j.JoinModel.ParentIndex(),
+		j.JoinModel.rootValue(),
+		j.JoinModel.parentIndex(),
 		j.Relation.BaseFields,
 	)
 	where = append(where, ")"...)
@@ -135,7 +135,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	}
 	q = q.Model(m2mModel)
 
-	index := j.JoinModel.ParentIndex()
+	index := j.JoinModel.parentIndex()
 	baseTable := j.BaseModel.Table()
 
 	//nolint
@@ -154,7 +154,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 		join = append(join, col.SQLName...)
 	}
 	join = append(join, ") IN ("...)
-	join = appendChildValues(fmter, join, j.BaseModel.Root(), index, baseTable.PKs)
+	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, baseTable.PKs)
 	join = append(join, ")"...)
 	q = q.Join(internal.String(join))
 

@@ -18,7 +18,7 @@ type sliceTableModel struct {
 	nextElem   func() reflect.Value
 }
 
-var _ tableModel = (*sliceTableModel)(nil)
+var _ TableModel = (*sliceTableModel)(nil)
 
 func newSliceTableModel(
 	db *DB, dest interface{}, slice reflect.Value, elemType reflect.Type,
@@ -46,19 +46,15 @@ func (m *sliceTableModel) init(sliceType reflect.Type) {
 	}
 }
 
-func (m *sliceTableModel) Join(name string) *relationJoin {
-	return m.join(m.slice, name)
-}
-
-func (m *sliceTableModel) Bind(bind reflect.Value) {
-	m.slice = bind.Field(m.index[len(m.index)-1])
+func (m *sliceTableModel) join(name string) *relationJoin {
+	return m._join(m.slice, name)
 }
 
 func (m *sliceTableModel) SetCap(cap int) {
 	if cap > 100 {
 		cap = 100
 	}
-	if m.slice.Cap() < cap {
+	if m.slice.Cap() == 0 {
 		m.slice.Set(reflect.MakeSlice(m.slice.Type(), 0, cap))
 	}
 }

@@ -19,7 +19,7 @@ type hasManyModel struct {
 	structKey  []interface{}
 }
 
-var _ tableModel = (*hasManyModel)(nil)
+var _ TableModel = (*hasManyModel)(nil)
 
 func newHasManyModel(j *relationJoin) *hasManyModel {
 	baseTable := j.BaseModel.Table()
@@ -129,11 +129,11 @@ func (m *hasManyModel) parkStruct() error {
 	return nil
 }
 
-func baseValues(model tableModel, fields []*schema.Field) map[internal.MapKey][]reflect.Value {
+func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]reflect.Value {
 	fieldIndex := model.Relation().Field.Index
 	m := make(map[internal.MapKey][]reflect.Value)
 	key := make([]interface{}, 0, len(fields))
-	walk(model.Root(), model.ParentIndex(), func(v reflect.Value) {
+	walk(model.rootValue(), model.parentIndex(), func(v reflect.Value) {
 		key = modelKey(key[:0], v, fields)
 		mapKey := internal.NewMapKey(key)
 		m[mapKey] = append(m[mapKey], v.FieldByIndex(fieldIndex))

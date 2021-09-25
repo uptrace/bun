@@ -13,7 +13,7 @@ type scanModel struct {
 	scanIndex int
 }
 
-var _ model = (*scanModel)(nil)
+var _ Model = (*scanModel)(nil)
 
 func newScanModel(db *DB, dest []interface{}) *scanModel {
 	return &scanModel{

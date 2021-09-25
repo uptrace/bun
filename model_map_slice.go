@@ -17,7 +17,7 @@ type mapSliceModel struct {
 	keys []string
 }
 
-var _ model = (*mapSliceModel)(nil)
+var _ Model = (*mapSliceModel)(nil)
 
 func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
 	return &mapSliceModel{
