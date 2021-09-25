@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"runtime"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/uptrace/bun"
@@ -16,7 +19,15 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-var tracer = otel.Tracer("github.com/uptrace/bun")
+var (
+	tracer         = otel.Tracer("github.com/uptrace/bun")
+	meter          = metric.Must(global.Meter("github.com/uptrace/bun"))
+	queryHistogram = meter.NewInt64Histogram(
+		"bun.query.timing",
+		metric.WithDescription("Timing of processed queries"),
+		metric.WithUnit("milliseconds"),
+	)
+)
 
 type ConfigOption func(*QueryHook)
 
@@ -37,18 +48,27 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 		return ctx
 	}
 
-	operation := event.Operation()
-	ctx, span := tracer.Start(ctx, operation)
-	span.SetAttributes(attribute.String("db.operation", operation))
-
+	ctx, _ = tracer.Start(ctx, "")
 	return ctx
 }
 
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
+	operation := event.Operation()
+	dbOperation := attribute.String("db.operation", operation)
+
+	labels := []attribute.KeyValue{dbOperation}
+	if tableName := tableName(event.QueryAppender); tableName != "" {
+		labels = append(labels, attribute.String("db.table", tableName))
+	}
+
+	queryHistogram.Record(ctx, time.Since(event.StartTime).Milliseconds(), labels...)
+
 	span := trace.SpanFromContext(ctx)
 	if !span.IsRecording() {
 		return
 	}
+
+	span.SetName(operation)
 	defer span.End()
 
 	query := eventQuery(event)
@@ -56,6 +76,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 
 	attrs := make([]attribute.KeyValue, 0, 10)
 	attrs = append(attrs,
+		dbOperation,
 		attribute.String("db.statement", query),
 		attribute.String("code.function", fn),
 		attribute.String("code.filepath", file),
@@ -110,8 +131,8 @@ func funcFileLine(pkg string) (string, string, int) {
 }
 
 func eventQuery(event *bun.QueryEvent) string {
-	const softQueryLimit = 5000
-	const hardQueryLimit = 10000
+	const softQueryLimit = 8000
+	const hardQueryLimit = 16000
 
 	var query string
 
@@ -146,4 +167,13 @@ func dbSystem(db *bun.DB) string {
 	default:
 		return ""
 	}
+}
+
+func tableName(query schema.Query) string {
+	if v, ok := query.(interface {
+		GetTableName() string
+	}); ok {
+		return v.GetTableName()
+	}
+	return ""
 }

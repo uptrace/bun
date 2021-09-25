@@ -21,7 +21,7 @@ type mapModel struct {
 	scanIndex    int
 }
 
-var _ model = (*mapModel)(nil)
+var _ Model = (*mapModel)(nil)
 
 func newMapModel(db *DB, dest *map[string]interface{}) *mapModel {
 	m := &mapModel{

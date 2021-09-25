@@ -21,7 +21,7 @@ type sliceModel struct {
 	info      []sliceInfo
 }
 
-var _ model = (*sliceModel)(nil)
+var _ Model = (*sliceModel)(nil)
 
 func newSliceModel(db *DB, dest []interface{}, values []reflect.Value) *sliceModel {
 	return &sliceModel{

@@ -297,7 +297,7 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
-	join := q.tableModel.Join(name)
+	join := q.tableModel.join(name)
 	if join == nil {
 		q.setErr(fmt.Errorf("%s does not have relation=%q", q.table, name))
 		return q
@@ -314,7 +314,7 @@ func (q *SelectQuery) forEachHasOneJoin(fn func(*relationJoin) error) error {
 	if q.tableModel == nil {
 		return nil
 	}
-	return q._forEachHasOneJoin(fn, q.tableModel.GetJoins())
+	return q._forEachHasOneJoin(fn, q.tableModel.getJoins())
 }
 
 func (q *SelectQuery) _forEachHasOneJoin(fn func(*relationJoin) error, joins []relationJoin) error {
@@ -325,7 +325,7 @@ func (q *SelectQuery) _forEachHasOneJoin(fn func(*relationJoin) error, joins []r
 			if err := fn(j); err != nil {
 				return err
 			}
-			if err := q._forEachHasOneJoin(fn, j.JoinModel.GetJoins()); err != nil {
+			if err := q._forEachHasOneJoin(fn, j.JoinModel.getJoins()); err != nil {
 				return err
 			}
 		}
@@ -341,7 +341,7 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 
 		switch j.Relation.Type {
 		case schema.HasOneRelation, schema.BelongsToRelation:
-			err = q.selectJoins(ctx, j.JoinModel.GetJoins())
+			err = q.selectJoins(ctx, j.JoinModel.getJoins())
 		case schema.HasManyRelation:
 			err = j.selectMany(ctx, q.db.NewSelect())
 		case schema.ManyToManyRelation:
@@ -701,8 +701,8 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	}
 
 	if n, _ := res.RowsAffected(); n > 0 {
-		if tableModel, ok := model.(tableModel); ok {
-			if err := q.selectJoins(ctx, tableModel.GetJoins()); err != nil {
+		if tableModel, ok := model.(TableModel); ok {
+			if err := q.selectJoins(ctx, tableModel.getJoins()); err != nil {
 				return err
 			}
 		}

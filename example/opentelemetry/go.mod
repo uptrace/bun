@@ -20,8 +20,8 @@ require (
 	github.com/uptrace/bun/dialect/sqlitedialect v1.0.8
 	github.com/uptrace/bun/driver/sqliteshim v1.0.8
 	github.com/uptrace/bun/extra/bunotel v1.0.8
-	go.opentelemetry.io/otel v1.0.0-RC3
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC3
-	go.opentelemetry.io/otel/sdk v1.0.0-RC3
+	go.opentelemetry.io/otel v1.0.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0
+	go.opentelemetry.io/otel/sdk v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

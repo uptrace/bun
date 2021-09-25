@@ -30,7 +30,7 @@ type structTableModel struct {
 	scanIndex int
 }
 
-var _ tableModel = (*structTableModel)(nil)
+var _ TableModel = (*structTableModel)(nil)
 
 func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structTableModel {
 	return &structTableModel{
@@ -60,23 +60,6 @@ func (m *structTableModel) Table() *schema.Table {
 
 func (m *structTableModel) Relation() *schema.Relation {
 	return m.rel
-}
-
-func (m *structTableModel) Root() reflect.Value {
-	return m.root
-}
-
-func (m *structTableModel) Index() []int {
-	return m.index
-}
-
-func (m *structTableModel) ParentIndex() []int {
-	return m.index[:len(m.index)-len(m.rel.Field.Index)]
-}
-
-func (m *structTableModel) Mount(host reflect.Value) {
-	m.strct = host.FieldByIndex(m.rel.Field.Index)
-	m.structInited = false
 }
 
 func (m *structTableModel) initStruct() error {
@@ -112,7 +95,7 @@ func (m *structTableModel) mountJoins() {
 		j := &m.joins[i]
 		switch j.Relation.Type {
 		case schema.HasOneRelation, schema.BelongsToRelation:
-			j.JoinModel.Mount(m.strct)
+			j.JoinModel.mount(m.strct)
 		}
 	}
 }
@@ -151,7 +134,7 @@ func (m *structTableModel) AfterScan(ctx context.Context) error {
 	return firstErr
 }
 
-func (m *structTableModel) GetJoin(name string) *relationJoin {
+func (m *structTableModel) getJoin(name string) *relationJoin {
 	for i := range m.joins {
 		j := &m.joins[i]
 		if j.Relation.Field.Name == name || j.Relation.Field.GoName == name {
@@ -161,20 +144,20 @@ func (m *structTableModel) GetJoin(name string) *relationJoin {
 	return nil
 }
 
-func (m *structTableModel) GetJoins() []relationJoin {
+func (m *structTableModel) getJoins() []relationJoin {
 	return m.joins
 }
 
-func (m *structTableModel) AddJoin(j relationJoin) *relationJoin {
+func (m *structTableModel) addJoin(j relationJoin) *relationJoin {
 	m.joins = append(m.joins, j)
 	return &m.joins[len(m.joins)-1]
 }
 
-func (m *structTableModel) Join(name string) *relationJoin {
-	return m.join(m.strct, name)
+func (m *structTableModel) join(name string) *relationJoin {
+	return m._join(m.strct, name)
 }
 
-func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
+func (m *structTableModel) _join(bind reflect.Value, name string) *relationJoin {
 	path := strings.Split(name, ".")
 	index := make([]int, 0, len(path))
 
@@ -193,7 +176,7 @@ func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
 		currJoin.Relation = relation
 		index = append(index, relation.Field.Index...)
 
-		if j := currJoin.JoinModel.GetJoin(name); j != nil {
+		if j := currJoin.JoinModel.getJoin(name); j != nil {
 			currJoin.BaseModel = j.BaseModel
 			currJoin.JoinModel = j.JoinModel
 
@@ -208,11 +191,24 @@ func (m *structTableModel) join(bind reflect.Value, name string) *relationJoin {
 			currJoin.BaseModel = currJoin.JoinModel
 			currJoin.JoinModel = model
 
-			lastJoin = currJoin.BaseModel.AddJoin(currJoin)
+			lastJoin = currJoin.BaseModel.addJoin(currJoin)
 		}
 	}
 
 	return lastJoin
+}
+
+func (m *structTableModel) rootValue() reflect.Value {
+	return m.root
+}
+
+func (m *structTableModel) parentIndex() []int {
+	return m.index[:len(m.index)-len(m.rel.Field.Index)]
+}
+
+func (m *structTableModel) mount(host reflect.Value) {
+	m.strct = host.FieldByIndex(m.rel.Field.Index)
+	m.structInited = false
 }
 
 func (m *structTableModel) updateSoftDeleteField(tm time.Time) error {
@@ -309,7 +305,7 @@ func (m *structTableModel) scanColumn(column string, src interface{}) (bool, err
 	}
 
 	if joinName, column := splitColumn(column); joinName != "" {
-		if join := m.GetJoin(joinName); join != nil {
+		if join := m.getJoin(joinName); join != nil {
 			return true, join.JoinModel.ScanColumn(column, src)
 		}
 

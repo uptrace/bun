@@ -8,5 +8,5 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc
 	github.com/vmihailenco/msgpack/v5 v5.3.4
-	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
+	golang.org/x/sys v0.0.0-20210925032602-92d5a993a665 // indirect
 )

@@ -19,7 +19,7 @@ type m2mModel struct {
 	structKey  []interface{}
 }
 
-var _ tableModel = (*m2mModel)(nil)
+var _ TableModel = (*m2mModel)(nil)
 
 func newM2MModel(j *relationJoin) *m2mModel {
 	baseTable := j.BaseModel.Table()
