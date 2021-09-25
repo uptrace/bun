@@ -12,7 +12,7 @@
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
 **Status**: API freeze (stable release). Note that all sub-packages (mainly extra/\* packages) are
-not part of the API freeze and are developed independently. You can think of them as 3-rd party
+not part of the API freeze and are developed independently. You can think of them as of 3rd party
 packages that share one repo with the core.
 
 Main features are:
@@ -37,6 +37,10 @@ Resources:
 - [Documentation](https://bun.uptrace.dev/)
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
+
+Projects using Bun:
+
+- [gotosocial](https://github.com/superseriousbusiness/gotosocial) - Golang fediverse server.
 - [RealWorld app](https://github.com/go-bun/bun-realworld-app)
 
 <details>
