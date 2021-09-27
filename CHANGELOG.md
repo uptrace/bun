@@ -1,3 +1,21 @@
+## [1.0.9](https://github.com/uptrace/bun/compare/v1.0.8...v1.0.9) (2021-09-27)
+
+
+### Bug Fixes
+
+* change DBStats to use uint32 instead of uint64 to make it work on i386 ([caca2a7](https://github.com/uptrace/bun/commit/caca2a7130288dec49fa26b49c8550140ee52f4c))
+
+
+### Features
+
+* add IQuery and QueryEvent.IQuery ([b762942](https://github.com/uptrace/bun/commit/b762942fa3b1d8686d0a559f93f2a6847b83d9c1))
+* add QueryEvent.Model ([7688201](https://github.com/uptrace/bun/commit/7688201b485d14d3e393956f09a3200ea4d4e31d))
+* **bunotel:** add experimental bun.query.timing metric ([2cdb384](https://github.com/uptrace/bun/commit/2cdb384678631ccadac0fb75f524bd5e91e96ee2))
+* **pgdriver:** add Config.ConnParams to session config params ([408caf0](https://github.com/uptrace/bun/commit/408caf0bb579e23e26fc6149efd6851814c22517))
+* **pgdriver:** allow specifying timeout in DSN ([7dbc71b](https://github.com/uptrace/bun/commit/7dbc71b3494caddc2e97d113f00067071b9e19da))
+
+
+
 ## [1.0.8](https://github.com/uptrace/bun/compare/v1.0.7...v1.0.8) (2021-09-18)
 
 
