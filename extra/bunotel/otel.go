@@ -57,8 +57,10 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	dbOperation := attribute.String("db.operation", operation)
 
 	labels := []attribute.KeyValue{dbOperation}
-	if tableName := event.IQuery.GetTableName(); tableName != "" {
-		labels = append(labels, attribute.String("db.table", tableName))
+	if event.IQuery != nil {
+		if tableName := event.IQuery.GetTableName(); tableName != "" {
+			labels = append(labels, attribute.String("db.table", tableName))
+		}
 	}
 
 	queryHistogram.Record(ctx, time.Since(event.StartTime).Milliseconds(), labels...)
