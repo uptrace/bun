@@ -30,6 +30,7 @@ var tagTests = []struct {
 	{`hello:"D'Angelo, esquire",foo:bar`, "", map[string]string{"hello": "D'Angelo, esquire", "foo": "bar"}},
 	{`hello:"world('foo', 'bar')"`, "", map[string]string{"hello": "world('foo', 'bar')"}},
 	{" hello,foo: bar ", " hello", map[string]string{"foo": " bar "}},
+	{"type:geometry(POINT, 4326)", "", map[string]string{"type": "geometry(POINT, 4326)"}},
 }
 
 func TestTagParser(t *testing.T) {

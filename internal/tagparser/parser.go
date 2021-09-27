@@ -93,6 +93,8 @@ func (p *parser) parseValue() string {
 			return p.parseQuotedValue()
 		case ',':
 			return p.s[start : p.i-1]
+		case '(':
+			p.skipPairs('(', ')')
 		}
 	}
 
@@ -123,6 +125,23 @@ func (p *parser) parseQuotedValue() string {
 	}
 
 	return ""
+}
+
+func (p *parser) skipPairs(start, end byte) {
+	var lvl int
+	for p.valid() {
+		switch c := p.read(); c {
+		case '"':
+			_ = p.parseQuotedValue()
+		case start:
+			lvl++
+		case end:
+			if lvl == 0 {
+				return
+			}
+			lvl--
+		}
+	}
 }
 
 func (p *parser) valid() bool {
