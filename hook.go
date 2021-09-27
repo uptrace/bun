@@ -17,6 +17,7 @@ type QueryEvent struct {
 	QueryAppender schema.Query
 	Query         string
 	QueryArgs     []interface{}
+	Model         Model
 
 	StartTime time.Time
 	Result    sql.Result
@@ -52,6 +53,7 @@ func (db *DB) beforeQuery(
 	queryApp schema.Query,
 	query string,
 	queryArgs []interface{},
+	model Model,
 ) (context.Context, *QueryEvent) {
 	atomic.AddUint32(&db.stats.Queries, 1)
 
@@ -62,6 +64,7 @@ func (db *DB) beforeQuery(
 	event := &QueryEvent{
 		DB: db,
 
+		Model:         model,
 		QueryAppender: queryApp,
 		Query:         query,
 		QueryArgs:     queryArgs,

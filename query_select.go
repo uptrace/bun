@@ -744,7 +744,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	}
 
 	query := internal.String(queryBytes)
-	ctx, event := q.db.beforeQuery(ctx, qq, query, nil)
+	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
 
 	var num int
 	err = q.conn.QueryRowContext(ctx, query).Scan(&num)
@@ -803,7 +803,7 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	}
 
 	query := internal.String(queryBytes)
-	ctx, event := q.db.beforeQuery(ctx, qq, query, nil)
+	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
 
 	var exists bool
 	err = q.conn.QueryRowContext(ctx, query).Scan(&exists)

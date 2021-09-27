@@ -203,7 +203,7 @@ func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 func (db *DB) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := db.beforeQuery(ctx, nil, query, args)
+	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
 	res, err := db.DB.ExecContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, res, err)
 	return res, err
@@ -216,7 +216,7 @@ func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 func (db *DB) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := db.beforeQuery(ctx, nil, query, args)
+	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
 	rows, err := db.DB.QueryContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, nil, err)
 	return rows, err
@@ -227,7 +227,7 @@ func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := db.beforeQuery(ctx, nil, query, args)
+	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
 	row := db.DB.QueryRowContext(ctx, db.format(query, args))
 	db.afterQuery(ctx, event, nil, row.Err())
 	return row
@@ -258,7 +258,7 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
 	res, err := c.Conn.ExecContext(ctx, c.db.format(query, args))
 	c.db.afterQuery(ctx, event, res, err)
 	return res, err
@@ -267,14 +267,14 @@ func (c Conn) ExecContext(
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
 	rows, err := c.Conn.QueryContext(ctx, c.db.format(query, args))
 	c.db.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
 
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
 	row := c.Conn.QueryRowContext(ctx, c.db.format(query, args))
 	c.db.afterQuery(ctx, event, nil, row.Err())
 	return row
@@ -392,7 +392,7 @@ func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
 func (tx Tx) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
 	res, err := tx.Tx.ExecContext(ctx, tx.db.format(query, args))
 	tx.db.afterQuery(ctx, event, res, err)
 	return res, err
@@ -405,7 +405,7 @@ func (tx Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
 func (tx Tx) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
 	rows, err := tx.Tx.QueryContext(ctx, tx.db.format(query, args))
 	tx.db.afterQuery(ctx, event, nil, err)
 	return rows, err
@@ -416,7 +416,7 @@ func (tx Tx) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args)
+	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
 	row := tx.Tx.QueryRowContext(ctx, tx.db.format(query, args))
 	tx.db.afterQuery(ctx, event, nil, row.Err())
 	return row
