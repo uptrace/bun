@@ -456,12 +456,12 @@ func (q *baseQuery) _getFields(omitPK bool) ([]*schema.Field, error) {
 
 func (q *baseQuery) scan(
 	ctx context.Context,
-	queryApp schema.Query,
+	iquery IQuery,
 	query string,
 	model Model,
 	hasDest bool,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil, q.model)
+	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
 
 	rows, err := q.conn.QueryContext(ctx, query)
 	if err != nil {
@@ -488,10 +488,10 @@ func (q *baseQuery) scan(
 
 func (q *baseQuery) exec(
 	ctx context.Context,
-	queryApp schema.Query,
+	iquery IQuery,
 	query string,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, queryApp, query, nil, q.model)
+	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
 
 	res, err := q.conn.ExecContext(ctx, query)
 	if err != nil {

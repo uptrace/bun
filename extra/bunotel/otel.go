@@ -57,7 +57,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	dbOperation := attribute.String("db.operation", operation)
 
 	labels := []attribute.KeyValue{dbOperation}
-	if tableName := tableName(event.QueryAppender); tableName != "" {
+	if tableName := event.IQuery.GetTableName(); tableName != "" {
 		labels = append(labels, attribute.String("db.table", tableName))
 	}
 
@@ -167,13 +167,4 @@ func dbSystem(db *bun.DB) string {
 	default:
 		return ""
 	}
-}
-
-func tableName(query schema.Query) string {
-	if v, ok := query.(interface {
-		GetTableName() string
-	}); ok {
-		return v.GetTableName()
-	}
-	return ""
 }

@@ -4,11 +4,6 @@ type QueryAppender interface {
 	AppendQuery(fmter Formatter, b []byte) ([]byte, error)
 }
 
-type Query interface {
-	QueryAppender
-	Operation() string
-}
-
 type ColumnsAppender interface {
 	AppendColumns(fmter Formatter, b []byte) ([]byte, error)
 }

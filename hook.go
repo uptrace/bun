@@ -11,10 +11,18 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+type IQuery interface {
+	schema.QueryAppender
+	Operation() string
+	GetModel() Model
+	GetTableName() string
+}
+
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender schema.Query
+	QueryAppender schema.QueryAppender // Deprecated: use IQuery instead
+	IQuery        IQuery
 	Query         string
 	QueryArgs     []interface{}
 	Model         Model
@@ -27,8 +35,8 @@ type QueryEvent struct {
 }
 
 func (e *QueryEvent) Operation() string {
-	if e.QueryAppender != nil {
-		return e.QueryAppender.Operation()
+	if e.IQuery != nil {
+		return e.IQuery.Operation()
 	}
 	return queryOperation(e.Query)
 }
@@ -50,7 +58,7 @@ type QueryHook interface {
 
 func (db *DB) beforeQuery(
 	ctx context.Context,
-	queryApp schema.Query,
+	iquery IQuery,
 	query string,
 	queryArgs []interface{},
 	model Model,
@@ -65,7 +73,8 @@ func (db *DB) beforeQuery(
 		DB: db,
 
 		Model:         model,
-		QueryAppender: queryApp,
+		QueryAppender: iquery,
+		IQuery:        iquery,
 		Query:         query,
 		QueryArgs:     queryArgs,
 
