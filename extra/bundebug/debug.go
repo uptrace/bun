@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -74,23 +73,6 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 func formatOperation(event *bun.QueryEvent) string {
 	operation := event.Operation()
 	return operationColor(operation).Sprintf(" %-16s ", operation)
-}
-
-func eventOperation(event *bun.QueryEvent) string {
-	if event.QueryAppender != nil {
-		return event.QueryAppender.Operation()
-	}
-	return queryOperation(event.Query)
-}
-
-func queryOperation(name string) string {
-	if idx := strings.IndexByte(name, ' '); idx > 0 {
-		name = name[:idx]
-	}
-	if len(name) > 16 {
-		name = name[:16]
-	}
-	return name
 }
 
 func operationColor(operation string) *color.Color {
