@@ -194,12 +194,12 @@ func writeStartup(ctx context.Context, cn *Conn) error {
 	wb.StartMessage(0)
 	wb.WriteInt32(196608)
 	wb.WriteString("user")
-	wb.WriteString(cn.driver.cfg.User)
+	wb.WriteString(cn.cfg.User)
 	wb.WriteString("database")
-	wb.WriteString(cn.driver.cfg.Database)
-	if cn.driver.cfg.AppName != "" {
+	wb.WriteString(cn.cfg.Database)
+	if cn.cfg.AppName != "" {
 		wb.WriteString("application_name")
-		wb.WriteString(cn.driver.cfg.AppName)
+		wb.WriteString(cn.cfg.AppName)
 	}
 	wb.WriteString("")
 	wb.FinishMessage()
@@ -233,7 +233,7 @@ func auth(ctx context.Context, cn *Conn, rd *reader) error {
 }
 
 func authCleartext(ctx context.Context, cn *Conn, rd *reader) error {
-	if err := writePassword(ctx, cn, cn.driver.cfg.Password); err != nil {
+	if err := writePassword(ctx, cn, cn.cfg.Password); err != nil {
 		return err
 	}
 	return readAuthOK(cn, rd)
@@ -274,7 +274,7 @@ func authMD5(ctx context.Context, cn *Conn, rd *reader) error {
 		return err
 	}
 
-	secret := "md5" + md5s(md5s(cn.driver.cfg.Password+cn.driver.cfg.User)+string(b))
+	secret := "md5" + md5s(md5s(cn.cfg.Password+cn.cfg.User)+string(b))
 	if err := writePassword(ctx, cn, secret); err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ loop:
 	}
 
 	creds := sasl.Credentials(func() (Username, Password, Identity []byte) {
-		return []byte(cn.driver.cfg.User), []byte(cn.driver.cfg.Password), nil
+		return []byte(cn.cfg.User), []byte(cn.cfg.Password), nil
 	})
 	client := sasl.NewClient(saslMech, creds)
 

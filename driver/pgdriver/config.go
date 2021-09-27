@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +33,8 @@ type Config struct {
 	Password string
 	Database string
 	AppName  string
+	// PostgreSQL session parameters updated with `SET` command when a connection is created.
+	ConnParams map[string]interface{}
 
 	// Timeout for socket reads. If reached, commands fail with a timeout instead of blocking.
 	ReadTimeout time.Duration
@@ -68,20 +69,20 @@ func newDefaultConfig() *Config {
 	return cfg
 }
 
-type DriverOption func(*Connector)
+type DriverOption func(cfg *Config)
 
 func WithAddr(addr string) DriverOption {
 	if addr == "" {
 		panic("addr is empty")
 	}
-	return func(d *Connector) {
-		d.cfg.Addr = addr
+	return func(cfg *Config) {
+		cfg.Addr = addr
 	}
 }
 
-func WithTLSConfig(cfg *tls.Config) DriverOption {
-	return func(d *Connector) {
-		d.cfg.TLSConfig = cfg
+func WithTLSConfig(tlsConfig *tls.Config) DriverOption {
+	return func(cfg *Config) {
+		cfg.TLSConfig = tlsConfig
 	}
 }
 
@@ -89,14 +90,14 @@ func WithUser(user string) DriverOption {
 	if user == "" {
 		panic("user is empty")
 	}
-	return func(d *Connector) {
-		d.cfg.User = user
+	return func(cfg *Config) {
+		cfg.User = user
 	}
 }
 
 func WithPassword(password string) DriverOption {
-	return func(d *Connector) {
-		d.cfg.Password = password
+	return func(cfg *Config) {
+		cfg.Password = password
 	}
 }
 
@@ -104,51 +105,57 @@ func WithDatabase(database string) DriverOption {
 	if database == "" {
 		panic("database is empty")
 	}
-	return func(d *Connector) {
-		d.cfg.Database = database
+	return func(cfg *Config) {
+		cfg.Database = database
 	}
 }
 
 func WithApplicationName(appName string) DriverOption {
-	return func(d *Connector) {
-		d.cfg.AppName = appName
+	return func(cfg *Config) {
+		cfg.AppName = appName
+	}
+}
+
+func WithConnParams(params map[string]interface{}) DriverOption {
+	return func(cfg *Config) {
+		cfg.ConnParams = params
 	}
 }
 
 func WithTimeout(timeout time.Duration) DriverOption {
-	return func(d *Connector) {
-		d.cfg.DialTimeout = timeout
-		d.cfg.ReadTimeout = timeout
-		d.cfg.WriteTimeout = timeout
+	return func(cfg *Config) {
+		cfg.DialTimeout = timeout
+		cfg.ReadTimeout = timeout
+		cfg.WriteTimeout = timeout
 	}
 }
 
 func WithDialTimeout(dialTimeout time.Duration) DriverOption {
-	return func(d *Connector) {
-		d.cfg.DialTimeout = dialTimeout
+	return func(cfg *Config) {
+		cfg.DialTimeout = dialTimeout
 	}
 }
 
 func WithReadTimeout(readTimeout time.Duration) DriverOption {
-	return func(d *Connector) {
-		d.cfg.ReadTimeout = readTimeout
+	return func(cfg *Config) {
+		cfg.ReadTimeout = readTimeout
 	}
 }
 
 func WithWriteTimeout(writeTimeout time.Duration) DriverOption {
-	return func(d *Connector) {
-		d.cfg.WriteTimeout = writeTimeout
+	return func(cfg *Config) {
+		cfg.WriteTimeout = writeTimeout
 	}
 }
 
 func WithDSN(dsn string) DriverOption {
-	return func(d *Connector) {
+	return func(cfg *Config) {
 		opts, err := parseDSN(dsn)
 		if err != nil {
 			panic(err)
 		}
 		for _, opt := range opts {
-			opt(d)
+			opt(cfg)
 		}
 	}
 }
@@ -225,8 +232,13 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 	if err != nil {
 		return nil, q.err
 	}
+
 	if len(rem) > 0 {
-		return nil, fmt.Errorf("pgdriver: unexpected option: %s", strings.Join(rem, ", "))
+		params := make(map[string]interface{}, len(rem))
+		for k, v := range rem {
+			params[k] = v
+		}
+		opts = append(opts, WithConnParams(params))
 	}
 
 	return opts, nil
@@ -279,17 +291,16 @@ func (o *queryOptions) duration(name string) time.Duration {
 	return 0
 }
 
-func (o *queryOptions) remaining() ([]string, error) {
+func (o *queryOptions) remaining() (map[string]string, error) {
 	if o.err != nil {
 		return nil, o.err
 	}
 	if len(o.q) == 0 {
 		return nil, nil
 	}
-	keys := make([]string, 0, len(o.q))
-	for k := range o.q {
-		keys = append(keys, k)
+	m := make(map[string]string, len(o.q))
+	for k, ss := range o.q {
+		m[k] = ss[len(ss)-1]
 	}
-	sort.Strings(keys)
-	return keys, nil
+	return m, nil
 }

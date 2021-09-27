@@ -71,35 +71,34 @@ type Connector struct {
 }
 
 func NewConnector(opts ...DriverOption) *Connector {
-	d := &Connector{cfg: newDefaultConfig()}
+	c := &Connector{cfg: newDefaultConfig()}
 	for _, opt := range opts {
-		opt(d)
+		opt(c.cfg)
 	}
-	return d
+	return c
 }
 
 var _ driver.Connector = (*Connector)(nil)
 
-func (d *Connector) Connect(ctx context.Context) (driver.Conn, error) {
-	if err := d.cfg.verify(); err != nil {
+func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
+	if err := c.cfg.verify(); err != nil {
 		return nil, err
 	}
-
-	return newConn(ctx, d)
+	return newConn(ctx, c.cfg)
 }
 
-func (d *Connector) Driver() driver.Driver {
-	return Driver{connector: d}
+func (c *Connector) Driver() driver.Driver {
+	return Driver{connector: c}
 }
 
-func (d *Connector) Config() *Config {
-	return d.cfg
+func (c *Connector) Config() *Config {
+	return c.cfg
 }
 
 //------------------------------------------------------------------------------
 
 type Conn struct {
-	driver *Connector
+	cfg *Config
 
 	netConn net.Conn
 	rd      *reader
@@ -112,26 +111,39 @@ type Conn struct {
 	closed int32
 }
 
-func newConn(ctx context.Context, driver *Connector) (*Conn, error) {
-	netConn, err := driver.cfg.Dialer(ctx, driver.cfg.Network, driver.cfg.Addr)
+func newConn(ctx context.Context, cfg *Config) (*Conn, error) {
+	netConn, err := cfg.Dialer(ctx, cfg.Network, cfg.Addr)
 	if err != nil {
 		return nil, err
 	}
 
 	cn := &Conn{
-		driver:  driver,
+		cfg:     cfg,
 		netConn: netConn,
 		rd:      newReader(netConn),
 	}
 
-	if cn.driver.cfg.TLSConfig != nil {
-		if err := enableSSL(ctx, cn, cn.driver.cfg.TLSConfig); err != nil {
+	if cfg.TLSConfig != nil {
+		if err := enableSSL(ctx, cn, cfg.TLSConfig); err != nil {
 			return nil, err
 		}
 	}
 
 	if err := startup(ctx, cn); err != nil {
 		return nil, err
+	}
+
+	for k, v := range cfg.ConnParams {
+		if v != nil {
+			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
+				{Value: v},
+			})
+		} else {
+			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO DEFAULT", k), nil)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return cn, nil
@@ -277,14 +289,14 @@ func (cn *Conn) Ping(ctx context.Context) error {
 
 func (cn *Conn) setReadDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.driver.cfg.ReadTimeout
+		timeout = cn.cfg.ReadTimeout
 	}
 	_ = cn.netConn.SetReadDeadline(cn.deadline(ctx, timeout))
 }
 
 func (cn *Conn) setWriteDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.driver.cfg.WriteTimeout
+		timeout = cn.cfg.WriteTimeout
 	}
 	_ = cn.netConn.SetWriteDeadline(cn.deadline(ctx, timeout))
 }
