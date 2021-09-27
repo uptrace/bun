@@ -22,6 +22,9 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 		switch c := p.Next(); c {
 		case '$':
 			if i, ok := p.Number(); ok {
+				if i < 1 {
+					return "", fmt.Errorf("pgdriver: got $%d, but the minimal arg index is 1", i)
+				}
 				if i > len(args) {
 					return "", fmt.Errorf("pgdriver: got %d args, wanted %d", len(args), i)
 				}

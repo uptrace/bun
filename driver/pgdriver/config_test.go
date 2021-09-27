@@ -42,6 +42,22 @@ func TestParseDSN(t *testing.T) {
 			},
 		},
 		{
+			dsn: "postgres://postgres:1@localhost:5432/testDatabase?search_path=foo",
+			cfg: &pgdriver.Config{
+				Network:  "tcp",
+				Addr:     "localhost:5432",
+				User:     "postgres",
+				Password: "1",
+				Database: "testDatabase",
+				ConnParams: map[string]interface{}{
+					"search_path": "foo",
+				},
+				DialTimeout:  5 * time.Second,
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 5 * time.Second,
+			},
+		},
+		{
 			dsn: "postgres://postgres:password@app.xxx.us-east-1.rds.amazonaws.com:5432/test?sslmode=disable",
 			cfg: &pgdriver.Config{
 				Network:      "tcp",

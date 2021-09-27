@@ -217,6 +217,20 @@ func TestFloat64(t *testing.T) {
 	require.Equal(t, 1.1, f)
 }
 
+func TestConnParams(t *testing.T) {
+	db := sql.OpenDB(pgdriver.NewConnector(
+		pgdriver.WithDSN(dsn()),
+		pgdriver.WithConnParams(map[string]interface{}{
+			"search_path": "foo",
+		}),
+	))
+
+	var searchPath string
+	err := db.QueryRow("SHOW search_path").Scan(&searchPath)
+	require.NoError(t, err)
+	require.Equal(t, "foo", searchPath)
+}
+
 func sqlDB() *sql.DB {
 	db, err := sql.Open("pg", dsn())
 	if err != nil {
