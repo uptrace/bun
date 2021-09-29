@@ -313,7 +313,7 @@ func TestPGDate(t *testing.T) {
 	defer db.Close()
 
 	var str string
-	err := db.NewSelect().ColumnExpr("'2021-09-15'::DATE").Scan(ctx, &str)
+	err := db.NewSelect().ColumnExpr("'2021-09-15'::date").Scan(ctx, &str)
 	require.NoError(t, err)
 	require.Equal(t, "2021-09-15", str)
 
@@ -331,4 +331,14 @@ func TestPGDate(t *testing.T) {
 	err = db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP::date").Scan(ctx, &nullTime)
 	require.NoError(t, err)
 	require.False(t, nullTime.IsZero())
+}
+
+func TestPGTimetz(t *testing.T) {
+	db := pg(t)
+	defer db.Close()
+
+	var tm time.Time
+	err := db.NewSelect().ColumnExpr("now()::timetz").Scan(ctx, &tm)
+	require.NoError(t, err)
+	require.NotZero(t, tm)
 }
