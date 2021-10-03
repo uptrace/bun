@@ -89,27 +89,33 @@ func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 }
 
 func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
-	if j.Relation.M2MTable != nil {
-		q = q.ColumnExpr(string(j.Relation.M2MTable.SQLAlias) + ".*")
-	}
-
 	b := make([]byte, 0, 32)
 
+	joinTable := j.JoinModel.Table()
 	if len(j.columns) > 0 {
 		for i, col := range j.columns {
 			if i > 0 {
 				b = append(b, ", "...)
 			}
 
+			if col.Args == nil {
+				if field, ok := joinTable.FieldMap[col.Query]; ok {
+					b = append(b, joinTable.SQLAlias...)
+					b = append(b, '.')
+					b = append(b, field.SQLName...)
+					continue
+				}
+			}
+
 			var err error
 			b, err = col.AppendQuery(q.db.fmter, b)
 			if err != nil {
-				q.err = err
+				q.setErr(err)
 				return q
 			}
+
 		}
 	} else {
-		joinTable := j.JoinModel.Table()
 		b = appendColumns(b, joinTable.SQLAlias, joinTable.Fields)
 	}
 
@@ -137,6 +143,10 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 
 	index := j.JoinModel.parentIndex()
 	baseTable := j.BaseModel.Table()
+
+	if j.Relation.M2MTable != nil {
+		q = q.ColumnExpr(string(j.Relation.M2MTable.SQLAlias) + ".*")
+	}
 
 	//nolint
 	var join []byte

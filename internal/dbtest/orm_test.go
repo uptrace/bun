@@ -29,6 +29,7 @@ func TestORM(t *testing.T) {
 		{testBulkUpdate},
 		{testRelationColumn},
 		{testRelationExcludeAll},
+		{testM2MRelationExcludeColumn},
 		{testRelationBelongsToSelf},
 	}
 
@@ -369,6 +370,63 @@ func testRelationBelongsToSelf(t *testing.T, db *bun.DB) {
 		{ID: 1},
 		{ID: 2, ModelID: 1, Model: &Model{ID: 1}},
 	}, models)
+}
+
+func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
+	type Item struct {
+		ID        int64
+		CreatedAt time.Time `bun:",notnull,nullzero"`
+		UpdatedAt time.Time `bun:",notnull,nullzero"`
+	}
+
+	type Order struct {
+		ID    int64
+		Items []Item `bun:"m2m:order_to_items"`
+	}
+
+	type OrderToItem struct {
+		OrderID   int64     `bun:",pk"`
+		Order     *Order    `bun:"rel:has-one,join:order_id=id"`
+		ItemID    int64     `bun:",pk"`
+		Item      *Item     `bun:"rel:has-one,join:item_id=id"`
+		CreatedAt time.Time `bun:",notnull,nullzero"`
+	}
+
+	db.RegisterModel((*OrderToItem)(nil))
+
+	err := db.ResetModel(ctx, (*Order)(nil), (*Item)(nil), (*OrderToItem)(nil))
+	require.NoError(t, err)
+
+	items := []Item{
+		{ID: 1, CreatedAt: time.Unix(1, 0), UpdatedAt: time.Unix(1, 0)},
+		{ID: 2, CreatedAt: time.Unix(2, 0), UpdatedAt: time.Unix(1, 0)},
+	}
+	_, err = db.NewInsert().Model(&items).Exec(ctx)
+	require.NoError(t, err)
+
+	orders := []Order{
+		{ID: 1},
+		{ID: 2},
+	}
+	_, err = db.NewInsert().Model(&orders).Exec(ctx)
+	require.NoError(t, err)
+
+	orderItems := []OrderToItem{
+		{OrderID: 1, ItemID: 1, CreatedAt: time.Unix(3, 0)},
+		{OrderID: 2, ItemID: 2, CreatedAt: time.Unix(4, 0)},
+	}
+	_, err = db.NewInsert().Model(&orderItems).Exec(ctx)
+	require.NoError(t, err)
+
+	order := new(Order)
+	err = db.NewSelect().
+		Model(order).
+		Where("id = ?", 1).
+		Relation("Items", func(sq *bun.SelectQuery) *bun.SelectQuery {
+			return sq.ExcludeColumn("updated_at")
+		}).
+		Scan(ctx)
+	require.NoError(t, err)
 }
 
 type Genre struct {
