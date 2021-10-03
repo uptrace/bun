@@ -36,7 +36,7 @@ func Append(fmter Formatter, b []byte, v interface{}, custom CustomAppender) []b
 	case string:
 		return dialect.AppendString(b, v)
 	case time.Time:
-		return dialect.AppendTime(b, v)
+		return fmter.Dialect().AppendTime(b, v)
 	case []byte:
 		return dialect.AppendBytes(b, v)
 	case QueryAppender:

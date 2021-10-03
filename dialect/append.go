@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"math"
 	"strconv"
-	"time"
 	"unicode/utf8"
 
 	"github.com/uptrace/bun/internal"
@@ -91,13 +90,6 @@ func AppendBytes(b []byte, bytes []byte) []byte {
 
 	b = append(b, '\'')
 
-	return b
-}
-
-func AppendTime(b []byte, tm time.Time) []byte {
-	b = append(b, '\'')
-	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
-	b = append(b, '\'')
 	return b
 }
 

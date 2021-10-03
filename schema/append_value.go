@@ -194,7 +194,7 @@ func AppendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 
 func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	tm := v.Interface().(time.Time)
-	return dialect.AppendTime(b, tm)
+	return fmter.Dialect().AppendTime(b, tm)
 }
 
 func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
