@@ -38,6 +38,13 @@ func customAppender(typ reflect.Type) schema.AppenderFunc {
 	return nil
 }
 
+func appendTime(b []byte, tm time.Time) []byte {
+	b = append(b, '\'')
+	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
+	b = append(b, '\'')
+	return b
+}
+
 func appendUint32ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	return strconv.AppendInt(b, int64(int32(v.Uint())), 10)
 }
@@ -61,7 +68,7 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	case string:
 		return arrayAppendString(b, v)
 	case time.Time:
-		return dialect.AppendTime(b, v)
+		return appendTime(b, v)
 	default:
 		err := fmt.Errorf("pgdialect: can't append %T", v)
 		return dialect.AppendError(b, err)

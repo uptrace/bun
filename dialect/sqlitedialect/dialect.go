@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -60,6 +61,13 @@ func (d *Dialect) onField(field *schema.Field) {
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'
+}
+
+func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
+	b = append(b, '\'')
+	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
+	b = append(b, '\'')
+	return b
 }
 
 func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {

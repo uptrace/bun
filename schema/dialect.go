@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -19,8 +20,11 @@ type Dialect interface {
 	OnTable(table *Table)
 
 	IdentQuote() byte
+
+	AppendTime(b []byte, tm time.Time) []byte
 	Append(fmter Formatter, b []byte, v interface{}) []byte
 	Appender(typ reflect.Type) AppenderFunc
+
 	FieldAppender(field *Field) AppenderFunc
 	Scanner(typ reflect.Type) ScannerFunc
 }
@@ -62,6 +66,13 @@ func (d *nopDialect) OnTable(table *Table) {}
 
 func (d *nopDialect) IdentQuote() byte {
 	return '"'
+}
+
+func (d *nopDialect) AppendTime(b []byte, tm time.Time) []byte {
+	b = append(b, '\'')
+	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
+	b = append(b, '\'')
+	return b
 }
 
 func (d *nopDialect) Append(fmter Formatter, b []byte, v interface{}) []byte {
