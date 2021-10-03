@@ -310,14 +310,14 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 	return q
 }
 
-func (q *SelectQuery) forEachHasOneJoin(fn func(*relationJoin) error) error {
+func (q *SelectQuery) forEachInlineRelJoin(fn func(*relationJoin) error) error {
 	if q.tableModel == nil {
 		return nil
 	}
-	return q._forEachHasOneJoin(fn, q.tableModel.getJoins())
+	return q._forEachInlineRelJoin(fn, q.tableModel.getJoins())
 }
 
-func (q *SelectQuery) _forEachHasOneJoin(fn func(*relationJoin) error, joins []relationJoin) error {
+func (q *SelectQuery) _forEachInlineRelJoin(fn func(*relationJoin) error, joins []relationJoin) error {
 	for i := range joins {
 		j := &joins[i]
 		switch j.Relation.Type {
@@ -325,7 +325,7 @@ func (q *SelectQuery) _forEachHasOneJoin(fn func(*relationJoin) error, joins []r
 			if err := fn(j); err != nil {
 				return err
 			}
-			if err := q._forEachHasOneJoin(fn, j.JoinModel.getJoins()); err != nil {
+			if err := q._forEachInlineRelJoin(fn, j.JoinModel.getJoins()); err != nil {
 				return err
 			}
 		}
@@ -423,7 +423,7 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
-	if err := q.forEachHasOneJoin(func(j *relationJoin) error {
+	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
 		b, err = j.appendHasOneJoin(fmter, b, q)
 		return err
@@ -553,13 +553,13 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 		b = append(b, '*')
 	}
 
-	if err := q.forEachHasOneJoin(func(join *relationJoin) error {
+	if err := q.forEachInlineRelJoin(func(join *relationJoin) error {
 		if len(b) != start {
 			b = append(b, ", "...)
 			start = len(b)
 		}
 
-		b, err = q.appendHasOneColumns(fmter, b, join)
+		b, err = q.appendInlineRelColumns(fmter, b, join)
 		if err != nil {
 			return err
 		}
@@ -574,7 +574,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 	return b, nil
 }
 
-func (q *SelectQuery) appendHasOneColumns(
+func (q *SelectQuery) appendInlineRelColumns(
 	fmter schema.Formatter, b []byte, join *relationJoin,
 ) (_ []byte, err error) {
 	join.applyTo(q)
