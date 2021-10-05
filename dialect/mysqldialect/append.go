@@ -11,13 +11,6 @@ import (
 
 var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
 
-func appender(typ reflect.Type) schema.AppenderFunc {
-	if typ == timeType {
-		return appendTimeValue
-	}
-	return schema.Appender(typ, customAppender)
-}
-
 func customAppender(typ reflect.Type) schema.AppenderFunc {
 	switch typ.Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map, reflect.Struct:

@@ -97,7 +97,7 @@ func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
 		return v.(schema.AppenderFunc)
 	}
 
-	fn := appender(typ)
+	fn := schema.Appender(typ, customAppender)
 
 	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
 		return v.(schema.AppenderFunc)
