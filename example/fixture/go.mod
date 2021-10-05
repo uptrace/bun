@@ -13,9 +13,9 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
 require (
-	github.com/uptrace/bun v1.0.10
-	github.com/uptrace/bun/dbfixture v1.0.10
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.10
-	github.com/uptrace/bun/driver/sqliteshim v1.0.10
-	github.com/uptrace/bun/extra/bundebug v1.0.10
+	github.com/uptrace/bun v1.0.11
+	github.com/uptrace/bun/dbfixture v1.0.11
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.11
+	github.com/uptrace/bun/driver/sqliteshim v1.0.11
+	github.com/uptrace/bun/extra/bundebug v1.0.11
 )

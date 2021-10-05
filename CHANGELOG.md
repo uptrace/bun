@@ -1,3 +1,12 @@
+## [1.0.11](https://github.com/uptrace/bun/compare/v1.0.10...v1.0.11) (2021-10-05)
+
+
+### Bug Fixes
+
+* **mysqldialect:** remove duplicate AppendTime ([8d42090](https://github.com/uptrace/bun/commit/8d42090af34a1760004482c7fc0923b114d79937))
+
+
+
 ## [1.0.10](https://github.com/uptrace/bun/compare/v1.0.9...v1.0.10) (2021-10-05)
 
 
