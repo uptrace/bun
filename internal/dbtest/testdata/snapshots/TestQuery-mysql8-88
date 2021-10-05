@@ -1,1 +1,1 @@
-UPDATE `models` AS `model` SET  WHERE (`model`.`id` = 42)
+INSERT INTO `models` (`id`, `time`) VALUES (123, '1970-01-01 00:00:00')
