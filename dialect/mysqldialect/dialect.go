@@ -89,12 +89,7 @@ func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
 }
 
 func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
-	switch v := v.(type) {
-	case time.Time:
-		return appendTime(b, v)
-	default:
-		return schema.Append(fmter, b, v, customAppender)
-	}
+	return schema.Append(fmter, b, v, customAppender)
 }
 
 func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
