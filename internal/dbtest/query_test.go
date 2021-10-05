@@ -547,7 +547,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID int `bun:",allowzero"`
+				ID int64 `bun:",allowzero"`
 			}
 			return db.NewInsert().Model(new(Model))
 		},
@@ -556,6 +556,13 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{ID: 42}).OmitZero().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   int64
+				Time time.Time
+			}
+			return db.NewInsert().Model(&Model{ID: 123, Time: time.Unix(0, 0)})
 		},
 	}
 
