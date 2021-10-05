@@ -3,6 +3,7 @@ package schema
 import (
 	"database/sql"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
@@ -76,7 +77,43 @@ func (d *nopDialect) AppendTime(b []byte, tm time.Time) []byte {
 }
 
 func (d *nopDialect) Append(fmter Formatter, b []byte, v interface{}) []byte {
-	return Append(fmter, b, v, nil)
+	switch v := v.(type) {
+	case nil:
+		return dialect.AppendNull(b)
+	case bool:
+		return dialect.AppendBool(b, v)
+	case int:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int32:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int64:
+		return strconv.AppendInt(b, v, 10)
+	case uint:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint32:
+		return strconv.AppendUint(b, uint64(v), 10)
+	case uint64:
+		return strconv.AppendUint(b, v, 10)
+	case float32:
+		return dialect.AppendFloat32(b, v)
+	case float64:
+		return dialect.AppendFloat64(b, v)
+	case string:
+		return dialect.AppendString(b, v)
+	case time.Time:
+		return d.AppendTime(b, v)
+	case []byte:
+		return dialect.AppendBytes(b, v)
+	case QueryAppender:
+		return AppendQueryAppender(fmter, b, v)
+	default:
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Ptr && vv.IsNil() {
+			return dialect.AppendNull(b)
+		}
+		appender := Appender(vv.Type(), nil)
+		return appender(fmter, b, vv)
+	}
 }
 
 func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {

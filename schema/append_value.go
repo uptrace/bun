@@ -13,6 +13,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
 	"github.com/uptrace/bun/internal"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type (
@@ -80,7 +81,7 @@ func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 		return appendQueryAppenderValue
 	}
 	if typ.Implements(driverValuerType) {
-		return driverValueAppender(custom)
+		return appendDriverValue
 	}
 
 	kind := typ.Kind()
@@ -88,16 +89,16 @@ func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 	if kind != reflect.Ptr {
 		ptr := reflect.PtrTo(typ)
 		if ptr.Implements(queryAppenderType) {
-			return addrAppender(appendQueryAppenderValue, custom)
+			return addrAppender(appendQueryAppenderValue)
 		}
 		if ptr.Implements(driverValuerType) {
-			return addrAppender(driverValueAppender(custom), custom)
+			return addrAppender(appendDriverValue)
 		}
 	}
 
 	switch kind {
 	case reflect.Interface:
-		return ifaceAppenderFunc(typ, custom)
+		return ifaceAppenderFunc
 	case reflect.Ptr:
 		if fn := Appender(typ.Elem(), custom); fn != nil {
 			return PtrAppender(fn)
@@ -120,15 +121,13 @@ func Appender(typ reflect.Type, custom CustomAppender) AppenderFunc {
 	return appenders[typ.Kind()]
 }
 
-func ifaceAppenderFunc(typ reflect.Type, custom func(reflect.Type) AppenderFunc) AppenderFunc {
-	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
-		if v.IsNil() {
-			return dialect.AppendNull(b)
-		}
-		elem := v.Elem()
-		appender := Appender(elem.Type(), custom)
-		return appender(fmter, b, elem)
+func ifaceAppenderFunc(fmter Formatter, b []byte, v reflect.Value) []byte {
+	if v.IsNil() {
+		return dialect.AppendNull(b)
 	}
+	elem := v.Elem()
+	appender := fmter.Dialect().Appender(elem.Type())
+	return appender(fmter, b, elem)
 }
 
 func PtrAppender(fn AppenderFunc) AppenderFunc {
@@ -219,21 +218,15 @@ func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte
 	return AppendQueryAppender(fmter, b, v.Interface().(QueryAppender))
 }
 
-func driverValueAppender(custom CustomAppender) AppenderFunc {
-	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
-		return appendDriverValue(fmter, b, v.Interface().(driver.Valuer), custom)
-	}
-}
-
-func appendDriverValue(fmter Formatter, b []byte, v driver.Valuer, custom CustomAppender) []byte {
-	value, err := v.Value()
+func appendDriverValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+	value, err := v.Interface().(driver.Valuer).Value()
 	if err != nil {
 		return dialect.AppendError(b, err)
 	}
-	return Append(fmter, b, value, custom)
+	return fmter.Dialect().Append(fmter, b, value)
 }
 
-func addrAppender(fn AppenderFunc, custom CustomAppender) AppenderFunc {
+func addrAppender(fn AppenderFunc) AppenderFunc {
 	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
 		if !v.CanAddr() {
 			err := fmt.Errorf("bun: Append(nonaddressable %T)", v.Interface())
@@ -241,4 +234,30 @@ func addrAppender(fn AppenderFunc, custom CustomAppender) AppenderFunc {
 		}
 		return fn(fmter, b, v.Addr())
 	}
+}
+
+func appendMsgpack(fmter Formatter, b []byte, v reflect.Value) []byte {
+	hexEnc := internal.NewHexEncoder(b)
+
+	enc := msgpack.GetEncoder()
+	defer msgpack.PutEncoder(enc)
+
+	enc.Reset(hexEnc)
+	if err := enc.EncodeValue(v); err != nil {
+		return dialect.AppendError(b, err)
+	}
+
+	if err := hexEnc.Close(); err != nil {
+		return dialect.AppendError(b, err)
+	}
+
+	return hexEnc.Bytes()
+}
+
+func AppendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
+	bb, err := app.AppendQuery(fmter, b)
+	if err != nil {
+		return dialect.AppendError(b, err)
+	}
+	return bb
 }
