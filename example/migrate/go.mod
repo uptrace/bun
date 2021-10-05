@@ -12,9 +12,9 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/uptrace/bun v1.0.9
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.9
-	github.com/uptrace/bun/driver/sqliteshim v1.0.9
-	github.com/uptrace/bun/extra/bundebug v1.0.9
+	github.com/uptrace/bun v1.0.10
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.10
+	github.com/uptrace/bun/driver/sqliteshim v1.0.10
+	github.com/uptrace/bun/extra/bundebug v1.0.10
 	github.com/urfave/cli/v2 v2.3.0
 )
