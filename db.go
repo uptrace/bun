@@ -163,7 +163,14 @@ func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) 
 	return rs.ScanRow(ctx, rows)
 }
 
+type queryHookIniter interface {
+	Init(db *DB)
+}
+
 func (db *DB) AddQueryHook(hook QueryHook) {
+	if initer, ok := hook.(queryHookIniter); ok {
+		initer.Init(db)
+	}
 	db.queryHooks = append(db.queryHooks, hook)
 }
 
