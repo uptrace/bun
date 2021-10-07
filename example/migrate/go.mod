@@ -12,6 +12,7 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/uptrace/bun v1.0.11
 	github.com/uptrace/bun/dialect/sqlitedialect v1.0.11
 	github.com/uptrace/bun/driver/sqliteshim v1.0.11

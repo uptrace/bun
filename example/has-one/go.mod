@@ -11,6 +11,7 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
+	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/uptrace/bun v1.0.11
 	github.com/uptrace/bun/dialect/sqlitedialect v1.0.11
 	github.com/uptrace/bun/driver/sqliteshim v1.0.11

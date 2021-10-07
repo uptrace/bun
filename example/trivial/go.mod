@@ -18,6 +18,7 @@ replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialec
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/mattn/go-colorable v0.1.11 // indirect
 	github.com/uptrace/bun v1.0.11
 	github.com/uptrace/bun/dialect/mysqldialect v1.0.11
 	github.com/uptrace/bun/dialect/pgdialect v1.0.11
