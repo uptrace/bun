@@ -71,6 +71,15 @@ func newDefaultConfig() *Config {
 
 type DriverOption func(cfg *Config)
 
+func WithNetwork(network string) DriverOption {
+	if network == "" {
+		panic("network is empty")
+	}
+	return func(cfg *Config) {
+		cfg.Network = network
+	}
+}
+
 func WithAddr(addr string) DriverOption {
 	if addr == "" {
 		panic("addr is empty")
