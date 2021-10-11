@@ -40,7 +40,7 @@ func main() {
 	sqldb.SetMaxOpenConns(1)
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	// Register models before loading fixtures.
 	db.RegisterModel((*User)(nil), (*Org)(nil))
