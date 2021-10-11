@@ -31,7 +31,7 @@ func main() {
 
 	db := bun.NewDB(sqlite, sqlitedialect.New())
 	db.AddQueryHook(bunotel.NewQueryHook())
-	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	if _, err := db.NewCreateTable().Model((*TestModel)(nil)).Exec(ctx); err != nil {
 		panic(err)

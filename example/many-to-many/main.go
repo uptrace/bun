@@ -38,7 +38,7 @@ func main() {
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	defer db.Close()
 
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	// Register many to many model so bun can better recognize m2m relation.
 	// This should be done before you use the model for the first time.

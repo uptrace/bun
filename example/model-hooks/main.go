@@ -25,7 +25,7 @@ func main() {
 	sqlite.SetMaxOpenConns(1)
 
 	db := bun.NewDB(sqlite, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	// Register models for the fixture.
 	db.RegisterModel((*User)(nil), (*Story)(nil))

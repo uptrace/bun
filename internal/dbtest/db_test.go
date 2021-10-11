@@ -63,7 +63,7 @@ func pg(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=pg>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db
@@ -85,7 +85,7 @@ func pgx(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=pg>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db
@@ -107,7 +107,7 @@ func mysql8(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db
@@ -129,7 +129,7 @@ func mysql5(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db
@@ -151,7 +151,7 @@ func mariadb(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db
@@ -168,7 +168,7 @@ func sqlite(tb testing.TB) *bun.DB {
 	require.Equal(tb, "DB<dialect=sqlite>", db.String())
 
 	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose()))
+		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 	}
 
 	return db

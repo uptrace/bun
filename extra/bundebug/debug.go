@@ -14,9 +14,9 @@ import (
 
 type ConfigOption func(*QueryHook)
 
-func WithVerbose() ConfigOption {
+func WithVerbose(on bool) ConfigOption {
 	return func(h *QueryHook) {
-		h.verbose = true
+		h.verbose = on
 	}
 }
 
