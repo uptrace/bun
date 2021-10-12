@@ -69,9 +69,12 @@ func newDefaultConfig() *Config {
 	return cfg
 }
 
-type DriverOption func(cfg *Config)
+type Option func(cfg *Config)
 
-func WithNetwork(network string) DriverOption {
+// Deprecated. Use Option instead.
+type DriverOption = Option
+
+func WithNetwork(network string) Option {
 	if network == "" {
 		panic("network is empty")
 	}
@@ -80,7 +83,7 @@ func WithNetwork(network string) DriverOption {
 	}
 }
 
-func WithAddr(addr string) DriverOption {
+func WithAddr(addr string) Option {
 	if addr == "" {
 		panic("addr is empty")
 	}
@@ -89,13 +92,13 @@ func WithAddr(addr string) DriverOption {
 	}
 }
 
-func WithTLSConfig(tlsConfig *tls.Config) DriverOption {
+func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(cfg *Config) {
 		cfg.TLSConfig = tlsConfig
 	}
 }
 
-func WithUser(user string) DriverOption {
+func WithUser(user string) Option {
 	if user == "" {
 		panic("user is empty")
 	}
@@ -104,13 +107,13 @@ func WithUser(user string) DriverOption {
 	}
 }
 
-func WithPassword(password string) DriverOption {
+func WithPassword(password string) Option {
 	return func(cfg *Config) {
 		cfg.Password = password
 	}
 }
 
-func WithDatabase(database string) DriverOption {
+func WithDatabase(database string) Option {
 	if database == "" {
 		panic("database is empty")
 	}
@@ -119,19 +122,19 @@ func WithDatabase(database string) DriverOption {
 	}
 }
 
-func WithApplicationName(appName string) DriverOption {
+func WithApplicationName(appName string) Option {
 	return func(cfg *Config) {
 		cfg.AppName = appName
 	}
 }
 
-func WithConnParams(params map[string]interface{}) DriverOption {
+func WithConnParams(params map[string]interface{}) Option {
 	return func(cfg *Config) {
 		cfg.ConnParams = params
 	}
 }
 
-func WithTimeout(timeout time.Duration) DriverOption {
+func WithTimeout(timeout time.Duration) Option {
 	return func(cfg *Config) {
 		cfg.DialTimeout = timeout
 		cfg.ReadTimeout = timeout
@@ -139,25 +142,25 @@ func WithTimeout(timeout time.Duration) DriverOption {
 	}
 }
 
-func WithDialTimeout(dialTimeout time.Duration) DriverOption {
+func WithDialTimeout(dialTimeout time.Duration) Option {
 	return func(cfg *Config) {
 		cfg.DialTimeout = dialTimeout
 	}
 }
 
-func WithReadTimeout(readTimeout time.Duration) DriverOption {
+func WithReadTimeout(readTimeout time.Duration) Option {
 	return func(cfg *Config) {
 		cfg.ReadTimeout = readTimeout
 	}
 }
 
-func WithWriteTimeout(writeTimeout time.Duration) DriverOption {
+func WithWriteTimeout(writeTimeout time.Duration) Option {
 	return func(cfg *Config) {
 		cfg.WriteTimeout = writeTimeout
 	}
 }
 
-func WithDSN(dsn string) DriverOption {
+func WithDSN(dsn string) Option {
 	return func(cfg *Config) {
 		opts, err := parseDSN(dsn)
 		if err != nil {
@@ -178,7 +181,7 @@ func env(key, defValue string) string {
 
 //------------------------------------------------------------------------------
 
-func parseDSN(dsn string) ([]DriverOption, error) {
+func parseDSN(dsn string) ([]Option, error) {
 	u, err := url.Parse(dsn)
 	if err != nil {
 		return nil, err
@@ -188,7 +191,7 @@ func parseDSN(dsn string) ([]DriverOption, error) {
 		return nil, errors.New("pgdriver: invalid scheme: " + u.Scheme)
 	}
 
-	var opts []DriverOption
+	var opts []Option
 
 	if u.Host != "" {
 		addr := u.Host

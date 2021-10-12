@@ -70,7 +70,7 @@ type Connector struct {
 	cfg *Config
 }
 
-func NewConnector(opts ...DriverOption) *Connector {
+func NewConnector(opts ...Option) *Connector {
 	c := &Connector{cfg: newDefaultConfig()}
 	for _, opt := range opts {
 		opt(c.cfg)
