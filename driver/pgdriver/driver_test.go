@@ -224,11 +224,32 @@ func TestConnParams(t *testing.T) {
 			"search_path": "foo",
 		}),
 	))
+	defer db.Close()
 
 	var searchPath string
 	err := db.QueryRow("SHOW search_path").Scan(&searchPath)
 	require.NoError(t, err)
 	require.Equal(t, "foo", searchPath)
+}
+
+func TestStatementTimeout(t *testing.T) {
+	ctx := context.Background()
+
+	db := sqlDB()
+	defer db.Close()
+
+	cn, err := db.Conn(ctx)
+	require.NoError(t, err)
+
+	_, err = cn.ExecContext(ctx, "SET statement_timeout = 100")
+	require.NoError(t, err)
+
+	_, err = cn.ExecContext(ctx, "SELECT pg_sleep(1)")
+	require.Error(t, err)
+
+	pgerr, ok := err.(pgdriver.Error)
+	require.True(t, ok)
+	require.True(t, pgerr.StatementTimeout())
 }
 
 func sqlDB() *sql.DB {

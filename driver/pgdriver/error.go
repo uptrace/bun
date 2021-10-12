@@ -21,7 +21,7 @@ func (err Error) Field(k byte) string {
 	return err.m[k]
 }
 
-// IntegrityViolation reports whether an error is a part of
+// IntegrityViolation reports whether the error is a part of
 // Integrity Constraint Violation class of errors.
 //
 // https://www.postgresql.org/docs/current/static/errcodes-appendix.html
@@ -32,6 +32,11 @@ func (err Error) IntegrityViolation() bool {
 	default:
 		return false
 	}
+}
+
+// StatementTimeout reports whether the error is a statement timeout error.
+func (err Error) StatementTimeout() bool {
+	return err.Field('C') == "57014"
 }
 
 func (err Error) Error() string {
