@@ -564,6 +564,9 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(&Model{ID: 123, Time: time.Unix(0, 0)})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewInsert().ColumnExpr("id, name").Table("dest").Table("src")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
