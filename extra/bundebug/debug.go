@@ -13,10 +13,10 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type ConfigOption func(*QueryHook)
+type Option func(*QueryHook)
 
 // WithEnabled enables/disables the hook.
-func WithEnabled(on bool) ConfigOption {
+func WithEnabled(on bool) Option {
 	return func(h *QueryHook) {
 		h.enabled = on
 	}
@@ -24,18 +24,18 @@ func WithEnabled(on bool) ConfigOption {
 
 // WithVerbose configures the hook to log all queries
 // (by default, only failed queries are logged).
-func WithVerbose(on bool) ConfigOption {
+func WithVerbose(on bool) Option {
 	return func(h *QueryHook) {
 		h.verbose = on
 	}
 }
 
-// WithEnv configures the hook using then environment variable value.
+// WithEnv configures the hook using the environment variable value.
 // For example, WithEnv("BUNDEBUG"):
 //    - BUNDEBUG=0 - disables the hook.
 //    - BUNDEBUG=1 - enables the hook.
 //    - BUNDEBUG=2 - enables the hook and verbose mode.
-func FromEnv(key string) ConfigOption {
+func FromEnv(key string) Option {
 	if key == "" {
 		key = "BUNDEBUG"
 	}
@@ -54,7 +54,7 @@ type QueryHook struct {
 
 var _ bun.QueryHook = (*QueryHook)(nil)
 
-func NewQueryHook(opts ...ConfigOption) *QueryHook {
+func NewQueryHook(opts ...Option) *QueryHook {
 	h := &QueryHook{
 		enabled: true,
 	}
