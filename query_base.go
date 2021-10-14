@@ -260,6 +260,11 @@ func (q *baseQuery) addColumn(column schema.QueryWithArgs) {
 }
 
 func (q *baseQuery) excludeColumn(columns []string) {
+	if q.table == nil {
+		q.setErr(errNilModel)
+		return
+	}
+
 	if q.columns == nil {
 		for _, f := range q.table.Fields {
 			q.columns = append(q.columns, schema.UnsafeIdent(f.Name))
