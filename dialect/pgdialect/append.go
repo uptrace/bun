@@ -2,6 +2,7 @@ package pgdialect
 
 import (
 	"database/sql/driver"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -64,7 +65,7 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	case bool:
 		return dialect.AppendBool(b, v)
 	case []byte:
-		return dialect.AppendBytes(b, v)
+		return arrayAppendBytes(b, v)
 	case string:
 		return arrayAppendString(b, v)
 	case time.Time:
@@ -76,17 +77,26 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 }
 
 func arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
-	if typ.Kind() == reflect.String {
-		return arrayAppendStringValue
-	}
 	if typ.Implements(driverValuerType) {
 		return arrayAppendDriverValue
+	}
+	switch typ.Kind() {
+	case reflect.String:
+		return arrayAppendStringValue
+	case reflect.Slice:
+		if typ.Elem().Kind() == reflect.Uint8 {
+			return arrayAppendBytesValue
+		}
 	}
 	return schema.Appender(typ, customAppender)
 }
 
 func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
 	return arrayAppendString(b, v.String())
+}
+
+func arrayAppendBytesValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return arrayAppendBytes(b, v.Bytes())
 }
 
 func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -279,6 +289,22 @@ func appendFloat64Slice(b []byte, floats []float64) []byte {
 }
 
 //------------------------------------------------------------------------------
+
+func arrayAppendBytes(b []byte, bs []byte) []byte {
+	if bs == nil {
+		return dialect.AppendNull(b)
+	}
+
+	b = append(b, `"\\x`...)
+
+	s := len(b)
+	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
+	hex.Encode(b[s:], bs)
+
+	b = append(b, '"')
+
+	return b
+}
 
 func arrayAppendString(b []byte, s string) []byte {
 	b = append(b, '"')

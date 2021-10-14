@@ -2,6 +2,7 @@ package pgdialect
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 )
@@ -112,6 +113,16 @@ func (p *arrayParser) readSubstring() ([]byte, error) {
 
 		p.buf = append(p.buf, c)
 		c = next
+	}
+
+	if bytes.HasPrefix(p.buf, []byte("\\x")) && len(p.buf)%2 == 0 {
+		data := p.buf[2:]
+		buf := make([]byte, hex.DecodedLen(len(data)))
+		n, err := hex.Decode(buf, data)
+		if err != nil {
+			return nil, err
+		}
+		return buf[:n], nil
 	}
 
 	return p.buf, nil

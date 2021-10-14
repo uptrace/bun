@@ -126,7 +126,11 @@ func init() {
 }
 `
 
-const sqlTemplate = `SELECT 1
+const sqlTemplate = `SET statement_timeout = 0;
+
+--bun:split
+
+SELECT 1
 
 --bun:split
 
