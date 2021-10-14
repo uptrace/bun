@@ -2,6 +2,8 @@ package dbtest_test
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -16,13 +18,14 @@ import (
 
 func TestPGArray(t *testing.T) {
 	type Model struct {
-		ID     int
+		ID     int64
 		Array1 []string  `bun:",array"`
 		Array2 *[]string `bun:",array"`
 		Array3 *[]string `bun:",array"`
 	}
 
 	db := pg(t)
+	defer db.Close()
 
 	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
 	require.NoError(t, err)
@@ -55,6 +58,49 @@ func TestPGArray(t *testing.T) {
 		Scan(ctx, pgdialect.Array(&strs))
 	require.NoError(t, err)
 	require.Nil(t, strs)
+}
+
+type Hash [32]byte
+
+func (h *Hash) Scan(src interface{}) error {
+	srcB, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("can't scan %T into Hash", src)
+	}
+	if len(srcB) != len(h) {
+		return fmt.Errorf("can't scan []byte of len %d into Hash, want %d", len(srcB), len(h))
+	}
+	copy(h[:], srcB)
+	return nil
+}
+
+func (h Hash) Value() (driver.Value, error) {
+	return h[:], nil
+}
+
+func TestPGArrayValuer(t *testing.T) {
+	type Model struct {
+		ID    int64
+		Array []Hash `bun:",array"`
+	}
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model1 := &Model{
+		ID:    123,
+		Array: []Hash{Hash{}},
+	}
+	_, err = db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, model1, model2)
 }
 
 type Recipe struct {

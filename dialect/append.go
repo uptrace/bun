@@ -77,16 +77,16 @@ func AppendString(b []byte, s string) []byte {
 	return b
 }
 
-func AppendBytes(b []byte, bytes []byte) []byte {
-	if bytes == nil {
+func AppendBytes(b []byte, bs []byte) []byte {
+	if bs == nil {
 		return AppendNull(b)
 	}
 
 	b = append(b, `'\x`...)
 
 	s := len(b)
-	b = append(b, make([]byte, hex.EncodedLen(len(bytes)))...)
-	hex.Encode(b[s:], bytes)
+	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
+	hex.Encode(b[s:], bs)
 
 	b = append(b, '\'')
 
