@@ -24,7 +24,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,7 +55,7 @@ func pg(tb testing.TB) *bun.DB {
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, pgdialect.New())
@@ -78,7 +77,7 @@ func pgx(tb testing.TB) *bun.DB {
 	sqldb, err := sql.Open("pgx", dsn)
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, pgdialect.New())
@@ -100,7 +99,7 @@ func mysql8(tb testing.TB) *bun.DB {
 	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
@@ -122,7 +121,7 @@ func mysql5(tb testing.TB) *bun.DB {
 	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
@@ -144,7 +143,7 @@ func mariadb(tb testing.TB) *bun.DB {
 	sqldb, err := sql.Open("mysql", dsn)
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
@@ -161,7 +160,7 @@ func sqlite(tb testing.TB) *bun.DB {
 	sqldb, err := sql.Open(sqliteshim.DriverName(), filepath.Join(tb.TempDir(), "sqlite.db"))
 	require.NoError(tb, err)
 	tb.Cleanup(func() {
-		assert.NoError(tb, sqldb.Close())
+		require.NoError(tb, sqldb.Close())
 	})
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
@@ -226,6 +225,7 @@ func TestDB(t *testing.T) {
 		{testPointers},
 		{testExists},
 		{testScanTimeIntoString},
+		{testModelNonPointer},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -899,4 +899,12 @@ func testScanTimeIntoString(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP").Scan(ctx, &str)
 	require.NoError(t, err)
 	require.NotZero(t, str)
+}
+
+func testModelNonPointer(t *testing.T, db *bun.DB) {
+	type Model struct{}
+
+	_, err := db.NewInsert().Model(Model{}).ExcludeColumn("id").Returning("id").Exec(ctx)
+	require.Error(t, err)
+	require.Equal(t, "bun: Model(non-pointer dbtest_test.Model)", err.Error())
 }
