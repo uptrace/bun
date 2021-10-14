@@ -1,3 +1,24 @@
+## [1.0.12](https://github.com/uptrace/bun/compare/v1.0.11...v1.0.12) (2021-10-14)
+
+
+### Bug Fixes
+
+* add InsertQuery.ColumnExpr to specify columns ([60ffe29](https://github.com/uptrace/bun/commit/60ffe293b37912d95f28e69734ff51edf4b27da7))
+* **bundebug:** change WithVerbose to accept a bool flag ([b2f8b91](https://github.com/uptrace/bun/commit/b2f8b912de1dc29f40c79066de1e9d6379db666c))
+* **pgdialect:** fix bytea[] handling ([a5ca013](https://github.com/uptrace/bun/commit/a5ca013742c5a2e947b43d13f9c2fc0cf6a65d9c))
+* **pgdriver:** rename DriverOption to Option ([51c1702](https://github.com/uptrace/bun/commit/51c1702431787d7369904b2624e346bf3e59c330))
+* support allowzero on the soft delete field ([d0abec7](https://github.com/uptrace/bun/commit/d0abec71a9a546472a83bd70ed4e6a7357659a9b))
+
+
+### Features
+
+* **bundebug:** allow to configure the hook using env var, for example, BUNDEBUG={0,1,2} ([ce92852](https://github.com/uptrace/bun/commit/ce928524cab9a83395f3772ae9dd5d7732af281d))
+* **bunotel:** report DBStats metrics ([b9b1575](https://github.com/uptrace/bun/commit/b9b15750f405cdbd345b776f5a56c6f742bc7361))
+* **pgdriver:** add Error.StatementTimeout ([8a7934d](https://github.com/uptrace/bun/commit/8a7934dd788057828bb2b0983732b4394b74e960))
+* **pgdriver:** allow setting Network in config ([b24b5d8](https://github.com/uptrace/bun/commit/b24b5d8014195a56ad7a4c634c10681038e6044d))
+
+
+
 ## [1.0.11](https://github.com/uptrace/bun/compare/v1.0.10...v1.0.11) (2021-10-05)
 
 

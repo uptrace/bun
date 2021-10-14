@@ -14,10 +14,9 @@ replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/mattn/go-colorable v0.1.11 // indirect
-	github.com/uptrace/bun v1.0.11
-	github.com/uptrace/bun/dbfixture v1.0.11
-	github.com/uptrace/bun/dialect/pgdialect v1.0.11
-	github.com/uptrace/bun/driver/pgdriver v1.0.11
-	github.com/uptrace/bun/extra/bundebug v1.0.11
+	github.com/uptrace/bun v1.0.12
+	github.com/uptrace/bun/dbfixture v1.0.12
+	github.com/uptrace/bun/dialect/pgdialect v1.0.12
+	github.com/uptrace/bun/driver/pgdriver v1.0.12
+	github.com/uptrace/bun/extra/bundebug v1.0.12
 )
