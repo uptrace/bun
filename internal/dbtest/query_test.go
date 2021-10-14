@@ -37,9 +37,18 @@ func TestQuery(t *testing.T) {
 		User   *User `bun:"rel:belongs-to"`
 	}
 
-	type SoftDelete struct {
+	type SoftDelete1 struct {
+		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
+
 		ID        int64
 		DeletedAt time.Time `bun:",soft_delete"`
+	}
+
+	type SoftDelete2 struct {
+		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
+
+		ID        int64
+		DeletedAt time.Time `bun:",soft_delete,allowzero"`
 	}
 
 	queries := []func(db *bun.DB) schema.QueryAppender{
@@ -403,19 +412,19 @@ func TestQuery(t *testing.T) {
 			return db.NewUpdate().Model(new(Model)).Value("foo", "?", "bar").WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete)).WherePK()
+			return db.NewDelete().Model(new(SoftDelete1)).WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete)).WherePK().ForceDelete()
+			return db.NewDelete().Model(new(SoftDelete1)).WherePK().ForceDelete()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete))
+			return db.NewSelect().Model(new(SoftDelete1))
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete)).WhereDeleted()
+			return db.NewSelect().Model(new(SoftDelete1)).WhereDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete)).WhereAllWithDeleted()
+			return db.NewSelect().Model(new(SoftDelete1)).WhereAllWithDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			models := []Model{
@@ -552,7 +561,7 @@ func TestQuery(t *testing.T) {
 			return db.NewInsert().Model(new(Model))
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewInsert().Model(new(SoftDelete)).On("CONFLICT DO NOTHING")
+			return db.NewInsert().Model(new(SoftDelete1)).On("CONFLICT DO NOTHING")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{ID: 42}).OmitZero().WherePK()
@@ -566,6 +575,24 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewInsert().ColumnExpr("id, name").Table("dest").Table("src")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete2)).WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete2)).WherePK().ForceDelete()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete2))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete2)).WhereDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete2)).WhereAllWithDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewInsert().Model(new(SoftDelete2)).On("CONFLICT DO NOTHING")
 		},
 	}
 
