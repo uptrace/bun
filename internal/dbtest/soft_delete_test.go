@@ -2,8 +2,6 @@ package dbtest_test
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"testing"
 	"time"
 
@@ -30,27 +28,6 @@ func TestSoftDelete(t *testing.T) {
 			})
 		}
 	})
-}
-
-type CustomTime struct {
-	Time time.Time
-}
-
-var _ driver.Valuer = (*CustomTime)(nil)
-
-func (tm *CustomTime) Value() (driver.Value, error) {
-	return tm.Time, nil
-}
-
-var _ sql.Scanner = (*CustomTime)(nil)
-
-func (tm *CustomTime) Scan(src interface{}) error {
-	tm.Time, _ = src.(time.Time)
-	return nil
-}
-
-func (tm *CustomTime) IsZero() bool {
-	return tm.Time.IsZero()
 }
 
 type Video struct {

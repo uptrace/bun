@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -628,11 +629,23 @@ func (q *whereBaseQuery) appendWhere(
 			b = append(b, q.tableModel.Table().SQLAlias...)
 			b = append(b, '.')
 		}
-		b = append(b, q.tableModel.Table().SoftDeleteField.SQLName...)
-		if q.flags.Has(deletedFlag) {
-			b = append(b, " IS NOT NULL"...)
+
+		field := q.tableModel.Table().SoftDeleteField
+		b = append(b, field.SQLName...)
+
+		if field.NullZero {
+			if q.flags.Has(deletedFlag) {
+				b = append(b, " IS NOT NULL"...)
+			} else {
+				b = append(b, " IS NULL"...)
+			}
 		} else {
-			b = append(b, " IS NULL"...)
+			if q.flags.Has(deletedFlag) {
+				b = append(b, " != "...)
+			} else {
+				b = append(b, " = "...)
+			}
+			b = fmter.Dialect().AppendTime(b, time.Time{})
 		}
 	}
 
