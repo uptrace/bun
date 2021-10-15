@@ -1,4 +1,4 @@
-module github.com/uptrace/bun/example/model-hooks
+module github.com/uptrace/bun/example/multi-tenant
 
 go 1.16
 

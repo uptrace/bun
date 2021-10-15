@@ -131,16 +131,16 @@ func (t *ModelHookTest) BeforeAppendModel(query bun.Query) error {
 	return nil
 }
 
-var _ bun.BeforeScanHook = (*ModelHookTest)(nil)
+var _ bun.BeforeScanRowHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) BeforeScan(c context.Context) error {
+func (t *ModelHookTest) BeforeScanRow(c context.Context) error {
 	events.Add("BeforeScan")
 	return nil
 }
 
-var _ bun.AfterScanHook = (*ModelHookTest)(nil)
+var _ bun.AfterScanRowHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) AfterScan(c context.Context) error {
+func (t *ModelHookTest) AfterScanRow(c context.Context) error {
 	events.Add("AfterScan")
 	return nil
 }

@@ -1,0 +1,8 @@
+- model: Story
+  rows:
+    - title: Story 1 by author 1
+      author_id: 1
+    - title: Story 2 by author 1
+      author_id: 1
+    - title: Story 3 by author 2
+      author_id: 2
