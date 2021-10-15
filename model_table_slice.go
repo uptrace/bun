@@ -91,10 +91,31 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 	return n, nil
 }
 
+var _ schema.BeforeAppendModelHook = (*sliceTableModel)(nil)
+
+func (m *sliceTableModel) BeforeAppendModel(query Query) error {
+	if !m.table.HasBeforeAppendModelHook() {
+		return nil
+	}
+
+	sliceLen := m.slice.Len()
+	for i := 0; i < sliceLen; i++ {
+		strct := m.slice.Index(i)
+		if !m.sliceOfPtr {
+			strct = strct.Addr()
+		}
+		err := strct.Interface().(schema.BeforeAppendModelHook).BeforeAppendModel(query)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Inherit these hooks from structTableModel.
 var (
-	_ schema.BeforeScanHook = (*sliceTableModel)(nil)
-	_ schema.AfterScanHook  = (*sliceTableModel)(nil)
+	_ schema.BeforeScanRowHook = (*sliceTableModel)(nil)
+	_ schema.AfterScanRowHook  = (*sliceTableModel)(nil)
 )
 
 func (m *sliceTableModel) updateSoftDeleteField(tm time.Time) error {

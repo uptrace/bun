@@ -39,17 +39,14 @@ func TestModelHook(t *testing.T) {
 }
 
 func testModelHook(t *testing.T, dbName string, db *bun.DB) {
-	_, err := db.NewDropTable().Model((*ModelHookTest)(nil)).IfExists().Exec(ctx)
-	require.NoError(t, err)
-
-	_, err = db.NewCreateTable().Model((*ModelHookTest)(nil)).Exec(ctx)
+	err := db.ResetModel(ctx, (*ModelHookTest)(nil))
 	require.NoError(t, err)
 
 	{
 		hook := &ModelHookTest{ID: 1}
 		_, err := db.NewInsert().Model(hook).Exec(ctx)
 		require.NoError(t, err)
-		require.Equal(t, []string{"BeforeInsert", "AfterInsert"}, events.Flush())
+		require.Equal(t, []string{"BeforeInsert", "BeforeAppendModel", "AfterInsert"}, events.Flush())
 	}
 
 	{
@@ -58,13 +55,14 @@ func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 		require.NoError(t, err)
 		require.Equal(t, []string{
 			"BeforeSelect",
+			"BeforeAppendModel",
 			"BeforeScan",
 			"AfterScan",
 			"AfterSelect",
 		}, events.Flush())
 	}
 
-	{
+	t.Run("selectEmptySlice", func(t *testing.T) {
 		hooks := make([]ModelHookTest, 0)
 		err := db.NewSelect().Model(&hooks).Scan(ctx)
 		require.NoError(t, err)
@@ -74,20 +72,20 @@ func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 			"AfterScan",
 			"AfterSelect",
 		}, events.Flush())
-	}
+	})
 
 	{
 		hook := &ModelHookTest{ID: 1}
 		_, err := db.NewUpdate().Model(hook).Where("id = 1").Exec(ctx)
 		require.NoError(t, err)
-		require.Equal(t, []string{"BeforeUpdate", "AfterUpdate"}, events.Flush())
+		require.Equal(t, []string{"BeforeUpdate", "BeforeAppendModel", "AfterUpdate"}, events.Flush())
 	}
 
 	{
 		hook := &ModelHookTest{ID: 1}
 		_, err := db.NewDelete().Model(hook).Where("id = 1").Exec(ctx)
 		require.NoError(t, err)
-		require.Equal(t, []string{"BeforeDelete", "AfterDelete"}, events.Flush())
+		require.Equal(t, []string{"BeforeDelete", "BeforeAppendModel", "AfterDelete"}, events.Flush())
 	}
 
 	{
@@ -95,11 +93,42 @@ func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"BeforeDelete", "AfterDelete"}, events.Flush())
 	}
+
+	t.Run("insertSlice", func(t *testing.T) {
+		hooks := []ModelHookTest{{ID: 1}, {ID: 2}}
+		_, err := db.NewInsert().Model(&hooks).Exec(ctx)
+		require.NoError(t, err)
+		require.Equal(t, []string{
+			"BeforeInsert",
+			"BeforeAppendModel",
+			"BeforeAppendModel",
+			"AfterInsert",
+		}, events.Flush())
+	})
+
+	t.Run("insertSliceOfPtr", func(t *testing.T) {
+		hooks := []*ModelHookTest{{ID: 3}, {ID: 4}}
+		_, err := db.NewInsert().Model(&hooks).Exec(ctx)
+		require.NoError(t, err)
+		require.Equal(t, []string{
+			"BeforeInsert",
+			"BeforeAppendModel",
+			"BeforeAppendModel",
+			"AfterInsert",
+		}, events.Flush())
+	})
 }
 
 type ModelHookTest struct {
 	ID    int
 	Value string
+}
+
+var _ bun.BeforeAppendModelHook = (*ModelHookTest)(nil)
+
+func (t *ModelHookTest) BeforeAppendModel(query bun.Query) error {
+	events.Add("BeforeAppendModel")
+	return nil
 }
 
 var _ bun.BeforeScanHook = (*ModelHookTest)(nil)
@@ -182,7 +211,7 @@ func (t *ModelHookTest) AfterDelete(ctx context.Context, query *bun.DeleteQuery)
 
 func assertQueryModel(query interface{ GetModel() bun.Model }) {
 	switch value := query.GetModel().Value(); value.(type) {
-	case *ModelHookTest, *[]ModelHookTest:
+	case *ModelHookTest, *[]ModelHookTest, *[]*ModelHookTest:
 		// ok
 	default:
 		panic(fmt.Errorf("unexpected: %T", value))

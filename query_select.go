@@ -364,15 +364,18 @@ func (q *SelectQuery) Operation() string {
 }
 
 func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+	if err := q.beforeAppendModel(q); err != nil {
+		return nil, err
+	}
 	return q.appendQuery(fmter, b, false)
 }
 
 func (q *SelectQuery) appendQuery(
 	fmter schema.Formatter, b []byte, count bool,
 ) (_ []byte, err error) {
-	if q.err != nil {
-		return nil, q.err
-	}
 	fmter = formatterWithModel(fmter, q)
 
 	cteCount := count && (len(q.group) > 0 || q.distinctOn != nil)
@@ -854,6 +857,12 @@ type countQuery struct {
 }
 
 func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+	// if err := q.beforeAppendModel(q); err != nil {
+	// 	return nil, err
+	// }
 	return q.appendQuery(fmter, b, true)
 }
 
@@ -864,6 +873,13 @@ type existsQuery struct {
 }
 
 func (q existsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+	// if err := q.beforeAppendModel(q); err != nil {
+	// 	return nil, err
+	// }
+
 	b = append(b, "SELECT EXISTS ("...)
 
 	b, err = q.appendQuery(fmter, b, false)

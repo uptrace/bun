@@ -3,7 +3,6 @@ package bun
 import (
 	"context"
 	"database/sql"
-	"reflect"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -11,18 +10,11 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-type IQuery interface {
-	schema.QueryAppender
-	Operation() string
-	GetModel() Model
-	GetTableName() string
-}
-
 type QueryEvent struct {
 	DB *DB
 
 	QueryAppender schema.QueryAppender // Deprecated: use IQuery instead
-	IQuery        IQuery
+	IQuery        Query
 	Query         string
 	QueryArgs     []interface{}
 	Model         Model
@@ -58,7 +50,7 @@ type QueryHook interface {
 
 func (db *DB) beforeQuery(
 	ctx context.Context,
-	iquery IQuery,
+	iquery Query,
 	query string,
 	queryArgs []interface{},
 	model Model,
@@ -115,14 +107,4 @@ func (db *DB) afterQueryFromIndex(ctx context.Context, event *QueryEvent, hookIn
 	for ; hookIndex >= 0; hookIndex-- {
 		db.queryHooks[hookIndex].AfterQuery(ctx, event)
 	}
-}
-
-//------------------------------------------------------------------------------
-
-func callBeforeScanHook(ctx context.Context, v reflect.Value) error {
-	return v.Interface().(schema.BeforeScanHook).BeforeScan(ctx)
-}
-
-func callAfterScanHook(ctx context.Context, v reflect.Value) error {
-	return v.Interface().(schema.AfterScanHook).AfterScan(ctx)
 }
