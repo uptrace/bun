@@ -21,7 +21,7 @@ type Query interface {
 //------------------------------------------------------------------------------
 
 type BeforeAppendModelHook interface {
-	BeforeAppendModel(query Query) error
+	BeforeAppendModel(ctx context.Context, query Query) error
 }
 
 var beforeAppendModelHookType = reflect.TypeOf((*BeforeAppendModelHook)(nil)).Elem()

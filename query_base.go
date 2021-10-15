@@ -165,9 +165,9 @@ func (q *baseQuery) getModel(dest []interface{}) (Model, error) {
 	return newModel(q.db, dest)
 }
 
-func (q *baseQuery) beforeAppendModel(query Query) error {
+func (q *baseQuery) beforeAppendModel(ctx context.Context, query Query) error {
 	if q.tableModel != nil {
-		return q.tableModel.BeforeAppendModel(query)
+		return q.tableModel.BeforeAppendModel(ctx, query)
 	}
 	return nil
 }

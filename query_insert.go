@@ -152,13 +152,6 @@ func (q *InsertQuery) Operation() string {
 }
 
 func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if q.err != nil {
-		return nil, q.err
-	}
-	if err := q.beforeAppendModel(q); err != nil {
-		return nil, err
-	}
-
 	fmter = formatterWithModel(fmter, q)
 
 	b, err = q.appendWith(fmter, b)
@@ -487,6 +480,13 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		if err := q.beforeInsertHook(ctx); err != nil {
 			return nil, err
 		}
+	}
+
+	if q.err != nil {
+		return nil, q.err
+	}
+	if err := q.beforeAppendModel(ctx, q); err != nil {
+		return nil, err
 	}
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())

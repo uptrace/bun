@@ -93,7 +93,7 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 
 var _ schema.BeforeAppendModelHook = (*sliceTableModel)(nil)
 
-func (m *sliceTableModel) BeforeAppendModel(query Query) error {
+func (m *sliceTableModel) BeforeAppendModel(ctx context.Context, query Query) error {
 	if !m.table.HasBeforeAppendModelHook() {
 		return nil
 	}
@@ -104,7 +104,7 @@ func (m *sliceTableModel) BeforeAppendModel(query Query) error {
 		if !m.sliceOfPtr {
 			strct = strct.Addr()
 		}
-		err := strct.Interface().(schema.BeforeAppendModelHook).BeforeAppendModel(query)
+		err := strct.Interface().(schema.BeforeAppendModelHook).BeforeAppendModel(ctx, query)
 		if err != nil {
 			return err
 		}

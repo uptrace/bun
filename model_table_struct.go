@@ -102,11 +102,11 @@ func (m *structTableModel) mountJoins() {
 
 var _ schema.BeforeAppendModelHook = (*structTableModel)(nil)
 
-func (m *structTableModel) BeforeAppendModel(query Query) error {
+func (m *structTableModel) BeforeAppendModel(ctx context.Context, query Query) error {
 	if !m.table.HasBeforeAppendModelHook() || !m.strct.IsValid() {
 		return nil
 	}
-	return m.strct.Addr().Interface().(schema.BeforeAppendModelHook).BeforeAppendModel(query)
+	return m.strct.Addr().Interface().(schema.BeforeAppendModelHook).BeforeAppendModel(ctx, query)
 }
 
 var _ schema.BeforeScanRowHook = (*structTableModel)(nil)

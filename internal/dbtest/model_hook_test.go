@@ -126,21 +126,21 @@ type ModelHookTest struct {
 
 var _ bun.BeforeAppendModelHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) BeforeAppendModel(query bun.Query) error {
+func (t *ModelHookTest) BeforeAppendModel(ctx context.Context, query bun.Query) error {
 	events.Add("BeforeAppendModel")
 	return nil
 }
 
 var _ bun.BeforeScanRowHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) BeforeScanRow(c context.Context) error {
+func (t *ModelHookTest) BeforeScanRow(ctx context.Context) error {
 	events.Add("BeforeScan")
 	return nil
 }
 
 var _ bun.AfterScanRowHook = (*ModelHookTest)(nil)
 
-func (t *ModelHookTest) AfterScanRow(c context.Context) error {
+func (t *ModelHookTest) AfterScanRow(ctx context.Context) error {
 	events.Add("AfterScan")
 	return nil
 }
