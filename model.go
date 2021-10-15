@@ -15,10 +15,7 @@ var errNilModel = errors.New("bun: Model(nil)")
 
 var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
 
-type Model interface {
-	ScanRows(ctx context.Context, rows *sql.Rows) (int, error)
-	Value() interface{}
-}
+type Model = schema.Model
 
 type rowScanner interface {
 	ScanRow(ctx context.Context, rows *sql.Rows) error
@@ -27,8 +24,9 @@ type rowScanner interface {
 type TableModel interface {
 	Model
 
-	schema.BeforeScanHook
-	schema.AfterScanHook
+	schema.BeforeAppendModelHook
+	schema.BeforeScanRowHook
+	schema.AfterScanRowHook
 	ScanColumn(column string, src interface{}) error
 
 	Table() *schema.Table

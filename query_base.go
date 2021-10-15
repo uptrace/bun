@@ -165,6 +165,13 @@ func (q *baseQuery) getModel(dest []interface{}) (Model, error) {
 	return newModel(q.db, dest)
 }
 
+func (q *baseQuery) beforeAppendModel(query Query) error {
+	if q.tableModel != nil {
+		return q.tableModel.BeforeAppendModel(query)
+	}
+	return nil
+}
+
 //------------------------------------------------------------------------------
 
 func (q *baseQuery) checkSoftDelete() error {
@@ -462,7 +469,7 @@ func (q *baseQuery) _getFields(omitPK bool) ([]*schema.Field, error) {
 
 func (q *baseQuery) scan(
 	ctx context.Context,
-	iquery IQuery,
+	iquery Query,
 	query string,
 	model Model,
 	hasDest bool,
@@ -494,7 +501,7 @@ func (q *baseQuery) scan(
 
 func (q *baseQuery) exec(
 	ctx context.Context,
-	iquery IQuery,
+	iquery Query,
 	query string,
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)

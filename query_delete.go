@@ -134,9 +134,13 @@ func (q *DeleteQuery) Operation() string {
 }
 
 func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if err := q.beforeAppendModel(q); err != nil {
+		return nil, err
+	}
 	if q.err != nil {
 		return nil, q.err
 	}
+
 	fmter = formatterWithModel(fmter, q)
 
 	if q.isSoftDelete() {

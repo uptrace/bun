@@ -15,9 +15,17 @@ type (
 
 	NullTime  = schema.NullTime
 	BaseModel = schema.BaseModel
+	Query     = schema.Query
 
+	BeforeAppendModelHook = schema.BeforeAppendModelHook
+
+	BeforeScanRowHook = schema.BeforeScanRowHook
+	AfterScanRowHook  = schema.AfterScanRowHook
+
+	// DEPRECATED. Use BeforeScanRowHook instead.
 	BeforeScanHook = schema.BeforeScanHook
-	AfterScanHook  = schema.AfterScanHook
+	// DEPRECATED. Use AfterScanRowHook instead.
+	AfterScanHook = schema.AfterScanHook
 )
 
 type BeforeSelectHook interface {
