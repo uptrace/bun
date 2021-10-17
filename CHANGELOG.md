@@ -1,3 +1,18 @@
+## [1.0.13](https://github.com/uptrace/bun/compare/v1.0.12...v1.0.13) (2021-10-17)
+
+
+### Bug Fixes
+
+* **pgdriver:** enable TLS by default with InsecureSkipVerify=true ([15ec635](https://github.com/uptrace/bun/commit/15ec6356a04d5cf62d2efbeb189610532dc5eb31))
+
+
+### Features
+
+* add BeforeAppendModelHook ([0b55de7](https://github.com/uptrace/bun/commit/0b55de77aaffc1ed0894ef16f45df77bca7d93c1))
+* **pgdriver:** add support for unix socket DSN ([f398cec](https://github.com/uptrace/bun/commit/f398cec1c3873efdf61ac0b94ebe06c657f0cf91))
+
+
+
 ## [1.0.12](https://github.com/uptrace/bun/compare/v1.0.11...v1.0.12) (2021-10-14)
 
 

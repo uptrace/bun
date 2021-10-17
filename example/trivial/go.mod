@@ -18,11 +18,11 @@ replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialec
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/uptrace/bun v1.0.12
-	github.com/uptrace/bun/dialect/mysqldialect v1.0.12
-	github.com/uptrace/bun/dialect/pgdialect v1.0.12
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.12
-	github.com/uptrace/bun/driver/pgdriver v1.0.12
-	github.com/uptrace/bun/driver/sqliteshim v1.0.12
-	github.com/uptrace/bun/extra/bundebug v1.0.12
+	github.com/uptrace/bun v1.0.13
+	github.com/uptrace/bun/dialect/mysqldialect v1.0.13
+	github.com/uptrace/bun/dialect/pgdialect v1.0.13
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.13
+	github.com/uptrace/bun/driver/pgdriver v1.0.13
+	github.com/uptrace/bun/driver/sqliteshim v1.0.13
+	github.com/uptrace/bun/extra/bundebug v1.0.13
 )
