@@ -187,30 +187,49 @@ func parseDSN(dsn string) ([]Option, error) {
 		return nil, err
 	}
 
-	if u.Scheme != "postgres" && u.Scheme != "postgresql" {
+	q := queryOptions{q: u.Query()}
+	var opts []Option
+
+	switch u.Scheme {
+	case "postgres", "postgresql":
+		if u.Host != "" {
+			addr := u.Host
+			if !strings.Contains(addr, ":") {
+				addr += ":5432"
+			}
+			opts = append(opts, WithAddr(addr))
+		}
+
+		if len(u.Path) > 1 {
+			opts = append(opts, WithDatabase(u.Path[1:]))
+		}
+
+		if host := q.string("host"); host != "" {
+			opts = append(opts, WithAddr(host))
+			if host[0] == '/' {
+				opts = append(opts, WithNetwork("unix"))
+			}
+		}
+	case "unix":
+		if len(u.Path) == 0 {
+			return nil, fmt.Errorf("unix socket DSN requires a path: %s", dsn)
+		}
+
+		opts = append(opts, WithNetwork("unix"))
+		if u.Host != "" {
+			opts = append(opts, WithDatabase(u.Host))
+		}
+		opts = append(opts, WithAddr(u.Path))
+	default:
 		return nil, errors.New("pgdriver: invalid scheme: " + u.Scheme)
 	}
 
-	var opts []Option
-
-	if u.Host != "" {
-		addr := u.Host
-		if !strings.Contains(addr, ":") {
-			addr += ":5432"
-		}
-		opts = append(opts, WithAddr(addr))
-	}
 	if u.User != nil {
 		opts = append(opts, WithUser(u.User.Username()))
 		if password, ok := u.User.Password(); ok {
 			opts = append(opts, WithPassword(password))
 		}
 	}
-	if len(u.Path) > 1 {
-		opts = append(opts, WithDatabase(u.Path[1:]))
-	}
-
-	q := queryOptions{q: u.Query()}
 
 	if appName := q.string("application_name"); appName != "" {
 		opts = append(opts, WithApplicationName(appName))
