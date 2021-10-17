@@ -56,6 +56,8 @@ func newDefaultConfig() *Config {
 
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 5 * time.Second,
+
+		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -95,6 +97,12 @@ func WithAddr(addr string) Option {
 func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(cfg *Config) {
 		cfg.TLSConfig = tlsConfig
+	}
+}
+
+func WithInsecure(on bool) Option {
+	return func(cfg *Config) {
+		cfg.TLSConfig = nil
 	}
 }
 
@@ -238,10 +246,10 @@ func parseDSN(dsn string) ([]Option, error) {
 	switch sslMode := q.string("sslmode"); sslMode {
 	case "verify-ca", "verify-full":
 		opts = append(opts, WithTLSConfig(new(tls.Config)))
-	case "allow", "prefer", "require":
+	case "allow", "prefer", "require", "":
 		opts = append(opts, WithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
-	case "disable", "":
-		// no TLS config
+	case "disable":
+		opts = append(opts, WithInsecure(true))
 	default:
 		return nil, fmt.Errorf("pgdriver: sslmode '%s' is not supported", sslMode)
 	}

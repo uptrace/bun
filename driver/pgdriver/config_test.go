@@ -105,6 +105,7 @@ func TestParseDSN(t *testing.T) {
 
 			cfg := c.Config()
 			cfg.Dialer = nil
+			cfg.TLSConfig = nil
 
 			require.Equal(t, test.cfg, cfg)
 		})
