@@ -263,7 +263,7 @@ func sqlDB() *sql.DB {
 func dsn() string {
 	dsn := os.Getenv("PG")
 	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test"
+		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
 	}
 	return dsn
 }
