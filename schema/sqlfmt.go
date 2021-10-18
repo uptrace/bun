@@ -1,5 +1,11 @@
 package schema
 
+import (
+	"strings"
+
+	"github.com/uptrace/bun/internal"
+)
+
 type QueryAppender interface {
 	AppendQuery(fmter Formatter, b []byte) ([]byte, error)
 }
@@ -42,8 +48,13 @@ var _ QueryAppender = QueryWithArgs{}
 func SafeQuery(query string, args []interface{}) QueryWithArgs {
 	if args == nil {
 		args = make([]interface{}, 0)
+	} else if len(query) > 0 && strings.IndexByte(query, '?') == -1 {
+		internal.Warn.Printf("query %q has args %v, but no placeholders", query, args)
 	}
-	return QueryWithArgs{Query: query, Args: args}
+	return QueryWithArgs{
+		Query: query,
+		Args:  args,
+	}
 }
 
 func UnsafeIdent(ident string) QueryWithArgs {

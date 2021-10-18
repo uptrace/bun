@@ -819,9 +819,11 @@ func (q *returningQuery) addReturningField(field *schema.Field) {
 
 func (q *returningQuery) hasReturning() bool {
 	if len(q.returning) == 1 {
-		switch q.returning[0].Query {
-		case "null", "NULL":
-			return false
+		if ret := q.returning[0]; len(ret.Args) == 0 {
+			switch ret.Query {
+			case "", "null", "NULL":
+				return false
+			}
 		}
 	}
 	return len(q.returning) > 0 || len(q.returningFields) > 0

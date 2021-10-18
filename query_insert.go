@@ -118,7 +118,7 @@ func (q *InsertQuery) WhereOr(query string, args ...interface{}) *InsertQuery {
 
 // Returning adds a RETURNING clause to the query.
 //
-// To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
+// To suppress the auto-generated RETURNING clause, use `Returning("")`.
 func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
