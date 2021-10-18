@@ -1,4 +1,4 @@
-module github.com/uptrace/bun/example/belongs-to
+module github.com/uptrace/bun/example/rel-belongs-to
 
 go 1.16
 
