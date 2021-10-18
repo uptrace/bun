@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -387,4 +388,41 @@ func TestPGTimetz(t *testing.T) {
 	err := db.NewSelect().ColumnExpr("now()::timetz").Scan(ctx, &tm)
 	require.NoError(t, err)
 	require.NotZero(t, tm)
+}
+
+func TestPGOnConflictDoUpdate(t *testing.T) {
+	type Model struct {
+		ID        int64
+		UpdatedAt time.Time
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{ID: 1}
+
+	_, err = db.NewInsert().
+		Model(model).
+		On("CONFLICT (id) DO UPDATE").
+		Set("updated_at = now()").
+		Returning("id, updated_at").
+		Exec(ctx)
+	require.NoError(t, err)
+	require.Zero(t, model.UpdatedAt)
+
+	for i := 0; i < 2; i++ {
+		_, err = db.NewInsert().
+			Model(model).
+			On("CONFLICT (id) DO UPDATE").
+			Set("updated_at = now()").
+			Returning("id, updated_at").
+			Exec(ctx)
+		require.NoError(t, err)
+		require.NotZero(t, model.UpdatedAt)
+	}
 }

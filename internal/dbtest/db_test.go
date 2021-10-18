@@ -59,11 +59,12 @@ func pg(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, pgdialect.New())
-	require.Equal(tb, "DB<dialect=pg>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=pg>", db.String())
 
 	return db
 }
@@ -81,11 +82,12 @@ func pgx(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, pgdialect.New())
-	require.Equal(tb, "DB<dialect=pg>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=pg>", db.String())
 
 	return db
 }
@@ -103,11 +105,12 @@ func mysql8(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
-	require.Equal(tb, "DB<dialect=mysql>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	return db
 }
@@ -125,11 +128,12 @@ func mysql5(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
-	require.Equal(tb, "DB<dialect=mysql>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	return db
 }
@@ -147,11 +151,12 @@ func mariadb(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, mysqldialect.New())
-	require.Equal(tb, "DB<dialect=mysql>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=mysql>", db.String())
 
 	return db
 }
@@ -164,11 +169,12 @@ func sqlite(tb testing.TB) *bun.DB {
 	})
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
-	require.Equal(tb, "DB<dialect=sqlite>", db.String())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
-	if _, ok := os.LookupEnv("DEBUG"); ok {
-		db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
-	}
+	require.Equal(tb, "DB<dialect=sqlite>", db.String())
 
 	return db
 }
