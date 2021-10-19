@@ -1,120 +1,125 @@
 ## [1.0.13](https://github.com/uptrace/bun/compare/v1.0.12...v1.0.13) (2021-10-17)
 
+### Breaking Change
 
-### Bug Fixes
-
-* **pgdriver:** enable TLS by default with InsecureSkipVerify=true ([15ec635](https://github.com/uptrace/bun/commit/15ec6356a04d5cf62d2efbeb189610532dc5eb31))
-
+- **pgdriver:** enable TLS by default with InsecureSkipVerify=true
+  ([15ec635](https://github.com/uptrace/bun/commit/15ec6356a04d5cf62d2efbeb189610532dc5eb31))
 
 ### Features
 
-* add BeforeAppendModelHook ([0b55de7](https://github.com/uptrace/bun/commit/0b55de77aaffc1ed0894ef16f45df77bca7d93c1))
-* **pgdriver:** add support for unix socket DSN ([f398cec](https://github.com/uptrace/bun/commit/f398cec1c3873efdf61ac0b94ebe06c657f0cf91))
-
-
+- add BeforeAppendModelHook
+  ([0b55de7](https://github.com/uptrace/bun/commit/0b55de77aaffc1ed0894ef16f45df77bca7d93c1))
+- **pgdriver:** add support for unix socket DSN
+  ([f398cec](https://github.com/uptrace/bun/commit/f398cec1c3873efdf61ac0b94ebe06c657f0cf91))
 
 ## [1.0.12](https://github.com/uptrace/bun/compare/v1.0.11...v1.0.12) (2021-10-14)
 
-
 ### Bug Fixes
 
-* add InsertQuery.ColumnExpr to specify columns ([60ffe29](https://github.com/uptrace/bun/commit/60ffe293b37912d95f28e69734ff51edf4b27da7))
-* **bundebug:** change WithVerbose to accept a bool flag ([b2f8b91](https://github.com/uptrace/bun/commit/b2f8b912de1dc29f40c79066de1e9d6379db666c))
-* **pgdialect:** fix bytea[] handling ([a5ca013](https://github.com/uptrace/bun/commit/a5ca013742c5a2e947b43d13f9c2fc0cf6a65d9c))
-* **pgdriver:** rename DriverOption to Option ([51c1702](https://github.com/uptrace/bun/commit/51c1702431787d7369904b2624e346bf3e59c330))
-* support allowzero on the soft delete field ([d0abec7](https://github.com/uptrace/bun/commit/d0abec71a9a546472a83bd70ed4e6a7357659a9b))
-
+- add InsertQuery.ColumnExpr to specify columns
+  ([60ffe29](https://github.com/uptrace/bun/commit/60ffe293b37912d95f28e69734ff51edf4b27da7))
+- **bundebug:** change WithVerbose to accept a bool flag
+  ([b2f8b91](https://github.com/uptrace/bun/commit/b2f8b912de1dc29f40c79066de1e9d6379db666c))
+- **pgdialect:** fix bytea[] handling
+  ([a5ca013](https://github.com/uptrace/bun/commit/a5ca013742c5a2e947b43d13f9c2fc0cf6a65d9c))
+- **pgdriver:** rename DriverOption to Option
+  ([51c1702](https://github.com/uptrace/bun/commit/51c1702431787d7369904b2624e346bf3e59c330))
+- support allowzero on the soft delete field
+  ([d0abec7](https://github.com/uptrace/bun/commit/d0abec71a9a546472a83bd70ed4e6a7357659a9b))
 
 ### Features
 
-* **bundebug:** allow to configure the hook using env var, for example, BUNDEBUG={0,1,2} ([ce92852](https://github.com/uptrace/bun/commit/ce928524cab9a83395f3772ae9dd5d7732af281d))
-* **bunotel:** report DBStats metrics ([b9b1575](https://github.com/uptrace/bun/commit/b9b15750f405cdbd345b776f5a56c6f742bc7361))
-* **pgdriver:** add Error.StatementTimeout ([8a7934d](https://github.com/uptrace/bun/commit/8a7934dd788057828bb2b0983732b4394b74e960))
-* **pgdriver:** allow setting Network in config ([b24b5d8](https://github.com/uptrace/bun/commit/b24b5d8014195a56ad7a4c634c10681038e6044d))
-
-
+- **bundebug:** allow to configure the hook using env var, for example, BUNDEBUG={0,1,2}
+  ([ce92852](https://github.com/uptrace/bun/commit/ce928524cab9a83395f3772ae9dd5d7732af281d))
+- **bunotel:** report DBStats metrics
+  ([b9b1575](https://github.com/uptrace/bun/commit/b9b15750f405cdbd345b776f5a56c6f742bc7361))
+- **pgdriver:** add Error.StatementTimeout
+  ([8a7934d](https://github.com/uptrace/bun/commit/8a7934dd788057828bb2b0983732b4394b74e960))
+- **pgdriver:** allow setting Network in config
+  ([b24b5d8](https://github.com/uptrace/bun/commit/b24b5d8014195a56ad7a4c634c10681038e6044d))
 
 ## [1.0.11](https://github.com/uptrace/bun/compare/v1.0.10...v1.0.11) (2021-10-05)
 
-
 ### Bug Fixes
 
-* **mysqldialect:** remove duplicate AppendTime ([8d42090](https://github.com/uptrace/bun/commit/8d42090af34a1760004482c7fc0923b114d79937))
-
-
+- **mysqldialect:** remove duplicate AppendTime
+  ([8d42090](https://github.com/uptrace/bun/commit/8d42090af34a1760004482c7fc0923b114d79937))
 
 ## [1.0.10](https://github.com/uptrace/bun/compare/v1.0.9...v1.0.10) (2021-10-05)
 
-
 ### Bug Fixes
 
-* add UpdateQuery.OmitZero ([2294db6](https://github.com/uptrace/bun/commit/2294db61d228711435fff1075409a30086b37555))
-* make ExcludeColumn work with many-to-many queries ([300e12b](https://github.com/uptrace/bun/commit/300e12b993554ff839ec4fa6bbea97e16aca1b55))
-* **mysqldialect:** append time in local timezone ([e763cc8](https://github.com/uptrace/bun/commit/e763cc81eac4b11fff4e074ad3ff6cd970a71697))
-* **tagparser:** improve parsing options with brackets ([0daa61e](https://github.com/uptrace/bun/commit/0daa61edc3c4d927ed260332b99ee09f4bb6b42f))
-
+- add UpdateQuery.OmitZero
+  ([2294db6](https://github.com/uptrace/bun/commit/2294db61d228711435fff1075409a30086b37555))
+- make ExcludeColumn work with many-to-many queries
+  ([300e12b](https://github.com/uptrace/bun/commit/300e12b993554ff839ec4fa6bbea97e16aca1b55))
+- **mysqldialect:** append time in local timezone
+  ([e763cc8](https://github.com/uptrace/bun/commit/e763cc81eac4b11fff4e074ad3ff6cd970a71697))
+- **tagparser:** improve parsing options with brackets
+  ([0daa61e](https://github.com/uptrace/bun/commit/0daa61edc3c4d927ed260332b99ee09f4bb6b42f))
 
 ### Features
 
-* add timetz parsing ([6e415c4](https://github.com/uptrace/bun/commit/6e415c4c5fa2c8caf4bb4aed4e5897fe5676f5a5))
-
-
+- add timetz parsing
+  ([6e415c4](https://github.com/uptrace/bun/commit/6e415c4c5fa2c8caf4bb4aed4e5897fe5676f5a5))
 
 ## [1.0.9](https://github.com/uptrace/bun/compare/v1.0.8...v1.0.9) (2021-09-27)
 
-
 ### Bug Fixes
 
-* change DBStats to use uint32 instead of uint64 to make it work on i386 ([caca2a7](https://github.com/uptrace/bun/commit/caca2a7130288dec49fa26b49c8550140ee52f4c))
-
+- change DBStats to use uint32 instead of uint64 to make it work on i386
+  ([caca2a7](https://github.com/uptrace/bun/commit/caca2a7130288dec49fa26b49c8550140ee52f4c))
 
 ### Features
 
-* add IQuery and QueryEvent.IQuery ([b762942](https://github.com/uptrace/bun/commit/b762942fa3b1d8686d0a559f93f2a6847b83d9c1))
-* add QueryEvent.Model ([7688201](https://github.com/uptrace/bun/commit/7688201b485d14d3e393956f09a3200ea4d4e31d))
-* **bunotel:** add experimental bun.query.timing metric ([2cdb384](https://github.com/uptrace/bun/commit/2cdb384678631ccadac0fb75f524bd5e91e96ee2))
-* **pgdriver:** add Config.ConnParams to session config params ([408caf0](https://github.com/uptrace/bun/commit/408caf0bb579e23e26fc6149efd6851814c22517))
-* **pgdriver:** allow specifying timeout in DSN ([7dbc71b](https://github.com/uptrace/bun/commit/7dbc71b3494caddc2e97d113f00067071b9e19da))
-
-
+- add IQuery and QueryEvent.IQuery
+  ([b762942](https://github.com/uptrace/bun/commit/b762942fa3b1d8686d0a559f93f2a6847b83d9c1))
+- add QueryEvent.Model
+  ([7688201](https://github.com/uptrace/bun/commit/7688201b485d14d3e393956f09a3200ea4d4e31d))
+- **bunotel:** add experimental bun.query.timing metric
+  ([2cdb384](https://github.com/uptrace/bun/commit/2cdb384678631ccadac0fb75f524bd5e91e96ee2))
+- **pgdriver:** add Config.ConnParams to session config params
+  ([408caf0](https://github.com/uptrace/bun/commit/408caf0bb579e23e26fc6149efd6851814c22517))
+- **pgdriver:** allow specifying timeout in DSN
+  ([7dbc71b](https://github.com/uptrace/bun/commit/7dbc71b3494caddc2e97d113f00067071b9e19da))
 
 ## [1.0.8](https://github.com/uptrace/bun/compare/v1.0.7...v1.0.8) (2021-09-18)
 
-
 ### Bug Fixes
 
-* don't append soft delete where for insert queries with on conflict clause ([27c477c](https://github.com/uptrace/bun/commit/27c477ce071d4c49c99a2531d638ed9f20e33461))
-* improve bun.NullTime to accept string ([73ad6f5](https://github.com/uptrace/bun/commit/73ad6f5640a0a9b09f8df2bc4ab9cb510021c50c))
-* make allowzero work with auto-detected primary keys ([82ca87c](https://github.com/uptrace/bun/commit/82ca87c7c49797d507b31fdaacf8343716d4feff))
-* support soft deletes on nil model ([0556e3c](https://github.com/uptrace/bun/commit/0556e3c63692a7f4e48659d52b55ffd9cca0202a))
-
-
+- don't append soft delete where for insert queries with on conflict clause
+  ([27c477c](https://github.com/uptrace/bun/commit/27c477ce071d4c49c99a2531d638ed9f20e33461))
+- improve bun.NullTime to accept string
+  ([73ad6f5](https://github.com/uptrace/bun/commit/73ad6f5640a0a9b09f8df2bc4ab9cb510021c50c))
+- make allowzero work with auto-detected primary keys
+  ([82ca87c](https://github.com/uptrace/bun/commit/82ca87c7c49797d507b31fdaacf8343716d4feff))
+- support soft deletes on nil model
+  ([0556e3c](https://github.com/uptrace/bun/commit/0556e3c63692a7f4e48659d52b55ffd9cca0202a))
 
 ## [1.0.7](https://github.com/uptrace/bun/compare/v1.0.6...v1.0.7) (2021-09-15)
 
-
 ### Bug Fixes
 
-* don't append zero time as NULL without nullzero tag ([3b8d9cb](https://github.com/uptrace/bun/commit/3b8d9cb4e39eb17f79a618396bbbe0adbc66b07b))
-* **pgdriver:** return PostgreSQL DATE as a string ([40be0e8](https://github.com/uptrace/bun/commit/40be0e8ea85f8932b7a410a6fc2dd3acd2d18ebc))
-* specify table alias for soft delete where ([5fff1dc](https://github.com/uptrace/bun/commit/5fff1dc1dd74fa48623a24fa79e358a544dfac0b))
-
+- don't append zero time as NULL without nullzero tag
+  ([3b8d9cb](https://github.com/uptrace/bun/commit/3b8d9cb4e39eb17f79a618396bbbe0adbc66b07b))
+- **pgdriver:** return PostgreSQL DATE as a string
+  ([40be0e8](https://github.com/uptrace/bun/commit/40be0e8ea85f8932b7a410a6fc2dd3acd2d18ebc))
+- specify table alias for soft delete where
+  ([5fff1dc](https://github.com/uptrace/bun/commit/5fff1dc1dd74fa48623a24fa79e358a544dfac0b))
 
 ### Features
 
-* add SelectQuery.Exists helper ([c3e59c1](https://github.com/uptrace/bun/commit/c3e59c1bc58b43c4b8e33e7d170ad33a08fbc3c7))
-
-
+- add SelectQuery.Exists helper
+  ([c3e59c1](https://github.com/uptrace/bun/commit/c3e59c1bc58b43c4b8e33e7d170ad33a08fbc3c7))
 
 ## [1.0.6](https://github.com/uptrace/bun/compare/v1.0.5...v1.0.6) (2021-09-11)
 
-
 ### Bug Fixes
 
-* change unique tag to create a separate unique constraint ([8401615](https://github.com/uptrace/bun/commit/84016155a77ca77613cc054277fefadae3098757))
-* improve zero checker for ptr values ([2b3623d](https://github.com/uptrace/bun/commit/2b3623dd665d873911fd20ca707016929921e862))
-
-
+- change unique tag to create a separate unique constraint
+  ([8401615](https://github.com/uptrace/bun/commit/84016155a77ca77613cc054277fefadae3098757))
+- improve zero checker for ptr values
+  ([2b3623d](https://github.com/uptrace/bun/commit/2b3623dd665d873911fd20ca707016929921e862))
 
 ## v1.0.5 - Sep 09 2021
 
