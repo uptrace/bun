@@ -233,6 +233,7 @@ func TestDB(t *testing.T) {
 		{testScanTimeIntoString},
 		{testModelNonPointer},
 		{testBinaryData},
+		{testUpsert},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -934,4 +935,36 @@ func testBinaryData(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(&model).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, []byte("hello"), model.Data)
+}
+
+func testUpsert(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID  int64
+		Str string
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{ID: 1, Str: "hello"}
+
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+
+	model.Str = "world"
+
+	switch db.Dialect().Name() {
+	case dialect.MySQL:
+		_, err := db.NewInsert().Model(model).On("DUPLICATE KEY UPDATE").Exec(ctx)
+		require.NoError(t, err)
+	default:
+		_, err := db.NewInsert().Model(model).On("CONFLICT (id) DO UPDATE").Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	err = db.NewSelect().Model(model).WherePK().Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "world", model.Str)
 }
