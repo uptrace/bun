@@ -206,7 +206,7 @@ func (q *DeleteQuery) softDeleteSet(fmter schema.Formatter, tm time.Time) string
 	}
 	b = append(b, q.table.SoftDeleteField.SQLName...)
 	b = append(b, " = "...)
-	b = q.db.Dialect().Append(fmter, b, tm)
+	b = schema.Append(fmter, b, tm)
 	return internal.String(b)
 }
 

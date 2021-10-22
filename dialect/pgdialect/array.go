@@ -30,7 +30,7 @@ func Array(vi interface{}) *ArrayValue {
 	return &ArrayValue{
 		v: v,
 
-		append: arrayAppender(v.Type()),
+		append: pgDialect.arrayAppender(v.Type()),
 		scan:   arrayScanner(v.Type()),
 	}
 }

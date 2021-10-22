@@ -29,33 +29,6 @@ var (
 	sliceFloat64Type = reflect.TypeOf([]float64(nil))
 )
 
-func customAppender(typ reflect.Type) schema.AppenderFunc {
-	switch typ.Kind() {
-	case reflect.Uint32:
-		return appendUint32ValueAsInt
-	case reflect.Uint, reflect.Uint64:
-		return appendUint64ValueAsInt
-	}
-	return nil
-}
-
-func appendTime(b []byte, tm time.Time) []byte {
-	b = append(b, '\'')
-	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
-	b = append(b, '\'')
-	return b
-}
-
-func appendUint32ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-	return strconv.AppendInt(b, int64(int32(v.Uint())), 10)
-}
-
-func appendUint64ValueAsInt(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-	return strconv.AppendInt(b, int64(v.Uint()), 10)
-}
-
-//------------------------------------------------------------------------------
-
 func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	switch v := v.(type) {
 	case int64:
@@ -69,26 +42,11 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	case string:
 		return arrayAppendString(b, v)
 	case time.Time:
-		return appendTime(b, v)
+		return fmter.Dialect().AppendTime(b, v)
 	default:
 		err := fmt.Errorf("pgdialect: can't append %T", v)
 		return dialect.AppendError(b, err)
 	}
-}
-
-func arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
-	if typ.Implements(driverValuerType) {
-		return arrayAppendDriverValue
-	}
-	switch typ.Kind() {
-	case reflect.String:
-		return arrayAppendStringValue
-	case reflect.Slice:
-		if typ.Elem().Kind() == reflect.Uint8 {
-			return arrayAppendBytesValue
-		}
-	}
-	return schema.Appender(typ, customAppender)
 }
 
 func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -109,12 +67,12 @@ func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) [
 
 //------------------------------------------------------------------------------
 
-func arrayAppender(typ reflect.Type) schema.AppenderFunc {
+func (d *Dialect) arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()
 
 	switch kind {
 	case reflect.Ptr:
-		if fn := arrayAppender(typ.Elem()); fn != nil {
+		if fn := d.arrayAppender(typ.Elem()); fn != nil {
 			return schema.PtrAppender(fn)
 		}
 	case reflect.Slice, reflect.Array:
@@ -138,7 +96,7 @@ func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 		}
 	}
 
-	appendElem := arrayElemAppender(elemType)
+	appendElem := d.arrayElemAppender(elemType)
 	if appendElem == nil {
 		panic(fmt.Errorf("pgdialect: %s is not supported", typ))
 	}
@@ -174,6 +132,21 @@ func arrayAppender(typ reflect.Type) schema.AppenderFunc {
 
 		return b
 	}
+}
+
+func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
+	if typ.Implements(driverValuerType) {
+		return arrayAppendDriverValue
+	}
+	switch typ.Kind() {
+	case reflect.String:
+		return arrayAppendStringValue
+	case reflect.Slice:
+		if typ.Elem().Kind() == reflect.Uint8 {
+			return arrayAppendBytesValue
+		}
+	}
+	return schema.Appender(d, typ)
 }
 
 func appendStringSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {

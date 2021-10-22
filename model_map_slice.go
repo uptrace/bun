@@ -129,7 +129,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 			if j > 0 {
 				b = append(b, ", "...)
 			}
-			b = fmter.Dialect().Append(fmter, b, el[key])
+			b = schema.Append(fmter, b, el[key])
 		}
 	}
 
