@@ -50,7 +50,7 @@ func (f Formatter) AppendValue(b []byte, v reflect.Value) []byte {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return dialect.AppendNull(b)
 	}
-	appender := f.dialect.Appender(v.Type())
+	appender := Appender(f.dialect, v.Type())
 	return appender(f, b, v)
 }
 
@@ -167,7 +167,7 @@ func (f Formatter) appendArg(b []byte, arg interface{}) []byte {
 		}
 		return bb
 	default:
-		return f.dialect.Append(f, b, arg)
+		return Append(f, b, arg)
 	}
 }
 

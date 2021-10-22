@@ -2,11 +2,9 @@ package mysqldialect
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"log"
-	"reflect"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/mod/semver"
@@ -20,11 +18,10 @@ import (
 const datetimeType = "DATETIME"
 
 type Dialect struct {
+	schema.BaseDialect
+
 	tables   *schema.Tables
 	features feature.Feature
-
-	appenderMap sync.Map
-	scannerMap  sync.Map
 }
 
 func New() *Dialect {
@@ -86,82 +83,45 @@ func (d *Dialect) IdentQuote() byte {
 }
 
 func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
-	return appendTime(b, tm)
+	b = append(b, '\'')
+	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	b = append(b, '\'')
+	return b
 }
 
-func (d *Dialect) Append(fmter schema.Formatter, b []byte, v interface{}) []byte {
-	switch v := v.(type) {
-	case nil:
+func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
+	if bs == nil {
 		return dialect.AppendNull(b)
-	case bool:
-		return dialect.AppendBool(b, v)
-	case int:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int32:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int64:
-		return strconv.AppendInt(b, v, 10)
-	case uint:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint32:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint64:
-		return strconv.AppendUint(b, v, 10)
-	case float32:
-		return dialect.AppendFloat32(b, v)
-	case float64:
-		return dialect.AppendFloat64(b, v)
-	case string:
-		return dialect.AppendString(b, v)
-	case time.Time:
-		return appendTime(b, v)
-	case []byte:
-		return dialect.AppendBytes(b, v)
-	case schema.QueryAppender:
-		return schema.AppendQueryAppender(fmter, b, v)
-	default:
-		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Ptr && vv.IsNil() {
-			return dialect.AppendNull(b)
+	}
+
+	b = append(b, `X'`...)
+
+	s := len(b)
+	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
+	hex.Encode(b[s:], bs)
+
+	b = append(b, '\'')
+
+	return b
+}
+
+func (d *Dialect) AppendJSON(b, jsonb []byte) []byte {
+	b = append(b, '\'')
+
+	for _, c := range jsonb {
+		switch c {
+		case '\'':
+			b = append(b, "''"...)
+		case '\\':
+			b = append(b, `\\`...)
+		default:
+			b = append(b, c)
 		}
-		appender := d.Appender(vv.Type())
-		return appender(fmter, b, vv)
-	}
-}
-
-func (d *Dialect) Appender(typ reflect.Type) schema.AppenderFunc {
-	if v, ok := d.appenderMap.Load(typ); ok {
-		return v.(schema.AppenderFunc)
 	}
 
-	fn := schema.Appender(typ, customAppender)
+	b = append(b, '\'')
 
-	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
-		return v.(schema.AppenderFunc)
-	}
-	return fn
-}
-
-func (d *Dialect) FieldAppender(field *schema.Field) schema.AppenderFunc {
-	switch strings.ToUpper(field.UserSQLType) {
-	case sqltype.JSON:
-		return appendJSONValue
-	}
-
-	return schema.FieldAppender(d, field)
-}
-
-func (d *Dialect) Scanner(typ reflect.Type) schema.ScannerFunc {
-	if v, ok := d.scannerMap.Load(typ); ok {
-		return v.(schema.ScannerFunc)
-	}
-
-	fn := scanner(typ)
-
-	if v, ok := d.scannerMap.LoadOrStore(typ, fn); ok {
-		return v.(schema.ScannerFunc)
-	}
-	return fn
+	return b
 }
 
 func sqlType(field *schema.Field) string {

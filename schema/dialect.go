@@ -2,13 +2,12 @@ package schema
 
 import (
 	"database/sql"
-	"reflect"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/internal/parser"
 )
 
 type Dialect interface {
@@ -22,22 +21,75 @@ type Dialect interface {
 
 	IdentQuote() byte
 
+	AppendUint32(b []byte, n uint32) []byte
+	AppendUint64(b []byte, n uint64) []byte
 	AppendTime(b []byte, tm time.Time) []byte
-	Append(fmter Formatter, b []byte, v interface{}) []byte
-	Appender(typ reflect.Type) AppenderFunc
+	AppendBytes(b []byte, bs []byte) []byte
+	AppendJSON(b, jsonb []byte) []byte
+}
 
-	FieldAppender(field *Field) AppenderFunc
-	Scanner(typ reflect.Type) ScannerFunc
+//------------------------------------------------------------------------------
+
+type BaseDialect struct{}
+
+func (BaseDialect) AppendUint32(b []byte, n uint32) []byte {
+	return strconv.AppendUint(b, uint64(n), 10)
+}
+
+func (BaseDialect) AppendUint64(b []byte, n uint64) []byte {
+	return strconv.AppendUint(b, n, 10)
+}
+
+func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
+	b = append(b, '\'')
+	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
+	b = append(b, '\'')
+	return b
+}
+
+func (BaseDialect) AppendBytes(b, bs []byte) []byte {
+	return dialect.AppendBytes(b, bs)
+}
+
+func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
+	b = append(b, '\'')
+
+	p := parser.New(jsonb)
+	for p.Valid() {
+		c := p.Read()
+		switch c {
+		case '"':
+			b = append(b, '"')
+		case '\'':
+			b = append(b, "''"...)
+		case '\000':
+			continue
+		case '\\':
+			if p.SkipBytes([]byte("u0000")) {
+				b = append(b, `\\u0000`...)
+			} else {
+				b = append(b, '\\')
+				if p.Valid() {
+					b = append(b, p.Read())
+				}
+			}
+		default:
+			b = append(b, c)
+		}
+	}
+
+	b = append(b, '\'')
+
+	return b
 }
 
 //------------------------------------------------------------------------------
 
 type nopDialect struct {
+	BaseDialect
+
 	tables   *Tables
 	features feature.Feature
-
-	appenderMap sync.Map
-	scannerMap  sync.Map
 }
 
 func newNopDialect() *nopDialect {
@@ -67,81 +119,4 @@ func (d *nopDialect) OnTable(table *Table) {}
 
 func (d *nopDialect) IdentQuote() byte {
 	return '"'
-}
-
-func (d *nopDialect) AppendTime(b []byte, tm time.Time) []byte {
-	b = append(b, '\'')
-	b = tm.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
-	b = append(b, '\'')
-	return b
-}
-
-func (d *nopDialect) Append(fmter Formatter, b []byte, v interface{}) []byte {
-	switch v := v.(type) {
-	case nil:
-		return dialect.AppendNull(b)
-	case bool:
-		return dialect.AppendBool(b, v)
-	case int:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int32:
-		return strconv.AppendInt(b, int64(v), 10)
-	case int64:
-		return strconv.AppendInt(b, v, 10)
-	case uint:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint32:
-		return strconv.AppendUint(b, uint64(v), 10)
-	case uint64:
-		return strconv.AppendUint(b, v, 10)
-	case float32:
-		return dialect.AppendFloat32(b, v)
-	case float64:
-		return dialect.AppendFloat64(b, v)
-	case string:
-		return dialect.AppendString(b, v)
-	case time.Time:
-		return d.AppendTime(b, v)
-	case []byte:
-		return dialect.AppendBytes(b, v)
-	case QueryAppender:
-		return AppendQueryAppender(fmter, b, v)
-	default:
-		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Ptr && vv.IsNil() {
-			return dialect.AppendNull(b)
-		}
-		appender := Appender(vv.Type(), nil)
-		return appender(fmter, b, vv)
-	}
-}
-
-func (d *nopDialect) Appender(typ reflect.Type) AppenderFunc {
-	if v, ok := d.appenderMap.Load(typ); ok {
-		return v.(AppenderFunc)
-	}
-
-	fn := Appender(typ, nil)
-
-	if v, ok := d.appenderMap.LoadOrStore(typ, fn); ok {
-		return v.(AppenderFunc)
-	}
-	return fn
-}
-
-func (d *nopDialect) FieldAppender(field *Field) AppenderFunc {
-	return FieldAppender(d, field)
-}
-
-func (d *nopDialect) Scanner(typ reflect.Type) ScannerFunc {
-	if v, ok := d.scannerMap.Load(typ); ok {
-		return v.(ScannerFunc)
-	}
-
-	fn := Scanner(typ)
-
-	if v, ok := d.scannerMap.LoadOrStore(typ, fn); ok {
-		return v.(ScannerFunc)
-	}
-	return fn
 }

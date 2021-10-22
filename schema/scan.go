@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/vmihailenco/msgpack/v5"
@@ -52,6 +53,8 @@ func init() {
 	}
 }
 
+var scannerMap sync.Map
+
 func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	if field.Tag.HasOption("msgpack") {
 		return scanMsgpack
@@ -65,10 +68,23 @@ func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 			return scanJSONIntoInterface
 		}
 	}
-	return dialect.Scanner(field.StructField.Type)
+	return Scanner(field.StructField.Type)
 }
 
 func Scanner(typ reflect.Type) ScannerFunc {
+	if v, ok := scannerMap.Load(typ); ok {
+		return v.(ScannerFunc)
+	}
+
+	fn := scanner(typ)
+
+	if v, ok := scannerMap.LoadOrStore(typ, fn); ok {
+		return v.(ScannerFunc)
+	}
+	return fn
+}
+
+func scanner(typ reflect.Type) ScannerFunc {
 	kind := typ.Kind()
 
 	if kind == reflect.Ptr {

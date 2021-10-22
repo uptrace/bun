@@ -7,7 +7,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/internal/parser"
 )
 
 func AppendError(b []byte, err error) []byte {
@@ -77,48 +76,16 @@ func AppendString(b []byte, s string) []byte {
 	return b
 }
 
-func AppendBytes(b []byte, bs []byte) []byte {
+func AppendBytes(b, bs []byte) []byte {
 	if bs == nil {
 		return AppendNull(b)
 	}
 
-	b = append(b, `X'`...)
+	b = append(b, `'\x`...)
 
 	s := len(b)
 	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
 	hex.Encode(b[s:], bs)
-
-	b = append(b, '\'')
-
-	return b
-}
-
-func AppendJSON(b, jsonb []byte) []byte {
-	b = append(b, '\'')
-
-	p := parser.New(jsonb)
-	for p.Valid() {
-		c := p.Read()
-		switch c {
-		case '"':
-			b = append(b, '"')
-		case '\'':
-			b = append(b, "''"...)
-		case '\000':
-			continue
-		case '\\':
-			if p.SkipBytes([]byte("u0000")) {
-				b = append(b, `\\u0000`...)
-			} else {
-				b = append(b, '\\')
-				if p.Valid() {
-					b = append(b, p.Read())
-				}
-			}
-		default:
-			b = append(b, c)
-		}
-	}
 
 	b = append(b, '\'')
 

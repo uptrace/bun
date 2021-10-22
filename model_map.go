@@ -139,7 +139,7 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = fmter.Dialect().Append(fmter, b, m.m[k])
+			b = schema.Append(fmter, b, m.m[k])
 		}
 	}
 
@@ -167,7 +167,7 @@ func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = fmter.Dialect().Append(fmter, b, m.m[k])
+			b = schema.Append(fmter, b, m.m[k])
 		}
 	}
 

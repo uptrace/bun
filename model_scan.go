@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"reflect"
+
+	"github.com/uptrace/bun/schema"
 )
 
 type scanModel struct {
@@ -49,6 +51,6 @@ func (m *scanModel) Scan(src interface{}) error {
 	dest := reflect.ValueOf(m.dest[m.scanIndex])
 	m.scanIndex++
 
-	scanner := m.db.dialect.Scanner(dest.Type())
+	scanner := schema.Scanner(dest.Type())
 	return scanner(dest, src)
 }
