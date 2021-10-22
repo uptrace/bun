@@ -8,6 +8,7 @@ const (
 	Real            = "REAL"
 	DoublePrecision = "DOUBLE PRECISION"
 	VarChar         = "VARCHAR"
+	Blob            = "BLOB"
 	Timestamp       = "TIMESTAMP"
 	JSON            = "JSON"
 	JSONB           = "JSONB"

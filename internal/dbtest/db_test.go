@@ -227,11 +227,12 @@ func TestDB(t *testing.T) {
 		{testFKViolation},
 		{testInterfaceAny},
 		{testInterfaceJSON},
-		{testScanBytes},
+		{testScanRawMessage},
 		{testPointers},
 		{testExists},
 		{testScanTimeIntoString},
 		{testModelNonPointer},
+		{testBinaryData},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -828,7 +829,7 @@ func testInterfaceJSON(t *testing.T, db *bun.DB) {
 	require.Equal(t, "hello", model.Value)
 }
 
-func testScanBytes(t *testing.T, db *bun.DB) {
+func testScanRawMessage(t *testing.T, db *bun.DB) {
 	type Model struct {
 		ID    int64
 		Value json.RawMessage
@@ -913,4 +914,24 @@ func testModelNonPointer(t *testing.T, db *bun.DB) {
 	_, err := db.NewInsert().Model(Model{}).ExcludeColumn("id").Returning("id").Exec(ctx)
 	require.Error(t, err)
 	require.Equal(t, "bun: Model(non-pointer dbtest_test.Model)", err.Error())
+}
+
+func testBinaryData(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID   int64
+		Data []byte
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Model{Data: []byte("hello")}).Exec(ctx)
+	require.NoError(t, err)
+
+	var model Model
+	err = db.NewSelect().Model(&model).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []byte("hello"), model.Data)
 }

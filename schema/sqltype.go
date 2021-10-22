@@ -61,6 +61,14 @@ func DiscoverSQLType(typ reflect.Type) string {
 	case nullStringType:
 		return sqltype.VarChar
 	}
+
+	switch typ.Kind() {
+	case reflect.Slice:
+		if typ.Elem().Kind() == reflect.Uint8 {
+			return sqltype.Blob
+		}
+	}
+
 	return sqlTypes[typ.Kind()]
 }
 
