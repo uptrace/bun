@@ -82,7 +82,7 @@ func AppendBytes(b []byte, bs []byte) []byte {
 		return AppendNull(b)
 	}
 
-	b = append(b, `'\x`...)
+	b = append(b, `X'`...)
 
 	s := len(b)
 	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)

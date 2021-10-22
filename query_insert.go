@@ -442,6 +442,17 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		}
 
 		b = q.appendSetExcluded(b, fields)
+	} else if q.onDuplicateKeyUpdate() {
+		fields, err := q.getDataFields()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(fields) == 0 {
+			fields = q.tableModel.Table().DataFields
+		}
+
+		b = q.appendSetValues(b, fields)
 	}
 
 	if len(q.where) > 0 {
@@ -460,6 +471,10 @@ func (q *InsertQuery) onConflictDoUpdate() bool {
 	return strings.HasSuffix(strings.ToUpper(q.on.Query), " DO UPDATE")
 }
 
+func (q *InsertQuery) onDuplicateKeyUpdate() bool {
+	return strings.ToUpper(q.on.Query) == "DUPLICATE KEY UPDATE"
+}
+
 func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte {
 	b = append(b, " SET "...)
 	for i, f := range fields {
@@ -469,6 +484,20 @@ func (q *InsertQuery) appendSetExcluded(b []byte, fields []*schema.Field) []byte
 		b = append(b, f.SQLName...)
 		b = append(b, " = EXCLUDED."...)
 		b = append(b, f.SQLName...)
+	}
+	return b
+}
+
+func (q *InsertQuery) appendSetValues(b []byte, fields []*schema.Field) []byte {
+	b = append(b, " "...)
+	for i, f := range fields {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+		b = append(b, f.SQLName...)
+		b = append(b, " = VALUES("...)
+		b = append(b, f.SQLName...)
+		b = append(b, ")"...)
 	}
 	return b
 }
