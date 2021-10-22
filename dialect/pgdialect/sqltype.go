@@ -68,6 +68,10 @@ func fieldSQLType(field *schema.Field) string {
 		}
 	}
 
+	if field.DiscoveredSQLType == sqltype.Blob {
+		return pgTypeBytea
+	}
+
 	return sqlType(field.IndirectType)
 }
 
