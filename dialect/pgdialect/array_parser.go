@@ -110,6 +110,14 @@ func (p *arrayParser) readSubstring() ([]byte, error) {
 			}
 			continue
 		}
+		if c == '\'' && next == '\'' {
+			p.buf = append(p.buf, next)
+			c, err = p.readByte()
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
 
 		p.buf = append(p.buf, c)
 		c = next
