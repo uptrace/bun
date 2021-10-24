@@ -1,4 +1,4 @@
-module github.com/uptrace/bun/example/rel-many-to-many
+module github.com/uptrace/bun/example/rel-many-to-many-self
 
 go 1.16
 
