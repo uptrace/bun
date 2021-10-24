@@ -1,3 +1,19 @@
+## [1.0.14](https://github.com/uptrace/bun/compare/v1.0.13...v1.0.14) (2021-10-24)
+
+
+### Bug Fixes
+
+* correct binary serialization for mysql ([#259](https://github.com/uptrace/bun/issues/259)) ([e899f50](https://github.com/uptrace/bun/commit/e899f50b22ef6759ef8c029a6cd3f25f2bde17ef))
+* correctly escape single quotes in pg arrays ([3010847](https://github.com/uptrace/bun/commit/3010847f5c2c50bce1969689a0b77fd8a6fb7e55))
+* use BLOB sql type to encode []byte in MySQL and SQLite ([725ec88](https://github.com/uptrace/bun/commit/725ec8843824a7fc8f4058ead75ab0e62a78192a))
+
+
+### Features
+
+* warn when there are args but no placeholders ([06dde21](https://github.com/uptrace/bun/commit/06dde215c8d0bde2b2364597190729a160e536a1))
+
+
+
 ## [1.0.13](https://github.com/uptrace/bun/compare/v1.0.12...v1.0.13) (2021-10-17)
 
 ### Breaking Change
