@@ -61,6 +61,19 @@ func TestPGArray(t *testing.T) {
 	require.Nil(t, strs)
 }
 
+func TestPGArrayQuote(t *testing.T) {
+	db := pg(t)
+	defer db.Close()
+
+	wanted := []string{"'", "''", "'''", "\""}
+	var strs []string
+	err := db.NewSelect().
+		ColumnExpr("?::text[]", pgdialect.Array(wanted)).
+		Scan(ctx, pgdialect.Array(&strs))
+	require.NoError(t, err)
+	require.Equal(t, wanted, strs)
+}
+
 type Hash [32]byte
 
 func (h *Hash) Scan(src interface{}) error {
