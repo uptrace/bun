@@ -286,7 +286,7 @@ func arrayAppendString(b []byte, s string) []byte {
 		case 0:
 			// ignore
 		case '\'':
-			b = append(b, "'''"...)
+			b = append(b, "''"...)
 		case '"':
 			b = append(b, '\\', '"')
 		case '\\':
