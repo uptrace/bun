@@ -94,6 +94,55 @@ Projects using Bun:
 
 </details>
 
+## But why?
+
+So you can write queries like this:
+
+```go
+regionalSales := db.NewSelect().
+	ColumnExpr("region").
+	ColumnExpr("SUM(amount) AS total_sales").
+	TableExpr("orders").
+	GroupExpr("region")
+
+topRegions := db.NewSelect().
+	ColumnExpr("region").
+	TableExpr("regional_sales").
+	Where("total_sales > (SELECT SUM(total_sales) / 10 FROM regional_sales)")
+
+err := db.NewSelect().
+	With("regional_sales", regionalSales).
+	With("top_regions", topRegions).
+	ColumnExpr("region").
+	ColumnExpr("product").
+	ColumnExpr("SUM(quantity) AS product_units").
+	ColumnExpr("SUM(amount) AS product_sales").
+	TableExpr("orders").
+	Where("region IN (SELECT region FROM top_regions)").
+	GroupExpr("region").
+	GroupExpr("product").
+	Scan(ctx)
+```
+
+```sql
+WITH regional_sales AS (
+    SELECT region, SUM(amount) AS total_sales
+    FROM orders
+    GROUP BY region
+), top_regions AS (
+    SELECT region
+    FROM regional_sales
+    WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)
+)
+SELECT region,
+       product,
+       SUM(quantity) AS product_units,
+       SUM(amount) AS product_sales
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product
+```
+
 ## Installation
 
 ```go
