@@ -12,16 +12,16 @@ import (
 )
 
 type Profile struct {
-	ID   int64
+	ID   int64 `bun:",pk"`
 	Lang string
 }
 
 // User has one profile.
 type User struct {
-	ID        int64
+	ID        int64 `bun:",pk"`
 	Name      string
 	ProfileID int64
-	Profile   *Profile `bun:"rel:belongs-to"`
+	Profile   *Profile `bun:"rel:belongs-to,join=profile_id=id"`
 }
 
 func main() {

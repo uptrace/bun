@@ -12,7 +12,7 @@ import (
 )
 
 type Profile struct {
-	ID     int64
+	ID     int64 `bun:",pk"`
 	Lang   string
 	Active bool
 	UserID int64
@@ -20,9 +20,9 @@ type Profile struct {
 
 // User has many profiles.
 type User struct {
-	ID       int64
+	ID       int64 `bun:",pk"`
 	Name     string
-	Profiles []*Profile `bun:"rel:has-many"`
+	Profiles []*Profile `bun:"rel:has-many,join:id=user_id"`
 }
 
 func main() {

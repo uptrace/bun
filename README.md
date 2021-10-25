@@ -30,8 +30,7 @@ Main features are:
 
 Resources:
 
-- To ask questions, join [Discord](https://discord.gg/rWtp5Aj) or use
-  [Discussions](https://github.com/uptrace/bun/discussions).
+- [Discussions](https://github.com/uptrace/bun/discussions).
 - [Newsletter](https://blog.uptrace.dev/pages/newsletter.html) to get latest updates.
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
 - [Documentation](https://bun.uptrace.dev/)
@@ -147,30 +146,6 @@ err := db.NewSelect().
 	OrderExpr("id ASC").
 	Limit(1).
 	Scan(ctx)
-```
-
-The code above is equivalent to:
-
-```go
-query := "SELECT id, name FROM users AS user WHERE name != '' ORDER BY id ASC LIMIT 1"
-
-rows, err := sqldb.QueryContext(ctx, query)
-if err != nil {
-	panic(err)
-}
-
-if !rows.Next() {
-    panic(sql.ErrNoRows)
-}
-
-user := new(User)
-if err := db.ScanRow(ctx, rows, user); err != nil {
-	panic(err)
-}
-
-if err := rows.Err(); err != nil {
-    panic(err)
-}
 ```
 
 ## Basic example

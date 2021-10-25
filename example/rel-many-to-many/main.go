@@ -12,19 +12,19 @@ import (
 )
 
 type Order struct {
-	ID    int64
-	Items []Item `bun:"m2m:order_to_items"`
+	ID    int64  `bun:",pk"`
+	Items []Item `bun:"m2m:order_to_items,join:Order=Item"`
 }
 
 type Item struct {
-	ID int64
+	ID int64 `bun:",pk"`
 }
 
 type OrderToItem struct {
 	OrderID int64  `bun:",pk"`
-	Order   *Order `bun:"rel:belongs-to"`
+	Order   *Order `bun:"rel:belongs-to,join:order_id=id"`
 	ItemID  int64  `bun:",pk"`
-	Item    *Item  `bun:"rel:belongs-to"`
+	Item    *Item  `bun:"rel:belongs-to,join:item_id=id"`
 }
 
 func main() {
