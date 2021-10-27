@@ -600,6 +600,12 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewInsert().Model(&Model{Str: "hello"}).On("DUPLICATE KEY UPDATE")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewAddColumn().Model(new(Model)).
+				ModelTableExpr("mytable").
+				IfNotExists().
+				ColumnExpr("column_name VARCHAR(123)")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)

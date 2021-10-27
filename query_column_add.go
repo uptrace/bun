@@ -11,6 +11,8 @@ import (
 
 type AddColumnQuery struct {
 	baseQuery
+
+	ifNotExists bool
 }
 
 func NewAddColumnQuery(db *DB) *AddColumnQuery {
@@ -59,6 +61,11 @@ func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColum
 	return q
 }
 
+func (q *AddColumnQuery) IfNotExists() *AddColumnQuery {
+	q.ifNotExists = true
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *AddColumnQuery) Operation() string {
@@ -82,6 +89,10 @@ func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 	b = append(b, " ADD "...)
 
+	if q.ifNotExists {
+		b = append(b, "IF NOT EXISTS "...)
+	}
+
 	b, err = q.columns[0].AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
@@ -99,11 +110,5 @@ func (q *AddColumnQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Res
 	}
 
 	query := internal.String(queryBytes)
-
-	res, err := q.exec(ctx, q, query)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return q.exec(ctx, q, query)
 }
