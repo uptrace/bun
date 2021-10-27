@@ -606,6 +606,20 @@ func TestQuery(t *testing.T) {
 				IfNotExists().
 				ColumnExpr("column_name VARCHAR(123)")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []Model{
+				{ID: 1},
+				{ID: 2},
+			}
+			return db.NewSelect().Model(&models).WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []Model{
+				{ID: 1, Str: "hello"},
+				{ID: 2, Str: "world"},
+			}
+			return db.NewSelect().Model(&models).WherePK("id", "str")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)

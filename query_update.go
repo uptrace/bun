@@ -107,8 +107,8 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) WherePK() *UpdateQuery {
-	q.flags = q.flags.Set(wherePKFlag)
+func (q *UpdateQuery) WherePK(cols ...string) *UpdateQuery {
+	q.addWhereCols(cols)
 	return q
 }
 
