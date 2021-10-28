@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/bradleyjkemp/cupaloy"
-	"github.com/stretchr/testify/assert"
-	"github.com/uptrace/bun/dialect"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
@@ -622,6 +620,14 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewSelect().Model(&models).WherePK("id", "str")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct{}
+
+			return db.NewCreateTable().
+				Model(&Model{}).
+				ColumnExpr(`email VARCHAR`).
+				ColumnExpr(`password VARCHAR`)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
@@ -645,50 +651,5 @@ func TestQuery(t *testing.T) {
 				}
 			})
 		}
-	})
-}
-
-func TestCreateTableQuery_AppendQuery(t *testing.T) {
-	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		t.Run("with columns from model", func(t *testing.T) {
-			type Login struct {
-				Email    string
-				Password string
-			}
-
-			output, err := bun.NewCreateTableQuery(db).
-				Model(&Login{}).
-				AppendQuery(schema.NewFormatter(db.Dialect()), nil)
-			assert.NoError(t, err, "should be able to generate a simple create table query without error")
-			assert.NotEmpty(t, output, "the resulting query byte array should not be empty")
-			switch db.Dialect().Name() {
-			case dialect.PG, dialect.SQLite:
-				assert.Equal(t, `CREATE TABLE "logins" ("email" VARCHAR, "password" VARCHAR)`, string(output))
-			case dialect.MySQL:
-				assert.Equal(t, "CREATE TABLE `logins` (`email` VARCHAR(255), `password` VARCHAR(255))", string(output))
-			default:
-				t.Fatalf("unknown dialect: %+v", db.Dialect().Name())
-			}
-		})
-
-		t.Run("with columns from column expr", func(t *testing.T) {
-			type Login struct{}
-
-			output, err := bun.NewCreateTableQuery(db).
-				Model(&Login{}).
-				ColumnExpr(`email VARCHAR`).
-				ColumnExpr(`password VARCHAR`).
-				AppendQuery(schema.NewFormatter(db.Dialect()), nil)
-			assert.NoError(t, err, "should be able to generate a simple create table query without error")
-			assert.NotEmpty(t, output, "the resulting query byte array should not be empty")
-			switch db.Dialect().Name() {
-			case dialect.PG, dialect.SQLite:
-				assert.Equal(t, `CREATE TABLE "logins" (email VARCHAR, password VARCHAR)`, string(output))
-			case dialect.MySQL:
-				assert.Equal(t, "CREATE TABLE `logins` (email VARCHAR, password VARCHAR)", string(output))
-			default:
-				t.Fatalf("unknown dialect: %+v", db.Dialect().Name())
-			}
-		})
 	})
 }
