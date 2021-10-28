@@ -44,7 +44,7 @@ func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
 	return q
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Table(tables ...string) *CreateTableQuery {
 	for _, table := range tables {
@@ -68,7 +68,7 @@ func (q *CreateTableQuery) ColumnExpr(query string, args ...interface{}) *Create
 	return q
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Temp() *CreateTableQuery {
 	q.temp = true
@@ -128,7 +128,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if field.NotNull {
 			b = append(b, " NOT NULL"...)
 		}
-		if q.db.features.Has(feature.AutoIncrement) && field.AutoIncrement {
+		if fmter.Dialect().Features().Has(feature.AutoIncrement) && field.AutoIncrement {
 			b = append(b, " AUTO_INCREMENT"...)
 		}
 		if field.SQLDefault != "" {
@@ -137,8 +137,13 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		}
 	}
 
-	for _, col := range q.columns {
-		b = append(b, ", "...)
+	for i, col := range q.columns {
+		// Only pre-pend the comma if we are on subsequent iterations, or if there were fields/columns appended before
+		// this. This way if we are only appending custom column expressions we will not produce a syntax error with a
+		// leading comma.
+		if i > 0 || len(q.table.Fields) > 0 {
+			b = append(b, ", "...)
+		}
 		b, err = col.AppendQuery(fmter, b)
 		if err != nil {
 			return nil, err
@@ -147,7 +152,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 	b = q.appendPKConstraint(b, q.table.PKs)
 	b = q.appendUniqueConstraints(fmter, b)
-	b, err = q.appenFKConstraints(fmter, b)
+	b, err = q.appendFKConstraints(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +231,7 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 	return b
 }
 
-func (q *CreateTableQuery) appenFKConstraints(
+func (q *CreateTableQuery) appendFKConstraints(
 	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	for _, fk := range q.fks {
@@ -250,7 +255,7 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 	return b
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
 	if err := q.beforeCreateTableHook(ctx); err != nil {
