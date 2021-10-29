@@ -101,12 +101,14 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 		return table
 	}
 
-	if inProgress.init2() {
-		t.mu.Lock()
-		delete(t.inProgress, typ)
-		t.tables.Store(typ, table)
-		t.mu.Unlock()
+	if !inProgress.init2() {
+		return table
 	}
+
+	t.mu.Lock()
+	delete(t.inProgress, typ)
+	t.tables.Store(typ, table)
+	t.mu.Unlock()
 
 	t.dialect.OnTable(table)
 

@@ -444,7 +444,7 @@ func (t *Table) tryRelation(field *Field) bool {
 
 	if field.Tag.HasOption("join") {
 		internal.Warn.Printf(
-			`%s.%s option "join" requires a relation type`,
+			`%s.%s "join" option must come together with "rel" option`,
 			t.TypeName, field.GoName,
 		)
 	}
