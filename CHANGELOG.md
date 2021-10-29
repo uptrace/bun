@@ -1,3 +1,19 @@
+## [1.0.15](https://github.com/uptrace/bun/compare/v1.0.14...v1.0.15) (2021-10-29)
+
+
+### Bug Fixes
+
+* fixed bug creating table when model has no columns ([042c50b](https://github.com/uptrace/bun/commit/042c50bfe41caaa6e279e02c887c3a84a3acd84f))
+* init table with dialect once ([9a1ce1e](https://github.com/uptrace/bun/commit/9a1ce1e492602742bb2f587e9ed24e50d7d07cad))
+
+
+### Features
+
+* accept columns in WherePK ([b3e7035](https://github.com/uptrace/bun/commit/b3e70356db1aa4891115a10902316090fccbc8bf))
+* support ADD COLUMN IF NOT EXISTS ([ca7357c](https://github.com/uptrace/bun/commit/ca7357cdfe283e2f0b94eb638372e18401c486e9))
+
+
+
 ## [1.0.14](https://github.com/uptrace/bun/compare/v1.0.13...v1.0.14) (2021-10-24)
 
 
