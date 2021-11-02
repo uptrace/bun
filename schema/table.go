@@ -315,15 +315,14 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	tag := tagparser.Parse(f.Tag.Get("bun"))
 
 	sqlName := internal.Underscore(f.Name)
-	if tag.Name != "" {
+	if tag.Name != "" && tag.Name != sqlName {
+		if isKnownFieldOption(tag.Name) {
+			internal.Warn.Printf(
+				"%s.%s tag name %q is also an option name; is it a mistake?",
+				t.TypeName, f.Name, tag.Name,
+			)
+		}
 		sqlName = tag.Name
-	}
-
-	if tag.Name != sqlName && isKnownFieldOption(tag.Name) {
-		internal.Warn.Printf(
-			"%s.%s tag name %q is also an option name; is it a mistake?",
-			t.TypeName, f.Name, tag.Name,
-		)
 	}
 
 	for name := range tag.Options {
