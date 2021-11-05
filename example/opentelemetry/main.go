@@ -12,8 +12,6 @@ import (
 	"github.com/uptrace/opentelemetry-go-extra/otelplay"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 var tracer = otel.Tracer("bunexample")
@@ -68,23 +66,4 @@ func handleRequest(ctx context.Context, db *bun.DB) error {
 	}
 
 	return nil
-}
-
-func configureOpentelemetry(ctx context.Context) func() {
-	provider := sdktrace.NewTracerProvider()
-	otel.SetTracerProvider(provider)
-
-	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	if err != nil {
-		panic(err)
-	}
-
-	bsp := sdktrace.NewBatchSpanProcessor(exp)
-	provider.RegisterSpanProcessor(bsp)
-
-	return func() {
-		if err := provider.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}
 }
