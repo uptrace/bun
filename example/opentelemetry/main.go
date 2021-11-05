@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bunotel"
+	"github.com/uptrace/opentelemetry-go-extra/otelplay"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -20,8 +21,8 @@ var tracer = otel.Tracer("bunexample")
 func main() {
 	ctx := context.Background()
 
-	stop := configureOpentelemetry(ctx)
-	defer stop()
+	shutdown := otelplay.ConfigureOpentelemetry(ctx)
+	defer shutdown()
 
 	sqlite, err := sql.Open(sqliteshim.ShimName, "file::memory:?cache=shared")
 	if err != nil {
@@ -44,6 +45,8 @@ func main() {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
+
+	otelplay.PrintTraceID(ctx)
 }
 
 type TestModel struct {
