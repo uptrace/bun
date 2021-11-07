@@ -94,9 +94,9 @@ Projects using Bun:
 
 </details>
 
-## But why?
+## Why another database client?
 
-So you can write queries like this:
+So you can elegantly write complex queries:
 
 ```go
 regionalSales := db.NewSelect().

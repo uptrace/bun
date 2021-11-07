@@ -356,7 +356,8 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 //------------------------------------------------------------------------------
 
 type Tx struct {
-	db *DB
+	ctx context.Context
+	db  *DB
 	*sql.Tx
 }
 
@@ -382,14 +383,31 @@ func (db *DB) Begin() (Tx, error) {
 }
 
 func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	ctx, event := db.beforeQuery(ctx, nil, "BEGIN", nil, nil)
 	tx, err := db.DB.BeginTx(ctx, opts)
+	db.afterQuery(ctx, event, nil, err)
 	if err != nil {
 		return Tx{}, err
 	}
 	return Tx{
-		db: db,
-		Tx: tx,
+		ctx: ctx,
+		db:  db,
+		Tx:  tx,
 	}, nil
+}
+
+func (tx Tx) Commit() error {
+	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "COMMIT", nil, nil)
+	err := tx.Tx.Commit()
+	tx.db.afterQuery(ctx, event, nil, err)
+	return err
+}
+
+func (tx Tx) Rollback() error {
+	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "ROLLBACK", nil, nil)
+	err := tx.Tx.Rollback()
+	tx.db.afterQuery(ctx, event, nil, err)
+	return err
 }
 
 func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {

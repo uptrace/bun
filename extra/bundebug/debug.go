@@ -77,7 +77,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 
 	if !h.verbose {
 		switch event.Err {
-		case nil, sql.ErrNoRows:
+		case nil, sql.ErrNoRows, sql.ErrTxDone:
 			return
 		}
 	}
