@@ -18,6 +18,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/schema"
+	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 )
 
 var (
@@ -52,7 +53,7 @@ func (h *QueryHook) Init(db *bun.DB) {
 		labels = append(labels, sys)
 	}
 
-	reportDBStats(db.DB, labels)
+	otelsql.ReportDBStatsMetrics(db.DB, otelsql.WithAttributes(labels...))
 }
 
 func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) context.Context {
@@ -177,63 +178,4 @@ func dbSystem(db *bun.DB) attribute.KeyValue {
 	default:
 		return attribute.KeyValue{}
 	}
-}
-
-func reportDBStats(db *sql.DB, labels []attribute.KeyValue) {
-	var maxOpenConns metric.Int64GaugeObserver
-	var openConns metric.Int64GaugeObserver
-	var inUseConns metric.Int64GaugeObserver
-	var idleConns metric.Int64GaugeObserver
-	var connsWaitCount metric.Int64CounterObserver
-	var connsWaitDuration metric.Int64CounterObserver
-	var connsClosedMaxIdle metric.Int64CounterObserver
-	var connsClosedMaxIdleTime metric.Int64CounterObserver
-	var connsClosedMaxLifetime metric.Int64CounterObserver
-
-	batch := meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
-		stats := db.Stats()
-
-		result.Observe(labels,
-			maxOpenConns.Observation(int64(stats.MaxOpenConnections)),
-
-			openConns.Observation(int64(stats.OpenConnections)),
-			inUseConns.Observation(int64(stats.InUse)),
-			idleConns.Observation(int64(stats.Idle)),
-
-			connsWaitCount.Observation(stats.WaitCount),
-			connsWaitDuration.Observation(int64(stats.WaitDuration)),
-			connsClosedMaxIdle.Observation(stats.MaxIdleClosed),
-			connsClosedMaxIdleTime.Observation(stats.MaxIdleTimeClosed),
-			connsClosedMaxLifetime.Observation(stats.MaxLifetimeClosed),
-		)
-	})
-
-	maxOpenConns = batch.NewInt64GaugeObserver("go.sql.connections_max_open",
-		metric.WithDescription("Maximum number of open connections to the database"),
-	)
-	openConns = batch.NewInt64GaugeObserver("go.sql.connections_open",
-		metric.WithDescription("The number of established connections both in use and idle"),
-	)
-	inUseConns = batch.NewInt64GaugeObserver("go.sql.connections_in_use",
-		metric.WithDescription("The number of connections currently in use"),
-	)
-	idleConns = batch.NewInt64GaugeObserver("go.sql.connections_idle",
-		metric.WithDescription("The number of idle connections"),
-	)
-	connsWaitCount = batch.NewInt64CounterObserver("go.sql.connections_wait_count",
-		metric.WithDescription("The total number of connections waited for"),
-	)
-	connsWaitDuration = batch.NewInt64CounterObserver("go.sql.connections_wait_duration",
-		metric.WithDescription("The total time blocked waiting for a new connection"),
-		metric.WithUnit("nanoseconds"),
-	)
-	connsClosedMaxIdle = batch.NewInt64CounterObserver("go.sql.connections_closed_max_idle",
-		metric.WithDescription("The total number of connections closed due to SetMaxIdleConns"),
-	)
-	connsClosedMaxIdleTime = batch.NewInt64CounterObserver("go.sql.connections_closed_max_idle_time",
-		metric.WithDescription("The total number of connections closed due to SetConnMaxIdleTime"),
-	)
-	connsClosedMaxLifetime = batch.NewInt64CounterObserver("go.sql.connections_closed_max_lifetime",
-		metric.WithDescription("The total number of connections closed due to SetConnMaxLifetime"),
-	)
 }
