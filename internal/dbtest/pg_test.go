@@ -368,6 +368,27 @@ func TestPGBytea(t *testing.T) {
 	require.Equal(t, []byte("hello"), model.Bytes)
 }
 
+func TestPGByteaArray(t *testing.T) {
+	type Model struct {
+		BytesSlice [][]byte `bun:"type:bytea[]"`
+	}
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model1 := &Model{BytesSlice: [][]byte{[]byte("hello"), []byte("world")}}
+	_, err = db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, model1.BytesSlice, model2.BytesSlice)
+}
+
 func TestPGDate(t *testing.T) {
 	db := pg(t)
 	defer db.Close()

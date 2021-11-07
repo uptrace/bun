@@ -3,6 +3,7 @@ package pgdialect
 import (
 	"database/sql"
 	"strconv"
+	"strings"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -68,7 +69,7 @@ func (d *Dialect) onField(field *schema.Field) {
 		}
 	}
 
-	if field.Tag.HasOption("array") {
+	if field.Tag.HasOption("array") || strings.HasSuffix(field.UserSQLType, "[]") {
 		field.Append = d.arrayAppender(field.StructField.Type)
 		field.Scan = arrayScanner(field.StructField.Type)
 	}
