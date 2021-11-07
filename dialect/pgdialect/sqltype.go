@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
-	"time"
 
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/schema"
@@ -41,7 +40,6 @@ const (
 )
 
 var (
-	timeType           = reflect.TypeOf((*time.Time)(nil)).Elem()
 	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
 	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
 	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
@@ -52,11 +50,11 @@ func fieldSQLType(field *schema.Field) string {
 		return field.UserSQLType
 	}
 
-	if v, ok := field.Tag.Options["composite"]; ok {
+	if v, ok := field.Tag.Option("composite"); ok {
 		return v
 	}
 
-	if _, ok := field.Tag.Options["hstore"]; ok {
+	if _, ok := field.Tag.Option("hstore"); ok {
 		return "hstore"
 	}
 

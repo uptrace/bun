@@ -485,7 +485,7 @@ type Book struct {
 
 	Genres       []Genre       `bun:"m2m:book_genres"` // many to many relation
 	Translations []Translation `bun:"rel:has-many"`
-	Comments     []Comment     `bun:"rel:has-many,join:\"id=trackable_id,type=trackable_type\",polymorphic"`
+	Comments     []Comment     `bun:"rel:has-many,join:id=trackable_id,join:type=trackable_type,polymorphic"`
 }
 
 func (b Book) String() string {
@@ -509,7 +509,7 @@ type Translation struct {
 	Book   *Book  `bun:"rel:belongs-to"`
 	Lang   string `bun:"unique:book_id_lang"`
 
-	Comments []Comment `bun:"rel:has-many,join:\"id=trackable_id,type=trackable_type\",polymorphic"`
+	Comments []Comment `bun:"rel:has-many,join:id=trackable_id,join:type=trackable_type,polymorphic"`
 }
 
 type Comment struct {
