@@ -5,6 +5,6 @@ go 1.16
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/uptrace/bun v1.0.15
+	github.com/uptrace/bun v1.0.16
 	golang.org/x/mod v0.5.1
 )

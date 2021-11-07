@@ -1,3 +1,19 @@
+## [1.0.16](https://github.com/uptrace/bun/compare/v1.0.15...v1.0.16) (2021-11-07)
+
+
+### Bug Fixes
+
+* call query hook when tx is started, committed, or rolled back ([30e85b5](https://github.com/uptrace/bun/commit/30e85b5366b2e51951ef17a0cf362b58f708dab1))
+* **pgdialect:** auto-enable array support if the sql type is an array ([62c1012](https://github.com/uptrace/bun/commit/62c1012b2482e83969e5c6f5faf89e655ce78138))
+
+
+### Features
+
+* support multiple tag options join:left_col1=right_col1,join:left_col2=right_col2 ([78cd5aa](https://github.com/uptrace/bun/commit/78cd5aa60a5c7d1323bb89081db2b2b811113052))
+* **tag:** log with bad tag name ([4e82d75](https://github.com/uptrace/bun/commit/4e82d75be2dabdba1a510df4e1fbb86092f92f4c))
+
+
+
 ## [1.0.15](https://github.com/uptrace/bun/compare/v1.0.14...v1.0.15) (2021-10-29)
 
 
