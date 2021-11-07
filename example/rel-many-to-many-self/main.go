@@ -74,7 +74,7 @@ func createSchema(ctx context.Context, db *bun.DB) error {
 		(*ItemToItem)(nil),
 	}
 	for _, model := range models {
-		if _, err := db.NewCreateTable().Model(model).Exec(ctx); err != nil {
+		if err := db.ResetModel(ctx, model); err != nil {
 			return err
 		}
 	}

@@ -1,0 +1,41 @@
+- model: Article
+  rows:
+    - _id: a1
+      name: article 1
+    - _id: a2
+      name: article 2
+    - _id: a3
+      name: article 3
+
+- model: Post
+  rows:
+    - _id: p1
+      name: post 1
+    - _id: p2
+      name: post 2
+    - _id: p3
+      name: post 3
+
+- model: Comment
+  rows:
+    - trackable_id: '{{ $.Article.a1.ID }}'
+      trackable_type: article
+      text: Comment 1 for a1
+    - trackable_id: '{{ $.Article.a1.ID }}'
+      trackable_type: article
+      text: Comment 2 for a1
+    - trackable_id: '{{ $.Article.a2.ID }}'
+      trackable_type: article
+      text: Comment 1 for a2
+    - trackable_id: '{{ $.Article.a2.ID }}'
+      trackable_type: article
+      text: Comment 2 for a2
+    - trackable_id: '{{ $.Post.p1.ID }}'
+      trackable_type: post
+      text: Comment 1 for p1
+    - trackable_id: '{{ $.Post.p1.ID }}'
+      trackable_type: post
+      text: Comment 2 for p1
+    - trackable_id: '{{ $.Post.p1.ID }}'
+      trackable_type: post
+      text: Comment 3 for p1

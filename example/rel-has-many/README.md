@@ -1,4 +1,4 @@
-# Has-many relationship
+# Has many relationship
 
 To run this example:
 
