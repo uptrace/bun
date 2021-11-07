@@ -6,7 +6,11 @@ import (
 
 type Tag struct {
 	Name    string
-	Options map[string]string
+	Options map[string][]string
+}
+
+func (t Tag) IsZero() bool {
+	return t.Name == "" && t.Options == nil
 }
 
 func (t Tag) HasOption(name string) bool {
@@ -14,7 +18,17 @@ func (t Tag) HasOption(name string) bool {
 	return ok
 }
 
+func (t Tag) Option(name string) (string, bool) {
+	if vs, ok := t.Options[name]; ok {
+		return vs[len(vs)-1], true
+	}
+	return "", false
+}
+
 func Parse(s string) Tag {
+	if s == "" {
+		return Tag{}
+	}
 	p := parser{
 		s: s,
 	}
@@ -45,9 +59,13 @@ func (p *parser) addOption(key, value string) {
 		return
 	}
 	if p.tag.Options == nil {
-		p.tag.Options = make(map[string]string)
+		p.tag.Options = make(map[string][]string)
 	}
-	p.tag.Options[key] = value
+	if vs, ok := p.tag.Options[key]; ok {
+		p.tag.Options[key] = append(vs, value)
+	} else {
+		p.tag.Options[key] = []string{value}
+	}
 }
 
 func (p *parser) parse() {
