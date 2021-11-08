@@ -40,6 +40,7 @@ Resources:
 Projects using Bun:
 
 - [gotosocial](https://github.com/superseriousbusiness/gotosocial) - Golang fediverse server.
+- [input-output-hk/cicero](https://github.com/input-output-hk/cicero)
 - [RealWorld app](https://github.com/go-bun/bun-realworld-app)
 
 <details>
