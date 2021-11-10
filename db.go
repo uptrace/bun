@@ -370,11 +370,20 @@ func (db *DB) RunInTx(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+
+	var done bool
+
+	defer func() {
+		if !done {
+			_ = tx.Rollback()
+		}
+	}()
 
 	if err := fn(ctx, tx); err != nil {
 		return err
 	}
+
+	done = true
 	return tx.Commit()
 }
 
