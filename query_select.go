@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
@@ -542,7 +541,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 		if len(q.table.Fields) > 10 && fmter.IsNop() {
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
-			b = dialect.AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
+			b = fmter.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
 		} else {
 			b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		}

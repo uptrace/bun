@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/mod/semver"
 
@@ -82,14 +83,45 @@ func (d *Dialect) IdentQuote() byte {
 	return '`'
 }
 
-func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
+func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
 	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
 	b = append(b, '\'')
 	return b
 }
 
-func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
+func (*Dialect) AppendString(b []byte, s string) []byte {
+	b = append(b, '\'')
+loop:
+	for _, r := range s {
+		switch r {
+		case '\000':
+			continue loop
+		case '\'':
+			b = append(b, "''"...)
+			continue loop
+		case '\\':
+			b = append(b, '\\', '\\')
+			continue loop
+		}
+
+		if r < utf8.RuneSelf {
+			b = append(b, byte(r))
+			continue
+		}
+
+		l := len(b)
+		if cap(b)-l < utf8.UTFMax {
+			b = append(b, make([]byte, utf8.UTFMax)...)
+		}
+		n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+		b = b[:l+n]
+	}
+	b = append(b, '\'')
+	return b
+}
+
+func (*Dialect) AppendBytes(b []byte, bs []byte) []byte {
 	if bs == nil {
 		return dialect.AppendNull(b)
 	}
@@ -105,7 +137,7 @@ func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
 	return b
 }
 
-func (d *Dialect) AppendJSON(b, jsonb []byte) []byte {
+func (*Dialect) AppendJSON(b, jsonb []byte) []byte {
 	b = append(b, '\'')
 
 	for _, c := range jsonb {
