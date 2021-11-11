@@ -11,9 +11,9 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.0.16
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.16
-	github.com/uptrace/bun/driver/sqliteshim v1.0.16
-	github.com/uptrace/bun/extra/bundebug v1.0.16
+	github.com/uptrace/bun v1.0.17
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.17
+	github.com/uptrace/bun/driver/sqliteshim v1.0.17
+	github.com/uptrace/bun/extra/bundebug v1.0.17
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
