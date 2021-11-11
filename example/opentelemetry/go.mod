@@ -17,12 +17,11 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 require (
 	github.com/brianvoe/gofakeit/v5 v5.11.2
 	github.com/mattn/go-sqlite3 v1.14.9 // indirect
-	github.com/uptrace/bun v1.0.16
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.16
-	github.com/uptrace/bun/driver/sqliteshim v1.0.16
-	github.com/uptrace/bun/extra/bunotel v1.0.16
+	github.com/uptrace/bun v1.0.17
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.17
+	github.com/uptrace/bun/driver/sqliteshim v1.0.17
+	github.com/uptrace/bun/extra/bunotel v1.0.17
 	github.com/uptrace/opentelemetry-go-extra/otelplay v0.1.4
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.4 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	go.opentelemetry.io/otel v1.1.0
 	golang.org/x/net v0.0.0-20211105192438-b53810dc28af // indirect
