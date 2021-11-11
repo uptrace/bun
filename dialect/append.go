@@ -1,10 +1,8 @@
 package dialect
 
 import (
-	"encoding/hex"
 	"math"
 	"strconv"
-	"unicode/utf8"
 
 	"github.com/uptrace/bun/internal"
 )
@@ -46,50 +44,6 @@ func appendFloat(b []byte, v float64, bitSize int) []byte {
 	default:
 		return strconv.AppendFloat(b, v, 'f', -1, bitSize)
 	}
-}
-
-func AppendString(b []byte, s string) []byte {
-	b = append(b, '\'')
-	for _, r := range s {
-		if r == '\000' {
-			continue
-		}
-
-		if r == '\'' {
-			b = append(b, '\'', '\'')
-			continue
-		}
-
-		if r < utf8.RuneSelf {
-			b = append(b, byte(r))
-			continue
-		}
-
-		l := len(b)
-		if cap(b)-l < utf8.UTFMax {
-			b = append(b, make([]byte, utf8.UTFMax)...)
-		}
-		n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-		b = b[:l+n]
-	}
-	b = append(b, '\'')
-	return b
-}
-
-func AppendBytes(b, bs []byte) []byte {
-	if bs == nil {
-		return AppendNull(b)
-	}
-
-	b = append(b, `'\x`...)
-
-	s := len(b)
-	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
-	hex.Encode(b[s:], bs)
-
-	b = append(b, '\'')
-
-	return b
 }
 
 //------------------------------------------------------------------------------

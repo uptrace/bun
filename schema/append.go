@@ -31,7 +31,7 @@ func Append(fmter Formatter, b []byte, v interface{}) []byte {
 	case float64:
 		return dialect.AppendFloat64(b, v)
 	case string:
-		return dialect.AppendString(b, v)
+		return fmter.Dialect().AppendString(b, v)
 	case time.Time:
 		return fmter.Dialect().AppendTime(b, v)
 	case []byte:

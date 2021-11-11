@@ -265,6 +265,11 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 
+	var str string
+	err = db.NewSelect().ColumnExpr("?", "\\\"'hello\n%_").Scan(ctx, &str)
+	require.NoError(t, err)
+	require.Equal(t, "\\\"'hello\n%_", str)
+
 	var flag bool
 	err = db.NewSelect().
 		ColumnExpr("EXISTS (?)", db.NewSelect().ColumnExpr("1")).

@@ -194,7 +194,7 @@ func appendArrayBytesValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 }
 
 func AppendStringValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return dialect.AppendString(b, v.String())
+	return fmter.Dialect().AppendString(b, v.String())
 }
 
 func AppendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
@@ -217,12 +217,12 @@ func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 
 func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	ip := v.Interface().(net.IP)
-	return dialect.AppendString(b, ip.String())
+	return fmter.Dialect().AppendString(b, ip.String())
 }
 
 func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	ipnet := v.Interface().(net.IPNet)
-	return dialect.AppendString(b, ipnet.String())
+	return fmter.Dialect().AppendString(b, ipnet.String())
 }
 
 func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {
@@ -230,7 +230,7 @@ func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byt
 	if bytes == nil {
 		return dialect.AppendNull(b)
 	}
-	return dialect.AppendString(b, internal.String(bytes))
+	return fmter.Dialect().AppendString(b, internal.String(bytes))
 }
 
 func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte {

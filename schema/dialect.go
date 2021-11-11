@@ -2,8 +2,10 @@ package schema
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -24,6 +26,7 @@ type Dialect interface {
 	AppendUint32(b []byte, n uint32) []byte
 	AppendUint64(b []byte, n uint64) []byte
 	AppendTime(b []byte, tm time.Time) []byte
+	AppendString(b []byte, s string) []byte
 	AppendBytes(b []byte, bs []byte) []byte
 	AppendJSON(b, jsonb []byte) []byte
 }
@@ -47,8 +50,48 @@ func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
+func (BaseDialect) AppendString(b []byte, s string) []byte {
+	b = append(b, '\'')
+	for _, r := range s {
+		if r == '\000' {
+			continue
+		}
+
+		if r == '\'' {
+			b = append(b, '\'', '\'')
+			continue
+		}
+
+		if r < utf8.RuneSelf {
+			b = append(b, byte(r))
+			continue
+		}
+
+		l := len(b)
+		if cap(b)-l < utf8.UTFMax {
+			b = append(b, make([]byte, utf8.UTFMax)...)
+		}
+		n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
+		b = b[:l+n]
+	}
+	b = append(b, '\'')
+	return b
+}
+
 func (BaseDialect) AppendBytes(b, bs []byte) []byte {
-	return dialect.AppendBytes(b, bs)
+	if bs == nil {
+		return dialect.AppendNull(b)
+	}
+
+	b = append(b, `'\x`...)
+
+	s := len(b)
+	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
+	hex.Encode(b[s:], bs)
+
+	b = append(b, '\'')
+
+	return b
 }
 
 func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
