@@ -166,7 +166,7 @@ func (q *UpdateQuery) hasReturning() bool {
 //------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Operation() string {
-	return "SELECT"
+	return "UPDATE"
 }
 
 func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
