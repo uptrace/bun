@@ -90,6 +90,18 @@ func (q *CreateTableQuery) ForeignKey(query string, args ...interface{}) *Create
 	return q
 }
 
+func (q *CreateTableQuery) PartitionBy(query string, args ...interface{}) *CreateTableQuery {
+	q.partitionBy = schema.SafeQuery(query, args)
+	return q
+}
+
+func (q *CreateTableQuery) TableSpace(tablespace string) *CreateTableQuery {
+	q.tablespace = schema.UnsafeIdent(tablespace)
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *CreateTableQuery) Operation() string {
 	return "CREATE TABLE"
 }

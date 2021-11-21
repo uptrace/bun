@@ -628,6 +628,12 @@ func TestQuery(t *testing.T) {
 				ColumnExpr(`email VARCHAR`).
 				ColumnExpr(`password VARCHAR`)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewCreateTable().Model(new(Model)).PartitionBy("HASH (id)")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewCreateTable().Model(new(Model)).TableSpace("fasttablespace")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
