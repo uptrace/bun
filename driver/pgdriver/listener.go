@@ -17,6 +17,12 @@ var (
 	errPingTimeout    = errors.New("bun: ping timeout")
 )
 
+// Notify sends a notification on the channel using `NOTIFY` command.
+func Notify(ctx context.Context, db *bun.DB, channel, payload string) error {
+	_, err := db.ExecContext(ctx, "NOTIFY ?, ?", bun.Ident(channel), payload)
+	return err
+}
+
 type Listener struct {
 	db     *bun.DB
 	driver *Connector
