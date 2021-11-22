@@ -6,4 +6,4 @@ To run this example:
 go run .
 ```
 
-See [documentation](https://bun.uptrace.dev/postgres/listen-notify.html#listen-notify) for details.
+See [documentation](https://bun.uptrace.dev/postgres/listen-notify.html) for details.
