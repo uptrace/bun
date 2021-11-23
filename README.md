@@ -19,10 +19,10 @@ Main features are:
 - Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
-- [Selecting](/example/basic/) into a map, struct, slice of maps/structs/vars.
-- [Bulk inserts](https://bun.uptrace.dev/guide/queries.html#insert).
-- [Bulk updates](https://bun.uptrace.dev/guide/queries.html#update) using common table expressions.
-- [Bulk deletes](https://bun.uptrace.dev/guide/queries.html#delete).
+- [Selecting](/example/basic/) into scalars, structs, maps, slices of maps/structs/scalars.
+- [Bulk inserts](https://bun.uptrace.dev/guide/query-insert.html).
+- [Bulk updates](https://bun.uptrace.dev/guide/query-update.html) using common table expressions.
+- [Bulk deletes](https://bun.uptrace.dev/guide/query-delete.html).
 - [Fixtures](https://bun.uptrace.dev/guide/fixtures.html).
 - [Migrations](https://bun.uptrace.dev/guide/migrations.html).
 - [Soft deletes](https://bun.uptrace.dev/guide/soft-deletes.html).
@@ -145,6 +145,8 @@ WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product
 ```
 
+And scan results into scalars, structs, maps, slices of structs/maps/scalars.
+
 ## Installation
 
 ```go
@@ -213,13 +215,13 @@ db.RegisterModel((*User)(nil), (*Story)(nil))
 // WithRecreateTables tells Bun to drop existing tables and create new ones.
 fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
 
-// Load fixture.yaml which contains data for User and Story models.
-if err := fixture.Load(ctx, os.DirFS("."), "fixture.yaml"); err != nil {
+// Load fixture.yml which contains data for User and Story models.
+if err := fixture.Load(ctx, os.DirFS("."), "fixture.yml"); err != nil {
 	panic(err)
 }
 ```
 
-The `fixture.yaml` looks like this:
+The `fixture.yml` looks like this:
 
 ```yaml
 - model: User
