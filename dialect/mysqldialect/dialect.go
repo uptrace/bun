@@ -33,7 +33,8 @@ func New() *Dialect {
 		feature.UpdateMultiTable |
 		feature.ValuesRow |
 		feature.TableTruncate |
-		feature.OnDuplicateKey
+		feature.InsertIgnore |
+		feature.InsertOnDuplicateKey
 	return d
 }
 

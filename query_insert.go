@@ -133,9 +133,16 @@ func (q *InsertQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-// Ignore generates an `INSERT IGNORE INTO` query (MySQL).
+// Ignore generates different queries depending on the DBMS:
+//   - On MySQL, it generates `INSERT IGNORE INTO`.
+//   - On PostgreSQL, it generates `ON CONFLICT DO NOTHING`.
 func (q *InsertQuery) Ignore() *InsertQuery {
-	q.ignore = true
+	if q.db.fmter.HasFeature(feature.InsertOnConflict) {
+		return q.On("CONFLICT DO NOTHING")
+	}
+	if q.db.fmter.HasFeature(feature.InsertIgnore) {
+		q.ignore = true
+	}
 	return q
 }
 
@@ -421,7 +428,7 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 	}
 
 	if len(q.set) > 0 {
-		if fmter.HasFeature(feature.OnDuplicateKey) {
+		if fmter.HasFeature(feature.InsertOnDuplicateKey) {
 			b = append(b, ' ')
 		} else {
 			b = append(b, " SET "...)

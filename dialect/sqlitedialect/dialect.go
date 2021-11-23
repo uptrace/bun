@@ -23,7 +23,8 @@ func New() *Dialect {
 	d.features = feature.CTE |
 		feature.Returning |
 		feature.InsertTableAlias |
-		feature.DeleteTableAlias
+		feature.DeleteTableAlias |
+		feature.InsertOnConflict
 	return d
 }
 

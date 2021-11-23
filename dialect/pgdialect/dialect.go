@@ -31,7 +31,8 @@ func New() *Dialect {
 		feature.DeleteTableAlias |
 		feature.TableCascade |
 		feature.TableIdentity |
-		feature.TableTruncate
+		feature.TableTruncate |
+		feature.InsertOnConflict
 	return d
 }
 

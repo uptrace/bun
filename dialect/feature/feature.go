@@ -17,5 +17,7 @@ const (
 	TableCascade
 	TableIdentity
 	TableTruncate
-	OnDuplicateKey
+	InsertOnConflict     // INSERT ... ON CONFLICT
+	InsertOnDuplicateKey // INSERT ... ON DUPLICATE KEY
+	InsertIgnore         // INSERT IGNORE ...
 )
