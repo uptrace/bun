@@ -178,6 +178,8 @@ func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
 
+// RegisterModel registers models by name so they can be referenced in table relations
+// and fixtures.
 func (db *DB) RegisterModel(models ...interface{}) {
 	db.dialect.Tables().Register(models...)
 }
@@ -199,6 +201,11 @@ func (db *DB) WithNamedArg(name string, value interface{}) *DB {
 
 func (db *DB) Formatter() schema.Formatter {
 	return db.fmter
+}
+
+// HasFeature uses feature package to report whether the underlying DBMS supports this feature.
+func (db *DB) HasFeature(feat feature.Feature) bool {
+	return db.fmter.HasFeature(feat)
 }
 
 //------------------------------------------------------------------------------
