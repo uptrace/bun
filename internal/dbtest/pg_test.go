@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/driver/pgdriver"
 )
 
 func TestPGArray(t *testing.T) {
@@ -459,4 +461,58 @@ func TestPGOnConflictDoUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotZero(t, model.UpdatedAt)
 	}
+}
+
+func TestPGCopyFromCopyTo(t *testing.T) {
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	conn, err := db.Conn(ctx)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	qs := []string{
+		"CREATE TEMP TABLE copy_src(n int)",
+		"CREATE TEMP TABLE copy_dest(n int)",
+		"INSERT INTO copy_src SELECT generate_series(1, 1000)",
+	}
+	for _, q := range qs {
+		_, err := conn.ExecContext(ctx, q)
+		require.NoError(t, err)
+	}
+
+	var buf bytes.Buffer
+
+	{
+		res, err := pgdriver.CopyTo(ctx, conn, &buf, "COPY copy_src TO STDOUT")
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1000), n)
+	}
+
+	{
+		res, err := pgdriver.CopyFrom(ctx, conn, &buf, "COPY copy_dest FROM STDIN")
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1000), n)
+
+		var count int
+		err = conn.QueryRowContext(ctx, "SELECT count(*) FROM copy_dest").Scan(&count)
+		require.NoError(t, err)
+		require.Equal(t, 1000, count)
+	}
+
+	t.Run("corrupted data", func(t *testing.T) {
+		buf := bytes.NewBufferString("corrupted,data\nrow,two\r\nrow three")
+		_, err := pgdriver.CopyFrom(ctx, conn, buf, "COPY copy_dest FROM STDIN")
+		require.Error(t, err)
+		require.Equal(t,
+			`ERROR #22P02 invalid input syntax for type integer: "corrupted,data"`, err.Error())
+	})
 }
