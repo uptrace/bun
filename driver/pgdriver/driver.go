@@ -158,6 +158,8 @@ func (cn *Conn) write(ctx context.Context, wb *writeBuffer) error {
 	cn.setWriteDeadline(ctx, -1)
 
 	n, err := cn.netConn.Write(wb.Bytes)
+	wb.Reset()
+
 	if err != nil {
 		if n == 0 {
 			return driver.ErrBadConn

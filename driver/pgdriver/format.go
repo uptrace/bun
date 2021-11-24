@@ -10,6 +10,14 @@ import (
 	"unicode/utf8"
 )
 
+func formatQueryArgs(query string, args []interface{}) (string, error) {
+	namedArgs := make([]driver.NamedValue, len(args))
+	for i, arg := range args {
+		namedArgs[i] = driver.NamedValue{Value: arg}
+	}
+	return formatQuery(query, namedArgs)
+}
+
 func formatQuery(query string, args []driver.NamedValue) (string, error) {
 	if len(args) == 0 {
 		return query, nil
