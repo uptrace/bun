@@ -1,3 +1,20 @@
+## [1.0.18](https://github.com/uptrace/bun/compare/v1.0.17...v1.0.18) (2021-11-24)
+
+
+### Bug Fixes
+
+* use correct operation for UpdateQuery ([687a004](https://github.com/uptrace/bun/commit/687a004ef7ec6fe1ef06c394965dd2c2d822fc82))
+
+
+### Features
+
+* add pgdriver.Notify ([7ee443d](https://github.com/uptrace/bun/commit/7ee443d1b869d8ddc4746850f7425d0a9ccd012b))
+* CreateTableQuery.PartitionBy and CreateTableQuery.TableSpace ([cd3ab4d](https://github.com/uptrace/bun/commit/cd3ab4d8f3682f5a30b87c2ebc2d7e551d739078))
+* **pgdriver:** add CopyFrom and CopyTo ([0b97703](https://github.com/uptrace/bun/commit/0b977030b5c05f509e11d13550b5f99dfd62358d))
+* support InsertQuery.Ignore on PostgreSQL ([1aa9d14](https://github.com/uptrace/bun/commit/1aa9d149da8e46e63ff79192e394fde4d18d9b60))
+
+
+
 ## [1.0.17](https://github.com/uptrace/bun/compare/v1.0.16...v1.0.17) (2021-11-11)
 
 

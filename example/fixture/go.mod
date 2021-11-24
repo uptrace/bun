@@ -13,9 +13,10 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
 require (
-	github.com/uptrace/bun v1.0.17
-	github.com/uptrace/bun/dbfixture v1.0.17
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.17
-	github.com/uptrace/bun/driver/sqliteshim v1.0.17
-	github.com/uptrace/bun/extra/bundebug v1.0.17
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/uptrace/bun v1.0.18
+	github.com/uptrace/bun/dbfixture v1.0.18
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.18
+	github.com/uptrace/bun/driver/sqliteshim v1.0.18
+	github.com/uptrace/bun/extra/bundebug v1.0.18
 )
