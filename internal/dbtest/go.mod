@@ -22,15 +22,15 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.1
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/google/uuid v1.0.0
+	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.0.17
-	github.com/uptrace/bun/dbfixture v1.0.17
-	github.com/uptrace/bun/dialect/mysqldialect v1.0.17
-	github.com/uptrace/bun/dialect/pgdialect v1.0.17
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.17
-	github.com/uptrace/bun/driver/pgdriver v1.0.17
-	github.com/uptrace/bun/driver/sqliteshim v1.0.17
-	github.com/uptrace/bun/extra/bundebug v1.0.17
+	github.com/uptrace/bun v1.0.18
+	github.com/uptrace/bun/dbfixture v1.0.18
+	github.com/uptrace/bun/dialect/mysqldialect v1.0.18
+	github.com/uptrace/bun/dialect/pgdialect v1.0.18
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.18
+	github.com/uptrace/bun/driver/pgdriver v1.0.18
+	github.com/uptrace/bun/driver/sqliteshim v1.0.18
+	github.com/uptrace/bun/extra/bundebug v1.0.18
 )
