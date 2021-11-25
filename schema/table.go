@@ -300,6 +300,10 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.setName(tag.Name)
 	}
 
+	if s, ok := tag.Option("table"); ok {
+		t.setName(s)
+	}
+
 	if s, ok := tag.Option("select"); ok {
 		t.SQLNameForSelects = t.quoteTableName(s)
 	}
@@ -854,7 +858,7 @@ func appendNew(dst []int, src ...int) []int {
 
 func isKnownTableOption(name string) bool {
 	switch name {
-	case "alias", "select":
+	case "table", "alias", "select":
 		return true
 	}
 	return false
