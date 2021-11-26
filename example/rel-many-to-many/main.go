@@ -19,6 +19,8 @@ type Order struct {
 
 type Item struct {
 	ID int64 `bun:",pk"`
+	// Order and Item in join:Order=Item are fields in OrderToItem model
+	Orders []Order `bun:"m2m:order_to_items,join:Item=Order"`
 }
 
 type OrderToItem struct {
@@ -59,6 +61,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Order", order.ID, "Items", order.Items[0].ID, order.Items[1].ID)
+	fmt.Println()
 
 	order = new(Order)
 	if err := db.NewSelect().
@@ -72,8 +75,18 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Order", order.ID, "Items", order.Items[0].ID, order.Items[1].ID)
-	// Output: Order 1 Items 1 2
-	// Order 1 Items 2 1
+	fmt.Println()
+
+	item := new(Item)
+	if err := db.NewSelect().
+		Model(item).
+		Relation("Orders").
+		Order("item.id ASC").
+		Limit(1).
+		Scan(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Println("Item", item.ID, "Order", item.Orders[0].ID)
 }
 
 func createSchema(ctx context.Context, db *bun.DB) error {

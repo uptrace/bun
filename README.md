@@ -30,8 +30,8 @@ Main features are:
 Resources:
 
 - [**Get started**](https://bun.uptrace.dev/guide/getting-started.html)
-- [Discussions](https://github.com/uptrace/bun/discussions)
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
+- [Discussions](https://github.com/uptrace/bun/discussions)
 - [Newsletter](https://blog.uptrace.dev/pages/newsletter.html) to get latest updates.
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
