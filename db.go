@@ -203,6 +203,15 @@ func (db *DB) Formatter() schema.Formatter {
 	return db.fmter
 }
 
+// UpdateFQN returns a fully qualified column name. For MySQL, it returns the column name with
+// the table alias. For other RDBMS, it returns just the column name.
+func (db *DB) UpdateFQN(alias, column string) Ident {
+	if db.HasFeature(feature.UpdateMultiTable) {
+		return Ident(alias + "." + column)
+	}
+	return Ident(column)
+}
+
 // HasFeature uses feature package to report whether the underlying DBMS supports this feature.
 func (db *DB) HasFeature(feat feature.Feature) bool {
 	return db.fmter.HasFeature(feat)

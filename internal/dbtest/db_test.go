@@ -1002,9 +1002,7 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 		With("src", selq).
 		TableExpr("models AS dest").
 		Table("src").
-		Apply(func(q *bun.UpdateQuery) *bun.UpdateQuery {
-			return q.Set("? = src.str", q.FQN("dest", "str"))
-		}).
+		Set("? = src.str", db.UpdateFQN("dest", "str")).
 		Where("dest.id = src.id").
 		Exec(ctx)
 	require.NoError(t, err)

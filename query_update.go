@@ -452,9 +452,12 @@ func (q *UpdateQuery) afterUpdateHook(ctx context.Context) error {
 
 // FQN returns a fully qualified column name. For MySQL, it returns the column name with
 // the table alias. For other RDBMS, it returns just the column name.
-func (q *UpdateQuery) FQN(alias, column string) Ident {
-	if q.db.fmter.HasFeature(feature.UpdateMultiTable) {
-		return Ident(alias + "." + column)
+func (q *UpdateQuery) FQN(column string) Ident {
+	if q.table == nil {
+		panic("UpdateQuery.FQN requires a model")
+	}
+	if q.db.HasFeature(feature.UpdateMultiTable) {
+		return Ident(q.table.Alias + "." + column)
 	}
 	return Ident(column)
 }
