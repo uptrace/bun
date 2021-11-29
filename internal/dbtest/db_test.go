@@ -234,6 +234,7 @@ func TestDB(t *testing.T) {
 		{testModelNonPointer},
 		{testBinaryData},
 		{testUpsert},
+		{testMultiUpdate},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -972,4 +973,39 @@ func testUpsert(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(model).WherePK().Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "world", model.Str)
+}
+
+func testMultiUpdate(t *testing.T, db *bun.DB) {
+	if !db.Dialect().Features().Has(feature.CTE) {
+		t.Skip()
+		return
+	}
+
+	type Model struct {
+		ID  int64
+		Str string
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{ID: 1, Str: "hello"}
+
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+
+	selq := db.NewSelect().Model(new(Model))
+
+	_, err = db.NewUpdate().
+		With("src", selq).
+		TableExpr("models AS dest").
+		Table("src").
+		Apply(func(q *bun.UpdateQuery) *bun.UpdateQuery {
+			return q.Set("? = src.str", q.FQN("dest", "str"))
+		}).
+		Where("dest.id = src.id").
+		Exec(ctx)
+	require.NoError(t, err)
 }

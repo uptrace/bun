@@ -277,7 +277,7 @@ func TestPGInvalidQuery(t *testing.T) {
 
 	_, err := db.Exec("invalid query")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "#42601 syntax error")
+	require.Contains(t, err.Error(), "syntax error")
 
 	_, err = db.Exec("SELECT 1")
 	require.NoError(t, err)
@@ -513,6 +513,8 @@ func TestPGCopyFromCopyTo(t *testing.T) {
 		_, err := pgdriver.CopyFrom(ctx, conn, buf, "COPY copy_dest FROM STDIN")
 		require.Error(t, err)
 		require.Equal(t,
-			`ERROR #22P02 invalid input syntax for type integer: "corrupted,data"`, err.Error())
+			`ERROR: invalid input syntax for type integer: "corrupted,data" (SQLSTATE=22P02)`,
+			err.Error(),
+		)
 	})
 }

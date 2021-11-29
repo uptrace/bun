@@ -241,7 +241,7 @@ func testBulkUpdate(t *testing.T, db *bun.DB) {
 		Apply(func(q *bun.UpdateQuery) *bun.UpdateQuery {
 			return q.Set(
 				"? = UPPER(book.title)",
-				q.FQN("title"),
+				q.FQN("book", "title"),
 			)
 		}).
 		Where("book.id = _data.id").
