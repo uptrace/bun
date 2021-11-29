@@ -285,8 +285,8 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 
 	if isKnownTableOption(tag.Name) {
 		internal.Warn.Printf(
-			"%s.%s tag name %q is also an option name; is it a mistake?",
-			t.TypeName, f.Name, tag.Name,
+			"%s.%s tag name %q is also an option name, is it a mistake? Try table:%s.",
+			t.TypeName, f.Name, tag.Name, tag.Name,
 		)
 	}
 
@@ -316,17 +316,21 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 
 //nolint
 func (t *Table) newField(f reflect.StructField, index []int) *Field {
+	sqlName := internal.Underscore(f.Name)
 	tag := tagparser.Parse(f.Tag.Get("bun"))
 
-	sqlName := internal.Underscore(f.Name)
 	if tag.Name != "" && tag.Name != sqlName {
 		if isKnownFieldOption(tag.Name) {
 			internal.Warn.Printf(
-				"%s.%s tag name %q is also an option name; is it a mistake?",
-				t.TypeName, f.Name, tag.Name,
+				"%s.%s tag name %q is also an option name, is it a mistake? Try column:%s.",
+				t.TypeName, f.Name, tag.Name, tag.Name,
 			)
 		}
 		sqlName = tag.Name
+	}
+
+	if s, ok := tag.Option("column"); ok {
+		sqlName = s
 	}
 
 	for name := range tag.Options {
@@ -866,7 +870,8 @@ func isKnownTableOption(name string) bool {
 
 func isKnownFieldOption(name string) bool {
 	switch name {
-	case "alias",
+	case "column",
+		"alias",
 		"type",
 		"array",
 		"hstore",
