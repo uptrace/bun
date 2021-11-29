@@ -40,8 +40,8 @@ func (err Error) StatementTimeout() bool {
 }
 
 func (err Error) Error() string {
-	return fmt.Sprintf("%s #%s %s",
-		err.Field('S'), err.Field('C'), err.Field('M'))
+	return fmt.Sprintf("%s: %s (SQLSTATE=%s)",
+		err.Field('S'), err.Field('M'), err.Field('C'))
 }
 
 func isBadConn(err error, allowTimeout bool) bool {
