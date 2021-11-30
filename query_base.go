@@ -951,6 +951,7 @@ func (q setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err err
 //------------------------------------------------------------------------------
 
 type cascadeQuery struct {
+	cascade  bool
 	restrict bool
 }
 
@@ -958,10 +959,11 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 	if !fmter.HasFeature(feature.TableCascade) {
 		return b
 	}
+	if q.cascade {
+		b = append(b, " CASCADE"...)
+	}
 	if q.restrict {
 		b = append(b, " RESTRICT"...)
-	} else {
-		b = append(b, " CASCADE"...)
 	}
 	return b
 }

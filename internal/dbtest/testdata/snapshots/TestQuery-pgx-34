@@ -1,1 +1,1 @@
-DROP TABLE "models" CASCADE
+DROP TABLE "models"
