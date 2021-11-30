@@ -1,3 +1,12 @@
+## [1.0.19](https://github.com/uptrace/bun/compare/v1.0.18...v1.0.19) (2021-11-30)
+
+
+### Features
+
+* add support for column:name to specify column name ([e37b460](https://github.com/uptrace/bun/commit/e37b4602823babc8221970e086cfed90c6ad4cf4))
+
+
+
 ## [1.0.18](https://github.com/uptrace/bun/compare/v1.0.17...v1.0.18) (2021-11-24)
 
 

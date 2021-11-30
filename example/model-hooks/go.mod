@@ -14,10 +14,9 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/uptrace/bun v1.0.18
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.18
-	github.com/uptrace/bun/driver/sqliteshim v1.0.18
-	github.com/uptrace/bun/extra/bundebug v1.0.18
+	github.com/uptrace/bun v1.0.19
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.19
+	github.com/uptrace/bun/driver/sqliteshim v1.0.19
+	github.com/uptrace/bun/extra/bundebug v1.0.19
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
