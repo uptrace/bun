@@ -61,6 +61,11 @@ func (q *DropTableQuery) IfExists() *DropTableQuery {
 	return q
 }
 
+func (q *DropTableQuery) Cascade() *DropTableQuery {
+	q.cascade = true
+	return q
+}
+
 func (q *DropTableQuery) Restrict() *DropTableQuery {
 	q.restrict = true
 	return q

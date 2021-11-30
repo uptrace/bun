@@ -50,6 +50,11 @@ func (q *DropIndexQuery) IfExists() *DropIndexQuery {
 	return q
 }
 
+func (q *DropIndexQuery) Cascade() *DropIndexQuery {
+	q.cascade = true
+	return q
+}
+
 func (q *DropIndexQuery) Restrict() *DropIndexQuery {
 	q.restrict = true
 	return q

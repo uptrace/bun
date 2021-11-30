@@ -125,7 +125,7 @@ func (db *DB) NewDropColumn() *DropColumnQuery {
 
 func (db *DB) ResetModel(ctx context.Context, models ...interface{}) error {
 	for _, model := range models {
-		if _, err := db.NewDropTable().Model(model).IfExists().Exec(ctx); err != nil {
+		if _, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx); err != nil {
 			return err
 		}
 		if _, err := db.NewCreateTable().Model(model).Exec(ctx); err != nil {

@@ -57,6 +57,11 @@ func (q *TruncateTableQuery) ContinueIdentity() *TruncateTableQuery {
 	return q
 }
 
+func (q *TruncateTableQuery) Cascade() *TruncateTableQuery {
+	q.cascade = true
+	return q
+}
+
 func (q *TruncateTableQuery) Restrict() *TruncateTableQuery {
 	q.restrict = true
 	return q
