@@ -1,1 +1,1 @@
-UPDATE `users` AS `user` SET name = 'Hello' WHERE (id = 0)
+UPDATE `users` AS `user` SET name = 'Hello' WHERE (id = NULL)

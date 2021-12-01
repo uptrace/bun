@@ -634,6 +634,22 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewCreateTable().Model(new(Model)).TableSpace("fasttablespace")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   int64
+				Int  int64     `bun:",nullzero"`
+				Uint uint64    `bun:",nullzero"`
+				Str  string    `bun:",nullzero"`
+				Time time.Time `bun:",nullzero"`
+			}
+			return db.NewUpdate().
+				Model(new(Model)).
+				Set("int = ?int").
+				Set("uint = ?uint").
+				Set("str = ?str").
+				Set("time = ?time").
+				WherePK()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
