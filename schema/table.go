@@ -834,7 +834,7 @@ func (t *Table) AppendNamedArg(
 	fmter Formatter, b []byte, name string, strct reflect.Value,
 ) ([]byte, bool) {
 	if field, ok := t.FieldMap[name]; ok {
-		return fmter.appendArg(b, field.Value(strct).Interface()), true
+		return field.AppendValue(fmter, b, strct), true
 	}
 	return b, false
 }

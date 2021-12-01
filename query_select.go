@@ -369,6 +369,10 @@ func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 func (q *SelectQuery) appendQuery(
 	fmter schema.Formatter, b []byte, count bool,
 ) (_ []byte, err error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+
 	fmter = formatterWithModel(fmter, q)
 
 	cteCount := count && (len(q.group) > 0 || q.distinctOn != nil)

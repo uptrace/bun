@@ -607,34 +607,30 @@ func (q *whereBaseQuery) addWhereCols(cols []string) {
 		q.setErr(err)
 		return
 	}
-
-	var fields []*schema.Field
-
-	if cols == nil {
-		if err := q.table.CheckPKs(); err != nil {
-			q.setErr(err)
-			return
-		}
-		fields = q.table.PKs
-	} else {
-		fields = make([]*schema.Field, len(cols))
-		for i, col := range cols {
-			field, err := q.table.Field(col)
-			if err != nil {
-				q.setErr(err)
-				return
-			}
-			fields[i] = field
-		}
-	}
-
 	if q.whereFields != nil {
 		err := errors.New("bun: WherePK can only be called once")
 		q.setErr(err)
 		return
 	}
 
-	q.whereFields = fields
+	if cols == nil {
+		if err := q.table.CheckPKs(); err != nil {
+			q.setErr(err)
+			return
+		}
+		q.whereFields = q.table.PKs
+		return
+	}
+
+	q.whereFields = make([]*schema.Field, len(cols))
+	for i, col := range cols {
+		field, err := q.table.Field(col)
+		if err != nil {
+			q.setErr(err)
+			return
+		}
+		q.whereFields[i] = field
+	}
 }
 
 func (q *whereBaseQuery) mustAppendWhere(
