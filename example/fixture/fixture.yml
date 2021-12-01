@@ -3,6 +3,7 @@
     - _id: smith
       name: John Smith
       email: john@smith.com
+      attrs: { foo: bar, bar: baz }
       created_at: '{{ now }}'
       updated_at: '{{ now }}'
     - _id: doe
