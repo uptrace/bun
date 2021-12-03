@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -782,42 +781,17 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 }
 
 func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
-	var count int
-	var wg sync.WaitGroup
-	var mu sync.Mutex
 	var firstErr error
 
 	if q.limit >= 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			if err := q.Scan(ctx, dest...); err != nil {
-				mu.Lock()
-				if firstErr == nil {
-					firstErr = err
-				}
-				mu.Unlock()
-			}
-		}()
+		firstErr = q.Scan(ctx, dest...)
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	count, err := q.Count(ctx)
+	if err != nil && firstErr == nil {
+		firstErr = err
+	}
 
-		var err error
-		count, err = q.Count(ctx)
-		if err != nil {
-			mu.Lock()
-			if firstErr == nil {
-				firstErr = err
-			}
-			mu.Unlock()
-		}
-	}()
-
-	wg.Wait()
 	return count, firstErr
 }
 
