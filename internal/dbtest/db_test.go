@@ -235,6 +235,7 @@ func TestDB(t *testing.T) {
 		{testBinaryData},
 		{testUpsert},
 		{testMultiUpdate},
+		{testTxScanAndCount},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1006,4 +1007,25 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 		Where("dest.id = src.id").
 		Exec(ctx)
 	require.NoError(t, err)
+}
+
+func testTxScanAndCount(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID  int64
+		Str string
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	for i := 0; i < 100; i++ {
+		err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+			var models []Model
+			_, err := tx.NewSelect().Model(&models).ScanAndCount(ctx)
+			return err
+		})
+		require.NoError(t, err)
+	}
 }
