@@ -32,6 +32,7 @@ func WithDiscardUnknownColumns() DBOption {
 
 type DB struct {
 	*sql.DB
+
 	dialect  schema.Dialect
 	features feature.Feature
 
