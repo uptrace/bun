@@ -20,6 +20,8 @@ type UpdateQuery struct {
 	omitZero bool
 }
 
+var _ Query = (*UpdateQuery)(nil)
+
 func NewUpdateQuery(db *DB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{

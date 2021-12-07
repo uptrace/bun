@@ -34,6 +34,8 @@ type SelectQuery struct {
 	union []union
 }
 
+var _ Query = (*SelectQuery)(nil)
+
 func NewSelectQuery(db *DB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{

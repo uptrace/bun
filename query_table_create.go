@@ -24,6 +24,8 @@ type CreateTableQuery struct {
 	tablespace  schema.QueryWithArgs
 }
 
+var _ Query = (*CreateTableQuery)(nil)
+
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{

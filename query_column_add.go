@@ -15,6 +15,8 @@ type AddColumnQuery struct {
 	ifNotExists bool
 }
 
+var _ Query = (*AddColumnQuery)(nil)
+
 func NewAddColumnQuery(db *DB) *AddColumnQuery {
 	q := &AddColumnQuery{
 		baseQuery: baseQuery{

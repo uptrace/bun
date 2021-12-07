@@ -86,13 +86,6 @@ func (q *baseQuery) DB() *DB {
 	return q.db
 }
 
-type query interface {
-	GetModel() Model
-	GetTableName() string
-}
-
-var _ query = (*baseQuery)(nil)
-
 func (q *baseQuery) GetModel() Model {
 	return q.model
 }
@@ -103,7 +96,7 @@ func (q *baseQuery) GetTableName() string {
 	}
 
 	for _, wq := range q.with {
-		if v, ok := wq.query.(query); ok {
+		if v, ok := wq.query.(Query); ok {
 			if model := v.GetModel(); model != nil {
 				return v.GetTableName()
 			}

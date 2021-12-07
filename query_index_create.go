@@ -22,6 +22,8 @@ type CreateIndexQuery struct {
 	include []schema.QueryWithArgs
 }
 
+var _ Query = (*CreateIndexQuery)(nil)
+
 func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
 	q := &CreateIndexQuery{
 		whereBaseQuery: whereBaseQuery{

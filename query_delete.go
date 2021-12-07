@@ -15,6 +15,8 @@ type DeleteQuery struct {
 	returningQuery
 }
 
+var _ Query = (*DeleteQuery)(nil)
+
 func NewDeleteQuery(db *DB) *DeleteQuery {
 	q := &DeleteQuery{
 		whereBaseQuery: whereBaseQuery{

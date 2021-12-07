@@ -16,7 +16,10 @@ type ValuesQuery struct {
 	withOrder bool
 }
 
-var _ schema.NamedArgAppender = (*ValuesQuery)(nil)
+var (
+	_ Query                   = (*ValuesQuery)(nil)
+	_ schema.NamedArgAppender = (*ValuesQuery)(nil)
+)
 
 func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 	q := &ValuesQuery{

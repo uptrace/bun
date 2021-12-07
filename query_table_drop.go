@@ -15,6 +15,8 @@ type DropTableQuery struct {
 	ifExists bool
 }
 
+var _ Query = (*DropTableQuery)(nil)
+
 func NewDropTableQuery(db *DB) *DropTableQuery {
 	q := &DropTableQuery{
 		baseQuery: baseQuery{

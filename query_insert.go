@@ -24,6 +24,8 @@ type InsertQuery struct {
 	replace bool
 }
 
+var _ Query = (*InsertQuery)(nil)
+
 func NewInsertQuery(db *DB) *InsertQuery {
 	q := &InsertQuery{
 		whereBaseQuery: whereBaseQuery{

@@ -18,6 +18,8 @@ type DropIndexQuery struct {
 	index schema.QueryWithArgs
 }
 
+var _ Query = (*DropIndexQuery)(nil)
+
 func NewDropIndexQuery(db *DB) *DropIndexQuery {
 	q := &DropIndexQuery{
 		baseQuery: baseQuery{
