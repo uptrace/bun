@@ -177,8 +177,6 @@ type NamedArgAppender interface {
 	AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool)
 }
 
-//------------------------------------------------------------------------------
-
 type namedArgList struct {
 	arg  NamedArgAppender
 	next *namedArgList
@@ -219,12 +217,12 @@ func (a *namedArg) AppendNamedArg(fmter Formatter, b []byte, name string) ([]byt
 
 //------------------------------------------------------------------------------
 
-var _ NamedArgAppender = (*structArgs)(nil)
-
 type structArgs struct {
 	table *Table
 	strct reflect.Value
 }
+
+var _ NamedArgAppender = (*structArgs)(nil)
 
 func newStructArgs(fmter Formatter, strct interface{}) (*structArgs, bool) {
 	v := reflect.ValueOf(strct)
