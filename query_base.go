@@ -43,6 +43,7 @@ var (
 // IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
 type IDB interface {
 	IConn
+	Dialect() schema.Dialect
 
 	NewValues(model interface{}) *ValuesQuery
 	NewSelect() *SelectQuery

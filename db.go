@@ -473,6 +473,10 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 	return row
 }
 
+func (tx Tx) Dialect() schema.Dialect {
+	return tx.db.Dialect()
+}
+
 //------------------------------------------------------------------------------
 
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
