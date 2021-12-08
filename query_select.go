@@ -92,7 +92,7 @@ func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery 
 }
 
 func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
-	q.modelTable = schema.SafeQuery(query, args)
+	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 

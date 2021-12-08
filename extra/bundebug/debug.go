@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"time"
-	"io"
 
 	"github.com/fatih/color"
 
@@ -39,7 +39,7 @@ func WithWriter(w io.Writer) Option {
 	}
 }
 
-// WithEnv configures the hook using the environment variable value.
+// FromEnv configures the hook using the environment variable value.
 // For example, WithEnv("BUNDEBUG"):
 //    - BUNDEBUG=0 - disables the hook.
 //    - BUNDEBUG=1 - enables the hook.

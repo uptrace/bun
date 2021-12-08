@@ -74,10 +74,10 @@ type baseQuery struct {
 	tableModel TableModel
 	table      *schema.Table
 
-	with       []withQuery
-	modelTable schema.QueryWithArgs
-	tables     []schema.QueryWithArgs
-	columns    []schema.QueryWithArgs
+	with           []withQuery
+	modelTableName schema.QueryWithArgs
+	tables         []schema.QueryWithArgs
+	columns        []schema.QueryWithArgs
 
 	flags internal.Flag
 }
@@ -103,8 +103,8 @@ func (q *baseQuery) GetTableName() string {
 		}
 	}
 
-	if q.modelTable.Query != "" {
-		return q.modelTable.Query
+	if q.modelTableName.Query != "" {
+		return q.modelTableName.Query
 	}
 	if len(q.tables) > 0 {
 		return q.tables[0].Query
@@ -297,8 +297,8 @@ func (q *baseQuery) _excludeColumn(column string) bool {
 //------------------------------------------------------------------------------
 
 func (q *baseQuery) modelHasTableName() bool {
-	if !q.modelTable.IsZero() {
-		return q.modelTable.Query != ""
+	if !q.modelTableName.IsZero() {
+		return q.modelTableName.Query != ""
 	}
 	return q.table != nil
 }
@@ -325,8 +325,8 @@ func (q *baseQuery) _appendTables(
 	startLen := len(b)
 
 	if q.modelHasTableName() {
-		if !q.modelTable.IsZero() {
-			b, err = q.modelTable.AppendQuery(fmter, b)
+		if !q.modelTableName.IsZero() {
+			b, err = q.modelTableName.AppendQuery(fmter, b)
 			if err != nil {
 				return nil, err
 			}
@@ -365,8 +365,8 @@ func (q *baseQuery) appendFirstTableWithAlias(
 func (q *baseQuery) _appendFirstTable(
 	fmter schema.Formatter, b []byte, withAlias bool,
 ) ([]byte, error) {
-	if !q.modelTable.IsZero() {
-		return q.modelTable.AppendQuery(fmter, b)
+	if !q.modelTableName.IsZero() {
+		return q.modelTableName.AppendQuery(fmter, b)
 	}
 
 	if q.table != nil {
