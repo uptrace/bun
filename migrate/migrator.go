@@ -199,10 +199,6 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	return lastGroup, nil
 }
 
-func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
-	return m.Migrate(ctx, WithNopMigration())
-}
-
 type goMigrationConfig struct {
 	packageName string
 }
