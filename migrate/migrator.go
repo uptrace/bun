@@ -294,7 +294,7 @@ func (m *Migrator) genMigrationName(name string) (string, error) {
 	return fmt.Sprintf("%s_%s", version, name), nil
 }
 
-// MarkApplied marks the migration as applied (applied).
+// MarkApplied marks the migration as applied (completed).
 func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error {
 	_, err := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table).
