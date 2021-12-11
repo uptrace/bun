@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -59,11 +58,16 @@ func (m *Migrator) DB() *bun.DB {
 
 // MigrationsWithStatus returns migrations with status in ascending order.
 func (m *Migrator) MigrationsWithStatus(ctx context.Context) (MigrationSlice, error) {
+	sorted, _, err := m.migrationsWithStatus(ctx)
+	return sorted, err
+}
+
+func (m *Migrator) migrationsWithStatus(ctx context.Context) (MigrationSlice, int64, error) {
 	sorted := m.migrations.Sorted()
 
 	applied, err := m.selectAppliedMigrations(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	appliedMap := migrationMap(applied)
@@ -76,7 +80,7 @@ func (m *Migrator) MigrationsWithStatus(ctx context.Context) (MigrationSlice, er
 		}
 	}
 
-	return sorted, nil
+	return sorted, applied.LastGroupID(), nil
 }
 
 func (m *Migrator) Init(ctx context.Context) error {
@@ -128,7 +132,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	}
 	defer m.Unlock(ctx) //nolint:errcheck
 
-	migrations, err := m.MigrationsWithStatus(ctx)
+	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +143,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	if len(group.Migrations) == 0 {
 		return group, nil
 	}
-	group.ID = migrations.LastGroupID() + 1
+	group.ID = lastGroupID + 1
 
 	for i := range group.Migrations {
 		migration := &group.Migrations[i]
@@ -195,33 +199,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	return lastGroup, nil
 }
 
-type MigrationStatus struct {
-	Migrations    MigrationSlice
-	NewMigrations MigrationSlice
-	LastGroup     *MigrationGroup
-}
-
-func (m *Migrator) Status(ctx context.Context) (*MigrationStatus, error) {
-	log.Printf(
-		"DEPRECATED: bun: replace Status(ctx) with " +
-			"MigrationsWithStatus(ctx)")
-
-	migrations, err := m.MigrationsWithStatus(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &MigrationStatus{
-		Migrations:    migrations,
-		NewMigrations: migrations.Unapplied(),
-		LastGroup:     migrations.LastGroup(),
-	}, nil
-}
-
 func (m *Migrator) MarkCompleted(ctx context.Context) (*MigrationGroup, error) {
-	log.Printf(
-		"DEPRECATED: bun: replace MarkCompleted(ctx) with " +
-			"Migrate(ctx, migrate.WithNopMigration())")
-
 	return m.Migrate(ctx, WithNopMigration())
 }
 

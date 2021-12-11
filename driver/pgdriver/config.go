@@ -50,14 +50,13 @@ func newDefaultConfig() *Config {
 		Network:     "tcp",
 		Addr:        net.JoinHostPort(host, port),
 		DialTimeout: 5 * time.Second,
+		TLSConfig:   &tls.Config{InsecureSkipVerify: true},
 
 		User:     env("PGUSER", "postgres"),
 		Database: env("PGDATABASE", "postgres"),
 
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 5 * time.Second,
-
-		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -102,7 +101,11 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 
 func WithInsecure(on bool) Option {
 	return func(cfg *Config) {
-		cfg.TLSConfig = nil
+		if on {
+			cfg.TLSConfig = nil
+		} else {
+			cfg.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 	}
 }
 

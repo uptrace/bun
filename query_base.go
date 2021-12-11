@@ -497,15 +497,9 @@ func (q *baseQuery) exec(
 	query string,
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
-
 	res, err := q.conn.ExecContext(ctx, query)
-	if err != nil {
-		q.db.afterQuery(ctx, event, nil, err)
-		return res, err
-	}
-
-	q.db.afterQuery(ctx, event, res, err)
-	return res, nil
+	q.db.afterQuery(ctx, event, nil, err)
+	return res, err
 }
 
 //------------------------------------------------------------------------------
