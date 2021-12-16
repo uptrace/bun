@@ -236,6 +236,8 @@ func TestDB(t *testing.T) {
 		{testUpsert},
 		{testMultiUpdate},
 		{testTxScanAndCount},
+		{testEmbedModelValue},
+		{testEmbedModelPointer},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1028,4 +1030,60 @@ func testTxScanAndCount(t *testing.T, db *bun.DB) {
 		})
 		require.NoError(t, err)
 	}
+}
+
+func testEmbedModelValue(t *testing.T, db *bun.DB) {
+	type Embed struct {
+		Foo string
+		Bar string
+	}
+	type Model struct {
+		X Embed `bun:"embed:x_"`
+		Y Embed `bun:"embed:y_"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	m1 := &Model{
+		X: Embed{Foo: "x.foo", Bar: "x.bar"},
+		Y: Embed{Foo: "y.foo", Bar: "y.bar"},
+	}
+	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	require.NoError(t, err)
+
+	var m2 Model
+	err = db.NewSelect().Model(&m2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *m1, m2)
+}
+
+func testEmbedModelPointer(t *testing.T, db *bun.DB) {
+	type Embed struct {
+		Foo string
+		Bar string
+	}
+	type Model struct {
+		X *Embed `bun:"embed:x_"`
+		Y *Embed `bun:"embed:y_"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	m1 := &Model{
+		X: &Embed{Foo: "x.foo", Bar: "x.bar"},
+		Y: &Embed{Foo: "y.foo", Bar: "y.bar"},
+	}
+	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	require.NoError(t, err)
+
+	var m2 Model
+	err = db.NewSelect().Model(&m2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *m1, m2)
 }
