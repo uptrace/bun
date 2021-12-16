@@ -1,0 +1,21 @@
+- model: User
+  rows:
+    - _id: smith
+      id: '{{ xidToBinary "c6tf4i4bcv4458gu19s0" }}'
+      name: John Smith
+      email: john@smith.com
+      attrs: { foo: bar, bar: baz }
+      created_at: '{{ now }}'
+      updated_at: '{{ now }}'
+    - _id: doe
+      id: '{{ xidToBinary "c6tf4i4bcv4458gu19s0" }}'
+      name: Jonh Doe
+      email: john@doe.com
+      created_at: '{{ now }}'
+
+- model: Org
+  rows:
+    - name: "{{ $.User.smith.Name.String }}'s Org"
+      owner_id: '{{ $.User.smith.ID }}'
+    - name: "{{ $.User.doe.Name.String }}'s Org"
+      owner_id: '{{ $.User.doe.ID }}'
