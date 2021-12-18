@@ -17,20 +17,14 @@ type DeleteQuery struct {
 
 var _ Query = (*DeleteQuery)(nil)
 
-func NewDeleteQuery(db *DB) *DeleteQuery {
+func NewDeleteQuery(db IDB) *DeleteQuery {
 	q := &DeleteQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
-	return q
-}
-
-func (q *DeleteQuery) Conn(db IConn) *DeleteQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -123,7 +117,7 @@ func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery 
 }
 
 func (q *DeleteQuery) hasReturning() bool {
-	if !q.db.features.Has(feature.Returning) {
+	if !q.db.HasFeature(feature.Returning) {
 		return false
 	}
 	return q.returningQuery.hasReturning()
@@ -159,7 +153,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 
 	q = q.WhereDeleted()
-	withAlias := q.db.features.Has(feature.DeleteTableAlias)
+	withAlias := q.db.HasFeature(feature.DeleteTableAlias)
 
 	b, err = q.appendWith(fmter, b)
 	if err != nil {
@@ -233,7 +227,7 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

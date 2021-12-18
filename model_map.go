@@ -10,7 +10,7 @@ import (
 )
 
 type mapModel struct {
-	db *DB
+	db IDB
 
 	dest *map[string]interface{}
 	m    map[string]interface{}
@@ -23,7 +23,7 @@ type mapModel struct {
 
 var _ Model = (*mapModel)(nil)
 
-func newMapModel(db *DB, dest *map[string]interface{}) *mapModel {
+func newMapModel(db IDB, dest *map[string]interface{}) *mapModel {
 	m := &mapModel{
 		db:   db,
 		dest: dest,

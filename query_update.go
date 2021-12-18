@@ -22,20 +22,14 @@ type UpdateQuery struct {
 
 var _ Query = (*UpdateQuery)(nil)
 
-func NewUpdateQuery(db *DB) *UpdateQuery {
+func NewUpdateQuery(db IDB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
-	return q
-}
-
-func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -159,7 +153,7 @@ func (q *UpdateQuery) Returning(query string, args ...interface{}) *UpdateQuery 
 }
 
 func (q *UpdateQuery) hasReturning() bool {
-	if !q.db.features.Has(feature.Returning) {
+	if !q.db.HasFeature(feature.Returning) {
 		return false
 	}
 	return q.returningQuery.hasReturning()
@@ -331,7 +325,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	set, err := q.updateSliceSet(q.db.fmter, model)
+	set, err := q.updateSliceSet(q.db.Formatter(), model)
 	if err != nil {
 		q.setErr(err)
 		return q
@@ -403,7 +397,7 @@ func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

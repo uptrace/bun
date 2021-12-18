@@ -24,20 +24,14 @@ type CreateIndexQuery struct {
 
 var _ Query = (*CreateIndexQuery)(nil)
 
-func NewCreateIndexQuery(db *DB) *CreateIndexQuery {
+func NewCreateIndexQuery(db IDB) *CreateIndexQuery {
 	q := &CreateIndexQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
-	return q
-}
-
-func (q *CreateIndexQuery) Conn(db IConn) *CreateIndexQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -232,7 +226,7 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 //------------------------------------------------------------------------------
 
 func (q *CreateIndexQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

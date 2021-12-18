@@ -20,18 +20,12 @@ type DropIndexQuery struct {
 
 var _ Query = (*DropIndexQuery)(nil)
 
-func NewDropIndexQuery(db *DB) *DropIndexQuery {
+func NewDropIndexQuery(db IDB) *DropIndexQuery {
 	q := &DropIndexQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *DropIndexQuery) Conn(db IConn) *DropIndexQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -100,7 +94,7 @@ func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 //------------------------------------------------------------------------------
 
 func (q *DropIndexQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

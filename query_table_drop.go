@@ -17,18 +17,12 @@ type DropTableQuery struct {
 
 var _ Query = (*DropTableQuery)(nil)
 
-func NewDropTableQuery(db *DB) *DropTableQuery {
+func NewDropTableQuery(db IDB) *DropTableQuery {
 	q := &DropTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *DropTableQuery) Conn(db IConn) *DropTableQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -108,7 +102,7 @@ func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Res
 		}
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

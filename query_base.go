@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
@@ -24,25 +25,12 @@ type withQuery struct {
 	query schema.QueryAppender
 }
 
-// IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
-type IConn interface {
+// IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
+type IDB interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-}
 
-var (
-	_ IConn = (*sql.DB)(nil)
-	_ IConn = (*sql.Conn)(nil)
-	_ IConn = (*sql.Tx)(nil)
-	_ IConn = (*DB)(nil)
-	_ IConn = (*Conn)(nil)
-	_ IConn = (*Tx)(nil)
-)
-
-// IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
-type IDB interface {
-	IConn
 	Dialect() schema.Dialect
 
 	NewValues(model interface{}) *ValuesQuery
@@ -57,17 +45,32 @@ type IDB interface {
 	NewTruncateTable() *TruncateTableQuery
 	NewAddColumn() *AddColumnQuery
 	NewDropColumn() *DropColumnQuery
+
+	HasFeature(feat feature.Feature) bool
+	Formatter() schema.Formatter
+	Table(reflect.Type) *schema.Table
+
+	_flags() internal.Flag
+	makeQueryBytes() []byte
+
+	beforeQuery(
+		ctx context.Context,
+		iquery Query,
+		query string,
+		queryArgs []interface{},
+		model Model,
+	) (context.Context, *QueryEvent)
+
+	afterQuery(
+		ctx context.Context,
+		event *QueryEvent,
+		res sql.Result,
+		err error,
+	)
 }
 
-var (
-	_ IConn = (*DB)(nil)
-	_ IConn = (*Conn)(nil)
-	_ IConn = (*Tx)(nil)
-)
-
 type baseQuery struct {
-	db   *DB
-	conn IConn
+	db IDB
 
 	model Model
 	err   error
@@ -83,7 +86,7 @@ type baseQuery struct {
 	flags internal.Flag
 }
 
-func (q *baseQuery) DB() *DB {
+func (q *baseQuery) DB() IDB {
 	return q.db
 }
 
@@ -113,18 +116,9 @@ func (q *baseQuery) GetTableName() string {
 	return ""
 }
 
-func (q *baseQuery) setConn(db IConn) {
-	// Unwrap Bun wrappers to not call query hooks twice.
-	switch db := db.(type) {
-	case *DB:
-		q.conn = db.DB
-	case Conn:
-		q.conn = db.Conn
-	case Tx:
-		q.conn = db.Tx
-	default:
-		q.conn = db
-	}
+func (q *baseQuery) SetDB(db IDB) {
+	// FIXME: Unwrap Bun wrappers to not call query hooks twice.
+	q.db = db
 }
 
 // TODO: rename to setModel
@@ -469,7 +463,7 @@ func (q *baseQuery) scan(
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
 
-	rows, err := q.conn.QueryContext(ctx, query)
+	rows, err := q.db.QueryContext(ctx, query)
 	if err != nil {
 		q.db.afterQuery(ctx, event, nil, err)
 		return nil, err
@@ -498,7 +492,7 @@ func (q *baseQuery) exec(
 	query string,
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
-	res, err := q.conn.ExecContext(ctx, query)
+	res, err := q.db.ExecContext(ctx, query)
 	q.db.afterQuery(ctx, event, nil, err)
 	return res, err
 }

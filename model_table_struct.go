@@ -12,7 +12,7 @@ import (
 )
 
 type structTableModel struct {
-	db    *DB
+	db    IDB
 	table *schema.Table
 
 	rel   *schema.Relation
@@ -32,7 +32,7 @@ type structTableModel struct {
 
 var _ TableModel = (*structTableModel)(nil)
 
-func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structTableModel {
+func newStructTableModel(db IDB, dest interface{}, table *schema.Table) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: table,
@@ -40,7 +40,7 @@ func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structT
 	}
 }
 
-func newStructTableModelValue(db *DB, dest interface{}, v reflect.Value) *structTableModel {
+func newStructTableModelValue(db IDB, dest interface{}, v reflect.Value) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: db.Table(v.Type()),
@@ -311,7 +311,7 @@ func (m *structTableModel) ScanColumn(column string, src interface{}) error {
 	if ok, err := m.scanColumn(column, src); ok {
 		return err
 	}
-	if column == "" || column[0] == '_' || m.db.flags.Has(discardUnknownColumns) {
+	if column == "" || column[0] == '_' || m.db._flags().Has(discardUnknownColumns) {
 		return nil
 	}
 	return fmt.Errorf("bun: %s does not have column %q", m.table.TypeName, column)

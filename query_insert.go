@@ -26,23 +26,16 @@ type InsertQuery struct {
 
 var _ Query = (*InsertQuery)(nil)
 
-func NewInsertQuery(db *DB) *InsertQuery {
+func NewInsertQuery(db IDB) *InsertQuery {
 	q := &InsertQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
 	return q
 }
-
-func (q *InsertQuery) Conn(db IConn) *InsertQuery {
-	q.setConn(db)
-	return q
-}
-
 func (q *InsertQuery) Model(model interface{}) *InsertQuery {
 	q.setTableModel(model)
 	return q
@@ -127,7 +120,7 @@ func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery 
 }
 
 func (q *InsertQuery) hasReturning() bool {
-	if !q.db.features.Has(feature.Returning) {
+	if !q.db.HasFeature(feature.Returning) {
 		return false
 	}
 	return q.returningQuery.hasReturning()
@@ -139,10 +132,10 @@ func (q *InsertQuery) hasReturning() bool {
 //   - On MySQL, it generates `INSERT IGNORE INTO`.
 //   - On PostgreSQL, it generates `ON CONFLICT DO NOTHING`.
 func (q *InsertQuery) Ignore() *InsertQuery {
-	if q.db.fmter.HasFeature(feature.InsertOnConflict) {
+	if q.db.Formatter().HasFeature(feature.InsertOnConflict) {
 		return q.On("CONFLICT DO NOTHING")
 	}
-	if q.db.fmter.HasFeature(feature.InsertIgnore) {
+	if q.db.Formatter().HasFeature(feature.InsertIgnore) {
 		q.ignore = true
 	}
 	return q
@@ -182,7 +175,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	}
 	b = append(b, "INTO "...)
 
-	if q.db.features.Has(feature.InsertTableAlias) && !q.on.IsZero() {
+	if q.db.HasFeature(feature.InsertTableAlias) && !q.on.IsZero() {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
 	} else {
 		b, err = q.appendFirstTable(fmter, b)
@@ -307,7 +300,7 @@ func (q *InsertQuery) appendStructValues(
 		case isTemplate:
 			b = append(b, '?')
 		case f.NullZero && f.HasZeroValue(strct):
-			if q.db.features.Has(feature.DefaultPlaceholder) {
+			if q.db.HasFeature(feature.DefaultPlaceholder) {
 				b = append(b, "DEFAULT"...)
 			} else if f.SQLDefault != "" {
 				b = append(b, f.SQLDefault...)
@@ -368,7 +361,7 @@ func (q *InsertQuery) appendSliceValues(
 }
 
 func (q *InsertQuery) getFields() ([]*schema.Field, error) {
-	if q.db.features.Has(feature.DefaultPlaceholder) || len(q.columns) > 0 {
+	if q.db.HasFeature(feature.DefaultPlaceholder) || len(q.columns) > 0 {
 		return q.baseQuery.getFields()
 	}
 
@@ -531,7 +524,7 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +581,7 @@ func (q *InsertQuery) afterInsertHook(ctx context.Context) error {
 }
 
 func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {
-	if q.db.features.Has(feature.Returning) || q.table == nil || len(q.table.PKs) != 1 {
+	if q.db.HasFeature(feature.Returning) || q.table == nil || len(q.table.PKs) != 1 {
 		return nil
 	}
 

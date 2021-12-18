@@ -26,18 +26,12 @@ type CreateTableQuery struct {
 
 var _ Query = (*CreateTableQuery)(nil)
 
-func NewCreateTableQuery(db *DB) *CreateTableQuery {
+func NewCreateTableQuery(db IDB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *CreateTableQuery) Conn(db IConn) *CreateTableQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -276,7 +270,7 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.R
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

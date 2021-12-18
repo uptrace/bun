@@ -19,7 +19,7 @@ type mapSliceModel struct {
 
 var _ Model = (*mapSliceModel)(nil)
 
-func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
+func newMapSliceModel(db IDB, dest *[]map[string]interface{}) *mapSliceModel {
 	return &mapSliceModel{
 		mapModel: mapModel{
 			db: db,
@@ -99,7 +99,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 	slice := *m.dest
 
 	b = append(b, "VALUES "...)
-	if m.db.features.Has(feature.ValuesRow) {
+	if m.db.HasFeature(feature.ValuesRow) {
 		b = append(b, "ROW("...)
 	} else {
 		b = append(b, '(')
@@ -118,7 +118,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 	for i, el := range slice {
 		if i > 0 {
 			b = append(b, "), "...)
-			if m.db.features.Has(feature.ValuesRow) {
+			if m.db.HasFeature(feature.ValuesRow) {
 				b = append(b, "ROW("...)
 			} else {
 				b = append(b, '(')

@@ -124,6 +124,10 @@ func (db *DB) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(db)
 }
 
+func (db *DB) _flags() internal.Flag {
+	return db.flags
+}
+
 func (db *DB) ResetModel(ctx context.Context, models ...interface{}) error {
 	for _, model := range models {
 		if _, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx); err != nil {
@@ -264,7 +268,7 @@ func (db *DB) format(query string, args []interface{}) string {
 //------------------------------------------------------------------------------
 
 type Conn struct {
-	db *DB
+	*DB
 	*sql.Conn
 }
 
@@ -274,7 +278,7 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 		return Conn{}, err
 	}
 	return Conn{
-		db:   db,
+		DB:   db,
 		Conn: conn,
 	}, nil
 }
@@ -282,74 +286,74 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
-	res, err := c.Conn.ExecContext(ctx, c.db.format(query, args))
-	c.db.afterQuery(ctx, event, res, err)
+	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	res, err := c.Conn.ExecContext(ctx, c.format(query, args))
+	c.afterQuery(ctx, event, res, err)
 	return res, err
 }
 
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
-	rows, err := c.Conn.QueryContext(ctx, c.db.format(query, args))
-	c.db.afterQuery(ctx, event, nil, err)
+	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	rows, err := c.Conn.QueryContext(ctx, c.format(query, args))
+	c.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
 
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := c.db.beforeQuery(ctx, nil, query, args, nil)
-	row := c.Conn.QueryRowContext(ctx, c.db.format(query, args))
-	c.db.afterQuery(ctx, event, nil, row.Err())
+	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	row := c.Conn.QueryRowContext(ctx, c.format(query, args))
+	c.afterQuery(ctx, event, nil, row.Err())
 	return row
 }
 
 func (c Conn) NewValues(model interface{}) *ValuesQuery {
-	return NewValuesQuery(c.db, model).Conn(c)
+	return NewValuesQuery(c, model)
 }
 
 func (c Conn) NewSelect() *SelectQuery {
-	return NewSelectQuery(c.db).Conn(c)
+	return NewSelectQuery(c)
 }
 
 func (c Conn) NewInsert() *InsertQuery {
-	return NewInsertQuery(c.db).Conn(c)
+	return NewInsertQuery(c)
 }
 
 func (c Conn) NewUpdate() *UpdateQuery {
-	return NewUpdateQuery(c.db).Conn(c)
+	return NewUpdateQuery(c)
 }
 
 func (c Conn) NewDelete() *DeleteQuery {
-	return NewDeleteQuery(c.db).Conn(c)
+	return NewDeleteQuery(c)
 }
 
 func (c Conn) NewCreateTable() *CreateTableQuery {
-	return NewCreateTableQuery(c.db).Conn(c)
+	return NewCreateTableQuery(c)
 }
 
 func (c Conn) NewDropTable() *DropTableQuery {
-	return NewDropTableQuery(c.db).Conn(c)
+	return NewDropTableQuery(c)
 }
 
 func (c Conn) NewCreateIndex() *CreateIndexQuery {
-	return NewCreateIndexQuery(c.db).Conn(c)
+	return NewCreateIndexQuery(c)
 }
 
 func (c Conn) NewDropIndex() *DropIndexQuery {
-	return NewDropIndexQuery(c.db).Conn(c)
+	return NewDropIndexQuery(c)
 }
 
 func (c Conn) NewTruncateTable() *TruncateTableQuery {
-	return NewTruncateTableQuery(c.db).Conn(c)
+	return NewTruncateTableQuery(c)
 }
 
 func (c Conn) NewAddColumn() *AddColumnQuery {
-	return NewAddColumnQuery(c.db).Conn(c)
+	return NewAddColumnQuery(c)
 }
 
 func (c Conn) NewDropColumn() *DropColumnQuery {
-	return NewDropColumnQuery(c.db).Conn(c)
+	return NewDropColumnQuery(c)
 }
 
 //------------------------------------------------------------------------------
@@ -374,7 +378,7 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 
 type Tx struct {
 	ctx context.Context
-	db  *DB
+	*DB
 	*sql.Tx
 }
 
@@ -417,22 +421,22 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	}
 	return Tx{
 		ctx: ctx,
-		db:  db,
+		DB:  db,
 		Tx:  tx,
 	}, nil
 }
 
 func (tx Tx) Commit() error {
-	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "COMMIT", nil, nil)
+	ctx, event := tx.DB.beforeQuery(tx.ctx, nil, "COMMIT", nil, nil)
 	err := tx.Tx.Commit()
-	tx.db.afterQuery(ctx, event, nil, err)
+	tx.DB.afterQuery(ctx, event, nil, err)
 	return err
 }
 
 func (tx Tx) Rollback() error {
-	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "ROLLBACK", nil, nil)
+	ctx, event := tx.DB.beforeQuery(tx.ctx, nil, "ROLLBACK", nil, nil)
 	err := tx.Tx.Rollback()
-	tx.db.afterQuery(ctx, event, nil, err)
+	tx.DB.afterQuery(ctx, event, nil, err)
 	return err
 }
 
@@ -443,9 +447,9 @@ func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
 func (tx Tx) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
-	res, err := tx.Tx.ExecContext(ctx, tx.db.format(query, args))
-	tx.db.afterQuery(ctx, event, res, err)
+	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	res, err := tx.Tx.ExecContext(ctx, tx.DB.format(query, args))
+	tx.DB.afterQuery(ctx, event, res, err)
 	return res, err
 }
 
@@ -456,9 +460,9 @@ func (tx Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
 func (tx Tx) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
-	rows, err := tx.Tx.QueryContext(ctx, tx.db.format(query, args))
-	tx.db.afterQuery(ctx, event, nil, err)
+	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	rows, err := tx.Tx.QueryContext(ctx, tx.DB.format(query, args))
+	tx.DB.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
 
@@ -467,64 +471,64 @@ func (tx Tx) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, nil)
-	row := tx.Tx.QueryRowContext(ctx, tx.db.format(query, args))
-	tx.db.afterQuery(ctx, event, nil, row.Err())
+	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	row := tx.Tx.QueryRowContext(ctx, tx.DB.format(query, args))
+	tx.DB.afterQuery(ctx, event, nil, row.Err())
 	return row
 }
 
 func (tx Tx) Dialect() schema.Dialect {
-	return tx.db.Dialect()
+	return tx.DB.Dialect()
 }
 
 //------------------------------------------------------------------------------
 
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
-	return NewValuesQuery(tx.db, model).Conn(tx)
+	return NewValuesQuery(tx, model)
 }
 
 func (tx Tx) NewSelect() *SelectQuery {
-	return NewSelectQuery(tx.db).Conn(tx)
+	return NewSelectQuery(tx)
 }
 
 func (tx Tx) NewInsert() *InsertQuery {
-	return NewInsertQuery(tx.db).Conn(tx)
+	return NewInsertQuery(tx)
 }
 
 func (tx Tx) NewUpdate() *UpdateQuery {
-	return NewUpdateQuery(tx.db).Conn(tx)
+	return NewUpdateQuery(tx)
 }
 
 func (tx Tx) NewDelete() *DeleteQuery {
-	return NewDeleteQuery(tx.db).Conn(tx)
+	return NewDeleteQuery(tx)
 }
 
 func (tx Tx) NewCreateTable() *CreateTableQuery {
-	return NewCreateTableQuery(tx.db).Conn(tx)
+	return NewCreateTableQuery(tx)
 }
 
 func (tx Tx) NewDropTable() *DropTableQuery {
-	return NewDropTableQuery(tx.db).Conn(tx)
+	return NewDropTableQuery(tx)
 }
 
 func (tx Tx) NewCreateIndex() *CreateIndexQuery {
-	return NewCreateIndexQuery(tx.db).Conn(tx)
+	return NewCreateIndexQuery(tx)
 }
 
 func (tx Tx) NewDropIndex() *DropIndexQuery {
-	return NewDropIndexQuery(tx.db).Conn(tx)
+	return NewDropIndexQuery(tx)
 }
 
 func (tx Tx) NewTruncateTable() *TruncateTableQuery {
-	return NewTruncateTableQuery(tx.db).Conn(tx)
+	return NewTruncateTableQuery(tx)
 }
 
 func (tx Tx) NewAddColumn() *AddColumnQuery {
-	return NewAddColumnQuery(tx.db).Conn(tx)
+	return NewAddColumnQuery(tx)
 }
 
 func (tx Tx) NewDropColumn() *DropColumnQuery {
-	return NewDropColumnQuery(tx.db).Conn(tx)
+	return NewDropColumnQuery(tx)
 }
 
 //------------------------------------------------------------------------------

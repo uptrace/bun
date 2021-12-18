@@ -9,7 +9,7 @@ import (
 )
 
 type scanModel struct {
-	db *DB
+	db IDB
 
 	dest      []interface{}
 	scanIndex int
@@ -17,7 +17,7 @@ type scanModel struct {
 
 var _ Model = (*scanModel)(nil)
 
-func newScanModel(db *DB, dest []interface{}) *scanModel {
+func newScanModel(db IDB, dest []interface{}) *scanModel {
 	return &scanModel{
 		db:   db,
 		dest: dest,

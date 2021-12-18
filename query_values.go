@@ -21,19 +21,13 @@ var (
 	_ schema.NamedArgAppender = (*ValuesQuery)(nil)
 )
 
-func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
+func NewValuesQuery(db IDB, model interface{}) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	q.setTableModel(model)
-	return q
-}
-
-func (q *ValuesQuery) Conn(db IConn) *ValuesQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -133,7 +127,7 @@ func (q *ValuesQuery) appendQuery(
 	fields []*schema.Field,
 ) (_ []byte, err error) {
 	b = append(b, "VALUES "...)
-	if q.db.features.Has(feature.ValuesRow) {
+	if q.db.HasFeature(feature.ValuesRow) {
 		b = append(b, "ROW("...)
 	} else {
 		b = append(b, '(')
@@ -156,7 +150,7 @@ func (q *ValuesQuery) appendQuery(
 		for i := 0; i < sliceLen; i++ {
 			if i > 0 {
 				b = append(b, "), "...)
-				if q.db.features.Has(feature.ValuesRow) {
+				if q.db.HasFeature(feature.ValuesRow) {
 					b = append(b, "ROW("...)
 				} else {
 					b = append(b, '(')

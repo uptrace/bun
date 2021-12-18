@@ -44,7 +44,7 @@ type TableModel interface {
 	updateSoftDeleteField(time.Time) error
 }
 
-func newModel(db *DB, dest []interface{}) (Model, error) {
+func newModel(db IDB, dest []interface{}) (Model, error) {
 	if len(dest) == 1 {
 		return _newModel(db, dest[0], true)
 	}
@@ -68,11 +68,11 @@ func newModel(db *DB, dest []interface{}) (Model, error) {
 	return newSliceModel(db, dest, values), nil
 }
 
-func newSingleModel(db *DB, dest interface{}) (Model, error) {
+func newSingleModel(db IDB, dest interface{}) (Model, error) {
 	return _newModel(db, dest, false)
 }
 
-func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
+func _newModel(db IDB, dest interface{}, scan bool) (Model, error) {
 	switch dest := dest.(type) {
 	case nil:
 		return nil, errNilModel
@@ -139,7 +139,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 }
 
 func newTableModelIndex(
-	db *DB,
+	db IDB,
 	table *schema.Table,
 	root reflect.Value,
 	index []int,

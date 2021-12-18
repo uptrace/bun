@@ -15,18 +15,12 @@ type DropColumnQuery struct {
 
 var _ Query = (*DropColumnQuery)(nil)
 
-func NewDropColumnQuery(db *DB) *DropColumnQuery {
+func NewDropColumnQuery(db IDB) *DropColumnQuery {
 	q := &DropColumnQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *DropColumnQuery) Conn(db IConn) *DropColumnQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -102,7 +96,7 @@ func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 //------------------------------------------------------------------------------
 
 func (q *DropColumnQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

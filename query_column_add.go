@@ -17,18 +17,12 @@ type AddColumnQuery struct {
 
 var _ Query = (*AddColumnQuery)(nil)
 
-func NewAddColumnQuery(db *DB) *AddColumnQuery {
+func NewAddColumnQuery(db IDB) *AddColumnQuery {
 	q := &AddColumnQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *AddColumnQuery) Conn(db IConn) *AddColumnQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -106,7 +100,7 @@ func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 //------------------------------------------------------------------------------
 
 func (q *AddColumnQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

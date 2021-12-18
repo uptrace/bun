@@ -36,20 +36,14 @@ type SelectQuery struct {
 
 var _ Query = (*SelectQuery)(nil)
 
-func NewSelectQuery(db *DB) *SelectQuery {
+func NewSelectQuery(db IDB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
-}
-
-func (q *SelectQuery) Conn(db IConn) *SelectQuery {
-	q.setConn(db)
-	return q
 }
 
 func (q *SelectQuery) Model(model interface{}) *SelectQuery {
@@ -344,8 +338,10 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 		case schema.HasOneRelation, schema.BelongsToRelation:
 			err = q.selectJoins(ctx, j.JoinModel.getJoins())
 		case schema.HasManyRelation:
+			// FIXME: calling q.db.NewSelect assumes we're not in a transaction
 			err = j.selectMany(ctx, q.db.NewSelect())
 		case schema.ManyToManyRelation:
+			// FIXME: calling q.db.NewSelect assumes we're not in a transaction
 			err = j.selectM2M(ctx, q.db.NewSelect())
 		default:
 			panic("not reached")
@@ -655,13 +651,13 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
 
 	query := internal.String(queryBytes)
-	return q.conn.QueryContext(ctx, query)
+	return q.db.QueryContext(ctx, query)
 }
 
 func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
@@ -672,7 +668,7 @@ func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -713,7 +709,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return err
 	}
@@ -767,7 +763,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 
 	qq := countQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -776,7 +772,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
 
 	var num int
-	err = q.conn.QueryRowContext(ctx, query).Scan(&num)
+	err = q.db.QueryRowContext(ctx, query).Scan(&num)
 
 	q.db.afterQuery(ctx, event, nil, err)
 
@@ -784,7 +780,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 }
 
 func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
-	if _, ok := q.conn.(*DB); ok {
+	if _, ok := q.db.(*DB); ok {
 		return q.scanAndCountConc(ctx, dest...)
 	}
 	return q.scanAndCountSeq(ctx, dest...)
@@ -852,7 +848,7 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 
 	qq := existsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		return false, err
 	}
@@ -861,7 +857,7 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
 
 	var exists bool
-	err = q.conn.QueryRowContext(ctx, query).Scan(&exists)
+	err = q.db.QueryRowContext(ctx, query).Scan(&exists)
 
 	q.db.afterQuery(ctx, event, nil, err)
 

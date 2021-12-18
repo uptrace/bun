@@ -18,18 +18,12 @@ type TruncateTableQuery struct {
 
 var _ Query = (*TruncateTableQuery)(nil)
 
-func NewTruncateTableQuery(db *DB) *TruncateTableQuery {
+func NewTruncateTableQuery(db IDB) *TruncateTableQuery {
 	q := &TruncateTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
-	return q
-}
-
-func (q *TruncateTableQuery) Conn(db IConn) *TruncateTableQuery {
-	q.setConn(db)
 	return q
 }
 
@@ -100,7 +94,7 @@ func (q *TruncateTableQuery) AppendQuery(
 		return nil, err
 	}
 
-	if q.db.features.Has(feature.TableIdentity) {
+	if q.db.HasFeature(feature.TableIdentity) {
 		if q.continueIdentity {
 			b = append(b, " CONTINUE IDENTITY"...)
 		} else {
@@ -116,7 +110,7 @@ func (q *TruncateTableQuery) AppendQuery(
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.Formatter(), q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
