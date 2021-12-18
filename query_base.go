@@ -37,10 +37,10 @@ var (
 	_ IConn = (*sql.Tx)(nil)
 	_ IConn = (*DB)(nil)
 	_ IConn = (*Conn)(nil)
-	_ IConn = (*Tx)(nil)
+	_ IConn = (Tx{})
 )
 
-// IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
+// IDB is a common interface for *bun.DB, and bun.Tx.
 type IDB interface {
 	IConn
 	Dialect() schema.Dialect
@@ -60,9 +60,8 @@ type IDB interface {
 }
 
 var (
-	_ IConn = (*DB)(nil)
-	_ IConn = (*Conn)(nil)
-	_ IConn = (*Tx)(nil)
+	_ IDB = (*DB)(nil)
+	_ IDB = Tx{}
 )
 
 type baseQuery struct {
@@ -84,6 +83,26 @@ type baseQuery struct {
 }
 
 func (q *baseQuery) DB() *DB {
+	return q.db
+}
+
+func (q *baseQuery) getTx(ctx context.Context) (Tx, bool) {
+	tx, ok := q.conn.(*sql.Tx)
+	if !ok {
+		return Tx{}, false
+	}
+	return Tx{
+		ctx: ctx,
+		db:  q.db,
+		Tx:  tx,
+	}, true
+}
+
+func (q *baseQuery) idb(ctx context.Context) IDB {
+	tx, ok := q.getTx(ctx)
+	if ok {
+		return tx
+	}
 	return q.db
 }
 

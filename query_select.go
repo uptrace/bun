@@ -344,9 +344,9 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 		case schema.HasOneRelation, schema.BelongsToRelation:
 			err = q.selectJoins(ctx, j.JoinModel.getJoins())
 		case schema.HasManyRelation:
-			err = j.selectMany(ctx, q.db.NewSelect())
+			err = j.selectMany(ctx, q.idb(ctx).NewSelect())
 		case schema.ManyToManyRelation:
-			err = j.selectM2M(ctx, q.db.NewSelect())
+			err = j.selectM2M(ctx, q.idb(ctx).NewSelect())
 		default:
 			panic("not reached")
 		}
