@@ -73,7 +73,7 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 			return err
 		}
 
-		var idb bun.IConn
+		var idb bun.IDB
 
 		if isTx {
 			tx, err := db.BeginTx(ctx, nil)
