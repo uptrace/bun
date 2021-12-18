@@ -60,6 +60,12 @@ type IDB interface {
 	)
 }
 
+var (
+	_ IDB = (*DB)(nil)
+	_ IDB = (*Conn)(nil)
+	_ IDB = (*Tx)(nil)
+)
+
 type baseQuery struct {
 	db IDB
 
