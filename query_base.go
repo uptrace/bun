@@ -114,7 +114,6 @@ func (q *baseQuery) GetTableName() string {
 }
 
 func (q *baseQuery) SetDB(db IDB) {
-	// FIXME: Unwrap Bun wrappers to not call query hooks twice.
 	q.db = db
 }
 
