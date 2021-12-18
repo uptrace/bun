@@ -296,10 +296,10 @@ func TestPGTransaction(t *testing.T) {
 	tx, err := db.BeginTx(ctx, nil)
 	require.NoError(t, err)
 
-	_, err = db.NewCreateTable().Conn(tx).Model((*Model)(nil)).Exec(ctx)
+	_, err = tx.NewCreateTable().Model((*Model)(nil)).Exec(ctx)
 	require.NoError(t, err)
 
-	n, err := db.NewSelect().Conn(tx).Model((*Model)(nil)).Count(ctx)
+	n, err := tx.NewSelect().Model((*Model)(nil)).Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, n)
 
