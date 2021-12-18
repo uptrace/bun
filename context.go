@@ -43,9 +43,9 @@ func withModel(ctx context.Context, m Model) context.Context {
 }
 
 func withEvent(ctx context.Context, e *QueryEvent) context.Context {
-	scopeVal := scopeFromContext(ctx).copy()
+	scopeVal := scopeFromContext(ctx)
 	scopeVal.event = e
-	return context.WithValue(ctx, scopeKey, scopeVal)
+	return context.WithValue(ctx, scopeKey, scopeVal.copy())
 }
 
 func isManagedQuery(ctx context.Context) bool {
