@@ -50,39 +50,40 @@ type QueryHook interface {
 
 func (db *DB) beforeQuery(
 	ctx context.Context,
-	iquery Query,
 	query string,
 	queryArgs []interface{},
-	model Model,
-) (context.Context, *QueryEvent) {
+) context.Context {
 	atomic.AddUint32(&db.stats.Queries, 1)
 
 	if len(db.queryHooks) == 0 {
-		return ctx, nil
+		return ctx
 	}
+
+	scope := scopeFromContext(ctx)
 
 	event := &QueryEvent{
 		DB: db,
 
-		Model:         model,
-		QueryAppender: iquery,
-		IQuery:        iquery,
+		Model:         scope.model,
+		QueryAppender: scope.query,
+		IQuery:        scope.query,
 		Query:         query,
 		QueryArgs:     queryArgs,
 
 		StartTime: time.Now(),
 	}
 
+	ctx = withEvent(ctx, event)
+
 	for _, hook := range db.queryHooks {
 		ctx = hook.BeforeQuery(ctx, event)
 	}
 
-	return ctx, event
+	return ctx
 }
 
 func (db *DB) afterQuery(
 	ctx context.Context,
-	event *QueryEvent,
 	res sql.Result,
 	err error,
 ) {
@@ -92,6 +93,8 @@ func (db *DB) afterQuery(
 	default:
 		atomic.AddUint32(&db.stats.Errors, 1)
 	}
+
+	event := scopeFromContext(ctx).event
 
 	if event == nil {
 		return

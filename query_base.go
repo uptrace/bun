@@ -53,17 +53,8 @@ type IDB interface {
 	_flags() internal.Flag
 	makeQueryBytes() []byte
 
-	beforeQuery(
-		ctx context.Context,
-		iquery Query,
-		query string,
-		queryArgs []interface{},
-		model Model,
-	) (context.Context, *QueryEvent)
-
 	afterQuery(
 		ctx context.Context,
-		event *QueryEvent,
 		res sql.Result,
 		err error,
 	)
@@ -461,18 +452,19 @@ func (q *baseQuery) scan(
 	model Model,
 	hasDest bool,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
+	ctx = withQueryScope(ctx, iquery)
+	ctx = withModel(ctx, q.model)
 
 	rows, err := q.db.QueryContext(ctx, query)
 	if err != nil {
-		q.db.afterQuery(ctx, event, nil, err)
+		q.db.afterQuery(ctx, nil, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	numRow, err := model.ScanRows(ctx, rows)
 	if err != nil {
-		q.db.afterQuery(ctx, event, nil, err)
+		q.db.afterQuery(ctx, nil, err)
 		return nil, err
 	}
 
@@ -481,7 +473,7 @@ func (q *baseQuery) scan(
 	}
 
 	res := driver.RowsAffected(numRow)
-	q.db.afterQuery(ctx, event, res, err)
+	q.db.afterQuery(ctx, res, err)
 
 	return res, err
 }
@@ -491,9 +483,10 @@ func (q *baseQuery) exec(
 	iquery Query,
 	query string,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
+	ctx = withQueryScope(ctx, iquery)
+	ctx = withModel(ctx, q.model)
 	res, err := q.db.ExecContext(ctx, query)
-	q.db.afterQuery(ctx, event, nil, err)
+	q.db.afterQuery(ctx, nil, err)
 	return res, err
 }
 

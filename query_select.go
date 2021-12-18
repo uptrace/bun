@@ -769,12 +769,14 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	}
 
 	query := internal.String(queryBytes)
-	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
+
+	ctx = withQueryScope(ctx, qq)
+	ctx = withModel(ctx, q.model)
 
 	var num int
 	err = q.db.QueryRowContext(ctx, query).Scan(&num)
 
-	q.db.afterQuery(ctx, event, nil, err)
+	q.db.afterQuery(ctx, nil, err)
 
 	return num, err
 }
@@ -854,12 +856,14 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	}
 
 	query := internal.String(queryBytes)
-	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, q.model)
+
+	ctx = withQueryScope(ctx, qq)
+	ctx = withModel(ctx, q.model)
 
 	var exists bool
 	err = q.db.QueryRowContext(ctx, query).Scan(&exists)
 
-	q.db.afterQuery(ctx, event, nil, err)
+	q.db.afterQuery(ctx, nil, err)
 
 	return exists, err
 }

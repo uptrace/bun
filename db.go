@@ -231,9 +231,11 @@ func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 func (db *DB) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
+	ctx = db.beforeQuery(ctx, query, args)
 	res, err := db.DB.ExecContext(ctx, db.format(query, args))
-	db.afterQuery(ctx, event, res, err)
+	if !isManagedQuery(ctx) {
+		db.afterQuery(ctx, res, err)
+	}
 	return res, err
 }
 
@@ -244,9 +246,11 @@ func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 func (db *DB) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
+	ctx = db.beforeQuery(ctx, query, args)
 	rows, err := db.DB.QueryContext(ctx, db.format(query, args))
-	db.afterQuery(ctx, event, nil, err)
+	if !isManagedQuery(ctx) {
+		db.afterQuery(ctx, nil, err)
+	}
 	return rows, err
 }
 
@@ -255,9 +259,11 @@ func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := db.beforeQuery(ctx, nil, query, args, nil)
+	ctx = db.beforeQuery(ctx, query, args)
 	row := db.DB.QueryRowContext(ctx, db.format(query, args))
-	db.afterQuery(ctx, event, nil, row.Err())
+	if !isManagedQuery(ctx) {
+		db.afterQuery(ctx, nil, row.Err())
+	}
 	return row
 }
 
@@ -286,25 +292,31 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	ctx = c.beforeQuery(ctx, query, args)
 	res, err := c.Conn.ExecContext(ctx, c.format(query, args))
-	c.afterQuery(ctx, event, res, err)
+	if !isManagedQuery(ctx) {
+		c.afterQuery(ctx, res, err)
+	}
 	return res, err
 }
 
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	ctx = c.beforeQuery(ctx, query, args)
 	rows, err := c.Conn.QueryContext(ctx, c.format(query, args))
-	c.afterQuery(ctx, event, nil, err)
+	if !isManagedQuery(ctx) {
+		c.afterQuery(ctx, nil, err)
+	}
 	return rows, err
 }
 
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := c.beforeQuery(ctx, nil, query, args, nil)
+	ctx = c.beforeQuery(ctx, query, args)
 	row := c.Conn.QueryRowContext(ctx, c.format(query, args))
-	c.afterQuery(ctx, event, nil, row.Err())
+	if !isManagedQuery(ctx) {
+		c.afterQuery(ctx, nil, row.Err())
+	}
 	return row
 }
 
@@ -413,9 +425,9 @@ func (db *DB) Begin() (Tx, error) {
 }
 
 func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
-	ctx, event := db.beforeQuery(ctx, nil, "BEGIN", nil, nil)
+	ctx = db.beforeQuery(ctx, "BEGIN", nil)
 	tx, err := db.DB.BeginTx(ctx, opts)
-	db.afterQuery(ctx, event, nil, err)
+	db.afterQuery(ctx, nil, err)
 	if err != nil {
 		return Tx{}, err
 	}
@@ -427,16 +439,16 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 }
 
 func (tx Tx) Commit() error {
-	ctx, event := tx.DB.beforeQuery(tx.ctx, nil, "COMMIT", nil, nil)
+	ctx := tx.DB.beforeQuery(tx.ctx, "COMMIT", nil)
 	err := tx.Tx.Commit()
-	tx.DB.afterQuery(ctx, event, nil, err)
+	tx.DB.afterQuery(ctx, nil, err)
 	return err
 }
 
 func (tx Tx) Rollback() error {
-	ctx, event := tx.DB.beforeQuery(tx.ctx, nil, "ROLLBACK", nil, nil)
+	ctx := tx.DB.beforeQuery(tx.ctx, "ROLLBACK", nil)
 	err := tx.Tx.Rollback()
-	tx.DB.afterQuery(ctx, event, nil, err)
+	tx.DB.afterQuery(ctx, nil, err)
 	return err
 }
 
@@ -447,9 +459,11 @@ func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
 func (tx Tx) ExecContext(
 	ctx context.Context, query string, args ...interface{},
 ) (sql.Result, error) {
-	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	ctx = tx.DB.beforeQuery(ctx, query, args)
 	res, err := tx.Tx.ExecContext(ctx, tx.DB.format(query, args))
-	tx.DB.afterQuery(ctx, event, res, err)
+	if !isManagedQuery(ctx) {
+		tx.DB.afterQuery(ctx, res, err)
+	}
 	return res, err
 }
 
@@ -460,9 +474,11 @@ func (tx Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
 func (tx Tx) QueryContext(
 	ctx context.Context, query string, args ...interface{},
 ) (*sql.Rows, error) {
-	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	ctx = tx.DB.beforeQuery(ctx, query, args)
 	rows, err := tx.Tx.QueryContext(ctx, tx.DB.format(query, args))
-	tx.DB.afterQuery(ctx, event, nil, err)
+	if !isManagedQuery(ctx) {
+		tx.DB.afterQuery(ctx, nil, err)
+	}
 	return rows, err
 }
 
@@ -471,9 +487,11 @@ func (tx Tx) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	ctx, event := tx.DB.beforeQuery(ctx, nil, query, args, nil)
+	ctx = tx.DB.beforeQuery(ctx, query, args)
 	row := tx.Tx.QueryRowContext(ctx, tx.DB.format(query, args))
-	tx.DB.afterQuery(ctx, event, nil, row.Err())
+	if !isManagedQuery(ctx) {
+		tx.DB.afterQuery(ctx, nil, row.Err())
+	}
 	return row
 }
 
