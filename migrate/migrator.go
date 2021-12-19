@@ -136,23 +136,24 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	if err != nil {
 		return nil, err
 	}
+	migrations = migrations.Unapplied()
 
-	group := &MigrationGroup{
-		Migrations: migrations.Unapplied(),
-	}
-	if len(group.Migrations) == 0 {
+	group := new(MigrationGroup)
+	if len(migrations) == 0 {
 		return group, nil
 	}
 	group.ID = lastGroupID + 1
 
-	for i := range group.Migrations {
-		migration := &group.Migrations[i]
+	for i := range migrations {
+		migration := &migrations[i]
 		migration.GroupID = group.ID
 
 		// Always mark migration as applied so the rollback has a chance to fix the database.
 		if err := m.MarkApplied(ctx, migration); err != nil {
-			return nil, err
+			return group, err
 		}
+
+		group.Migrations = migrations[:i+1]
 
 		if !cfg.nop && migration.Up != nil {
 			if err := migration.Up(ctx, m.db); err != nil {

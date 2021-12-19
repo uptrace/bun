@@ -104,6 +104,17 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 			return nil
 		},
 	})
+	migrations.Add(migrate.Migration{
+		Name: "20060102170405",
+		Up: func(ctx context.Context, db *bun.DB) error {
+			history = append(history, "up3")
+			return errors.New("failed")
+		},
+		Down: func(ctx context.Context, db *bun.DB) error {
+			history = append(history, "down3")
+			return nil
+		},
+	})
 
 	m := migrate.NewMigrator(db, migrations)
 	err := m.Reset(ctx)
@@ -120,6 +131,6 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	group, err = m.Rollback(ctx)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), group.ID)
-	require.Len(t, group.Migrations, 1)
-	require.Equal(t, []string{"down1"}, history)
+	require.Len(t, group.Migrations, 2)
+	require.Equal(t, []string{"down2", "down1"}, history)
 }
