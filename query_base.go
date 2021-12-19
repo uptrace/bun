@@ -86,26 +86,6 @@ func (q *baseQuery) DB() *DB {
 	return q.db
 }
 
-func (q *baseQuery) getTx(ctx context.Context) (Tx, bool) {
-	tx, ok := q.conn.(*sql.Tx)
-	if !ok {
-		return Tx{}, false
-	}
-	return Tx{
-		ctx: ctx,
-		db:  q.db,
-		Tx:  tx,
-	}, true
-}
-
-func (q *baseQuery) idb(ctx context.Context) IDB {
-	tx, ok := q.getTx(ctx)
-	if ok {
-		return tx
-	}
-	return q.db
-}
-
 func (q *baseQuery) GetModel() Model {
 	return q.model
 }
