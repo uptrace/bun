@@ -4,10 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dbfixture"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -28,12 +26,7 @@ func main() {
 		bundebug.FromEnv("BUNDEBUG"),
 	))
 
-	// Register models for the fixture.
-	db.RegisterModel((*User)(nil), (*Story)(nil))
-
-	// Create tables and load initial data.
-	fixture := dbfixture.New(db, dbfixture.WithRecreateTables())
-	if err := fixture.Load(ctx, os.DirFS("."), "fixture.yml"); err != nil {
+	if err := resetSchema(ctx, db); err != nil {
 		panic(err)
 	}
 
@@ -100,4 +93,36 @@ type Story struct {
 	Title    string
 	AuthorID int64
 	Author   *User `bun:"rel:belongs-to,join:author_id=id"`
+}
+
+func resetSchema(ctx context.Context, db *bun.DB) error {
+	if err := db.ResetModel(ctx, (*User)(nil), (*Story)(nil)); err != nil {
+		return err
+	}
+
+	users := []User{
+		{
+			Name:   "admin",
+			Emails: []string{"admin1@admin", "admin2@admin"},
+		},
+		{
+			Name:   "root",
+			Emails: []string{"root1@root", "root2@root"},
+		},
+	}
+	if _, err := db.NewInsert().Model(&users).Exec(ctx); err != nil {
+		return err
+	}
+
+	stories := []Story{
+		{
+			Title:    "Cool story",
+			AuthorID: users[0].ID,
+		},
+	}
+	if _, err := db.NewInsert().Model(&stories).Exec(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
