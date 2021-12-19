@@ -149,14 +149,15 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		migration := &group.Migrations[i]
 		migration.GroupID = group.ID
 
+		// Always mark migration as applied so the rollback has a chance to fix the database.
+		if err := m.MarkApplied(ctx, migration); err != nil {
+			return nil, err
+		}
+
 		if !cfg.nop && migration.Up != nil {
 			if err := migration.Up(ctx, m.db); err != nil {
 				return group, err
 			}
-		}
-
-		if err := m.MarkApplied(ctx, migration); err != nil {
-			return nil, err
 		}
 	}
 
