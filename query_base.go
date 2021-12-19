@@ -37,10 +37,10 @@ var (
 	_ IConn = (*sql.Tx)(nil)
 	_ IConn = (*DB)(nil)
 	_ IConn = (*Conn)(nil)
-	_ IConn = (Tx{})
+	_ IConn = (*Tx)(nil)
 )
 
-// IDB is a common interface for *bun.DB, and bun.Tx.
+// IDB is a common interface for *bun.DB, bun.Conn, and bun.Tx.
 type IDB interface {
 	IConn
 	Dialect() schema.Dialect
@@ -61,7 +61,8 @@ type IDB interface {
 
 var (
 	_ IDB = (*DB)(nil)
-	_ IDB = Tx{}
+	_ IDB = (*Conn)(nil)
+	_ IDB = (*Tx)(nil)
 )
 
 type baseQuery struct {

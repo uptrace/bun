@@ -304,6 +304,10 @@ func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interfa
 	return row
 }
 
+func (c Conn) Dialect() schema.Dialect {
+	return c.db.Dialect()
+}
+
 func (c Conn) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
 }
@@ -473,11 +477,11 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 	return row
 }
 
+//------------------------------------------------------------------------------
+
 func (tx Tx) Dialect() schema.Dialect {
 	return tx.db.Dialect()
 }
-
-//------------------------------------------------------------------------------
 
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
