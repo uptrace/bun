@@ -1,3 +1,26 @@
+## [1.0.20](https://github.com/uptrace/bun/compare/v1.0.19...v1.0.20) (2021-12-19)
+
+
+### Bug Fixes
+
+* add Event.QueryTemplate and change Event.Query to be always formatted ([52b1ccd](https://github.com/uptrace/bun/commit/52b1ccdf3578418aa427adef9dcf942d90ae4fdd))
+* change GetTableName to return formatted table name in case ModelTableExpr ([95144dd](https://github.com/uptrace/bun/commit/95144dde937b4ac88b36b0bd8b01372421069b44))
+* change ScanAndCount to work with transactions ([5b3f2c0](https://github.com/uptrace/bun/commit/5b3f2c021c424da366caffd33589e8adde821403))
+* **dbfixture:** directly call funcs bypassing template eval ([a61974b](https://github.com/uptrace/bun/commit/a61974ba2d24361c5357fb9bda1f3eceec5a45cd))
+* don't append CASCADE by default in drop table/column queries ([26457ea](https://github.com/uptrace/bun/commit/26457ea5cb20862d232e6e5fa4dbdeac5d444bf1))
+* **migrate:** mark migrations as applied on error so the migration can be rolled back ([8ce33fb](https://github.com/uptrace/bun/commit/8ce33fbbac8e33077c20daf19a14c5ff2291bcae))
+* respect nullzero when appending struct fields. Fixes [#339](https://github.com/uptrace/bun/issues/339) ([ffd02f3](https://github.com/uptrace/bun/commit/ffd02f3170b3cccdd670a48d563cfb41094c05d6))
+* reuse tx for relation join ([#366](https://github.com/uptrace/bun/issues/366)) ([60bdb1a](https://github.com/uptrace/bun/commit/60bdb1ac84c0a699429eead3b7fdfbf14fe69ac6))
+
+
+### Features
+
+* add `Dialect()` to Transaction and IDB interface ([693f1e1](https://github.com/uptrace/bun/commit/693f1e135999fc31cf83b99a2530a695b20f4e1b))
+* add model embedding via embed:prefix_ ([9a2cedc](https://github.com/uptrace/bun/commit/9a2cedc8b08fa8585d4bfced338bd0a40d736b1d))
+* change the default logoutput to stderr ([4bf5773](https://github.com/uptrace/bun/commit/4bf577382f19c64457cbf0d64490401450954654)), closes [#349](https://github.com/uptrace/bun/issues/349)
+
+
+
 ## [1.0.19](https://github.com/uptrace/bun/compare/v1.0.18...v1.0.19) (2021-11-30)
 
 
