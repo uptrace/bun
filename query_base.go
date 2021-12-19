@@ -468,7 +468,7 @@ func (q *baseQuery) scan(
 	model Model,
 	hasDest bool,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
+	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, query, q.model)
 
 	rows, err := q.conn.QueryContext(ctx, query)
 	if err != nil {
@@ -498,7 +498,7 @@ func (q *baseQuery) exec(
 	iquery Query,
 	query string,
 ) (sql.Result, error) {
-	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, q.model)
+	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, query, q.model)
 	res, err := q.conn.ExecContext(ctx, query)
 	q.db.afterQuery(ctx, event, nil, err)
 	return res, err

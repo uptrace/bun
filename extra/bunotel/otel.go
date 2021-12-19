@@ -147,10 +147,10 @@ func eventQuery(event *bun.QueryEvent) string {
 
 	var query string
 
-	if len(event.Query) > softQueryLimit {
-		query = unformattedQuery(event)
-	} else {
+	if len(event.Query) <= softQueryLimit {
 		query = event.Query
+	} else {
+		query = unformattedQuery(event)
 	}
 
 	if len(query) > hardQueryLimit {
@@ -161,10 +161,12 @@ func eventQuery(event *bun.QueryEvent) string {
 }
 
 func unformattedQuery(event *bun.QueryEvent) string {
-	if b, err := event.QueryAppender.AppendQuery(schema.NewNopFormatter(), nil); err == nil {
-		return bytesToString(b)
+	if event.IQuery != nil {
+		if b, err := event.IQuery.AppendQuery(schema.NewNopFormatter(), nil); err == nil {
+			return bytesToString(b)
+		}
 	}
-	return string(event.Query)
+	return string(event.QueryTemplate)
 }
 
 func dbSystem(db *bun.DB) attribute.KeyValue {

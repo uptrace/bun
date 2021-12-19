@@ -13,9 +13,10 @@ import (
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender schema.QueryAppender // Deprecated: use IQuery instead
+	QueryAppender schema.QueryAppender // DEPRECATED: use IQuery instead
 	IQuery        Query
 	Query         string
+	QueryTemplate string
 	QueryArgs     []interface{}
 	Model         Model
 
@@ -51,8 +52,9 @@ type QueryHook interface {
 func (db *DB) beforeQuery(
 	ctx context.Context,
 	iquery Query,
-	query string,
+	queryTemplate string,
 	queryArgs []interface{},
+	query string,
 	model Model,
 ) (context.Context, *QueryEvent) {
 	atomic.AddUint32(&db.stats.Queries, 1)
@@ -68,6 +70,7 @@ func (db *DB) beforeQuery(
 		QueryAppender: iquery,
 		IQuery:        iquery,
 		Query:         query,
+		QueryTemplate: queryTemplate,
 		QueryArgs:     queryArgs,
 
 		StartTime: time.Now(),
