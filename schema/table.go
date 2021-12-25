@@ -251,23 +251,21 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 			}
 
 			fieldType := indirectType(f.Type)
-			if fieldType.Kind() != reflect.Struct {
+			if fieldType.Kind() == reflect.Struct {
+				t.addFields(fieldType, "", withIndex(index, f.Index))
+
+				tag := tagparser.Parse(f.Tag.Get("bun"))
+				if _, inherit := tag.Options["inherit"]; inherit {
+					embeddedTable := t.dialect.Tables().Ref(fieldType)
+					t.TypeName = embeddedTable.TypeName
+					t.SQLName = embeddedTable.SQLName
+					t.SQLNameForSelects = embeddedTable.SQLNameForSelects
+					t.Alias = embeddedTable.Alias
+					t.SQLAlias = embeddedTable.SQLAlias
+					t.ModelName = embeddedTable.ModelName
+				}
 				continue
 			}
-			t.addFields(fieldType, "", withIndex(index, f.Index))
-
-			tag := tagparser.Parse(f.Tag.Get("bun"))
-			if _, inherit := tag.Options["inherit"]; inherit {
-				embeddedTable := t.dialect.Tables().Ref(fieldType)
-				t.TypeName = embeddedTable.TypeName
-				t.SQLName = embeddedTable.SQLName
-				t.SQLNameForSelects = embeddedTable.SQLNameForSelects
-				t.Alias = embeddedTable.Alias
-				t.SQLAlias = embeddedTable.SQLAlias
-				t.ModelName = embeddedTable.ModelName
-			}
-
-			continue
 		}
 
 		if field := t.newField(f, prefix, index); field != nil {
