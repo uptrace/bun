@@ -109,7 +109,8 @@ func (q *baseQuery) GetTableName() string {
 		return string(b)
 	}
 	if len(q.tables) > 0 {
-		return q.tables[0].Query
+		b, _ := q.tables[0].AppendQuery(q.db.fmter, nil)
+		return string(b)
 	}
 	return ""
 }
