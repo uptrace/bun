@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"os"
@@ -222,7 +223,8 @@ func TestDB(t *testing.T) {
 		{testScanSingleRowByRow},
 		{testScanRows},
 		{testRunInTx},
-		{testInsertIface},
+		{testJSONInterface},
+		{testJSONValuer},
 		{testSelectBool},
 		{testFKViolation},
 		{testInterfaceAny},
@@ -712,7 +714,7 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 	}
 }
 
-func testInsertIface(t *testing.T, db *bun.DB) {
+func testJSONInterface(t *testing.T, db *bun.DB) {
 	type Model struct {
 		ID    int
 		Value interface{} `bun:"type:json"`
@@ -732,6 +734,49 @@ func testInsertIface(t *testing.T, db *bun.DB) {
 	}
 	_, err = db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
+}
+
+type JSONValue struct {
+	str string
+}
+
+var _ driver.Valuer = (*JSONValue)(nil)
+
+func (v *JSONValue) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		v.str = string(src)
+	case string:
+		v.str = src
+	default:
+		panic("not reached")
+	}
+	return nil
+}
+
+func (v *JSONValue) Value() (driver.Value, error) {
+	return `"driver.Value"`, nil
+}
+
+func testJSONValuer(t *testing.T, db *bun.DB) {
+	type Model struct {
+		ID    int
+		Value JSONValue `bun:"type:json"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := new(Model)
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, `"driver.Value"`, model2.Value.str)
 }
 
 func testSelectBool(t *testing.T, db *bun.DB) {
