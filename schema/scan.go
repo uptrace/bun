@@ -134,10 +134,19 @@ func scanBool(dest reflect.Value, src interface{}) error {
 		dest.SetBool(src != 0)
 		return nil
 	case []byte:
-		if len(src) == 1 {
-			dest.SetBool(src[0] != '0')
-			return nil
+		f, err := strconv.ParseBool(internal.String(src))
+		if err != nil {
+			return err
 		}
+		dest.SetBool(f)
+		return nil
+	case string:
+		f, err := strconv.ParseBool(src)
+		if err != nil {
+			return err
+		}
+		dest.SetBool(f)
+		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
@@ -189,6 +198,13 @@ func scanUint64(dest reflect.Value, src interface{}) error {
 		}
 		dest.SetUint(n)
 		return nil
+	case string:
+		n, err := strconv.ParseUint(src, 10, 64)
+		if err != nil {
+			return err
+		}
+		dest.SetUint(n)
+		return nil
 	}
 	return fmt.Errorf("bun: can't scan %#v into %s", src, dest.Type())
 }
@@ -203,6 +219,13 @@ func scanFloat64(dest reflect.Value, src interface{}) error {
 		return nil
 	case []byte:
 		f, err := strconv.ParseFloat(internal.String(src), 64)
+		if err != nil {
+			return err
+		}
+		dest.SetFloat(f)
+		return nil
+	case string:
+		f, err := strconv.ParseFloat(src, 64)
 		if err != nil {
 			return err
 		}

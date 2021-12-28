@@ -1,4 +1,4 @@
-module github.com/uptrace/bun/example/basic
+module github.com/uptrace/bun/example/opentelemetry
 
 go 1.16
 
