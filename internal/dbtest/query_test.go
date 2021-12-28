@@ -245,7 +245,6 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewDropTable().Model(new(Model))
 		},
-
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(new(Model)).
 				Where("1").
@@ -649,6 +648,13 @@ func TestQuery(t *testing.T) {
 				Set("str = ?str").
 				Set("time = ?time").
 				WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type ID string
+			type Model struct {
+				ID
+			}
+			return db.NewInsert().Model(&Model{ID: ID("embed")})
 		},
 	}
 
