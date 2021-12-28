@@ -250,6 +250,7 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 				continue
 			}
 
+			// If field is an embedded struct, add each field of the embedded struct.
 			fieldType := indirectType(f.Type)
 			if fieldType.Kind() == reflect.Struct {
 				t.addFields(fieldType, "", withIndex(index, f.Index))
@@ -268,6 +269,8 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 			}
 		}
 
+		// If field is not a struct, add it.
+		// This will also add any embedded non-struct type as a field.
 		if field := t.newField(f, prefix, index); field != nil {
 			t.addField(field)
 		}
