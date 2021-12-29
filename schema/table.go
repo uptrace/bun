@@ -250,26 +250,27 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 				continue
 			}
 
+			// If field is an embedded struct, add each field of the embedded struct.
 			fieldType := indirectType(f.Type)
-			if fieldType.Kind() != reflect.Struct {
+			if fieldType.Kind() == reflect.Struct {
+				t.addFields(fieldType, "", withIndex(index, f.Index))
+
+				tag := tagparser.Parse(f.Tag.Get("bun"))
+				if _, inherit := tag.Options["inherit"]; inherit {
+					embeddedTable := t.dialect.Tables().Ref(fieldType)
+					t.TypeName = embeddedTable.TypeName
+					t.SQLName = embeddedTable.SQLName
+					t.SQLNameForSelects = embeddedTable.SQLNameForSelects
+					t.Alias = embeddedTable.Alias
+					t.SQLAlias = embeddedTable.SQLAlias
+					t.ModelName = embeddedTable.ModelName
+				}
 				continue
 			}
-			t.addFields(fieldType, "", withIndex(index, f.Index))
-
-			tag := tagparser.Parse(f.Tag.Get("bun"))
-			if _, inherit := tag.Options["inherit"]; inherit {
-				embeddedTable := t.dialect.Tables().Ref(fieldType)
-				t.TypeName = embeddedTable.TypeName
-				t.SQLName = embeddedTable.SQLName
-				t.SQLNameForSelects = embeddedTable.SQLNameForSelects
-				t.Alias = embeddedTable.Alias
-				t.SQLAlias = embeddedTable.SQLAlias
-				t.ModelName = embeddedTable.ModelName
-			}
-
-			continue
 		}
 
+		// If field is not a struct, add it.
+		// This will also add any embedded non-struct type as a field.
 		if field := t.newField(f, prefix, index); field != nil {
 			t.addField(field)
 		}
