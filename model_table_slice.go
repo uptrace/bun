@@ -94,7 +94,7 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 var _ schema.BeforeAppendModelHook = (*sliceTableModel)(nil)
 
 func (m *sliceTableModel) BeforeAppendModel(ctx context.Context, query Query) error {
-	if !m.table.HasBeforeAppendModelHook() {
+	if !m.table.HasBeforeAppendModelHook() || !m.slice.IsValid() {
 		return nil
 	}
 

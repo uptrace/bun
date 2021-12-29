@@ -462,6 +462,12 @@ func (a Author) String() string {
 	return fmt.Sprintf("Author<ID=%d Name=%q>", a.ID, a.Name)
 }
 
+var _ bun.BeforeAppendModelHook = (*Author)(nil)
+
+func (*Author) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	return nil
+}
+
 type BookGenre struct {
 	bun.BaseModel `bun:"alias:bg"` // custom table alias
 
@@ -490,6 +496,12 @@ type Book struct {
 
 func (b Book) String() string {
 	return fmt.Sprintf("Book<Id=%d Title=%q>", b.ID, b.Title)
+}
+
+var _ bun.BeforeAppendModelHook = (*Book)(nil)
+
+func (*Book) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	return nil
 }
 
 // BookWithCommentCount is like Book model, but has additional CommentCount
