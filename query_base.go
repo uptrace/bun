@@ -105,13 +105,16 @@ func (q *baseQuery) GetTableName() string {
 	}
 
 	if q.modelTableName.Query != "" {
-		b, _ := q.modelTableName.AppendQuery(q.db.fmter, nil)
-		return string(b)
+		return q.modelTableName.Query
 	}
+
 	if len(q.tables) > 0 {
 		b, _ := q.tables[0].AppendQuery(q.db.fmter, nil)
-		return string(b)
+		if len(b) < 64 {
+			return string(b)
+		}
 	}
+
 	return ""
 }
 
