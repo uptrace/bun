@@ -87,6 +87,10 @@ func (q *baseQuery) DB() *DB {
 	return q.db
 }
 
+func (q *baseQuery) GetConn() IConn {
+	return q.conn
+}
+
 func (q *baseQuery) GetModel() Model {
 	return q.model
 }
