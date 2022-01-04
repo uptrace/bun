@@ -549,6 +549,62 @@ func (q *baseQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string
 	return b, false
 }
 
+//------------------------------------------------------------------------------
+
+func (q *baseQuery) Dialect() schema.Dialect {
+	return q.db.Dialect()
+}
+
+func (q *baseQuery) NewValues(model interface{}) *ValuesQuery {
+	return NewValuesQuery(q.db, model).Conn(q.conn)
+}
+
+func (q *baseQuery) NewSelect() *SelectQuery {
+	return NewSelectQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewInsert() *InsertQuery {
+	return NewInsertQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewUpdate() *UpdateQuery {
+	return NewUpdateQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewDelete() *DeleteQuery {
+	return NewDeleteQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewCreateTable() *CreateTableQuery {
+	return NewCreateTableQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewDropTable() *DropTableQuery {
+	return NewDropTableQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewCreateIndex() *CreateIndexQuery {
+	return NewCreateIndexQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewDropIndex() *DropIndexQuery {
+	return NewDropIndexQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewTruncateTable() *TruncateTableQuery {
+	return NewTruncateTableQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewAddColumn() *AddColumnQuery {
+	return NewAddColumnQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewDropColumn() *DropColumnQuery {
+	return NewDropColumnQuery(q.db).Conn(q.conn)
+}
+
+//------------------------------------------------------------------------------
+
 func appendColumns(b []byte, table schema.Safe, fields []*schema.Field) []byte {
 	for i, f := range fields {
 		if i > 0 {
