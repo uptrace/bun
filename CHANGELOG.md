@@ -1,3 +1,25 @@
+## [1.0.21](https://github.com/uptrace/bun/compare/v1.0.20...v1.0.21) (2022-01-06)
+
+
+### Bug Fixes
+
+* append where to index create ([1de6cea](https://github.com/uptrace/bun/commit/1de6ceaa8bba59b69fbe0cc6916d1b27da5586d8))
+* check if slice is nil when calling BeforeAppendModel ([938d9da](https://github.com/uptrace/bun/commit/938d9dadb72ceeeb906064d9575278929d20cbbe))
+* **dbfixture:** directly set matching types via reflect ([780504c](https://github.com/uptrace/bun/commit/780504cf1da687fc51a22d002ea66e2ccc41e1a3))
+* properly handle driver.Valuer and type:json ([a17454a](https://github.com/uptrace/bun/commit/a17454ac6b95b2a2e927d0c4e4aee96494108389))
+* support scanning string into uint64 ([73cc117](https://github.com/uptrace/bun/commit/73cc117a9f7a623ced1fdaedb4546e8e7470e4d3))
+* unique module name for opentelemetry example ([f2054fe](https://github.com/uptrace/bun/commit/f2054fe1d11cea3b21d69dab6f6d6d7d97ba06bb))
+
+
+### Features
+
+* add anonymous fields with type name ([508375b](https://github.com/uptrace/bun/commit/508375b8f2396cb088fd4399a9259584353eb7e5))
+* add baseQuery.GetConn() ([81a9bee](https://github.com/uptrace/bun/commit/81a9beecb74fed7ec3574a1d42acdf10a74e0b00))
+* create new queries from baseQuery ([ae1dd61](https://github.com/uptrace/bun/commit/ae1dd611a91c2b7c79bc2bc12e9a53e857791e71))
+* support INSERT ... RETURNING for MariaDB >= 10.5.0 ([b6531c0](https://github.com/uptrace/bun/commit/b6531c00ecbd4c7ec56b4131fab213f9313edc1b))
+
+
+
 ## [1.0.20](https://github.com/uptrace/bun/compare/v1.0.19...v1.0.20) (2021-12-19)
 
 
