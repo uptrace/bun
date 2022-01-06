@@ -245,7 +245,7 @@ func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value *y
 
 	if ss := funcNameRE.FindStringSubmatch(value.Value); len(ss) > 0 {
 		if fn, ok := f.funcMap[ss[1]].(func() interface{}); ok {
-			return field.ScanValue(strct, fn())
+			return scanFieldValue(strct, field, fn())
 		}
 	}
 
@@ -254,7 +254,7 @@ func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value *y
 		if err != nil {
 			return err
 		}
-		return field.ScanValue(strct, src)
+		return scanFieldValue(strct, field, src)
 	}
 
 	if v, ok := iface.(yaml.Unmarshaler); ok {
@@ -432,4 +432,12 @@ func defaultFuncs() template.FuncMap {
 			return time.Now()
 		},
 	}
+}
+
+func scanFieldValue(strct reflect.Value, field *schema.Field, value interface{}) error {
+	if v := reflect.ValueOf(value); field.StructField.Type == v.Type() {
+		field.Value(strct).Set(v)
+		return nil
+	}
+	return field.ScanValue(strct, value)
 }
