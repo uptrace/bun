@@ -11,10 +11,10 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.0.20
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.20
-	github.com/uptrace/bun/driver/sqliteshim v1.0.20
-	github.com/uptrace/bun/extra/bundebug v1.0.20
+	github.com/uptrace/bun v1.0.21
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.21
+	github.com/uptrace/bun/driver/sqliteshim v1.0.21
+	github.com/uptrace/bun/extra/bundebug v1.0.21
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/mattn/go-sqlite3 v1.14.9 // indirect
+	github.com/mattn/go-sqlite3 v1.14.10 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
@@ -34,9 +34,9 @@ require (
 	golang.org/x/tools v0.1.8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	lukechampine.com/uint128 v1.1.1 // indirect
-	modernc.org/cc/v3 v3.35.19 // indirect
-	modernc.org/ccgo/v3 v3.12.95 // indirect
-	modernc.org/libc v1.11.104 // indirect
+	modernc.org/cc/v3 v3.35.22 // indirect
+	modernc.org/ccgo/v3 v3.14.0 // indirect
+	modernc.org/libc v1.13.2 // indirect
 	modernc.org/mathutil v1.4.1 // indirect
 	modernc.org/memory v1.0.5 // indirect
 	modernc.org/opt v0.1.1 // indirect
