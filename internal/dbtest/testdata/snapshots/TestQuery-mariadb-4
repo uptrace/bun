@@ -1,0 +1,1 @@
+SELECT `model`.`id` FROM `models` AS `model`

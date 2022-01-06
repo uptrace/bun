@@ -661,11 +661,6 @@ func TestQuery(t *testing.T) {
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		if dbName == mariadbName {
-			t.Skip()
-			return
-		}
-
 		for i, fn := range queries {
 			t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 				q := fn(db)

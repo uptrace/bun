@@ -1,0 +1,1 @@
+ALTER TABLE mytable ADD IF NOT EXISTS column_name VARCHAR(123)
