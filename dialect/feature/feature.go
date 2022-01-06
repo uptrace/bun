@@ -7,6 +7,7 @@ type Feature = internal.Flag
 const (
 	CTE Feature = 1 << iota
 	Returning
+	InsertReturning
 	DefaultPlaceholder
 	DoubleColonCast
 	ValuesRow

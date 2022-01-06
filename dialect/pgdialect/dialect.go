@@ -25,6 +25,7 @@ func New() *Dialect {
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
 		feature.Returning |
+		feature.InsertReturning |
 		feature.DefaultPlaceholder |
 		feature.DoubleColonCast |
 		feature.InsertTableAlias |

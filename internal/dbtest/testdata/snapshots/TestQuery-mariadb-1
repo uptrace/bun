@@ -1,0 +1,1 @@
+VALUES ROW(42, 'hello'), ROW(43, 'world')
