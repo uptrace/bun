@@ -435,8 +435,8 @@ func defaultFuncs() template.FuncMap {
 }
 
 func scanFieldValue(strct reflect.Value, field *schema.Field, value interface{}) error {
-	if v := reflect.ValueOf(value); field.StructField.Type == v.Type() {
-		field.Value(strct).Set(v)
+	if v := reflect.ValueOf(value); v.CanConvert(field.StructField.Type) {
+		field.Value(strct).Set(v.Convert(field.StructField.Type))
 		return nil
 	}
 	return field.ScanValue(strct, value)
