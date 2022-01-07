@@ -7,7 +7,7 @@ pgdriver is a database/sql driver for PostgreSQL based on [go-pg](https://github
 You can install it with:
 
 ```shell
-github.com/uptrace/bun/driver/pgdriver
+go get github.com/uptrace/bun/driver/pgdriver
 ```
 
 And then create a `sql.DB` using it:
@@ -34,3 +34,5 @@ BenchmarkInsert/pgx-12         	    6494	    166391 ns/op	    2076 B/op	      26
 BenchmarkSelect/pg-12          	    9100	    132952 ns/op	    1417 B/op	      18 allocs/op
 BenchmarkSelect/pgx-12         	    8199	    154920 ns/op	    3679 B/op	      60 allocs/op
 ```
+
+See [documentation](https://bun.uptrace.dev/postgres/) for more details.
