@@ -240,6 +240,7 @@ func TestDB(t *testing.T) {
 		{testTxScanAndCount},
 		{testEmbedModelValue},
 		{testEmbedModelPointer},
+		{testJSONMarshaler},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1154,4 +1155,32 @@ func testEmbedTypeField(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(&m2).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, *m1, m2)
+}
+
+type JSONField struct {
+	Foo string `json:"foo"`
+}
+
+func (f *JSONField) MarshalJSON() ([]byte, error) {
+	return []byte(`{"foo": "bar"}`), nil
+}
+
+func testJSONMarshaler(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Field *JSONField
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	m1 := &Model{Field: new(JSONField)}
+	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	require.NoError(t, err)
+
+	var m2 Model
+	err = db.NewSelect().Model(&m2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "bar", m2.Field.Foo)
 }

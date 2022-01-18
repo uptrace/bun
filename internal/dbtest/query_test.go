@@ -656,6 +656,12 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(&Model{ID: ID("embed")})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Raw *json.RawMessage `bun:",nullzero"`
+			}
+			return db.NewInsert().Model(new(Model))
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
