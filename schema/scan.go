@@ -94,6 +94,8 @@ func scanner(typ reflect.Type) ScannerFunc {
 	}
 
 	switch typ {
+	case bytesType:
+		return scanBytes
 	case timeType:
 		return scanTime
 	case ipType:

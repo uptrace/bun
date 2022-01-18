@@ -128,6 +128,9 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	case reflect.Interface:
 		return ifaceAppenderFunc
 	case reflect.Ptr:
+		if typ.Implements(jsonMarshalerType) {
+			return AppendJSONValue
+		}
 		if fn := Appender(dialect, typ.Elem()); fn != nil {
 			return PtrAppender(fn)
 		}
