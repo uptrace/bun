@@ -1,8 +1,14 @@
 package feature
 
-import "github.com/uptrace/bun/internal"
+import (
+	"errors"
+
+	"github.com/uptrace/bun/internal"
+)
 
 type Feature = internal.Flag
+
+var ErrUnsupportedFeature = errors.New("bun: UnsupportedFeature")
 
 const (
 	CTE Feature = 1 << iota

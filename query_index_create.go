@@ -3,7 +3,9 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"strings"
 
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
@@ -93,6 +95,11 @@ func (q *CreateIndexQuery) ModelTableExpr(query string, args ...interface{}) *Cr
 }
 
 func (q *CreateIndexQuery) Using(query string, args ...interface{}) *CreateIndexQuery {
+	if strings.EqualFold(query, "HASH") && !q.db.features.Has(feature.IndexHash) {
+		q.err = feature.ErrUnsupportedFeature
+		return q
+	}
+
 	q.using = schema.SafeQuery(query, args)
 	return q
 }
