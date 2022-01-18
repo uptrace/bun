@@ -140,7 +140,7 @@ func mysql5(tb testing.TB) *bun.DB {
 }
 
 func mariadb(tb testing.TB) *bun.DB {
-	dsn := os.Getenv("MYSQL5")
+	dsn := os.Getenv("MARIADB")
 	if dsn == "" {
 		dsn = "user:pass@tcp(localhost:13306)/test"
 	}
