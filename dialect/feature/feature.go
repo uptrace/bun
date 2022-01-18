@@ -15,6 +15,7 @@ const (
 	InsertTableAlias
 	DeleteTableAlias
 	AutoIncrement
+	Identity
 	TableCascade
 	TableIdentity
 	TableTruncate

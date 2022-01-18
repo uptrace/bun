@@ -1,3 +1,11 @@
 *.s3db
 *.prof
 *.test
+.DS_Store
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -142,8 +142,13 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if field.NotNull {
 			b = append(b, " NOT NULL"...)
 		}
-		if fmter.Dialect().Features().Has(feature.AutoIncrement) && field.AutoIncrement {
-			b = append(b, " AUTO_INCREMENT"...)
+		if field.AutoIncrement {
+			switch {
+			case fmter.Dialect().Features().Has(feature.AutoIncrement):
+				b = append(b, " AUTO_INCREMENT"...)
+			case fmter.Dialect().Features().Has(feature.Identity):
+				b = append(b, " IDENTITY"...)
+			}
 		}
 		if field.SQLDefault != "" {
 			b = append(b, " DEFAULT "...)

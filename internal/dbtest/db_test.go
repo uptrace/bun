@@ -16,6 +16,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/dialect/mssqldialect"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -23,6 +24,7 @@ import (
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/require"
@@ -31,21 +33,23 @@ import (
 var ctx = context.TODO()
 
 const (
-	pgName      = "pg"
-	pgxName     = "pgx"
-	mysql5Name  = "mysql5"
-	mysql8Name  = "mysql8"
-	mariadbName = "mariadb"
-	sqliteName  = "sqlite"
+	pgName        = "pg"
+	pgxName       = "pgx"
+	mysql5Name    = "mysql5"
+	mysql8Name    = "mysql8"
+	mariadbName   = "mariadb"
+	sqliteName    = "sqlite"
+	mssql2019Name = "mssql2019"
 )
 
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
-	pgName:      pg,
-	pgxName:     pgx,
+	/*pgName: pg,
+	pgxName: pgx,
 	mysql5Name:  mysql5,
 	mysql8Name:  mysql8,
 	mariadbName: mariadb,
-	sqliteName:  sqlite,
+	sqliteName:  sqlite,*/
+	mssql2019Name: mssql2019,
 }
 
 func pg(tb testing.TB) *bun.DB {
@@ -180,6 +184,31 @@ func sqlite(tb testing.TB) *bun.DB {
 	return db
 }
 
+func mssql2019(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("MSSQL2019")
+	if dsn == "" {
+		dsn = "sqlserver://sa:P@ssword@localhost:14339?database=test"
+	}
+
+	sqldb, err := sql.Open("sqlserver", dsn)
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		require.NoError(tb, sqldb.Close())
+	})
+
+	db := bun.NewDB(sqldb, mssqldialect.New())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		//bundebug.WithEnabled(false),
+		//bundebug.FromEnv(""),
+		bundebug.WithVerbose(true),
+		bundebug.FromEnv("BUNDEBUG"),
+	))
+
+	require.Equal(tb, "DB<dialect=mssql>", db.String())
+
+	return db
+}
+
 func testEachDB(t *testing.T, f func(t *testing.T, dbName string, db *bun.DB)) {
 	for dbName, newDB := range allDBs {
 		t.Run(dbName, func(t *testing.T) {
@@ -205,7 +234,7 @@ func TestDB(t *testing.T) {
 		{testPing},
 		{testNilModel},
 		{testSelectScan},
-		{testSelectCount},
+		/*{testSelectCount},
 		{testSelectMap},
 		{testSelectMapSlice},
 		{testSelectStruct},
@@ -240,7 +269,7 @@ func TestDB(t *testing.T) {
 		{testTxScanAndCount},
 		{testEmbedModelValue},
 		{testEmbedModelPointer},
-		{testJSONMarshaler},
+		{testJSONMarshaler},*/
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
