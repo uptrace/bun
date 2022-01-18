@@ -34,7 +34,8 @@ func New() *Dialect {
 		feature.ValuesRow |
 		feature.TableTruncate |
 		feature.InsertIgnore |
-		feature.InsertOnDuplicateKey
+		feature.InsertOnDuplicateKey |
+		feature.IndexHash
 	return d
 }
 
