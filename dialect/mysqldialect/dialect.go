@@ -29,6 +29,7 @@ func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
+		feature.Identity | // for mssql dialect
 		feature.DefaultPlaceholder |
 		feature.UpdateMultiTable |
 		feature.ValuesRow |
