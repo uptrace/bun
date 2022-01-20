@@ -105,10 +105,8 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	}
 
 	switch event.Err {
-	case nil:
+	case nil, sql.ErrNoRows, sql.ErrTxDone:
 		// ignore
-	case sql.ErrNoRows, sql.ErrTxDone:
-		span.RecordError(event.Err)
 	default:
 		span.RecordError(event.Err)
 		span.SetStatus(codes.Error, event.Err.Error())
