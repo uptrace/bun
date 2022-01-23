@@ -57,7 +57,7 @@ func (h *QueryHook) Init(db *bun.DB) {
 }
 
 func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) context.Context {
-	ctx, _ = tracer.Start(ctx, "")
+	ctx, _ = tracer.Start(ctx, "", trace.WithSpanKind(trace.SpanKindClient))
 	return ctx
 }
 

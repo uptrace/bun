@@ -49,7 +49,7 @@ func SafeQuery(query string, args []interface{}) QueryWithArgs {
 	if args == nil {
 		args = make([]interface{}, 0)
 	} else if len(query) > 0 && strings.IndexByte(query, '?') == -1 {
-		internal.Warn.Printf("query %q has args %v, but no placeholders", query, args)
+		internal.Warn.Printf("query %q has %v args, but no placeholders", query, args)
 	}
 	return QueryWithArgs{
 		Query: query,
