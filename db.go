@@ -30,6 +30,22 @@ func WithDiscardUnknownColumns() DBOption {
 	}
 }
 
+func EnableFeature(features ...feature.Feature) DBOption {
+	return func(db *DB) {
+		for _, feature := range features {
+			db.features |= feature
+		}
+	}
+}
+
+func DisableFeature(features ...feature.Feature) DBOption {
+	return func(db *DB) {
+		for _, feature := range features {
+			db.features &= ^feature
+		}
+	}
+}
+
 type DB struct {
 	*sql.DB
 
