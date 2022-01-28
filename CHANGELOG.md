@@ -1,131 +1,166 @@
-## [1.0.21](https://github.com/uptrace/bun/compare/v1.0.20...v1.0.21) (2022-01-06)
-
+## [1.0.22](https://github.com/uptrace/bun/compare/v1.0.21...v1.0.22) (2022-01-28)
 
 ### Bug Fixes
 
-* append where to index create ([1de6cea](https://github.com/uptrace/bun/commit/1de6ceaa8bba59b69fbe0cc6916d1b27da5586d8))
-* check if slice is nil when calling BeforeAppendModel ([938d9da](https://github.com/uptrace/bun/commit/938d9dadb72ceeeb906064d9575278929d20cbbe))
-* **dbfixture:** directly set matching types via reflect ([780504c](https://github.com/uptrace/bun/commit/780504cf1da687fc51a22d002ea66e2ccc41e1a3))
-* properly handle driver.Valuer and type:json ([a17454a](https://github.com/uptrace/bun/commit/a17454ac6b95b2a2e927d0c4e4aee96494108389))
-* support scanning string into uint64 ([73cc117](https://github.com/uptrace/bun/commit/73cc117a9f7a623ced1fdaedb4546e8e7470e4d3))
-* unique module name for opentelemetry example ([f2054fe](https://github.com/uptrace/bun/commit/f2054fe1d11cea3b21d69dab6f6d6d7d97ba06bb))
+- improve scan error message
+  ([54048b2](https://github.com/uptrace/bun/commit/54048b296b9648fd62107ce6fa6fd7e6e2a648c7))
+- properly discover json.Marshaler on ptr field
+  ([3b321b0](https://github.com/uptrace/bun/commit/3b321b08601c4b8dc6bcaa24adea20875883ac14))
 
+### Breaking (MySQL, MariaDB)
+
+- **insert:** get last insert id only with pk support auto increment
+  ([79e7c79](https://github.com/uptrace/bun/commit/79e7c797beea54bfc9dc1cb0141a7520ff941b4d)). Make
+  sure your MySQL models have `bun:",pk,autoincrement"` options if you are using autoincrements.
 
 ### Features
 
-* add anonymous fields with type name ([508375b](https://github.com/uptrace/bun/commit/508375b8f2396cb088fd4399a9259584353eb7e5))
-* add baseQuery.GetConn() ([81a9bee](https://github.com/uptrace/bun/commit/81a9beecb74fed7ec3574a1d42acdf10a74e0b00))
-* create new queries from baseQuery ([ae1dd61](https://github.com/uptrace/bun/commit/ae1dd611a91c2b7c79bc2bc12e9a53e857791e71))
-* support INSERT ... RETURNING for MariaDB >= 10.5.0 ([b6531c0](https://github.com/uptrace/bun/commit/b6531c00ecbd4c7ec56b4131fab213f9313edc1b))
+- refuse to start when version check does not pass
+  ([ff8d767](https://github.com/uptrace/bun/commit/ff8d76794894eeaebede840e5199720f3f5cf531))
+- support Column in ValuesQuery
+  ([0707679](https://github.com/uptrace/bun/commit/0707679b075cac57efa8e6fe9019b57b2da4bcc7))
 
+## [1.0.21](https://github.com/uptrace/bun/compare/v1.0.20...v1.0.21) (2022-01-06)
 
+### Bug Fixes
+
+- append where to index create
+  ([1de6cea](https://github.com/uptrace/bun/commit/1de6ceaa8bba59b69fbe0cc6916d1b27da5586d8))
+- check if slice is nil when calling BeforeAppendModel
+  ([938d9da](https://github.com/uptrace/bun/commit/938d9dadb72ceeeb906064d9575278929d20cbbe))
+- **dbfixture:** directly set matching types via reflect
+  ([780504c](https://github.com/uptrace/bun/commit/780504cf1da687fc51a22d002ea66e2ccc41e1a3))
+- properly handle driver.Valuer and type:json
+  ([a17454a](https://github.com/uptrace/bun/commit/a17454ac6b95b2a2e927d0c4e4aee96494108389))
+- support scanning string into uint64
+  ([73cc117](https://github.com/uptrace/bun/commit/73cc117a9f7a623ced1fdaedb4546e8e7470e4d3))
+- unique module name for opentelemetry example
+  ([f2054fe](https://github.com/uptrace/bun/commit/f2054fe1d11cea3b21d69dab6f6d6d7d97ba06bb))
+
+### Features
+
+- add anonymous fields with type name
+  ([508375b](https://github.com/uptrace/bun/commit/508375b8f2396cb088fd4399a9259584353eb7e5))
+- add baseQuery.GetConn()
+  ([81a9bee](https://github.com/uptrace/bun/commit/81a9beecb74fed7ec3574a1d42acdf10a74e0b00))
+- create new queries from baseQuery
+  ([ae1dd61](https://github.com/uptrace/bun/commit/ae1dd611a91c2b7c79bc2bc12e9a53e857791e71))
+- support INSERT ... RETURNING for MariaDB >= 10.5.0
+  ([b6531c0](https://github.com/uptrace/bun/commit/b6531c00ecbd4c7ec56b4131fab213f9313edc1b))
 
 ## [1.0.20](https://github.com/uptrace/bun/compare/v1.0.19...v1.0.20) (2021-12-19)
 
-
 ### Bug Fixes
 
-* add Event.QueryTemplate and change Event.Query to be always formatted ([52b1ccd](https://github.com/uptrace/bun/commit/52b1ccdf3578418aa427adef9dcf942d90ae4fdd))
-* change GetTableName to return formatted table name in case ModelTableExpr ([95144dd](https://github.com/uptrace/bun/commit/95144dde937b4ac88b36b0bd8b01372421069b44))
-* change ScanAndCount to work with transactions ([5b3f2c0](https://github.com/uptrace/bun/commit/5b3f2c021c424da366caffd33589e8adde821403))
-* **dbfixture:** directly call funcs bypassing template eval ([a61974b](https://github.com/uptrace/bun/commit/a61974ba2d24361c5357fb9bda1f3eceec5a45cd))
-* don't append CASCADE by default in drop table/column queries ([26457ea](https://github.com/uptrace/bun/commit/26457ea5cb20862d232e6e5fa4dbdeac5d444bf1))
-* **migrate:** mark migrations as applied on error so the migration can be rolled back ([8ce33fb](https://github.com/uptrace/bun/commit/8ce33fbbac8e33077c20daf19a14c5ff2291bcae))
-* respect nullzero when appending struct fields. Fixes [#339](https://github.com/uptrace/bun/issues/339) ([ffd02f3](https://github.com/uptrace/bun/commit/ffd02f3170b3cccdd670a48d563cfb41094c05d6))
-* reuse tx for relation join ([#366](https://github.com/uptrace/bun/issues/366)) ([60bdb1a](https://github.com/uptrace/bun/commit/60bdb1ac84c0a699429eead3b7fdfbf14fe69ac6))
-
+- add Event.QueryTemplate and change Event.Query to be always formatted
+  ([52b1ccd](https://github.com/uptrace/bun/commit/52b1ccdf3578418aa427adef9dcf942d90ae4fdd))
+- change GetTableName to return formatted table name in case ModelTableExpr
+  ([95144dd](https://github.com/uptrace/bun/commit/95144dde937b4ac88b36b0bd8b01372421069b44))
+- change ScanAndCount to work with transactions
+  ([5b3f2c0](https://github.com/uptrace/bun/commit/5b3f2c021c424da366caffd33589e8adde821403))
+- **dbfixture:** directly call funcs bypassing template eval
+  ([a61974b](https://github.com/uptrace/bun/commit/a61974ba2d24361c5357fb9bda1f3eceec5a45cd))
+- don't append CASCADE by default in drop table/column queries
+  ([26457ea](https://github.com/uptrace/bun/commit/26457ea5cb20862d232e6e5fa4dbdeac5d444bf1))
+- **migrate:** mark migrations as applied on error so the migration can be rolled back
+  ([8ce33fb](https://github.com/uptrace/bun/commit/8ce33fbbac8e33077c20daf19a14c5ff2291bcae))
+- respect nullzero when appending struct fields. Fixes
+  [#339](https://github.com/uptrace/bun/issues/339)
+  ([ffd02f3](https://github.com/uptrace/bun/commit/ffd02f3170b3cccdd670a48d563cfb41094c05d6))
+- reuse tx for relation join ([#366](https://github.com/uptrace/bun/issues/366))
+  ([60bdb1a](https://github.com/uptrace/bun/commit/60bdb1ac84c0a699429eead3b7fdfbf14fe69ac6))
 
 ### Features
 
-* add `Dialect()` to Transaction and IDB interface ([693f1e1](https://github.com/uptrace/bun/commit/693f1e135999fc31cf83b99a2530a695b20f4e1b))
-* add model embedding via embed:prefix_ ([9a2cedc](https://github.com/uptrace/bun/commit/9a2cedc8b08fa8585d4bfced338bd0a40d736b1d))
-* change the default logoutput to stderr ([4bf5773](https://github.com/uptrace/bun/commit/4bf577382f19c64457cbf0d64490401450954654)), closes [#349](https://github.com/uptrace/bun/issues/349)
-
-
+- add `Dialect()` to Transaction and IDB interface
+  ([693f1e1](https://github.com/uptrace/bun/commit/693f1e135999fc31cf83b99a2530a695b20f4e1b))
+- add model embedding via embed:prefix\_
+  ([9a2cedc](https://github.com/uptrace/bun/commit/9a2cedc8b08fa8585d4bfced338bd0a40d736b1d))
+- change the default logoutput to stderr
+  ([4bf5773](https://github.com/uptrace/bun/commit/4bf577382f19c64457cbf0d64490401450954654)),
+  closes [#349](https://github.com/uptrace/bun/issues/349)
 
 ## [1.0.19](https://github.com/uptrace/bun/compare/v1.0.18...v1.0.19) (2021-11-30)
 
-
 ### Features
 
-* add support for column:name to specify column name ([e37b460](https://github.com/uptrace/bun/commit/e37b4602823babc8221970e086cfed90c6ad4cf4))
-
-
+- add support for column:name to specify column name
+  ([e37b460](https://github.com/uptrace/bun/commit/e37b4602823babc8221970e086cfed90c6ad4cf4))
 
 ## [1.0.18](https://github.com/uptrace/bun/compare/v1.0.17...v1.0.18) (2021-11-24)
 
-
 ### Bug Fixes
 
-* use correct operation for UpdateQuery ([687a004](https://github.com/uptrace/bun/commit/687a004ef7ec6fe1ef06c394965dd2c2d822fc82))
-
+- use correct operation for UpdateQuery
+  ([687a004](https://github.com/uptrace/bun/commit/687a004ef7ec6fe1ef06c394965dd2c2d822fc82))
 
 ### Features
 
-* add pgdriver.Notify ([7ee443d](https://github.com/uptrace/bun/commit/7ee443d1b869d8ddc4746850f7425d0a9ccd012b))
-* CreateTableQuery.PartitionBy and CreateTableQuery.TableSpace ([cd3ab4d](https://github.com/uptrace/bun/commit/cd3ab4d8f3682f5a30b87c2ebc2d7e551d739078))
-* **pgdriver:** add CopyFrom and CopyTo ([0b97703](https://github.com/uptrace/bun/commit/0b977030b5c05f509e11d13550b5f99dfd62358d))
-* support InsertQuery.Ignore on PostgreSQL ([1aa9d14](https://github.com/uptrace/bun/commit/1aa9d149da8e46e63ff79192e394fde4d18d9b60))
-
-
+- add pgdriver.Notify
+  ([7ee443d](https://github.com/uptrace/bun/commit/7ee443d1b869d8ddc4746850f7425d0a9ccd012b))
+- CreateTableQuery.PartitionBy and CreateTableQuery.TableSpace
+  ([cd3ab4d](https://github.com/uptrace/bun/commit/cd3ab4d8f3682f5a30b87c2ebc2d7e551d739078))
+- **pgdriver:** add CopyFrom and CopyTo
+  ([0b97703](https://github.com/uptrace/bun/commit/0b977030b5c05f509e11d13550b5f99dfd62358d))
+- support InsertQuery.Ignore on PostgreSQL
+  ([1aa9d14](https://github.com/uptrace/bun/commit/1aa9d149da8e46e63ff79192e394fde4d18d9b60))
 
 ## [1.0.17](https://github.com/uptrace/bun/compare/v1.0.16...v1.0.17) (2021-11-11)
 
-
 ### Bug Fixes
 
-* don't call rollback when tx is already done ([8246c2a](https://github.com/uptrace/bun/commit/8246c2a63e2e6eba314201c6ba87f094edf098b9))
-* **mysql:** escape backslash char in strings ([fb32029](https://github.com/uptrace/bun/commit/fb32029ea7604d066800b16df21f239b71bf121d))
-
-
+- don't call rollback when tx is already done
+  ([8246c2a](https://github.com/uptrace/bun/commit/8246c2a63e2e6eba314201c6ba87f094edf098b9))
+- **mysql:** escape backslash char in strings
+  ([fb32029](https://github.com/uptrace/bun/commit/fb32029ea7604d066800b16df21f239b71bf121d))
 
 ## [1.0.16](https://github.com/uptrace/bun/compare/v1.0.15...v1.0.16) (2021-11-07)
 
-
 ### Bug Fixes
 
-* call query hook when tx is started, committed, or rolled back ([30e85b5](https://github.com/uptrace/bun/commit/30e85b5366b2e51951ef17a0cf362b58f708dab1))
-* **pgdialect:** auto-enable array support if the sql type is an array ([62c1012](https://github.com/uptrace/bun/commit/62c1012b2482e83969e5c6f5faf89e655ce78138))
-
+- call query hook when tx is started, committed, or rolled back
+  ([30e85b5](https://github.com/uptrace/bun/commit/30e85b5366b2e51951ef17a0cf362b58f708dab1))
+- **pgdialect:** auto-enable array support if the sql type is an array
+  ([62c1012](https://github.com/uptrace/bun/commit/62c1012b2482e83969e5c6f5faf89e655ce78138))
 
 ### Features
 
-* support multiple tag options join:left_col1=right_col1,join:left_col2=right_col2 ([78cd5aa](https://github.com/uptrace/bun/commit/78cd5aa60a5c7d1323bb89081db2b2b811113052))
-* **tag:** log with bad tag name ([4e82d75](https://github.com/uptrace/bun/commit/4e82d75be2dabdba1a510df4e1fbb86092f92f4c))
-
-
+- support multiple tag options join:left_col1=right_col1,join:left_col2=right_col2
+  ([78cd5aa](https://github.com/uptrace/bun/commit/78cd5aa60a5c7d1323bb89081db2b2b811113052))
+- **tag:** log with bad tag name
+  ([4e82d75](https://github.com/uptrace/bun/commit/4e82d75be2dabdba1a510df4e1fbb86092f92f4c))
 
 ## [1.0.15](https://github.com/uptrace/bun/compare/v1.0.14...v1.0.15) (2021-10-29)
 
-
 ### Bug Fixes
 
-* fixed bug creating table when model has no columns ([042c50b](https://github.com/uptrace/bun/commit/042c50bfe41caaa6e279e02c887c3a84a3acd84f))
-* init table with dialect once ([9a1ce1e](https://github.com/uptrace/bun/commit/9a1ce1e492602742bb2f587e9ed24e50d7d07cad))
-
+- fixed bug creating table when model has no columns
+  ([042c50b](https://github.com/uptrace/bun/commit/042c50bfe41caaa6e279e02c887c3a84a3acd84f))
+- init table with dialect once
+  ([9a1ce1e](https://github.com/uptrace/bun/commit/9a1ce1e492602742bb2f587e9ed24e50d7d07cad))
 
 ### Features
 
-* accept columns in WherePK ([b3e7035](https://github.com/uptrace/bun/commit/b3e70356db1aa4891115a10902316090fccbc8bf))
-* support ADD COLUMN IF NOT EXISTS ([ca7357c](https://github.com/uptrace/bun/commit/ca7357cdfe283e2f0b94eb638372e18401c486e9))
-
-
+- accept columns in WherePK
+  ([b3e7035](https://github.com/uptrace/bun/commit/b3e70356db1aa4891115a10902316090fccbc8bf))
+- support ADD COLUMN IF NOT EXISTS
+  ([ca7357c](https://github.com/uptrace/bun/commit/ca7357cdfe283e2f0b94eb638372e18401c486e9))
 
 ## [1.0.14](https://github.com/uptrace/bun/compare/v1.0.13...v1.0.14) (2021-10-24)
 
-
 ### Bug Fixes
 
-* correct binary serialization for mysql ([#259](https://github.com/uptrace/bun/issues/259)) ([e899f50](https://github.com/uptrace/bun/commit/e899f50b22ef6759ef8c029a6cd3f25f2bde17ef))
-* correctly escape single quotes in pg arrays ([3010847](https://github.com/uptrace/bun/commit/3010847f5c2c50bce1969689a0b77fd8a6fb7e55))
-* use BLOB sql type to encode []byte in MySQL and SQLite ([725ec88](https://github.com/uptrace/bun/commit/725ec8843824a7fc8f4058ead75ab0e62a78192a))
-
+- correct binary serialization for mysql ([#259](https://github.com/uptrace/bun/issues/259))
+  ([e899f50](https://github.com/uptrace/bun/commit/e899f50b22ef6759ef8c029a6cd3f25f2bde17ef))
+- correctly escape single quotes in pg arrays
+  ([3010847](https://github.com/uptrace/bun/commit/3010847f5c2c50bce1969689a0b77fd8a6fb7e55))
+- use BLOB sql type to encode []byte in MySQL and SQLite
+  ([725ec88](https://github.com/uptrace/bun/commit/725ec8843824a7fc8f4058ead75ab0e62a78192a))
 
 ### Features
 
-* warn when there are args but no placeholders ([06dde21](https://github.com/uptrace/bun/commit/06dde215c8d0bde2b2364597190729a160e536a1))
-
-
+- warn when there are args but no placeholders
+  ([06dde21](https://github.com/uptrace/bun/commit/06dde215c8d0bde2b2364597190729a160e536a1))
 
 ## [1.0.13](https://github.com/uptrace/bun/compare/v1.0.12...v1.0.13) (2021-10-17)
 
