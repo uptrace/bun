@@ -2,9 +2,11 @@ package pgdialect
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -12,6 +14,13 @@ import (
 )
 
 var pgDialect = New()
+
+func init() {
+	if Version() != bun.Version() {
+		panic(fmt.Errorf("pgdialect and Bun must have the same version: v%s != v%s",
+			Version(), bun.Version()))
+	}
+}
 
 type Dialect struct {
 	schema.BaseDialect
