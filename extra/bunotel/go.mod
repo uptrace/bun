@@ -5,8 +5,8 @@ go 1.17
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/uptrace/bun v1.0.21
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.7
+	github.com/uptrace/bun v1.0.22
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.8
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/metric v0.26.0
 	go.opentelemetry.io/otel/trace v1.3.0
@@ -20,5 +20,5 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/otel/internal/metric v0.26.0 // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 )
