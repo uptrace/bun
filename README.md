@@ -294,8 +294,9 @@ And scan results into scalars, structs, maps, slices of structs/maps/scalars.
 go get github.com/uptrace/bun
 ```
 
-You also need to install a database/sql driver and the corresponding Bun
-[dialect](https://bun.uptrace.dev/guide/drivers.html).
+You also need to install a database/sql driver and a corresponding Bun
+[dialect](https://bun.uptrace.dev/guide/drivers.html). All packages have the same version and it is
+prudent to update all of them together.
 
 See [**Getting started**](https://bun.uptrace.dev/guide/getting-started.html) guide and check
 [examples](example).
