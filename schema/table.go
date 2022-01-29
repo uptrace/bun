@@ -215,19 +215,6 @@ func (t *Table) initFields() {
 			}
 		}
 	}
-
-	if len(t.PKs) == 1 {
-		pk := t.PKs[0]
-		if pk.SQLDefault != "" {
-			return
-		}
-
-		switch pk.IndirectType.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			pk.AutoIncrement = true
-		}
-	}
 }
 
 func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {

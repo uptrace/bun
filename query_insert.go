@@ -255,12 +255,7 @@ func (q *InsertQuery) appendColumnsValues(
 		return nil, errNilModel
 	}
 
-	var fields []*schema.Field
-	if fmter.Dialect().Features().Has(feature.Identity) {
-		fields, err = q.getDataFields()
-	} else {
-		fields, err = q.getFields()
-	}
+	fields, err := q.getFields()
 	if err != nil {
 		return nil, err
 	}
@@ -358,22 +353,13 @@ func (q *InsertQuery) appendSliceValues(
 		}
 	}
 
-	for i, v := range q.extraValues {
-		if i > 0 || len(fields) > 0 {
-			b = append(b, ", "...)
-		}
-
-		b, err = v.value.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return b, nil
 }
 
 func (q *InsertQuery) getFields() ([]*schema.Field, error) {
-	if q.db.features.Has(feature.DefaultPlaceholder) || len(q.columns) > 0 {
+	hasIdentity := q.db.features.Has(feature.Identity)
+
+	if len(q.columns) > 0 || q.db.features.Has(feature.DefaultPlaceholder) && !hasIdentity {
 		return q.baseQuery.getFields()
 	}
 
@@ -392,6 +378,9 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 	fields := make([]*schema.Field, 0, len(q.table.Fields))
 
 	for _, f := range q.table.Fields {
+		if hasIdentity && f.AutoIncrement {
+			continue
+		}
 		if f.NotNull && f.NullZero && f.SQLDefault == "" && f.HasZeroValue(strct) {
 			q.addReturningField(f)
 			continue

@@ -198,10 +198,8 @@ func mssql2019(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, mssqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
-		// bundebug.WithEnabled(false),
-		// bundebug.FromEnv(""),
-		bundebug.WithVerbose(true),
-		bundebug.FromEnv("BUNDEBUG"),
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
 	))
 
 	require.Equal(tb, "DB<dialect=mssql>", db.String())

@@ -23,5 +23,6 @@ const (
 	InsertOnDuplicateKey // INSERT ... ON DUPLICATE KEY
 	InsertIgnore         // INSERT IGNORE ...
 	NotExists
+	OffsetFetch
 	Output // mssql
 )

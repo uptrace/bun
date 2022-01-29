@@ -32,7 +32,8 @@ func New() *Dialect {
 	d.features = feature.CTE |
 		feature.DefaultPlaceholder |
 		feature.Identity |
-		feature.Output
+		feature.Output |
+		feature.OffsetFetch
 	return d
 }
 
