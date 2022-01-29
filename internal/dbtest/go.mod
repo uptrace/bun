@@ -30,6 +30,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/uptrace/bun v1.0.22
 	github.com/uptrace/bun/dbfixture v1.0.22
+	github.com/uptrace/bun/dialect/mssqldialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/mysqldialect v1.0.22
 	github.com/uptrace/bun/dialect/pgdialect v1.0.22
 	github.com/uptrace/bun/dialect/sqlitedialect v1.0.22

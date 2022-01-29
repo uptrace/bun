@@ -34,7 +34,8 @@ func New() *Dialect {
 		feature.InsertReturning |
 		feature.InsertTableAlias |
 		feature.DeleteTableAlias |
-		feature.InsertOnConflict
+		feature.InsertOnConflict |
+		feature.NotExists
 	return d
 }
 

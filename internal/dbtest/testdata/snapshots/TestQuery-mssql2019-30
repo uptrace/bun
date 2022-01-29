@@ -1,0 +1,1 @@
+WITH "src" ("id", "str") AS (VALUES (42, 'hello'), (43, 'world')) UPDATE "dest" SET dest.str = src.str FROM "src" WHERE (dest.id = src.id)

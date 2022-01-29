@@ -22,4 +22,6 @@ const (
 	InsertOnConflict     // INSERT ... ON CONFLICT
 	InsertOnDuplicateKey // INSERT ... ON DUPLICATE KEY
 	InsertIgnore         // INSERT IGNORE ...
+	NotExists
+	Output // mssql
 )

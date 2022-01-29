@@ -1,0 +1,1 @@
+INSERT INTO "models" ("id", "str") VALUES (42, 'hello'), (43, 'world') ON CONFLICT DO NOTHING

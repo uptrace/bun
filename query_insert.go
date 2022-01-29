@@ -255,7 +255,12 @@ func (q *InsertQuery) appendColumnsValues(
 		return nil, errNilModel
 	}
 
-	fields, err := q.getFields()
+	var fields []*schema.Field
+	if fmter.Dialect().Features().Has(feature.Identity) {
+		fields, err = q.getDataFields()
+	} else {
+		fields, err = q.getFields()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +593,11 @@ func (q *InsertQuery) afterInsertHook(ctx context.Context) error {
 }
 
 func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {
-	if q.db.features.Has(feature.Returning) || q.table == nil || len(q.table.PKs) != 1 || !q.table.PKs[0].AutoIncrement {
+	if q.db.features.Has(feature.Returning) ||
+		q.db.features.Has(feature.Output) ||
+		q.table == nil ||
+		len(q.table.PKs) != 1 ||
+		!q.table.PKs[0].AutoIncrement {
 		return nil
 	}
 

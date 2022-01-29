@@ -43,12 +43,12 @@ const (
 )
 
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
-	/*pgName: pg,
-	pgxName: pgx,
-	mysql5Name:  mysql5,
-	mysql8Name:  mysql8,
-	mariadbName: mariadb,
-	sqliteName:  sqlite,*/
+	pgName:        pg,
+	pgxName:       pgx,
+	mysql5Name:    mysql5,
+	mysql8Name:    mysql8,
+	mariadbName:   mariadb,
+	sqliteName:    sqlite,
 	mssql2019Name: mssql2019,
 }
 
@@ -198,8 +198,8 @@ func mssql2019(tb testing.TB) *bun.DB {
 
 	db := bun.NewDB(sqldb, mssqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
-		//bundebug.WithEnabled(false),
-		//bundebug.FromEnv(""),
+		// bundebug.WithEnabled(false),
+		// bundebug.FromEnv(""),
 		bundebug.WithVerbose(true),
 		bundebug.FromEnv("BUNDEBUG"),
 	))
@@ -234,8 +234,8 @@ func TestDB(t *testing.T) {
 		{testPing},
 		{testNilModel},
 		{testSelectScan},
-		/*{testSelectCount},
-		{testSelectMap},
+		//{testSelectCount},
+		/*{testSelectMap},
 		{testSelectMapSlice},
 		{testSelectStruct},
 		{testSelectNestedStructValue},
@@ -298,20 +298,16 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, 10, num)
 
-	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
+	err = db.NewSelect().
+		ColumnExpr("t.num").
+		TableExpr("(SELECT 10 AS num) AS t").
+		Where("1 = 2").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	var str string
 	err = db.NewSelect().ColumnExpr("?", "\\\"'hello\n%_").Scan(ctx, &str)
 	require.NoError(t, err)
 	require.Equal(t, "\\\"'hello\n%_", str)
-
-	var flag bool
-	err = db.NewSelect().
-		ColumnExpr("EXISTS (?)", db.NewSelect().ColumnExpr("1")).
-		Scan(ctx, &flag)
-	require.NoError(t, err)
-	require.Equal(t, true, flag)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {

@@ -14,8 +14,10 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-const datetimeType = "DATETIME"
-const bitType = "BIT"
+const (
+	datetimeType = "DATETIME"
+	bitType      = "BIT"
+)
 
 type Dialect struct {
 	schema.BaseDialect
@@ -29,7 +31,8 @@ func New() *Dialect {
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
 		feature.DefaultPlaceholder |
-		feature.Identity
+		feature.Identity |
+		feature.Output
 	return d
 }
 
@@ -80,73 +83,6 @@ func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
 	return b
 }
-
-/*
-func (*Dialect) AppendString(b []byte, s string) []byte {
-	b = append(b, '\'')
-loop:
-	for _, r := range s {
-		switch r {
-		case '\000':
-			continue loop
-		case '\'':
-			b = append(b, "''"...)
-			continue loop
-		case '\\':
-			b = append(b, '\\', '\\')
-			continue loop
-		}
-
-		if r < utf8.RuneSelf {
-			b = append(b, byte(r))
-			continue
-		}
-
-		l := len(b)
-		if cap(b)-l < utf8.UTFMax {
-			b = append(b, make([]byte, utf8.UTFMax)...)
-		}
-		n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-		b = b[:l+n]
-	}
-	b = append(b, '\'')
-	return b
-}
-
-func (*Dialect) AppendBytes(b []byte, bs []byte) []byte {
-	if bs == nil {
-		return dialect.AppendNull(b)
-	}
-
-	b = append(b, `X'`...)
-
-	s := len(b)
-	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
-	hex.Encode(b[s:], bs)
-
-	b = append(b, '\'')
-
-	return b
-}
-
-func (*Dialect) AppendJSON(b, jsonb []byte) []byte {
-	b = append(b, '\'')
-
-	for _, c := range jsonb {
-		switch c {
-		case '\'':
-			b = append(b, "''"...)
-		case '\\':
-			b = append(b, `\\`...)
-		default:
-			b = append(b, c)
-		}
-	}
-
-	b = append(b, '\'')
-
-	return b
-}*/
 
 func sqlType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {

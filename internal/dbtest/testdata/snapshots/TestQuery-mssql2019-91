@@ -1,0 +1,1 @@
+DELETE FROM "soft_deletes" WHERE "deleted_at" != '0001-01-01 00:00:00' AND ("id" = NULL)

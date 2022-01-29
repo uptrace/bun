@@ -121,7 +121,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, "TEMP "...)
 	}
 	b = append(b, "TABLE "...)
-	if q.ifNotExists {
+	if q.ifNotExists && fmter.Dialect().Features().Has(feature.NotExists) {
 		b = append(b, "IF NOT EXISTS "...)
 	}
 	b, err = q.appendFirstTable(fmter, b)
