@@ -588,7 +588,7 @@ func (q *InsertQuery) afterInsertHook(ctx context.Context) error {
 }
 
 func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {
-	if q.db.features.Has(feature.Returning) || q.table == nil || len(q.table.PKs) != 1 {
+	if q.db.features.Has(feature.Returning) || q.table == nil || len(q.table.PKs) != 1 || !q.table.PKs[0].AutoIncrement {
 		return nil
 	}
 

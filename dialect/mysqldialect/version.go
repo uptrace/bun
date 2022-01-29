@@ -1,4 +1,4 @@
-package bun
+package mysqldialect
 
 // Version is the current release version.
 func Version() string {

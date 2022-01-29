@@ -1,4 +1,4 @@
-package bun
+package sqlitedialect
 
 // Version is the current release version.
 func Version() string {
