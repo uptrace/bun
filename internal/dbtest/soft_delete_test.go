@@ -24,7 +24,7 @@ func TestSoftDelete(t *testing.T) {
 	}
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		if db.Dialect().Name() == dialect.MSSQL {
-			t.Skip()
+			t.Skip("mssql")
 		}
 		for _, test := range tests {
 			t.Run(funcName(test.run), func(t *testing.T) {

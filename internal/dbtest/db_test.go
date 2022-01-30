@@ -263,7 +263,7 @@ func TestDB(t *testing.T) {
 		{testModelNonPointer},
 		{testBinaryData},
 		//{testUpsert},
-		//{testMultiUpdate},
+		{testMultiUpdate},
 		{testTxScanAndCount},
 		{testEmbedModelValue},
 		{testEmbedModelPointer},
@@ -1073,10 +1073,10 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 
 	_, err = db.NewUpdate().
 		With("src", selq).
-		TableExpr("models AS dest").
+		TableExpr("models").
 		Table("src").
-		Set("? = src.str", db.UpdateFQN("dest", "str")).
-		Where("dest.id = src.id").
+		Set("? = src.str", db.UpdateFQN("models", "str")).
+		Where("models.id = src.id").
 		Exec(ctx)
 	require.NoError(t, err)
 }
