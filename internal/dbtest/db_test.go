@@ -261,7 +261,7 @@ func TestDB(t *testing.T) {
 		//{testExists},
 		{testScanTimeIntoString},
 		{testModelNonPointer},
-		//{testBinaryData},
+		{testBinaryData},
 		//{testUpsert},
 		//{testMultiUpdate},
 		{testTxScanAndCount},

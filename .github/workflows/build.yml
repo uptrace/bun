@@ -69,7 +69,7 @@ jobs:
           MSSQL_USER: user
           MSSQL_PASSWORD: pass
         ports:
-          - 14339:1433
+          - 1433:1433
         options: >-
           --health-cmd "/opt/mssql-tools/bin/sqlcmd -U user -P pass -Q 'select 1' -b -o /dev/null"
           --health-interval=10s --health-timeout=5s --health-retries=3
@@ -90,4 +90,4 @@ jobs:
           MYSQL: user:pass@/test
           MYSQL5: user:pass@tcp(localhost:53306)/test
           MARIADB: user:pass@tcp(localhost:13306)/test
-          MSSQL2019: sqlserver://user:pass@word@localhost:14339?database=test
+          MSSQL2019: sqlserver://user:pass@word@localhost:1433?database=test

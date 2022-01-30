@@ -2,6 +2,7 @@ package mssqldialect
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"log"
 	"strings"
 	"time"
@@ -87,6 +88,20 @@ func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
 	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
 	b = append(b, '\'')
+	return b
+}
+
+func (*Dialect) AppendBytes(b, bs []byte) []byte {
+	if bs == nil {
+		return dialect.AppendNull(b)
+	}
+
+	b = append(b, "0x"...)
+
+	s := len(b)
+	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
+	hex.Encode(b[s:], bs)
+
 	return b
 }
 
