@@ -249,25 +249,25 @@ func TestDB(t *testing.T) {
 		{testScanSingleRow},
 		{testScanSingleRowByRow},
 		{testScanRows},
-		// {testRunInTx},
-		// {testJSONInterface},
-		// {testJSONValuer},
-		// {testSelectBool},
-		// {testFKViolation},
-		// {testInterfaceAny},
-		// {testInterfaceJSON},
-		// {testScanRawMessage},
-		// {testPointers},
-		// {testExists},
-		// {testScanTimeIntoString},
-		// {testModelNonPointer},
-		// {testBinaryData},
-		// {testUpsert},
-		// {testMultiUpdate},
-		// {testTxScanAndCount},
-		// {testEmbedModelValue},
-		// {testEmbedModelPointer},
-		// {testJSONMarshaler},
+		{testRunInTx},
+		{testJSONInterface},
+		{testJSONValuer},
+		{testSelectBool},
+		{testFKViolation},
+		{testInterfaceAny},
+		{testInterfaceJSON},
+		//{testScanRawMessage},
+		{testPointers},
+		//{testExists},
+		{testScanTimeIntoString},
+		{testModelNonPointer},
+		//{testBinaryData},
+		//{testUpsert},
+		//{testMultiUpdate},
+		{testTxScanAndCount},
+		{testEmbedModelValue},
+		{testEmbedModelPointer},
+		{testJSONMarshaler},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -678,7 +678,7 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		_, err := tx.NewUpdate().Model((*Counter)(nil)).
 			Set("count = count + 1").
-			Where("TRUE").
+			Where("1 = 1").
 			Exec(ctx)
 		return err
 	})
