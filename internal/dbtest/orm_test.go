@@ -430,7 +430,7 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 }
 
 type Genre struct {
-	ID     int `bun:",pk,autoincrement"`
+	ID     int `bun:",pk"`
 	Name   string
 	Rating int `bun:",scanonly"`
 
@@ -445,12 +445,12 @@ func (g Genre) String() string {
 }
 
 type Image struct {
-	ID   int `bun:",pk,autoincrement"`
+	ID   int `bun:",pk"`
 	Path string
 }
 
 type Author struct {
-	ID    int     `bun:",pk,autoincrement"`
+	ID    int     `bun:",pk"`
 	Name  string  `bun:",unique"`
 	Books []*Book `bun:"rel:has-many"`
 
@@ -480,7 +480,7 @@ type BookGenre struct {
 }
 
 type Book struct {
-	ID        int `bun:",pk,autoincrement"`
+	ID        int `bun:",pk"`
 	Title     string
 	AuthorID  int
 	Author    Author `bun:"rel:belongs-to"`
@@ -516,7 +516,7 @@ type BookWithCommentCount struct {
 type Translation struct {
 	bun.BaseModel `bun:"alias:tr"`
 
-	ID     int    `bun:",pk,autoincrement"`
+	ID     int    `bun:",pk"`
 	BookID int    `bun:"unique:book_id_lang"`
 	Book   *Book  `bun:"rel:belongs-to"`
 	Lang   string `bun:"unique:book_id_lang"`
