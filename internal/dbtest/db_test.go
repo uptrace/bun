@@ -232,15 +232,15 @@ func TestDB(t *testing.T) {
 		{testPing},
 		{testNilModel},
 		{testSelectScan},
-		//{testSelectCount},
+		{testSelectCount},
 		{testSelectMap},
 		{testSelectMapSlice},
-		// {testSelectStruct},
-		// {testSelectNestedStructValue},
-		// {testSelectNestedStructPtr},
-		// {testSelectStructSlice},
-		// {testSelectSingleSlice},
-		// {testSelectMultiSlice},
+		{testSelectStruct},
+		{testSelectNestedStructValue},
+		{testSelectNestedStructPtr},
+		{testSelectStructSlice},
+		{testSelectSingleSlice},
+		{testSelectMultiSlice},
 		// {testSelectJSONMap},
 		// {testSelectJSONStruct},
 		// {testJSONSpecialChars},
@@ -299,7 +299,8 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().
 		ColumnExpr("t.num").
 		TableExpr("(SELECT 10 AS num) AS t").
-		Where("1 = 2").Scan(ctx, &num)
+		Where("1 = 2").
+		Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	var str string
@@ -392,7 +393,7 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	require.Equal(t, 10, model.Num)
 	require.Equal(t, "hello", model.Str)
 
-	err = db.NewSelect().TableExpr("(SELECT 42) AS t").Where("FALSE").Scan(ctx, model)
+	err = db.NewSelect().TableExpr("(SELECT 42 AS num) AS t").Where("1 = 2").Scan(ctx, model)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
