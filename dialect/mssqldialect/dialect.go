@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	datetimeType = "DATETIME"
-	bitType      = "BIT"
-	nvarcharType = "NVARCHAR(max)"
+	datetimeType  = "DATETIME"
+	bitType       = "BIT"
+	nvarcharType  = "NVARCHAR(MAX)"
+	varbinaryType = "VARBINARY(MAX)"
 )
 
 type Dialect struct {
@@ -97,6 +98,10 @@ func sqlType(field *schema.Field) string {
 		return datetimeType
 	case sqltype.Boolean:
 		return bitType
+	case sqltype.JSON:
+		return nvarcharType
+	case sqltype.Blob:
+		return varbinaryType
 	}
 	return field.DiscoveredSQLType
 }

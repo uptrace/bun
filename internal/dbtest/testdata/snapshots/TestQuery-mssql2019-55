@@ -1,1 +1,1 @@
-REPLACE INTO "models" ("str") VALUES ('')
+REPLACE INTO "models" ("str") OUTPUT INSERTED."id" VALUES ('')

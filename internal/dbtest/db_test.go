@@ -256,7 +256,7 @@ func TestDB(t *testing.T) {
 		{testFKViolation},
 		{testInterfaceAny},
 		{testInterfaceJSON},
-		//{testScanRawMessage},
+		{testScanRawMessage},
 		{testPointers},
 		//{testExists},
 		{testScanTimeIntoString},

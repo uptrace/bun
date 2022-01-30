@@ -126,13 +126,6 @@ func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery 
 	return q
 }
 
-func (q *InsertQuery) hasReturning() bool {
-	if !q.db.features.Has(feature.InsertReturning) {
-		return false
-	}
-	return q.returningQuery.hasReturning()
-}
-
 //------------------------------------------------------------------------------
 
 // Ignore generates different queries depending on the DBMS:
@@ -201,7 +194,8 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	if q.hasReturning() {
+	if q.hasFeature(feature.InsertReturning) && q.hasReturning() {
+		b = append(b, " RETURNING "...)
 		b, err = q.appendReturning(fmter, b)
 		if err != nil {
 			return nil, err
@@ -222,6 +216,14 @@ func (q *InsertQuery) appendColumnsValues(
 				return nil, err
 			}
 			b = append(b, ")"...)
+		}
+
+		if q.hasFeature(feature.Output) && q.hasReturning() {
+			b = append(b, " OUTPUT "...)
+			b, err = q.appendOutput(fmter, b)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		b = append(b, " SELECT "...)
@@ -255,6 +257,7 @@ func (q *InsertQuery) appendColumnsValues(
 		return nil, errNilModel
 	}
 
+	// Build fields to populate RETURNING clause.
 	fields, err := q.getFields()
 	if err != nil {
 		return nil, err
@@ -262,7 +265,17 @@ func (q *InsertQuery) appendColumnsValues(
 
 	b = append(b, " ("...)
 	b = q.appendFields(fmter, b, fields)
-	b = append(b, ") VALUES ("...)
+	b = append(b, ")"...)
+
+	if q.hasFeature(feature.Output) && q.hasReturning() {
+		b = append(b, " OUTPUT "...)
+		b, err = q.appendOutput(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	b = append(b, " VALUES ("...)
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
@@ -373,12 +386,15 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 			return nil, fmt.Errorf("bun: Insert(empty %T)", model.slice.Type())
 		}
 		strct = indirect(model.slice.Index(0))
+	default:
+		return nil, errNilModel
 	}
 
 	fields := make([]*schema.Field, 0, len(q.table.Fields))
 
 	for _, f := range q.table.Fields {
 		if hasIdentity && f.AutoIncrement {
+			q.addReturningField(f)
 			continue
 		}
 		if f.NotNull && f.NullZero && f.SQLDefault == "" && f.HasZeroValue(strct) {
@@ -533,7 +549,8 @@ func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 	query := internal.String(queryBytes)
 	var res sql.Result
 
-	if hasDest := len(dest) > 0; hasDest || q.hasReturning() {
+	if hasDest := len(dest) > 0; hasDest ||
+		(q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output)) {
 		model, err := q.getModel(dest)
 		if err != nil {
 			return nil, err

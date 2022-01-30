@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str", "foo") VALUES ('', 'bar')
+INSERT INTO "models" ("str", "foo") OUTPUT INSERTED."id" VALUES ('', 'bar')

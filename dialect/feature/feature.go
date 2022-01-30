@@ -9,6 +9,7 @@ const (
 	WithValues
 	Returning
 	InsertReturning
+	Output // mssql
 	DefaultPlaceholder
 	DoubleColonCast
 	ValuesRow
@@ -26,5 +27,4 @@ const (
 	InsertIgnore         // INSERT IGNORE ...
 	NotExists
 	OffsetFetch
-	Output // mssql
 )

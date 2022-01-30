@@ -174,6 +174,10 @@ func (q *baseQuery) beforeAppendModel(ctx context.Context, query Query) error {
 	return nil
 }
 
+func (q *baseQuery) hasFeature(feature feature.Feature) bool {
+	return q.db.features.Has(feature)
+}
+
 //------------------------------------------------------------------------------
 
 func (q *baseQuery) checkSoftDelete() error {
@@ -458,6 +462,9 @@ func (q *baseQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, e
 
 func (q *baseQuery) getFields() ([]*schema.Field, error) {
 	if len(q.columns) == 0 {
+		if q.table == nil {
+			return nil, errNilModel
+		}
 		return q.table.Fields, nil
 	}
 	return q._getFields(false)
@@ -465,6 +472,9 @@ func (q *baseQuery) getFields() ([]*schema.Field, error) {
 
 func (q *baseQuery) getDataFields() ([]*schema.Field, error) {
 	if len(q.columns) == 0 {
+		if q.table == nil {
+			return nil, errNilModel
+		}
 		return q.table.DataFields, nil
 	}
 	return q._getFields(true)
@@ -929,27 +939,21 @@ func (q *returningQuery) addReturningField(field *schema.Field) {
 	q.returningFields = append(q.returningFields, field)
 }
 
-func (q *returningQuery) hasReturning() bool {
-	if len(q.returning) == 1 {
-		if ret := q.returning[0]; len(ret.Args) == 0 {
-			switch ret.Query {
-			case "", "null", "NULL":
-				return false
-			}
-		}
-	}
-	return len(q.returning) > 0 || len(q.returningFields) > 0
-}
-
 func (q *returningQuery) appendReturning(
 	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
-	if !q.hasReturning() {
-		return b, nil
-	}
+	return q._appendReturning(fmter, b, "")
+}
 
-	b = append(b, " RETURNING "...)
+func (q *returningQuery) appendOutput(
+	fmter schema.Formatter, b []byte,
+) (_ []byte, err error) {
+	return q._appendReturning(fmter, b, "INSERTED")
+}
 
+func (q *returningQuery) _appendReturning(
+	fmter schema.Formatter, b []byte, table string,
+) (_ []byte, err error) {
 	for i, f := range q.returning {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -964,8 +968,27 @@ func (q *returningQuery) appendReturning(
 		return b, nil
 	}
 
-	b = appendColumns(b, "", q.returningFields)
+	b = appendColumns(b, schema.Safe(table), q.returningFields)
 	return b, nil
+}
+
+func (q *returningQuery) hasReturning() bool {
+	if len(q.returning) == 1 {
+		if ret := q.returning[0]; len(ret.Args) == 0 {
+			switch ret.Query {
+			case "", "null", "NULL":
+				return false
+			}
+		}
+	}
+	return len(q.returning) > 0 || len(q.returningFields) > 0
+}
+
+func (q *returningQuery) hasOutput(fmter schema.Formatter) bool {
+	if !fmter.Dialect().Features().Has(feature.Output) {
+		return false
+	}
+	return q.hasReturning()
 }
 
 //------------------------------------------------------------------------------
