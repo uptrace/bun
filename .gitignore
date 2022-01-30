@@ -1,11 +1,3 @@
+# Patterns for files created by this project.
+# For other files, use global gitignore.
 *.s3db
-*.prof
-*.test
-.DS_Store
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
