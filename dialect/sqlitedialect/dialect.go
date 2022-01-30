@@ -30,6 +30,7 @@ func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
+		feature.WithValues |
 		feature.Returning |
 		feature.InsertReturning |
 		feature.InsertTableAlias |

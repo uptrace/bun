@@ -6,6 +6,7 @@ type Feature = internal.Flag
 
 const (
 	CTE Feature = 1 << iota
+	WithValues
 	Returning
 	InsertReturning
 	DefaultPlaceholder

@@ -236,24 +236,46 @@ func (q *baseQuery) appendWith(fmter schema.Formatter, b []byte) (_ []byte, err 
 			b = append(b, ", "...)
 		}
 
-		b = fmter.AppendIdent(b, with.name)
-		if q, ok := with.query.(schema.ColumnsAppender); ok {
-			b = append(b, " ("...)
-			b, err = q.AppendColumns(fmter, b)
+		if fmter.Dialect().Features().Has(feature.WithValues) {
+			b = fmter.AppendIdent(b, with.name)
+
+			if q, ok := with.query.(schema.ColumnsAppender); ok {
+				b = append(b, " ("...)
+				b, err = q.AppendColumns(fmter, b)
+				if err != nil {
+					return nil, err
+				}
+				b = append(b, ")"...)
+			}
+
+			b = append(b, " AS ("...)
+
+			b, err = with.query.AppendQuery(fmter, b)
 			if err != nil {
 				return nil, err
 			}
+
+			b = append(b, ")"...)
+		} else {
+			b = fmter.AppendIdent(b, with.name)
+			b = append(b, " AS (SELECT * FROM ("...)
+
+			b, err = with.query.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+
+			b = append(b, ") AS t"...)
+			if q, ok := with.query.(schema.ColumnsAppender); ok {
+				b = append(b, " ("...)
+				b, err = q.AppendColumns(fmter, b)
+				if err != nil {
+					return nil, err
+				}
+				b = append(b, ")"...)
+			}
 			b = append(b, ")"...)
 		}
-
-		b = append(b, " AS ("...)
-
-		b, err = with.query.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-
-		b = append(b, ')')
 	}
 	b = append(b, ' ')
 	return b, nil

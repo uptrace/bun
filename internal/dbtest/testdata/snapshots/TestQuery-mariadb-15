@@ -1,1 +1,1 @@
-WITH `foo` AS (SELECT `model`.`id`, `model`.`str` FROM `models` AS `model`) SELECT * FROM `foo`
+WITH `foo` AS (SELECT * FROM (SELECT `model`.`id`, `model`.`str` FROM `models` AS `model`) AS t) SELECT * FROM `foo`
