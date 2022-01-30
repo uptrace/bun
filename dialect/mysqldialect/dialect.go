@@ -42,9 +42,10 @@ func New() *Dialect {
 		feature.UpdateMultiTable |
 		feature.ValuesRow |
 		feature.TableTruncate |
+		feature.TableNotExists |
 		feature.InsertIgnore |
 		feature.InsertOnDuplicateKey |
-		feature.NotExists
+		feature.SelectExists
 	return d
 }
 

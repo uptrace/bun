@@ -258,7 +258,7 @@ func TestDB(t *testing.T) {
 		{testInterfaceJSON},
 		{testScanRawMessage},
 		{testPointers},
-		//{testExists},
+		{testExists},
 		{testScanTimeIntoString},
 		{testModelNonPointer},
 		{testBinaryData},
@@ -974,7 +974,7 @@ func testExists(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 0").Exists(ctx)
+	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 2").Exists(ctx)
 	require.NoError(t, err)
 	require.False(t, exists)
 }

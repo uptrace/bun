@@ -44,8 +44,9 @@ func New() *Dialect {
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate |
+		feature.TableNotExists |
 		feature.InsertOnConflict |
-		feature.NotExists
+		feature.SelectExists
 	return d
 }
 

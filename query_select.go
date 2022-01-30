@@ -862,7 +862,14 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 		return false, q.err
 	}
 
-	qq := existsQuery{q}
+	if q.hasFeature(feature.SelectExists) {
+		return q.selectExists(ctx)
+	}
+	return q.whereExists(ctx)
+}
+
+func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
+	qq := selectExistsQuery{q}
 
 	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
 	if err != nil {
@@ -878,6 +885,33 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	q.db.afterQuery(ctx, event, nil, err)
 
 	return exists, err
+}
+
+func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
+	qq := whereExistsQuery{q}
+
+	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	if err != nil {
+		return false, err
+	}
+
+	query := internal.String(queryBytes)
+	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
+
+	res, err := q.exec(ctx, q, query)
+
+	q.db.afterQuery(ctx, event, nil, err)
+
+	if err != nil {
+		return false, err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return n == 1, nil
 }
 
 //------------------------------------------------------------------------------
@@ -924,27 +958,44 @@ func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err
 	if q.err != nil {
 		return nil, q.err
 	}
-	// if err := q.beforeAppendModel(q); err != nil {
-	// 	return nil, err
-	// }
 	return q.appendQuery(fmter, b, true)
 }
 
 //------------------------------------------------------------------------------
 
-type existsQuery struct {
+type selectExistsQuery struct {
 	*SelectQuery
 }
 
-func (q existsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q selectExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
-	// if err := q.beforeAppendModel(q); err != nil {
-	// 	return nil, err
-	// }
 
 	b = append(b, "SELECT EXISTS ("...)
+
+	b, err = q.appendQuery(fmter, b, false)
+	if err != nil {
+		return nil, err
+	}
+
+	b = append(b, ")"...)
+
+	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+type whereExistsQuery struct {
+	*SelectQuery
+}
+
+func (q whereExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+
+	b = append(b, "SELECT 1 WHERE EXISTS ("...)
 
 	b, err = q.appendQuery(fmter, b, false)
 	if err != nil {
