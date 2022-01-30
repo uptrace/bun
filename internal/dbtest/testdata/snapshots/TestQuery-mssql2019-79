@@ -1,1 +1,1 @@
-WITH "_data" ("id", "str1", "str2") AS (VALUES (42, 'hello', 'world'), (43, 'foo', 'bar')) UPDATE "models" AS "model" SET "str2" = _data."str2" FROM _data WHERE ("model"."id" = _data."id")
+WITH "_data" ("id", "str1", "str2") AS (VALUES (42, 'hello', 'world'), (43, 'foo', 'bar')) UPDATE "models" SET "str2" = _data."str2" FROM _data WHERE ("model"."id" = _data."id")

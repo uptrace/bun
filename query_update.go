@@ -187,8 +187,10 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if fmter.HasFeature(feature.UpdateMultiTable) {
 		b, err = q.appendTablesWithAlias(fmter, b)
-	} else {
+	} else if fmter.HasFeature(feature.UpdateTableAlias) {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
+	} else {
+		b, err = q.appendFirstTable(fmter, b)
 	}
 	if err != nil {
 		return nil, err

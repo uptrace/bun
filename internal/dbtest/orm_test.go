@@ -13,6 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 )
 
@@ -229,6 +230,9 @@ func testBulkUpdate(t *testing.T, db *bun.DB) {
 	if !db.Dialect().Features().Has(feature.CTE) {
 		t.Skip()
 	}
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip()
+	}
 
 	var books []Book
 	err := db.NewSelect().Model(&books).Scan(ctx)
@@ -380,7 +384,8 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 	}
 
 	type Order struct {
-		ID    int64  `bun:",pk,autoincrement"`
+		ID    int64 `bun:",pk,autoincrement"`
+		Text  string
 		Items []Item `bun:"m2m:order_to_items"`
 	}
 
