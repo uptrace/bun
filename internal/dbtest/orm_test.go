@@ -348,7 +348,7 @@ func testRelationBelongsToSelf(t *testing.T, db *bun.DB) {
 	type Model struct {
 		bun.BaseModel `bun:"alias:m"`
 
-		ID      int64
+		ID      int64 `bun:",pk,autoincrement"`
 		ModelID int64
 		Model   *Model `bun:"rel:belongs-to"`
 	}
@@ -374,13 +374,13 @@ func testRelationBelongsToSelf(t *testing.T, db *bun.DB) {
 
 func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 	type Item struct {
-		ID        int64
+		ID        int64     `bun:",pk,autoincrement"`
 		CreatedAt time.Time `bun:",notnull,nullzero"`
 		UpdatedAt time.Time `bun:",notnull,nullzero"`
 	}
 
 	type Order struct {
-		ID    int64
+		ID    int64  `bun:",pk,autoincrement"`
 		Items []Item `bun:"m2m:order_to_items"`
 	}
 
@@ -430,7 +430,7 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 }
 
 type Genre struct {
-	ID     int
+	ID     int `bun:",pk,autoincrement"`
 	Name   string
 	Rating int `bun:",scanonly"`
 
@@ -445,12 +445,12 @@ func (g Genre) String() string {
 }
 
 type Image struct {
-	ID   int
+	ID   int `bun:",pk,autoincrement"`
 	Path string
 }
 
 type Author struct {
-	ID    int
+	ID    int     `bun:",pk,autoincrement"`
 	Name  string  `bun:",unique"`
 	Books []*Book `bun:"rel:has-many"`
 
@@ -480,7 +480,7 @@ type BookGenre struct {
 }
 
 type Book struct {
-	ID        int
+	ID        int `bun:",pk,autoincrement"`
 	Title     string
 	AuthorID  int
 	Author    Author `bun:"rel:belongs-to"`
@@ -516,7 +516,7 @@ type BookWithCommentCount struct {
 type Translation struct {
 	bun.BaseModel `bun:"alias:tr"`
 
-	ID     int
+	ID     int    `bun:",pk,autoincrement"`
 	BookID int    `bun:"unique:book_id_lang"`
 	Book   *Book  `bun:"rel:belongs-to"`
 	Lang   string `bun:"unique:book_id_lang"`

@@ -1,1 +1,1 @@
-INSERT INTO "users" ("id", "name") VALUES (DEFAULT, 'Hello') ON CONFLICT DO UPDATE SET name = 'Hello'
+INSERT INTO "users" ("name") VALUES ('Hello') ON CONFLICT DO UPDATE SET name = 'Hello'

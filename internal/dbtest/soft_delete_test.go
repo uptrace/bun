@@ -35,7 +35,7 @@ func TestSoftDelete(t *testing.T) {
 }
 
 type Video struct {
-	ID        int64
+	ID        int64 `bun:",pk,autoincrement"`
 	Name      string
 	DeletedAt time.Time `bun:",soft_delete"`
 }

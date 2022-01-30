@@ -1,1 +1,1 @@
-INSERT INTO "soft_deletes" ("id", "deleted_at") VALUES (DEFAULT, DEFAULT) ON CONFLICT DO NOTHING
+INSERT INTO "soft_deletes" ("deleted_at") VALUES (DEFAULT) ON CONFLICT DO NOTHING

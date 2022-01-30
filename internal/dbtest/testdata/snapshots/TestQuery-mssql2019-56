@@ -1,1 +1,1 @@
-INSERT INTO "models" ("id", "str") VALUES (42, 'hello'), (43, 'world') ON DUPLICATE KEY UPDATE SET str = upper(str)
+INSERT INTO "models" ("str") VALUES ('hello'), ('world') ON DUPLICATE KEY UPDATE SET str = upper(str)

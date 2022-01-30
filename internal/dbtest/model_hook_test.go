@@ -120,7 +120,7 @@ func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 }
 
 type ModelHookTest struct {
-	ID    int
+	ID    int `bun:",pk,autoincrement"`
 	Value string
 }
 
