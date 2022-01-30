@@ -1004,13 +1004,6 @@ func (q *returningQuery) hasReturning() bool {
 	return len(q.returning) > 0 || len(q.returningFields) > 0
 }
 
-func (q *returningQuery) hasOutput(fmter schema.Formatter) bool {
-	if !fmter.Dialect().Features().Has(feature.Output) {
-		return false
-	}
-	return q.hasReturning()
-}
-
 //------------------------------------------------------------------------------
 
 type columnValue struct {

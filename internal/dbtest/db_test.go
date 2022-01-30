@@ -262,7 +262,7 @@ func TestDB(t *testing.T) {
 		{testScanTimeIntoString},
 		{testModelNonPointer},
 		{testBinaryData},
-		//{testUpsert},
+		{testUpsert},
 		{testMultiUpdate},
 		{testTxScanAndCount},
 		{testEmbedModelValue},
@@ -1017,6 +1017,10 @@ func testBinaryData(t *testing.T, db *bun.DB) {
 }
 
 func testUpsert(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip("mssql")
+	}
+
 	type Model struct {
 		ID  int64 `bun:",pk,autoincrement"`
 		Str string
