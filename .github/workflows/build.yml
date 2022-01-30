@@ -90,4 +90,4 @@ jobs:
           MYSQL: user:pass@/test
           MYSQL5: user:pass@tcp(localhost:53306)/test
           MARIADB: user:pass@tcp(localhost:13306)/test
-          MSSQL2019: sqlserver://user:password@localhost:1433?database=test
+          MSSQL2019: sqlserver://sa:passWORD1@localhost:1433?database=test

@@ -3,12 +3,14 @@ package mssqldialect
 import (
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"golang.org/x/mod/semver"
 
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -21,6 +23,13 @@ const (
 	nvarcharType  = "NVARCHAR(MAX)"
 	varbinaryType = "VARBINARY(MAX)"
 )
+
+func init() {
+	if Version() != bun.Version() {
+		panic(fmt.Errorf("mssqldialect and Bun must have the same version: v%s != v%s",
+			Version(), bun.Version()))
+	}
+}
 
 type Dialect struct {
 	schema.BaseDialect
