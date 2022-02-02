@@ -102,9 +102,9 @@ func (q *CreateTableQuery) TableSpace(tablespace string) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) DetectForeignKeys() *CreateTableQuery {
+func (q *CreateTableQuery) WithForeignKeys() *CreateTableQuery {
 	for _, relation := range q.tableModel.Table().Relations {
-		q.ForeignKey("(?) REFERENCES ? (?)",
+		q = q.ForeignKey("(?) REFERENCES ? (?)",
 			Safe(appendColumns(nil, "", relation.BaseFields)),
 			relation.JoinTable.SQLName,
 			Safe(appendColumns(nil, "", relation.JoinFields)),

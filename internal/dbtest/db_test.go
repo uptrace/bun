@@ -227,7 +227,7 @@ func TestDB(t *testing.T) {
 		{testJSONValuer},
 		{testSelectBool},
 		{testFKViolation},
-		{testDetectForeignKeys},
+		{testWithForeignKeys},
 		{testInterfaceAny},
 		{testInterfaceJSON},
 		{testScanRawMessage},
@@ -844,7 +844,7 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 	require.Equal(t, 0, n)
 }
 
-func testDetectForeignKeys(t *testing.T, db *bun.DB) {
+func testWithForeignKeys(t *testing.T, db *bun.DB) {
 	type User struct {
 		ID   int    `bun:",pk"`
 		Type string `bun:",pk"`
@@ -876,7 +876,7 @@ func testDetectForeignKeys(t *testing.T, db *bun.DB) {
 	_, err = db.NewCreateTable().
 		Model((*Deck)(nil)).
 		IfNotExists().
-		DetectForeignKeys().
+		WithForeignKeys().
 		Exec(ctx)
 	require.NoError(t, err)
 
@@ -907,7 +907,7 @@ func testDetectForeignKeys(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1), affected)
 
-	//Select with Relation should work
+	// Select with Relation should work
 	d := Deck{}
 	err = db.NewSelect().Model(&d).Relation("User").Scan(ctx)
 	require.NoError(t, err)
