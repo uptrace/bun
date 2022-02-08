@@ -45,7 +45,8 @@ func New() *Dialect {
 		feature.DefaultPlaceholder |
 		feature.Identity |
 		feature.Output |
-		feature.OffsetFetch
+		feature.OffsetFetch |
+		feature.UpdateAliasAsMultiTable
 	return d
 }
 
@@ -95,7 +96,7 @@ func (d *Dialect) IdentQuote() byte {
 
 func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
-	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999")
 	b = append(b, '\'')
 	return b
 }
