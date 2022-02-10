@@ -46,7 +46,7 @@ func New() *Dialect {
 		feature.Identity |
 		feature.Output |
 		feature.OffsetFetch |
-		feature.UpdateAliasAsMultiTable
+		feature.UpdateFromTable
 	return d
 }
 

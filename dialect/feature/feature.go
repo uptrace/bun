@@ -28,5 +28,5 @@ const (
 	TableNotExists
 	OffsetFetch
 	SelectExists
-	UpdateAliasAsMultiTable
+	UpdateFromTable
 )

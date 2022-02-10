@@ -207,7 +207,7 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 			return nil, err
 		}
 	}
-	if fmter.Dialect().Features().Has(feature.UpdateAliasAsMultiTable) && q.table != nil {
+	if fmter.Dialect().Features().Has(feature.UpdateFromTable) && q.table != nil {
 		if !q.hasMultiTables() {
 			b = append(b, " FROM "...)
 		} else {
