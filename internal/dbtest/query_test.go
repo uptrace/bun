@@ -401,7 +401,7 @@ func TestQuery(t *testing.T) {
 				Time bun.NullTime
 			}
 			models := make([]Model, 2)
-			models[1].Time = bun.NullTime{Time: time.Unix(0, 0)}
+			models[1].Time = bun.NullTime{Time: time.Unix(0, 0).UTC()}
 			return db.NewValues(&models)
 		},
 		func(db *bun.DB) schema.QueryAppender {
@@ -570,7 +570,7 @@ func TestQuery(t *testing.T) {
 				ID   int64
 				Time time.Time
 			}
-			return db.NewInsert().Model(&Model{ID: 123, Time: time.Unix(0, 0)})
+			return db.NewInsert().Model(&Model{ID: 123, Time: time.Unix(0, 0).UTC()})
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewInsert().ColumnExpr("id, name").Table("dest").Table("src")

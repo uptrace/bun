@@ -20,6 +20,7 @@ func TestSoftDelete(t *testing.T) {
 		{run: testSoftDeleteNilModel},
 		{run: testSoftDeleteAPI},
 		{run: testSoftDeleteBulk},
+		{run: testSoftDeleteKeys},
 	}
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, test := range tests {
@@ -132,4 +133,69 @@ func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
 	count, err := db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, count)
+}
+
+func testSoftDeleteKeys(t *testing.T, db *bun.DB) {
+	if !db.Dialect().Features().Has(feature.PartialIndex) {
+		t.Skip()
+		return
+	}
+	type TeamMember struct {
+		ID        int       `bun:",pk,autoincrement"`
+		Email     string    `bun:",unique"`
+		Role      string    `bun:",unique:team_role"`
+		Team      string    `bun:",unique:team_role"`
+		DeletedAt time.Time `bun:",soft_delete"`
+	}
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*TeamMember)(nil))
+	require.NoError(t, err)
+
+	member1 := &TeamMember{
+		Email: "test1@dev",
+		Role:  "dev",
+		Team:  "team1",
+	}
+
+	_, err = db.NewInsert().Model(member1).Exec(ctx)
+	require.NoError(t, err)
+
+	member2 := &TeamMember{
+		Email: "test2@dev",
+		Role:  "dev",
+		Team:  "team1",
+	}
+	_, err = db.NewInsert().Model(member2).Exec(ctx)
+
+	//should not allow same role in same team twice
+	member3 := &TeamMember{
+		Email: "test3@dev",
+		Role:  "dev",
+		Team:  "team1",
+	}
+	_, err = db.NewInsert().Model(member3).Exec(ctx)
+	require.Error(t, err)
+
+	//should not allow same email team twice
+	member4 := &TeamMember{
+		Email: "test1@dev",
+		Role:  "lead",
+		Team:  "team3",
+	}
+	_, err = db.NewInsert().Model(member4).Exec(ctx)
+	require.Error(t, err)
+
+	_, err = db.NewDelete().Model(&TeamMember{}).Where("email = ?", "test1@dev").Exec(ctx)
+	require.NoError(t, err)
+
+	//should allow same email after previous was soft deleted
+	member5 := &TeamMember{
+		Email: "test1@dev",
+		Role:  "tester",
+		Team:  "team5",
+	}
+	_, err = db.NewInsert().Model(member5).Exec(ctx)
+	require.NoError(t, err)
+
 }
