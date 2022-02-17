@@ -353,17 +353,6 @@ func (q *InsertQuery) appendSliceValues(
 		}
 	}
 
-	for i, v := range q.extraValues {
-		if i > 0 || len(fields) > 0 {
-			b = append(b, ", "...)
-		}
-
-		b, err = v.value.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return b, nil
 }
 
