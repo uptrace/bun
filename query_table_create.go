@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 	"strconv"
 
@@ -22,6 +23,7 @@ type CreateTableQuery struct {
 	fks         []schema.QueryWithArgs
 	partitionBy schema.QueryWithArgs
 	tablespace  schema.QueryWithArgs
+	indexes     []*CreateIndexQuery
 }
 
 var _ Query = (*CreateTableQuery)(nil)
@@ -227,8 +229,21 @@ func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []b
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-
 	for _, key := range keys {
+		if q.table.SoftDeleteField != nil && q.Dialect().Features().Has(feature.PartialIndex)  {
+			keyName := fmt.Sprintf("%s_%s_unique_key", q.table.Name, key)
+			index := q.NewCreateIndex().
+				Index(keyName).
+				TableExpr(string(q.table.SQLName)).
+				Unique()
+			for _, field := range unique[key] {
+				index.Column(string(field.Name))
+			}
+			where := fmter.AppendQuery([]byte(q.table.SoftDeleteField.SQLName), " IS NULL")
+			index.Where(string(where))
+			q.indexes = append(q.indexes, index)
+			continue
+		}
 		if key == "" {
 			for _, field := range unique[key] {
 				b = q.appendUniqueConstraint(fmter, b, key, field)
@@ -297,6 +312,13 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.R
 	res, err := q.exec(ctx, q, query)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, indexQuery := range q.indexes {
+		_, err := indexQuery.Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if q.table != nil {
