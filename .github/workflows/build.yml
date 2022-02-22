@@ -47,7 +47,7 @@ jobs:
           - 53306:3306
         options: >-
           --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
       mariadb:
         image: mariadb:10.6
         env:
@@ -59,7 +59,7 @@ jobs:
           - 13306:3306
         options: >-
           --health-cmd="mariadb-admin ping" --health-interval=10s --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
       mssql2019:
         image: mcmoe/mssqldocker:v2019.CU4.0
         env:
@@ -69,10 +69,10 @@ jobs:
           MSSQL_USER: sa
           MSSQL_PASSWORD: passWORD1
         ports:
-          - 1433:1433
+          - 14339:1433
         options: >-
-          --health-cmd="/opt/mssql-tools/bin/sqlcmd -U sa -P passWORD1 -Q 'select 1' -b -o
-          /dev/null" --health-interval=10s --health-timeout=5s --health-retries=3
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S tcp:localhost,1433 -U sa -P passWORD1 -Q
+          'select 1' -b -o /dev/null" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
       - name: Set up ${{ matrix.go-version }}
@@ -90,4 +90,4 @@ jobs:
           MYSQL: user:pass@/test
           MYSQL5: user:pass@tcp(localhost:53306)/test
           MARIADB: user:pass@tcp(localhost:13306)/test
-          MSSQL2019: sqlserver://sa:passWORD1@localhost:1433?database=test
+          MSSQL2019: sqlserver://sa:passWORD1@localhost:14339?database=test
