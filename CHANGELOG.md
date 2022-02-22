@@ -1,3 +1,18 @@
+## [1.0.23](https://github.com/uptrace/bun/compare/v1.0.22...v1.0.23) (2022-02-22)
+
+
+### Bug Fixes
+
+* append slice values ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
+* don't automatically set pk, nullzero, and autoincrement options ([519a0df](https://github.com/uptrace/bun/commit/519a0df9707de01a418aba0d6b7482cfe4c9a532))
+
+
+### Features
+
+* add CreateTableQuery.DetectForeignKeys ([a958fcb](https://github.com/uptrace/bun/commit/a958fcbab680b0c5ad7980f369c7b73f7673db87))
+
+
+
 ## [1.0.22](https://github.com/uptrace/bun/compare/v1.0.21...v1.0.22) (2022-01-28)
 
 ### Bug Fixes
