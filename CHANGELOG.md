@@ -1,3 +1,20 @@
+# [1.1.0-beta.1](https://github.com/uptrace/bun/compare/v1.0.22...v1.1.0-beta.1) (2022-02-22)
+
+
+### Bug Fixes
+
+* append slice values ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
+* check for nils when appeding driver.Value ([7bb1640](https://github.com/uptrace/bun/commit/7bb1640a00fceca1e1075fe6544b9a4842ab2b26))
+* cleanup soft deletes for mssql ([e72e2c5](https://github.com/uptrace/bun/commit/e72e2c5d0a85f3d26c3fa22c7284c2de1dcfda8e))
+* **dbfixture:** apply cascade option. Fixes [#447](https://github.com/uptrace/bun/issues/447) ([d32d988](https://github.com/uptrace/bun/commit/d32d98840bc23e74c836f8192cb4bc9529aa9233))
+
+
+### Features
+
+* add CreateTableQuery.DetectForeignKeys ([a958fcb](https://github.com/uptrace/bun/commit/a958fcbab680b0c5ad7980f369c7b73f7673db87))
+
+
+
 ## [1.0.22](https://github.com/uptrace/bun/compare/v1.0.21...v1.0.22) (2022-01-28)
 
 ### Bug Fixes
