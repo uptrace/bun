@@ -22,3 +22,7 @@ TAG=v1.0.0 ./scripts/release.sh
 ```shell
 TAG=v1.0.0 ./scripts/tag.sh
 ```
+
+## Documentation
+
+To contribute to the docs visit https://github.com/go-bun/bun-docs

@@ -1,0 +1,1 @@
+INSERT INTO `models` (`id`, `slice`) VALUES (123, '[]')

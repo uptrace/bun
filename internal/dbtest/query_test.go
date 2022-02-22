@@ -662,6 +662,26 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(new(Model))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			models := []Model{
+				{42, "hello"},
+				{43, "foo"},
+			}
+			return db.NewInsert().
+				Model(&models).
+				Value("extra", "?", "custom")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Item struct {
+				Foo string
+				Bar string
+			}
+			type Model struct {
+				ID    int64
+				Slice []Item `bun:",nullzero"`
+			}
+			return db.NewInsert().Model(&Model{ID: 123, Slice: make([]Item, 0)})
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?'`)
