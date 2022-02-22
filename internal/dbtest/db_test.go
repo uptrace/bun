@@ -269,6 +269,7 @@ func TestDB(t *testing.T) {
 		{testEmbedModelValue},
 		{testEmbedModelPointer},
 		{testJSONMarshaler},
+		{testNilDriverValue},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1283,4 +1284,31 @@ func testJSONMarshaler(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(&m2).Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "bar", m2.Field.Foo)
+}
+
+type DriverValue struct {
+	s string
+}
+
+var _ driver.Valuer = (*DriverValue)(nil)
+
+func (v *DriverValue) Value() (driver.Value, error) {
+	return v.s, nil
+}
+
+func testNilDriverValue(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Value *DriverValue `bun:"type:varchar(100)"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Model{}).Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Model{Value: &DriverValue{s: "hello"}}).Exec(ctx)
+	require.NoError(t, err)
 }
