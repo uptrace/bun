@@ -229,8 +229,10 @@ func (t *Table) initFields() {
 		switch pk.IndirectType.Kind() {
 		case reflect.Int, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint32, reflect.Uint64:
-			internal.Warn.Printf("missing `bun:\",autoincrement\" on %s.%s field`",
-				t.TypeName, pk.GoName)
+			if !pk.Tag.HasOption("autoincrement") {
+				internal.Warn.Printf("missing `bun:\",autoincrement\" on %s.%s field`",
+					t.TypeName, pk.GoName)
+			}
 			pk.AutoIncrement = true
 		}
 	}
