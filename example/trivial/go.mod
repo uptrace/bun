@@ -16,9 +16,13 @@ replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
 replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialect
 
+replace github.com/uptrace/bun/dialect/mssqldialect => ../../dialect/mssqldialect
+
 require (
+	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/uptrace/bun v1.0.22
+	github.com/uptrace/bun/dialect/mssqldialect v0.0.0-00010101000000-000000000000
 	github.com/uptrace/bun/dialect/mysqldialect v1.0.22
 	github.com/uptrace/bun/dialect/pgdialect v1.0.22
 	github.com/uptrace/bun/dialect/sqlitedialect v1.0.22
@@ -29,6 +33,8 @@ require (
 
 require (
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
+	github.com/golang-sql/sqlexp v0.0.0-20170517235910-f1bb20e5a188 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
