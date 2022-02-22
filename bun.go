@@ -81,6 +81,11 @@ func SetLogger(logger internal.Logging) {
 	internal.Logger = logger
 }
 
+// SetWarnLogger overwriters default Bun warn logger.
+func SetWarnLogger(logger internal.Logging) {
+	internal.Warn = logger
+}
+
 //------------------------------------------------------------------------------
 
 type InValues struct {

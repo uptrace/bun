@@ -31,9 +31,9 @@ func TestSoftDelete(t *testing.T) {
 }
 
 type Video struct {
-	ID        int64
+	ID        int64 `bun:",pk"`
 	Name      string
-	DeletedAt time.Time `bun:",soft_delete"`
+	DeletedAt time.Time `bun:",soft_delete,nullzero"`
 }
 
 func testSoftDeleteNilModel(t *testing.T, db *bun.DB) {
