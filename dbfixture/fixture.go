@@ -281,6 +281,7 @@ func (f *Fixture) dropTable(ctx context.Context, table *schema.Table) error {
 	if _, err := f.db.NewDropTable().
 		Model(table.ZeroIface).
 		IfExists().
+		Cascade().
 		Exec(ctx); err != nil {
 		return err
 	}
@@ -302,6 +303,7 @@ func (f *Fixture) truncateTable(ctx context.Context, table *schema.Table) error 
 
 	if _, err := f.db.NewTruncateTable().
 		Model(table.ZeroIface).
+		Cascade().
 		Exec(ctx); err != nil {
 		return err
 	}
