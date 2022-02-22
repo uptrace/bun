@@ -1,3 +1,12 @@
+## [1.0.24](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.24) (2022-02-22)
+
+
+### Bug Fixes
+
+* fix missing autoincrement warning ([3bc9c72](https://github.com/uptrace/bun/commit/3bc9c721e1c1c5104c256a0c01c4525df6ecefc2))
+
+
+
 ## [1.0.23](https://github.com/uptrace/bun/compare/v1.0.22...v1.0.23) (2022-02-22)
 
 ### Deprecated
