@@ -7,6 +7,12 @@ cd internal/dbtest
 ./test.sh
 ```
 
+You can also run tests and print all executed queries to stdout:
+
+```shell
+BUNDEBUG=2 TZ= go test
+```
+
 ## Releasing
 
 1. Run `release.sh` script which updates versions in go.mod files and pushes a new branch to GitHub:
