@@ -4,6 +4,8 @@
 
 - Added [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql) support as a 4th fully supported
   DBMS.
+- Added `SetColumn("col_name", "upper(?)", "hello")` in addition to
+  `Set("col_name = upper(?)", "hello")` which works for all 4 supported DBMS.
 
 ### Breaking changes
 
