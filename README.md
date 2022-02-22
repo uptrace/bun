@@ -1,20 +1,14 @@
-<p align="center">
-  <a href="https://github.com/uptrace/uptrace">
-    <img src="https://raw.githubusercontent.com/uptrace/roadmap/master/banner1.png" alt="All-in-one tool to optimize performance and monitor errors & logs">
-  </a>
-</p>
-
-# Simple and performant client for PostgreSQL, MySQL, and SQLite
+# Simple and performant client for PostgreSQL, MySQL, MSSQL, and SQLite
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
 [![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 
-**Status**: API freeze (stable release). Note that all sub-packages (mainly extra/\* packages) are
-not part of the API freeze and are developed independently. You can think of them as of 3rd party
-packages that share one repo with the core.
+Bun is brought to you by :star: [**uptrace/uptrace**](https://github.com/uptrace/uptrace). Uptrace
+is an open source and blazingly fast **distributed tracing** backend powered by OpenTelemetry and
+ClickHouse. Give it a star as well!
 
-Main features are:
+## Features
 
 - Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
