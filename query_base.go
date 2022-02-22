@@ -769,10 +769,13 @@ func (q *whereBaseQuery) appendWhere(
 		if len(b) > startLen {
 			b = append(b, " AND "...)
 		}
+
 		if withAlias {
 			b = append(b, q.tableModel.Table().SQLAlias...)
-			b = append(b, '.')
+		} else {
+			b = append(b, q.tableModel.Table().SQLName...)
 		}
+		b = append(b, '.')
 
 		field := q.tableModel.Table().SoftDeleteField
 		b = append(b, field.SQLName...)

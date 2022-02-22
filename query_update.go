@@ -92,13 +92,21 @@ func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
 	return q
 }
 
+func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}) *UpdateQuery {
+	if q.db.HasFeature(feature.UpdateMultiTable) {
+		column = q.table.Alias + "." + column
+	}
+	q.addSet(schema.SafeQuery(column+" = "+query, args))
+	return q
+}
+
 // Value overwrites model value for the column.
-func (q *UpdateQuery) Value(column string, expr string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Value(column string, query string, args ...interface{}) *UpdateQuery {
 	if q.table == nil {
 		q.err = errNilModel
 		return q
 	}
-	q.addValue(q.table, column, expr, args)
+	q.addValue(q.table, column, query, args)
 	return q
 }
 
@@ -207,18 +215,8 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 			return nil, err
 		}
 	}
-	if fmter.Dialect().Features().Has(feature.UpdateFromTable) && q.table != nil {
-		if !q.hasMultiTables() {
-			b = append(b, " FROM "...)
-		} else {
-			b = append(b, " , "...)
-		}
-		b = append(b, q.table.SQLName...)
-		b = append(b, " AS "...)
-		b = append(b, q.table.SQLAlias...)
-	}
 
-	b, err = q.mustAppendWhere(fmter, b, true)
+	b, err = q.mustAppendWhere(fmter, b, q.hasTableAlias(fmter))
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +355,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		Model(model).
 		TableExpr("_data").
 		Set(set).
-		Where(q.updateSliceWhere(model))
+		Where(q.updateSliceWhere(q.db.fmter, model))
 }
 
 func (q *UpdateQuery) updateSliceSet(
@@ -384,13 +382,17 @@ func (q *UpdateQuery) updateSliceSet(
 	return internal.String(b), nil
 }
 
-func (db *UpdateQuery) updateSliceWhere(model *sliceTableModel) string {
+func (q *UpdateQuery) updateSliceWhere(fmter schema.Formatter, model *sliceTableModel) string {
 	var b []byte
 	for i, pk := range model.table.PKs {
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = append(b, model.table.SQLAlias...)
+		if q.hasTableAlias(fmter) {
+			b = append(b, model.table.SQLAlias...)
+		} else {
+			b = append(b, model.table.SQLName...)
+		}
 		b = append(b, '.')
 		b = append(b, pk.SQLName...)
 		b = append(b, " = _data."...)
@@ -469,14 +471,18 @@ func (q *UpdateQuery) afterUpdateHook(ctx context.Context) error {
 	return nil
 }
 
-// FQN returns a fully qualified column name. For MySQL, it returns the column name with
-// the table alias. For other RDBMS, it returns just the column name.
+// FQN returns a fully qualified column name, for example, table_name.column_name or
+// table_alias.column_alias.
 func (q *UpdateQuery) FQN(column string) Ident {
 	if q.table == nil {
-		panic("UpdateQuery.FQN requires a model")
+		panic("UpdateQuery.SetName requires a model")
 	}
-	if q.db.HasFeature(feature.UpdateMultiTable) {
+	if q.hasTableAlias(q.db.fmter) {
 		return Ident(q.table.Alias + "." + column)
 	}
-	return Ident(column)
+	return Ident(q.table.Name + "." + column)
+}
+
+func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
+	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
