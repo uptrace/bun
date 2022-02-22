@@ -17,10 +17,10 @@ type Model struct {
 }
 ```
 
-Bun [v1.0.24](#1024-2022-02-22) can help you find models with missing options by printing warnings.
-You are recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
+Bun [v1.0.24](#1024-2022-02-22) prints warnings for models with missing options so you are
+recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
 
-- Bun no longer automatically marks `soft_delete` fields as `nullzero`.
+- Also, Bun no longer adds `nullzero` option to `soft_delete` fields.
 
 - Removed `nopk` and `allowzero` options.
 
