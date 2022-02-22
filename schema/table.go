@@ -204,17 +204,6 @@ func (t *Table) initFields() {
 	t.Fields = make([]*Field, 0, t.Type.NumField())
 	t.FieldMap = make(map[string]*Field, t.Type.NumField())
 	t.addFields(t.Type, "", nil)
-
-	if len(t.PKs) == 0 {
-		for _, name := range []string{"id", "uuid", "pk_" + t.ModelName} {
-			if field, ok := t.FieldMap[name]; ok {
-				field.markAsPK()
-				t.PKs = []*Field{field}
-				t.DataFields = removeField(t.DataFields, field)
-				break
-			}
-		}
-	}
 }
 
 func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
@@ -355,9 +344,13 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 
 	field.NotNull = tag.HasOption("notnull")
 	field.NullZero = tag.HasOption("nullzero")
-	field.AutoIncrement = tag.HasOption("autoincrement")
 	if tag.HasOption("pk") {
-		field.markAsPK()
+		field.IsPK = true
+		field.NotNull = true
+	}
+	if tag.HasOption("autoincrement") {
+		field.AutoIncrement = true
+		field.NullZero = true
 	}
 
 	if v, ok := tag.Options["unique"]; ok {
@@ -403,20 +396,8 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 	}
 
 	if _, ok := tag.Options["soft_delete"]; ok {
-		field.NullZero = true
 		t.SoftDeleteField = field
 		t.UpdateSoftDeleteField = softDeleteFieldUpdater(field)
-	}
-
-	// Check this in the end to undo NullZero.
-	if tag.HasOption("allowzero") {
-		if tag.HasOption("nullzero") {
-			internal.Warn.Printf(
-				"%s.%s: nullzero and allowzero options are mutually exclusive",
-				t.TypeName, f.Name,
-			)
-		}
-		field.NullZero = false
 	}
 
 	return field
@@ -867,7 +848,6 @@ func isKnownFieldOption(name string) bool {
 		"msgpack",
 		"notnull",
 		"nullzero",
-		"allowzero",
 		"default",
 		"unique",
 		"soft_delete",

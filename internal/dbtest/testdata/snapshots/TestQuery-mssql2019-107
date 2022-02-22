@@ -1,0 +1,1 @@
+INSERT INTO "models" ("str", "extra") OUTPUT INSERTED."id" VALUES ('hello', 'custom'), ('foo', 'custom')

@@ -41,14 +41,14 @@ func TestQuery(t *testing.T) {
 		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
 
 		ID        int64     `bun:",pk,autoincrement"`
-		DeletedAt time.Time `bun:",soft_delete"`
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
 	}
 
 	type SoftDelete2 struct {
 		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
 
 		ID        int64     `bun:",pk,autoincrement"`
-		DeletedAt time.Time `bun:",soft_delete,allowzero"`
+		DeletedAt time.Time `bun:",soft_delete"`
 	}
 
 	queries := []func(db *bun.DB) schema.QueryAppender{
@@ -476,7 +476,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID int `bun:",pk,allowzero"`
+				ID int `bun:",pk"`
 			}
 			return db.NewInsert().Model(new(Model))
 		},
@@ -555,7 +555,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID int64 `bun:",allowzero"`
+				ID int64
 			}
 			return db.NewInsert().Model(new(Model))
 		},
