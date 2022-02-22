@@ -1,19 +1,85 @@
 # [1.1.0-beta.1](https://github.com/uptrace/bun/compare/v1.0.22...v1.1.0-beta.1) (2022-02-22)
 
+### Features
+
+- Added [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql) support as a 4th fully supported
+  DBMS.
+
+### Breaking changes
+
+- Bun no longer automatically marks some fields like `ID int64` as `pk` and `autoincrement`. You
+  need to manually add those options:
+
+```diff
+type Model struct {
+-	 ID int64
++	 ID int64 `bun:",pk,autoincrement"`
+}
+```
+
+Bun v1.0.24 can help you find models with missing options by printing warnings. You are recommended
+to upgrade to v1.0.24 before upgrading to v1.1.x.
+
+- Bun no longer automatically marks `soft_delete` fields as `nullzero`.
+
+- Removed `nopk` and `allowzero` options.
 
 ### Bug Fixes
 
-* append slice values ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
-* check for nils when appeding driver.Value ([7bb1640](https://github.com/uptrace/bun/commit/7bb1640a00fceca1e1075fe6544b9a4842ab2b26))
-* cleanup soft deletes for mssql ([e72e2c5](https://github.com/uptrace/bun/commit/e72e2c5d0a85f3d26c3fa22c7284c2de1dcfda8e))
-* **dbfixture:** apply cascade option. Fixes [#447](https://github.com/uptrace/bun/issues/447) ([d32d988](https://github.com/uptrace/bun/commit/d32d98840bc23e74c836f8192cb4bc9529aa9233))
+- append slice values
+  ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
+- check for nils when appeding driver.Value
+  ([7bb1640](https://github.com/uptrace/bun/commit/7bb1640a00fceca1e1075fe6544b9a4842ab2b26))
+- cleanup soft deletes for mssql
+  ([e72e2c5](https://github.com/uptrace/bun/commit/e72e2c5d0a85f3d26c3fa22c7284c2de1dcfda8e))
+- **dbfixture:** apply cascade option. Fixes [#447](https://github.com/uptrace/bun/issues/447)
+  ([d32d988](https://github.com/uptrace/bun/commit/d32d98840bc23e74c836f8192cb4bc9529aa9233))
 
+## [1.0.24](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.24) (2022-02-22)
+
+### Bug Fixes
+
+### Deprecated
+
+In the comming v1.1.x release, Bun will stop automatically adding `,pk,autoincrement` options on
+`ID int64/int32` fields. This version (v1.0.23) only prints a warning when it encounters such
+fields, but the code will continue working as before.
+
+To fix warnings, add missing options:
+
+```diff
+type Model struct {
+-	 ID int64
++	 ID int64 `bun:",pk,autoincrement"`
+}
+```
+
+To silence warnings:
+
+```go
+bun.SetWarnLogger(log.New(ioutil.Discard, "", log.LstdFlags))
+```
+
+Bun will also print a warning on [soft delete](https://bun.uptrace.dev/guide/soft-deletes.html)
+fields without a `,nullzero` option. You can fix the warning by adding missing `,nullzero` or
+`,allowzero` options.
+
+In v1.1.x, such options as `,nopk` and `,allowzero` will not be necessary and will be removed.
+
+### Bug Fixes
+
+- fix missing autoincrement warning
+  ([3bc9c72](https://github.com/uptrace/bun/commit/3bc9c721e1c1c5104c256a0c01c4525df6ecefc2))
+
+* append slice values
+  ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
+* don't automatically set pk, nullzero, and autoincrement options
+  ([519a0df](https://github.com/uptrace/bun/commit/519a0df9707de01a418aba0d6b7482cfe4c9a532))
 
 ### Features
 
-* add CreateTableQuery.DetectForeignKeys ([a958fcb](https://github.com/uptrace/bun/commit/a958fcbab680b0c5ad7980f369c7b73f7673db87))
-
-
+- add CreateTableQuery.DetectForeignKeys
+  ([a958fcb](https://github.com/uptrace/bun/commit/a958fcbab680b0c5ad7980f369c7b73f7673db87))
 
 ## [1.0.22](https://github.com/uptrace/bun/compare/v1.0.21...v1.0.22) (2022-01-28)
 
