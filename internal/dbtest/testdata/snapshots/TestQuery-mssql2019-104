@@ -1,0 +1,1 @@
+UPDATE "models" SET int = NULL, uint = NULL, str = NULL, time = NULL FROM "models" AS "model" WHERE ("model"."id" = NULL)

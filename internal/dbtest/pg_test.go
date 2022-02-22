@@ -21,7 +21,7 @@ import (
 
 func TestPGArray(t *testing.T) {
 	type Model struct {
-		ID     int64
+		ID     int64     `bun:",pk,autoincrement"`
 		Array1 []string  `bun:",array"`
 		Array2 *[]string `bun:",array"`
 		Array3 *[]string `bun:",array"`
@@ -96,7 +96,7 @@ func (h Hash) Value() (driver.Value, error) {
 
 func TestPGArrayValuer(t *testing.T) {
 	type Model struct {
-		ID    int64
+		ID    int64  `bun:",pk,autoincrement"`
 		Array []Hash `bun:",array"`
 	}
 
@@ -122,14 +122,14 @@ func TestPGArrayValuer(t *testing.T) {
 type Recipe struct {
 	bun.BaseModel `bun:"?tenant.recipes"`
 
-	ID          int
+	ID          int           `bun:",pk,autoincrement"`
 	Ingredients []*Ingredient `bun:"m2m:?tenant.ingredients_recipes"`
 }
 
 type Ingredient struct {
 	bun.BaseModel `bun:"?tenant.ingredients"`
 
-	ID      int
+	ID      int       `bun:",pk,autoincrement"`
 	Recipes []*Recipe `bun:"m2m:?tenant.ingredients_recipes"`
 }
 
@@ -187,7 +187,7 @@ func TestPGMultiTenant(t *testing.T) {
 
 func TestPGInsertNoRows(t *testing.T) {
 	type User struct {
-		ID int64
+		ID int64 `bun:",pk,autoincrement"`
 	}
 
 	db := pg(t)
@@ -287,7 +287,7 @@ func TestPGTransaction(t *testing.T) {
 	db := pg(t)
 
 	type Model struct {
-		ID int64
+		ID int64 `bun:",pk,autoincrement"`
 	}
 
 	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
@@ -316,7 +316,7 @@ func TestPGScanWithoutResult(t *testing.T) {
 	defer db.Close()
 
 	type Model struct {
-		ID int64
+		ID int64 `bun:",pk,autoincrement"`
 	}
 
 	err := db.ResetModel(ctx, (*Model)(nil))
@@ -428,7 +428,7 @@ func TestPGTimetz(t *testing.T) {
 
 func TestPGOnConflictDoUpdate(t *testing.T) {
 	type Model struct {
-		ID        int64
+		ID        int64 `bun:",pk,autoincrement"`
 		UpdatedAt time.Time
 	}
 

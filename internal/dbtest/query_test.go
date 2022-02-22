@@ -21,17 +21,17 @@ func init() {
 
 func TestQuery(t *testing.T) {
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk,autoincrement"`
 		Str string
 	}
 
 	type User struct {
-		ID   int64
+		ID   int64 `bun:",pk,autoincrement"`
 		Name string
 	}
 
 	type Story struct {
-		ID     int64
+		ID     int64 `bun:",pk,autoincrement"`
 		Name   string
 		UserID int64
 		User   *User `bun:"rel:belongs-to"`
@@ -40,14 +40,14 @@ func TestQuery(t *testing.T) {
 	type SoftDelete1 struct {
 		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
 
-		ID        int64
+		ID        int64     `bun:",pk,autoincrement"`
 		DeletedAt time.Time `bun:",soft_delete"`
 	}
 
 	type SoftDelete2 struct {
 		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
 
-		ID        int64
+		ID        int64     `bun:",pk,autoincrement"`
 		DeletedAt time.Time `bun:",soft_delete,allowzero"`
 	}
 
@@ -234,7 +234,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID     uint64
+				ID     uint64 `bun:",pk,autoincrement"`
 				Struct struct{}
 				Map    map[string]interface{}
 				Slice  []string
@@ -436,7 +436,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID   string `bun:",pk"`
+				ID   string `bun:",pk,autoincrement"`
 				Name string
 			}
 			return db.NewCreateTable().
@@ -499,7 +499,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID   int64
+				ID   int64 `bun:",pk,autoincrement"`
 				Str1 string
 				Str2 string
 			}
@@ -567,7 +567,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID   int64
+				ID   int64 `bun:",pk,autoincrement"`
 				Time time.Time
 			}
 			return db.NewInsert().Model(&Model{ID: 123, Time: time.Unix(0, 0)})
@@ -635,7 +635,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				ID   int64
+				ID   int64     `bun:",pk,autoincrement"`
 				Int  int64     `bun:",nullzero"`
 				Uint uint64    `bun:",nullzero"`
 				Str  string    `bun:",nullzero"`

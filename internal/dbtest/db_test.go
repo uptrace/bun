@@ -16,6 +16,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/dialect/mssqldialect"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -23,6 +24,7 @@ import (
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/require"
@@ -31,21 +33,23 @@ import (
 var ctx = context.TODO()
 
 const (
-	pgName      = "pg"
-	pgxName     = "pgx"
-	mysql5Name  = "mysql5"
-	mysql8Name  = "mysql8"
-	mariadbName = "mariadb"
-	sqliteName  = "sqlite"
+	pgName        = "pg"
+	pgxName       = "pgx"
+	mysql5Name    = "mysql5"
+	mysql8Name    = "mysql8"
+	mariadbName   = "mariadb"
+	sqliteName    = "sqlite"
+	mssql2019Name = "mssql2019"
 )
 
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
-	pgName:      pg,
-	pgxName:     pgx,
-	mysql5Name:  mysql5,
-	mysql8Name:  mysql8,
-	mariadbName: mariadb,
-	sqliteName:  sqlite,
+	pgName:        pg,
+	pgxName:       pgx,
+	mysql5Name:    mysql5,
+	mysql8Name:    mysql8,
+	mariadbName:   mariadb,
+	sqliteName:    sqlite,
+	mssql2019Name: mssql2019,
 }
 
 func pg(tb testing.TB) *bun.DB {
@@ -180,6 +184,29 @@ func sqlite(tb testing.TB) *bun.DB {
 	return db
 }
 
+func mssql2019(tb testing.TB) *bun.DB {
+	dsn := os.Getenv("MSSQL2019")
+	if dsn == "" {
+		dsn = "sqlserver://sa:passWORD1@localhost:14339?database=test"
+	}
+
+	sqldb, err := sql.Open("sqlserver", dsn)
+	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		require.NoError(tb, sqldb.Close())
+	})
+
+	db := bun.NewDB(sqldb, mssqldialect.New())
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
+
+	require.Equal(tb, "DB<dialect=mssql>", db.String())
+
+	return db
+}
+
 func testEachDB(t *testing.T, f func(t *testing.T, dbName string, db *bun.DB)) {
 	for dbName, newDB := range allDBs {
 		t.Run(dbName, func(t *testing.T) {
@@ -270,20 +297,17 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, 10, num)
 
-	err = db.NewSelect().TableExpr("(SELECT 10) AS t").Where("FALSE").Scan(ctx, &num)
+	err = db.NewSelect().
+		ColumnExpr("t.num").
+		TableExpr("(SELECT 10 AS num) AS t").
+		Where("1 = 2").
+		Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	var str string
 	err = db.NewSelect().ColumnExpr("?", "\\\"'hello\n%_").Scan(ctx, &str)
 	require.NoError(t, err)
 	require.Equal(t, "\\\"'hello\n%_", str)
-
-	var flag bool
-	err = db.NewSelect().
-		ColumnExpr("EXISTS (?)", db.NewSelect().ColumnExpr("1")).
-		Scan(ctx, &flag)
-	require.NoError(t, err)
-	require.Equal(t, true, flag)
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
@@ -370,7 +394,7 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	require.Equal(t, 10, model.Num)
 	require.Equal(t, "hello", model.Str)
 
-	err = db.NewSelect().TableExpr("(SELECT 42) AS t").Where("FALSE").Scan(ctx, model)
+	err = db.NewSelect().TableExpr("(SELECT 42 AS num) AS t").Where("1 = 2").Scan(ctx, model)
 	require.Equal(t, sql.ErrNoRows, err)
 
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
@@ -655,7 +679,7 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		_, err := tx.NewUpdate().Model((*Counter)(nil)).
 			Set("count = count + 1").
-			Where("TRUE").
+			Where("1 = 1").
 			Exec(ctx)
 		return err
 	})
@@ -684,7 +708,7 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 
 func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int                    `bun:",pk,autoincrement"`
 		Attrs map[string]interface{} `bun:"type:json"`
 	}
 
@@ -718,7 +742,7 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 
 func testJSONInterface(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int         `bun:",pk,autoincrement"`
 		Value interface{} `bun:"type:json"`
 	}
 
@@ -762,7 +786,7 @@ func (v *JSONValue) Value() (driver.Value, error) {
 
 func testJSONValuer(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int       `bun:",pk,autoincrement"`
 		Value JSONValue `bun:"type:json"`
 	}
 
@@ -794,12 +818,12 @@ func testSelectBool(t *testing.T, db *bun.DB) {
 
 func testFKViolation(t *testing.T, db *bun.DB) {
 	type Deck struct {
-		ID     int
+		ID     int `bun:",pk,autoincrement"`
 		UserID int
 	}
 
 	type User struct {
-		ID int
+		ID int `bun:",pk,autoincrement"`
 	}
 
 	if db.Dialect().Name() == dialect.SQLite {
@@ -846,12 +870,12 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 
 func testWithForeignKeys(t *testing.T, db *bun.DB) {
 	type User struct {
-		ID   int    `bun:",pk"`
+		ID   int    `bun:",pk,autoincrement"`
 		Type string `bun:",pk"`
 		Name string
 	}
 	type Deck struct {
-		ID       int `bun:",pk"`
+		ID       int `bun:",pk,autoincrement"`
 		UserID   int
 		UserType string
 		User     *User `bun:"rel:belongs-to,join:user_id=id,join:user_type=type"`
@@ -959,7 +983,7 @@ func testInterfaceJSON(t *testing.T, db *bun.DB) {
 
 func testScanRawMessage(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int64
+		ID    int64 `bun:",pk,autoincrement"`
 		Value json.RawMessage
 	}
 
@@ -1022,7 +1046,7 @@ func testExists(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 0").Exists(ctx)
+	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 2").Exists(ctx)
 	require.NoError(t, err)
 	require.False(t, exists)
 }
@@ -1046,7 +1070,7 @@ func testModelNonPointer(t *testing.T, db *bun.DB) {
 
 func testBinaryData(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID   int64
+		ID   int64 `bun:",pk,autoincrement"`
 		Data []byte
 	}
 
@@ -1065,8 +1089,12 @@ func testBinaryData(t *testing.T, db *bun.DB) {
 }
 
 func testUpsert(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip("mssql")
+	}
+
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk,autoincrement"`
 		Str string
 	}
 
@@ -1103,7 +1131,7 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 	}
 
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk,autoincrement"`
 		Str string
 	}
 
@@ -1121,17 +1149,17 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 
 	_, err = db.NewUpdate().
 		With("src", selq).
-		TableExpr("models AS dest").
+		TableExpr("models").
 		Table("src").
-		Set("? = src.str", db.UpdateFQN("dest", "str")).
-		Where("dest.id = src.id").
+		Set("? = src.str", db.UpdateFQN("models", "str")).
+		Where("models.id = src.id").
 		Exec(ctx)
 	require.NoError(t, err)
 }
 
 func testTxScanAndCount(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk,autoincrement"`
 		Str string
 	}
 

@@ -3,7 +3,7 @@ package internal
 type Flag uint64
 
 func (flag Flag) Has(other Flag) bool {
-	return flag&other == other
+	return flag&other != 0
 }
 
 func (flag Flag) Set(other Flag) Flag {

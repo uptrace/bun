@@ -59,6 +59,8 @@ func DiscoverSQLType(typ reflect.Type) string {
 		return sqltype.BigInt
 	case nullStringType:
 		return sqltype.VarChar
+	case jsonRawMessageType:
+		return sqltype.JSON
 	}
 
 	switch typ.Kind() {

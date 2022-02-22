@@ -187,8 +187,10 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if fmter.HasFeature(feature.UpdateMultiTable) {
 		b, err = q.appendTablesWithAlias(fmter, b)
-	} else {
+	} else if fmter.HasFeature(feature.UpdateTableAlias) {
 		b, err = q.appendFirstTableWithAlias(fmter, b)
+	} else {
+		b, err = q.appendFirstTable(fmter, b)
 	}
 	if err != nil {
 		return nil, err
@@ -205,13 +207,24 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 			return nil, err
 		}
 	}
+	if fmter.Dialect().Features().Has(feature.UpdateFromTable) && q.table != nil {
+		if !q.hasMultiTables() {
+			b = append(b, " FROM "...)
+		} else {
+			b = append(b, " , "...)
+		}
+		b = append(b, q.table.SQLName...)
+		b = append(b, " AS "...)
+		b = append(b, q.table.SQLAlias...)
+	}
 
 	b, err = q.mustAppendWhere(fmter, b, true)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(q.returning) > 0 {
+	if q.hasFeature(feature.Returning) && q.hasReturning() {
+		b = append(b, " RETURNING "...)
 		b, err = q.appendReturning(fmter, b)
 		if err != nil {
 			return nil, err

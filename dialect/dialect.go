@@ -10,6 +10,8 @@ func (n Name) String() string {
 		return "sqlite"
 	case MySQL:
 		return "mysql"
+	case MSSQL:
+		return "mssql"
 	default:
 		return "invalid"
 	}
@@ -20,4 +22,5 @@ const (
 	PG
 	SQLite
 	MySQL
+	MSSQL
 )

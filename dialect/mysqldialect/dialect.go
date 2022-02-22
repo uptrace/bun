@@ -42,8 +42,10 @@ func New() *Dialect {
 		feature.UpdateMultiTable |
 		feature.ValuesRow |
 		feature.TableTruncate |
+		feature.TableNotExists |
 		feature.InsertIgnore |
-		feature.InsertOnDuplicateKey
+		feature.InsertOnDuplicateKey |
+		feature.SelectExists
 	return d
 }
 
@@ -64,7 +66,7 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	version = semver.MajorMinor("v" + cleanupVersion(version))
 	if semver.Compare(version, "v8.0") >= 0 {
-		d.features |= feature.CTE | feature.DeleteTableAlias
+		d.features |= feature.CTE | feature.WithValues | feature.DeleteTableAlias
 	}
 }
 

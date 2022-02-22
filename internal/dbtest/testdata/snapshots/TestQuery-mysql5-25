@@ -1,1 +1,1 @@
-WITH `src` (`id`, `str`) AS (VALUES ROW(42, 'hello'), ROW(43, 'world')) INSERT INTO dest SELECT * FROM src
+WITH `src` AS (SELECT * FROM (VALUES ROW(42, 'hello'), ROW(43, 'world')) AS t (`id`, `str`)) INSERT INTO dest SELECT * FROM src

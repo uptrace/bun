@@ -105,7 +105,7 @@ func (q *ValuesQuery) AppendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 }
 
 func (q *ValuesQuery) Operation() string {
-	return "SELECT"
+	return "VALUES"
 }
 
 func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {

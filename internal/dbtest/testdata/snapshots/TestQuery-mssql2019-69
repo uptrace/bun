@@ -1,0 +1,1 @@
+WITH "_data" AS (SELECT * FROM (VALUES (42, 'hello'), (43, 'world')) AS t ("id", "str")) UPDATE "models" SET "str" = _data."str" FROM _data , "models" AS "model" WHERE ("model"."id" = _data."id")

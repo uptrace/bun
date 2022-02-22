@@ -1,0 +1,1 @@
+UPDATE "soft_deletes" SET "deleted_at" = [TIME] FROM "soft_deletes" AS "soft_delete" WHERE "soft_delete"."deleted_at" = '0001-01-01 00:00:00' AND ("soft_delete"."id" = NULL)

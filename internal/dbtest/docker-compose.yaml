@@ -56,3 +56,18 @@ services:
       timeout: 5s
       interval: 10s
       retries: 3
+  mssql:
+    image: mcmoe/mssqldocker:v2019.CU4.0
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=passWORD1
+      - MSSQL_DB=test
+      - MSSQL_USER=sa
+      - MSSQL_PASSWORD=passWORD1
+    ports:
+      - 14339:1433
+    healthcheck:
+      test: ['CMD', 'ping']
+      timeout: 5s
+      interval: 10s
+      retries: 3

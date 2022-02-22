@@ -1,0 +1,1 @@
+UPDATE "models" SET "str" = 'hello' FROM "models" AS "model" WHERE ("model"."id" = 42)

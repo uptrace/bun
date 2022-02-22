@@ -33,16 +33,20 @@ func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
+		feature.WithValues |
 		feature.Returning |
 		feature.InsertReturning |
 		feature.DefaultPlaceholder |
 		feature.DoubleColonCast |
 		feature.InsertTableAlias |
+		feature.UpdateTableAlias |
 		feature.DeleteTableAlias |
 		feature.TableCascade |
 		feature.TableIdentity |
 		feature.TableTruncate |
-		feature.InsertOnConflict
+		feature.TableNotExists |
+		feature.InsertOnConflict |
+		feature.SelectExists
 	return d
 }
 

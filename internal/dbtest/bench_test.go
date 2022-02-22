@@ -11,7 +11,7 @@ import (
 )
 
 type Bench struct {
-	ID        int64
+	ID        int64 `bun:",pk,autoincrement"`
 	Name      string
 	CreatedAt time.Time
 }

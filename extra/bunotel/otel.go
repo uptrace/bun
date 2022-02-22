@@ -177,6 +177,8 @@ func dbSystem(db *bun.DB) attribute.KeyValue {
 		return semconv.DBSystemMySQL
 	case dialect.SQLite:
 		return semconv.DBSystemSqlite
+	case dialect.MSSQL:
+		return semconv.DBSystemMSSQL
 	default:
 		return attribute.KeyValue{}
 	}
