@@ -18,6 +18,7 @@ Main features are:
 
 - Works with [PostgreSQL](https://bun.uptrace.dev/guide/drivers.html#postgresql),
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
+  [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
 - [Selecting](/example/basic/) into scalars, structs, maps, slices of maps/structs/scalars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/query-insert.html).

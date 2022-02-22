@@ -239,12 +239,10 @@ func testBulkUpdate(t *testing.T, db *bun.DB) {
 		Model((*Book)(nil)).
 		Table("_data").
 		Apply(func(q *bun.UpdateQuery) *bun.UpdateQuery {
-			return q.Set(
-				"? = UPPER(book.title)",
-				q.FQN("title"),
-			)
+			return q.
+				SetColumn("title", "UPPER(?)", q.FQN("title")).
+				Where("? = _data.id", q.FQN("id"))
 		}).
-		Where("book.id = _data.id").
 		Exec(ctx)
 	require.NoError(t, err)
 
