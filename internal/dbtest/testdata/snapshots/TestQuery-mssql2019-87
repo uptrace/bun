@@ -1,1 +1,1 @@
-UPDATE "models" SET  WHERE ("model"."id" = 42)
+UPDATE "models" SET  FROM "models" AS "model" WHERE ("model"."id" = 42)

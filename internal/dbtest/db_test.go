@@ -870,12 +870,12 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 
 func testWithForeignKeys(t *testing.T, db *bun.DB) {
 	type User struct {
-		ID   int    `bun:",pk"`
+		ID   int    `bun:",pk,autoincrement"`
 		Type string `bun:",pk"`
 		Name string
 	}
 	type Deck struct {
-		ID       int `bun:",pk"`
+		ID       int `bun:",pk,autoincrement"`
 		UserID   int
 		UserType string
 		User     *User `bun:"rel:belongs-to,join:user_id=id,join:user_type=type"`

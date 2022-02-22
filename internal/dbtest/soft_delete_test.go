@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 )
 
@@ -23,9 +22,6 @@ func TestSoftDelete(t *testing.T) {
 		{run: testSoftDeleteBulk},
 	}
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		if db.Dialect().Name() == dialect.MSSQL {
-			t.Skip("mssql")
-		}
 		for _, test := range tests {
 			t.Run(funcName(test.run), func(t *testing.T) {
 				test.run(t, db)
