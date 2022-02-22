@@ -684,7 +684,7 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 
 func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int                    `bun:",pk"`
 		Attrs map[string]interface{} `bun:"type:json"`
 	}
 
@@ -718,7 +718,7 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 
 func testJSONInterface(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int         `bun:",pk"`
 		Value interface{} `bun:"type:json"`
 	}
 
@@ -762,7 +762,7 @@ func (v *JSONValue) Value() (driver.Value, error) {
 
 func testJSONValuer(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int
+		ID    int       `bun:",pk"`
 		Value JSONValue `bun:"type:json"`
 	}
 
@@ -794,12 +794,12 @@ func testSelectBool(t *testing.T, db *bun.DB) {
 
 func testFKViolation(t *testing.T, db *bun.DB) {
 	type Deck struct {
-		ID     int
+		ID     int `bun:",pk"`
 		UserID int
 	}
 
 	type User struct {
-		ID int
+		ID int `bun:",pk"`
 	}
 
 	if db.Dialect().Name() == dialect.SQLite {
@@ -959,7 +959,7 @@ func testInterfaceJSON(t *testing.T, db *bun.DB) {
 
 func testScanRawMessage(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID    int64
+		ID    int64 `bun:",pk"`
 		Value json.RawMessage
 	}
 
@@ -988,7 +988,7 @@ func testScanRawMessage(t *testing.T, db *bun.DB) {
 
 func testPointers(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID  *int64 `bun:",default:0"`
+		ID  *int64 `bun:",pk,default:0"`
 		Str *string
 	}
 
@@ -1046,7 +1046,7 @@ func testModelNonPointer(t *testing.T, db *bun.DB) {
 
 func testBinaryData(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID   int64
+		ID   int64 `bun:",pk"`
 		Data []byte
 	}
 
@@ -1066,7 +1066,7 @@ func testBinaryData(t *testing.T, db *bun.DB) {
 
 func testUpsert(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk"`
 		Str string
 	}
 
@@ -1103,7 +1103,7 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 	}
 
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk"`
 		Str string
 	}
 
@@ -1131,7 +1131,7 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 
 func testTxScanAndCount(t *testing.T, db *bun.DB) {
 	type Model struct {
-		ID  int64
+		ID  int64 `bun:",pk"`
 		Str string
 	}
 

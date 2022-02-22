@@ -6,9 +6,9 @@ import (
 	"os"
 )
 
-var Warn = log.New(os.Stderr, "WARN: bun: ", log.LstdFlags)
+var Warn Logging = log.New(os.Stderr, "WARN: bun: ", log.LstdFlags)
 
-var Deprecated = log.New(os.Stderr, "DEPRECATED: bun: ", log.LstdFlags)
+var Deprecated Logging = log.New(os.Stderr, "DEPRECATED: bun: ", log.LstdFlags)
 
 type Logging interface {
 	Printf(format string, v ...interface{})

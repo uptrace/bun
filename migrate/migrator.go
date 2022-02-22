@@ -341,7 +341,7 @@ func (m *Migrator) validate() error {
 //------------------------------------------------------------------------------
 
 type migrationLock struct {
-	ID        int64
+	ID        int64  `bun:",pk"`
 	TableName string `bun:",unique"`
 }
 

@@ -208,6 +208,10 @@ func (t *Table) initFields() {
 	if len(t.PKs) == 0 {
 		for _, name := range []string{"id", "uuid", "pk_" + t.ModelName} {
 			if field, ok := t.FieldMap[name]; ok {
+				if !field.Tag.HasOption("nopk") {
+					internal.Warn.Printf("missing `bun:\",pk\" on %s.%s field`",
+						t.TypeName, field.GoName)
+				}
 				field.markAsPK()
 				t.PKs = []*Field{field}
 				t.DataFields = removeField(t.DataFields, field)
@@ -223,8 +227,10 @@ func (t *Table) initFields() {
 		}
 
 		switch pk.IndirectType.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		case reflect.Int, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint32, reflect.Uint64:
+			internal.Warn.Printf("missing `bun:\",autoincrement\" on %s.%s field`",
+				t.TypeName, pk.GoName)
 			pk.AutoIncrement = true
 		}
 	}
@@ -416,6 +422,10 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 	}
 
 	if _, ok := tag.Options["soft_delete"]; ok {
+		if !tag.HasOption("allowzero") {
+			internal.Warn.Printf("missing `bun:\",nullzero\" on %s.%s field`",
+				t.TypeName, field.GoName)
+		}
 		field.NullZero = true
 		t.SoftDeleteField = field
 		t.UpdateSoftDeleteField = softDeleteFieldUpdater(field)
@@ -887,6 +897,7 @@ func isKnownFieldOption(name string) bool {
 		"scanonly",
 
 		"pk",
+		"nopk",
 		"autoincrement",
 		"rel",
 		"join",
