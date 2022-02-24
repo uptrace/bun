@@ -41,7 +41,7 @@ func TestQuery(t *testing.T) {
 		bun.BaseModel `bun:"soft_deletes,alias:soft_delete"`
 
 		ID        int64     `bun:",pk"`
-		DeletedAt time.Time `bun:",soft_delete"`
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
 	}
 
 	type SoftDelete2 struct {
