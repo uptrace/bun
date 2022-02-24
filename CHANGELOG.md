@@ -1,3 +1,13 @@
+## [1.0.25](https://github.com/uptrace/bun/compare/v1.0.24...v1.0.25) (2022-02-24)
+
+
+### Bug Fixes
+
+* add missing autoincrement to migration models. Fixes [#457](https://github.com/uptrace/bun/issues/457) ([268eea9](https://github.com/uptrace/bun/commit/268eea966a5b7dcb372ceff25da5831cd687afb5))
+* fix soft_delete nullzero warning. Fixes [#458](https://github.com/uptrace/bun/issues/458) ([8e72048](https://github.com/uptrace/bun/commit/8e720480cd40282b8cdb0ad7c66565bd80a4a813))
+
+
+
 ## [1.0.24](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.24) (2022-02-22)
 
 
