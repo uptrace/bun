@@ -25,14 +25,14 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.0.24
-	github.com/uptrace/bun/dbfixture v1.0.24
-	github.com/uptrace/bun/dialect/mysqldialect v1.0.24
-	github.com/uptrace/bun/dialect/pgdialect v1.0.24
-	github.com/uptrace/bun/dialect/sqlitedialect v1.0.24
-	github.com/uptrace/bun/driver/pgdriver v1.0.24
-	github.com/uptrace/bun/driver/sqliteshim v1.0.24
-	github.com/uptrace/bun/extra/bundebug v1.0.24
+	github.com/uptrace/bun v1.1.0-beta.1
+	github.com/uptrace/bun/dbfixture v1.0.25
+	github.com/uptrace/bun/dialect/mysqldialect v1.0.25
+	github.com/uptrace/bun/dialect/pgdialect v1.0.25
+	github.com/uptrace/bun/dialect/sqlitedialect v1.0.25
+	github.com/uptrace/bun/driver/pgdriver v1.0.25
+	github.com/uptrace/bun/driver/sqliteshim v1.0.25
+	github.com/uptrace/bun/extra/bundebug v1.0.25
 )
 
 require (
@@ -57,7 +57,7 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/sys v0.0.0-20220224003255-dbe011f71a99 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
