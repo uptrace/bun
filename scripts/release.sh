@@ -39,8 +39,6 @@ then
     exit 1
 fi
 
-git checkout master
-
 PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
   | sed 's/^\.\///' \
   | sort)
@@ -65,7 +63,7 @@ sed --in-place "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 
 conventional-changelog -p angular -i CHANGELOG.md -s
 
-git checkout -b release/${TAG} master
+git checkout -b release/${TAG}
 git add -u
 git commit -m "chore: release $TAG (release.sh)"
 git push origin release/${TAG}
