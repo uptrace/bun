@@ -423,8 +423,8 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 		return nil
 	}
 
-	if _, ok := tag.Options["soft_delete"]; ok {
-		if !tag.HasOption("allowzero") {
+	if tag.HasOption("soft_delete") {
+		if !field.NullZero && !tag.HasOption("allowzero") {
 			internal.Warn.Printf("missing `bun:\",nullzero\" on %s.%s field`",
 				t.TypeName, field.GoName)
 		}
