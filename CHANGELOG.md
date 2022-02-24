@@ -19,7 +19,7 @@ type Model struct {
 }
 ```
 
-Bun [v1.0.24](#1024-2022-02-22) prints warnings for models with missing options so you are
+Bun [v1.0.25](#1024-2022-02-22) prints warnings for models with missing options so you are
 recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
 
 - Also, Bun no longer adds `nullzero` option to `soft_delete` fields.
@@ -37,7 +37,7 @@ recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
 - **dbfixture:** apply cascade option. Fixes [#447](https://github.com/uptrace/bun/issues/447)
   ([d32d988](https://github.com/uptrace/bun/commit/d32d98840bc23e74c836f8192cb4bc9529aa9233))
 
-## [1.0.24](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.24) (2022-02-22)
+## [1.0.25](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.25) (2022-02-22)
 
 ### Bug Fixes
 
