@@ -104,7 +104,8 @@ func (q *CreateTableQuery) TableSpace(tablespace string) *CreateTableQuery {
 
 func (q *CreateTableQuery) WithForeignKeys() *CreateTableQuery {
 	for _, relation := range q.tableModel.Table().Relations {
-		if relation.Type == schema.ManyToManyRelation {
+		if relation.Type == schema.ManyToManyRelation ||
+		    relation.Type == schema.HasManyRelation {
 			continue
 		}		
 		q = q.ForeignKey("(?) REFERENCES ? (?)",
