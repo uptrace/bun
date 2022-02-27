@@ -47,15 +47,16 @@ PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
 
 for dir in $PACKAGE_DIRS
 do
-    sed --in-place \
-      "s/uptrace\/bun\([^ ]*\) v.*/uptrace\/bun\1 ${TAG}/" "${dir}/go.mod"
+    printf "${dir}: go get -u && go mod tidy\n"
+    (cd ./${dir} && go get -u && go mod tidy)
 done
 
 for dir in $PACKAGE_DIRS
 do
-    printf "${dir}: go get -u && go mod tidy\n"
-    (cd ./${dir} && go get -u && go mod tidy)
+    sed --in-place \
+      "s/uptrace\/bun\([^ ]*\) v.*/uptrace\/bun\1 ${TAG}/" "${dir}/go.mod"
 done
+
 
 sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./version.go
 sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mysqldialect/version.go
