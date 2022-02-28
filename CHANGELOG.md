@@ -1,3 +1,13 @@
+# [1.1.0](https://github.com/uptrace/bun/compare/v1.1.0-beta.1...v1.1.0) (2022-02-28)
+
+
+### Bug Fixes
+
+* create table WithForeignKey() and has-many relation ([3cf5649](https://github.com/uptrace/bun/commit/3cf56491706b5652c383dbe007ff2389ad64922e))
+* do not emit m2m relations in WithForeignKeys() ([56c8c5e](https://github.com/uptrace/bun/commit/56c8c5ed44c0d6d734c3d3161c642ce8437e2248))
+
+
+
 # [1.1.0-beta.1](https://github.com/uptrace/bun/compare/v1.0.22...v1.1.0-beta.1) (2022-02-22)
 
 ### Features

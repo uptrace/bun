@@ -14,11 +14,11 @@ replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/uptrace/bun v1.1.0-beta.1
-	github.com/uptrace/bun/dbfixture v1.1.0-beta.1
-	github.com/uptrace/bun/dialect/pgdialect v1.1.0-beta.1
-	github.com/uptrace/bun/driver/pgdriver v1.1.0-beta.1
-	github.com/uptrace/bun/extra/bundebug v1.1.0-beta.1
+	github.com/uptrace/bun v1.1.0
+	github.com/uptrace/bun/dbfixture v1.1.0
+	github.com/uptrace/bun/dialect/pgdialect v1.1.0
+	github.com/uptrace/bun/driver/pgdriver v1.1.0
+	github.com/uptrace/bun/extra/bundebug v1.1.0
 )
 
 require (
@@ -30,7 +30,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	mellium.im/sasl v0.2.1 // indirect
 )

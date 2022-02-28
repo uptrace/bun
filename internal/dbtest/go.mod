@@ -28,15 +28,15 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.1.0-beta.1
-	github.com/uptrace/bun/dbfixture v1.1.0-beta.1
-	github.com/uptrace/bun/dialect/mssqldialect v1.1.0-beta.1
-	github.com/uptrace/bun/dialect/mysqldialect v1.1.0-beta.1
-	github.com/uptrace/bun/dialect/pgdialect v1.1.0-beta.1
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.0-beta.1
-	github.com/uptrace/bun/driver/pgdriver v1.1.0-beta.1
-	github.com/uptrace/bun/driver/sqliteshim v1.1.0-beta.1
-	github.com/uptrace/bun/extra/bundebug v1.1.0-beta.1
+	github.com/uptrace/bun v1.1.0
+	github.com/uptrace/bun/dbfixture v1.1.0
+	github.com/uptrace/bun/dialect/mssqldialect v1.1.0
+	github.com/uptrace/bun/dialect/mysqldialect v1.1.0
+	github.com/uptrace/bun/dialect/pgdialect v1.1.0
+	github.com/uptrace/bun/dialect/sqlitedialect v1.1.0
+	github.com/uptrace/bun/driver/pgdriver v1.1.0
+	github.com/uptrace/bun/driver/sqliteshim v1.1.0
+	github.com/uptrace/bun/extra/bundebug v1.1.0
 )
 
 require (
@@ -54,7 +54,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/mattn/go-sqlite3 v1.14.11 // indirect
+	github.com/mattn/go-sqlite3 v1.14.12 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.9 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
@@ -75,7 +75,7 @@ require (
 	modernc.org/mathutil v1.4.1 // indirect
 	modernc.org/memory v1.0.5 // indirect
 	modernc.org/opt v0.1.1 // indirect
-	modernc.org/sqlite v1.14.6 // indirect
+	modernc.org/sqlite v1.14.7 // indirect
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 )
