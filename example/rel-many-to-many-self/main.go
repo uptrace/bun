@@ -12,7 +12,7 @@ import (
 )
 
 type Item struct {
-	ID       int64  `bun:",pk"`
+	ID       int64  `bun:",pk,autoincrement"`
 	Children []Item `bun:"m2m:item_to_items,join:Item=Child"`
 }
 

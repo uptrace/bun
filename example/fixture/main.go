@@ -25,7 +25,7 @@ type User struct {
 }
 
 type Org struct {
-	ID      int64
+	ID      int64 `bun:",pk,autoincrement"`
 	Name    string
 	OwnerID int64
 	Owner   *User `bun:"rel:belongs-to"`

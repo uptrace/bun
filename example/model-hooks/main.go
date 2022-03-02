@@ -49,7 +49,7 @@ func main() {
 }
 
 type User struct {
-	ID        int64
+	ID        int64 `bun:",pk,autoincrement"`
 	Password  string
 	CreatedAt time.Time `bun:",nullzero"`
 	UpdatedAt time.Time `bun:",nullzero"`

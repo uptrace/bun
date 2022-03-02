@@ -16,7 +16,7 @@ import (
 )
 
 type Book struct {
-	ID   uint64
+	ID   uint64 `bun:",pk,autoincrement"`
 	Name string
 	Tags []string
 }

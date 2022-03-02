@@ -54,7 +54,7 @@ func selectStories(ctx context.Context, db *bun.DB) ([]*Story, error) {
 }
 
 type Story struct {
-	ID       int64
+	ID       int64 `bun:",pk,autoincrement"`
 	Title    string
 	AuthorID int64
 }

@@ -13,13 +13,13 @@ import (
 
 // Profile belongs to User.
 type Profile struct {
-	ID     int64 `bun:",pk"`
+	ID     int64 `bun:",pk,autoincrement"`
 	Lang   string
 	UserID int64
 }
 
 type User struct {
-	ID      int64 `bun:",pk"`
+	ID      int64 `bun:",pk,autoincrement"`
 	Name    string
 	Profile *Profile `bun:"rel:has-one,join:id=user_id"`
 }

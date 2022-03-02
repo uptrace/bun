@@ -58,7 +58,7 @@ func main() {
 }
 
 type Entry struct {
-	ID   int64
+	ID   int64 `bun:",pk,autoincrement"`
 	Text string
 }
 

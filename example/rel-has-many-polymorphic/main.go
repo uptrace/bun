@@ -20,14 +20,14 @@ type Comment struct {
 }
 
 type Article struct {
-	ID   int64
+	ID   int64 `bun:",pk,autoincrement"`
 	Name string
 
 	Comments []Comment `bun:"rel:has-many,join:id=trackable_id,join:type=trackable_type,polymorphic"`
 }
 
 type Post struct {
-	ID   int64
+	ID   int64 `bun:",pk,autoincrement"`
 	Name string
 
 	Comments []Comment `bun:"rel:has-many,join:id=trackable_id,join:type=trackable_type,polymorphic"`

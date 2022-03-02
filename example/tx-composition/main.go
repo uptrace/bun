@@ -57,7 +57,7 @@ func insertUserAndProfile(ctx context.Context, db bun.IDB) error {
 }
 
 type User struct {
-	ID   int64
+	ID   int64 `bun:",pk,autoincrement"`
 	Name string
 }
 
@@ -67,7 +67,7 @@ func InsertUser(ctx context.Context, db bun.IDB, user *User) error {
 }
 
 type Profile struct {
-	ID     int64
+	ID     int64 `bun:",pk,autoincrement"`
 	UserID int64
 	Email  string
 }

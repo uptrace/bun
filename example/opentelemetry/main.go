@@ -48,7 +48,7 @@ func main() {
 }
 
 type TestModel struct {
-	ID   int64
+	ID   int64 `bun:",pk,autoincrement"`
 	Name string
 }
 
