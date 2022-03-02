@@ -332,6 +332,7 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 
 	field := &Field{
 		StructField: f,
+		IsPtr:       f.Type.Kind() == reflect.Ptr,
 
 		Tag:          tag,
 		IndirectType: indirectType(f.Type),

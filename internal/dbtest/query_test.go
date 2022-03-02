@@ -658,7 +658,7 @@ func TestQuery(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			type Model struct {
-				Raw *json.RawMessage `bun:",nullzero"`
+				Raw *json.RawMessage
 			}
 			return db.NewInsert().Model(new(Model))
 		},
@@ -681,6 +681,19 @@ func TestQuery(t *testing.T) {
 				Slice []Item `bun:",nullzero"`
 			}
 			return db.NewInsert().Model(&Model{ID: 123, Slice: make([]Item, 0)})
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Time *time.Time
+			}
+			return db.NewInsert().Model(new(Model))
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				Time *time.Time
+			}
+			tm := time.Unix(0, 0)
+			return db.NewInsert().Model(&Model{Time: &tm})
 		},
 	}
 

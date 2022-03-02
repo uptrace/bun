@@ -780,7 +780,7 @@ func (q *whereBaseQuery) appendWhere(
 		field := q.tableModel.Table().SoftDeleteField
 		b = append(b, field.SQLName...)
 
-		if field.NullZero {
+		if field.IsPtr || field.NullZero {
 			if q.flags.Has(deletedFlag) {
 				b = append(b, " IS NOT NULL"...)
 			} else {
