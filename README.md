@@ -14,7 +14,8 @@ ClickHouse. Give it a star as well!
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
   [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
-- [Selecting](/example/basic/) into scalars, structs, maps, slices of maps/structs/scalars.
+- [ORM-like](/example/basic/) experience using good old SQL. Bun supports structs, map, scalars, and
+  slices of map/structs/scalars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/query-insert.html).
 - [Bulk updates](https://bun.uptrace.dev/guide/query-update.html) using common table expressions.
 - [Bulk deletes](https://bun.uptrace.dev/guide/query-delete.html).
