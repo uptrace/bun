@@ -53,7 +53,6 @@ func fieldSQLType(field *schema.Field) string {
 	if v, ok := field.Tag.Option("composite"); ok {
 		return v
 	}
-
 	if _, ok := field.Tag.Option("hstore"); ok {
 		return "hstore"
 	}

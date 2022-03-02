@@ -10,6 +10,7 @@ import (
 
 type Field struct {
 	StructField reflect.StructField
+	IsPtr       bool
 
 	Tag          tagparser.Tag
 	IndirectType reflect.Type
@@ -51,15 +52,36 @@ func (f *Field) Value(strct reflect.Value) reflect.Value {
 	return fieldByIndexAlloc(strct, f.Index)
 }
 
-func (f *Field) HasZeroValue(v reflect.Value) bool {
-	for _, idx := range f.Index {
+func (f *Field) HasNilValue(v reflect.Value) bool {
+	if len(f.Index) == 1 {
+		return v.Field(f.Index[0]).IsNil()
+	}
+
+	for _, index := range f.Index {
 		if v.Kind() == reflect.Ptr {
 			if v.IsNil() {
 				return true
 			}
 			v = v.Elem()
 		}
-		v = v.Field(idx)
+		v = v.Field(index)
+	}
+	return v.IsNil()
+}
+
+func (f *Field) HasZeroValue(v reflect.Value) bool {
+	if len(f.Index) == 1 {
+		return f.IsZero(v.Field(f.Index[0]))
+	}
+
+	for _, index := range f.Index {
+		if v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				return true
+			}
+			v = v.Elem()
+		}
+		v = v.Field(index)
 	}
 	return f.IsZero(v)
 }
@@ -70,7 +92,7 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 		return dialect.AppendNull(b)
 	}
 
-	if f.NullZero && f.IsZero(fv) {
+	if (f.IsPtr && fv.IsNil()) || (f.NullZero && f.IsZero(fv)) {
 		return dialect.AppendNull(b)
 	}
 	if f.Append == nil {

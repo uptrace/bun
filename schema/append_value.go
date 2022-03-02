@@ -97,6 +97,8 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		return appendBytesValue
 	case timeType:
 		return appendTimeValue
+	case timePtrType:
+		return PtrAppender(appendTimeValue)
 	case ipType:
 		return appendIPValue
 	case ipNetType:
@@ -135,7 +137,7 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		return ifaceAppenderFunc
 	case reflect.Ptr:
 		if typ.Implements(jsonMarshalerType) {
-			return AppendJSONValue
+			return nilAwareAppender(AppendJSONValue)
 		}
 		if fn := Appender(dialect, typ.Elem()); fn != nil {
 			return PtrAppender(fn)

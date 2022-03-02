@@ -319,7 +319,7 @@ func (q *InsertQuery) appendStructValues(
 		switch {
 		case isTemplate:
 			b = append(b, '?')
-		case f.NullZero && f.HasZeroValue(strct):
+		case (f.IsPtr && f.HasNilValue(strct)) || (f.NullZero && f.HasZeroValue(strct)):
 			if q.db.features.Has(feature.DefaultPlaceholder) {
 				b = append(b, "DEFAULT"...)
 			} else if f.SQLDefault != "" {
@@ -397,9 +397,11 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 			q.addReturningField(f)
 			continue
 		}
-		if f.NotNull && f.NullZero && f.SQLDefault == "" && f.HasZeroValue(strct) {
-			q.addReturningField(f)
-			continue
+		if f.NotNull && f.SQLDefault == "" {
+			if (f.IsPtr && f.HasNilValue(strct)) || (f.NullZero && f.HasZeroValue(strct)) {
+				q.addReturningField(f)
+				continue
+			}
 		}
 		fields = append(fields, f)
 	}

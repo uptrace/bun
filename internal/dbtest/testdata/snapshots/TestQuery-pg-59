@@ -1,1 +1,1 @@
-INSERT INTO "models" ("raw") VALUES ('null')
+INSERT INTO "models" ("raw") VALUES (DEFAULT) RETURNING "raw"

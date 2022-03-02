@@ -10,7 +10,8 @@ import (
 
 var (
 	bytesType          = reflect.TypeOf((*[]byte)(nil)).Elem()
-	timeType           = reflect.TypeOf((*time.Time)(nil)).Elem()
+	timePtrType        = reflect.TypeOf((*time.Time)(nil))
+	timeType           = timePtrType.Elem()
 	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
 	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
 	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
