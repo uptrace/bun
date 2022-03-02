@@ -281,17 +281,19 @@ WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product
 ```
 
-And scan results into scalars, structs, maps, slices of structs/maps/scalars.
-
-## Installation
+And scan results into scalars, structs, maps, slices of structs/maps/scalars:
 
 ```go
-go get github.com/uptrace/bun
-```
+users := make([]User, 0)
+if err := db.NewSelect().Model(&users).OrderExpr("id ASC").Scan(ctx); err != nil {
+	panic(err)
+}
 
-You also need to install a database/sql driver and a corresponding Bun
-[dialect](https://bun.uptrace.dev/guide/drivers.html). All packages have the same version and it is
-prudent to update all of them together.
+user1 := new(User)
+if err := db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx); err != nil {
+	panic(err)
+}
+```
 
 See [**Getting started**](https://bun.uptrace.dev/guide/getting-started.html) guide and check
 [examples](example).
