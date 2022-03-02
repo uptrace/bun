@@ -1,3 +1,17 @@
+# [](https://github.com/uptrace/bun/compare/v1.1.0...v) (2022-03-02)
+
+
+### Bug Fixes
+
+* accept dest in select queries ([33b5b6f](https://github.com/uptrace/bun/commit/33b5b6ff660b77238a737a543ca12675c7f0c284))
+
+
+### Features
+
+* improve nil ptr values handling ([b398e6b](https://github.com/uptrace/bun/commit/b398e6bea840ea2fd3e001b7879c0b00b6dcd6f7))
+
+
+
 # [1.1.0](https://github.com/uptrace/bun/compare/v1.1.0-beta.1...v1.1.0) (2022-02-28)
 
 
