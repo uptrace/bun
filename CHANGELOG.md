@@ -1,16 +1,5 @@
 # [1.1.0](https://github.com/uptrace/bun/compare/v1.1.0-beta.1...v1.1.0) (2022-02-28)
 
-### Bug Fixes
-
-- create table WithForeignKey() and has-many relation
-  ([3cf5649](https://github.com/uptrace/bun/commit/3cf56491706b5652c383dbe007ff2389ad64922e))
-- do not emit m2m relations in WithForeignKeys()
-  ([56c8c5e](https://github.com/uptrace/bun/commit/56c8c5ed44c0d6d734c3d3161c642ce8437e2248))
-- accept dest in select queries
-  ([33b5b6f](https://github.com/uptrace/bun/commit/33b5b6ff660b77238a737a543ca12675c7f0c284))
-
-# [1.1.0-beta.1](https://github.com/uptrace/bun/compare/v1.0.22...v1.1.0-beta.1) (2022-02-22)
-
 ### Features
 
 - Added [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql) support as a 4th fully supported
@@ -50,6 +39,12 @@ recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
   ([e72e2c5](https://github.com/uptrace/bun/commit/e72e2c5d0a85f3d26c3fa22c7284c2de1dcfda8e))
 - **dbfixture:** apply cascade option. Fixes [#447](https://github.com/uptrace/bun/issues/447)
   ([d32d988](https://github.com/uptrace/bun/commit/d32d98840bc23e74c836f8192cb4bc9529aa9233))
+- create table WithForeignKey() and has-many relation
+  ([3cf5649](https://github.com/uptrace/bun/commit/3cf56491706b5652c383dbe007ff2389ad64922e))
+- do not emit m2m relations in WithForeignKeys()
+  ([56c8c5e](https://github.com/uptrace/bun/commit/56c8c5ed44c0d6d734c3d3161c642ce8437e2248))
+- accept dest in select queries
+  ([33b5b6f](https://github.com/uptrace/bun/commit/33b5b6ff660b77238a737a543ca12675c7f0c284))
 
 ## [1.0.25](https://github.com/uptrace/bun/compare/v1.0.23...v1.0.25) (2022-02-22)
 
