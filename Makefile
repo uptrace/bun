@@ -1,4 +1,5 @@
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+EXAMPLE_GO_MOD_DIRS := $(shell find ./example/ -type f -name 'go.mod' -exec dirname {} \; | sort)
 
 test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
@@ -21,3 +22,9 @@ go_mod_tidy:
 fmt:
 	gofmt -w -s ./
 	goimports -w  -local github.com/uptrace/bun ./
+
+run-examples:
+	set -e; for dir in $(EXAMPLE_GO_MOD_DIRS); do \
+	  echo "go run . in $${dir}"; \
+	  (cd "$${dir}" && go run .); \
+	done

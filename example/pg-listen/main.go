@@ -21,15 +21,19 @@ func main() {
 	db := bun.NewDB(sqldb, pgdialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
+	ln := pgdriver.NewListener(db)
+
 	go func() {
-		for tm := range time.Tick(time.Second) {
-			if err := pgdriver.Notify(ctx, db, "mychan1", tm.Format(time.RFC3339)); err != nil {
+		for i := 0; i < 3; i++ {
+			payload := time.Now().Format(time.RFC3339)
+			if err := pgdriver.Notify(ctx, db, "mychan1", payload); err != nil {
 				panic(err)
 			}
+			time.Sleep(time.Second)
 		}
+		_ = ln.Close()
 	}()
 
-	ln := pgdriver.NewListener(db)
 	if err := ln.Listen(ctx, "mychan1", "mychan2"); err != nil {
 		panic(err)
 	}
