@@ -676,7 +676,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	return q.conn.QueryContext(ctx, query)
 }
 
-func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
+func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -691,9 +691,21 @@ func (q *SelectQuery) Exec(ctx context.Context) (res sql.Result, err error) {
 
 	query := internal.String(queryBytes)
 
-	res, err = q.exec(ctx, q, query)
-	if err != nil {
-		return nil, err
+	if len(dest) > 0 {
+		model, err := q.getModel(dest)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err = q.scan(ctx, q, query, model, true)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		res, err = q.exec(ctx, q, query)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
