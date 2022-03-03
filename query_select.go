@@ -721,12 +721,6 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	if q.limit > 1 {
-		if model, ok := model.(interface{ SetCap(int) }); ok {
-			model.SetCap(int(q.limit))
-		}
-	}
-
 	if q.table != nil {
 		if err := q.beforeSelectHook(ctx); err != nil {
 			return err

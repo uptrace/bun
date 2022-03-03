@@ -50,15 +50,6 @@ func (m *sliceTableModel) join(name string) *relationJoin {
 	return m._join(m.slice, name)
 }
 
-func (m *sliceTableModel) SetCap(cap int) {
-	if cap > 100 {
-		cap = 100
-	}
-	if m.slice.Cap() == 0 {
-		m.slice.Set(reflect.MakeSlice(m.slice.Type(), 0, cap))
-	}
-}
-
 func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	columns, err := rows.Columns()
 	if err != nil {
