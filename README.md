@@ -34,9 +34,12 @@ Resources:
 Projects using Bun:
 
 - [gotosocial](https://github.com/superseriousbusiness/gotosocial) - Golang fediverse server.
-- [qvalet](https://github.com/cmaster11/qvalet) listens for HTTP requests and executes commands on
-  demand.
+- [alexedwards/scs](https://github.com/alexedwards/scs) - HTTP Session Management for Go.
+- [emerald-web3-gateway](https://github.com/oasisprotocol/emerald-web3-gateway) - Web3 Gateway for
+  the Oasis Emerald paratime.
+- [lndhub.go](https://github.com/getAlby/lndhub.go) - accounting wrapper for the Lightning Network.
 - [RealWorld app](https://github.com/go-bun/bun-realworld-app)
+- And hundreds more.
 
 ## Benchmark
 
