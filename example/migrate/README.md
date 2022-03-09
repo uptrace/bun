@@ -3,7 +3,7 @@
 To run migrations:
 
 ```shell
-go run main.go db migrate
+go run . db migrate
 ```
 
 To rollback migrations:
@@ -33,7 +33,7 @@ go run . db create_sql sql_migration_name
 To get help:
 
 ```shell
-go run main.go db
+go run . db
 
 NAME:
    bun db - database commands
