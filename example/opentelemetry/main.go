@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-var tracer = otel.Tracer("bunexample")
+var tracer = otel.Tracer("github.com/uptrace/bun/example/opentelemetry")
 
 func main() {
 	ctx := context.Background()
@@ -32,7 +32,7 @@ func main() {
 	db.AddQueryHook(bunotel.NewQueryHook())
 	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
-	if _, err := db.NewCreateTable().Model((*TestModel)(nil)).Exec(ctx); err != nil {
+	if err := db.ResetModel(ctx, (*TestModel)(nil)); err != nil {
 		panic(err)
 	}
 

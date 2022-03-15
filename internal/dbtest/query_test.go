@@ -695,6 +695,13 @@ func TestQuery(t *testing.T) {
 			tm := time.Unix(0, 0)
 			return db.NewInsert().Model(&Model{Time: &tm})
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			values := [][]byte{
+				[]byte("foo"),
+				[]byte("bar"),
+			}
+			return db.NewSelect().Where("x IN (?)", bun.In(values))
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
