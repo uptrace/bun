@@ -1,0 +1,1 @@
+SELECT * WHERE (x IN (X'666f6f', X'626172'))

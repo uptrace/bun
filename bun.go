@@ -2,8 +2,6 @@ package bun
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -81,53 +79,6 @@ func SetLogger(logger internal.Logging) {
 	internal.Logger = logger
 }
 
-//------------------------------------------------------------------------------
-
-type InValues struct {
-	slice reflect.Value
-	err   error
-}
-
-var _ schema.QueryAppender = InValues{}
-
-func In(slice interface{}) InValues {
-	v := reflect.ValueOf(slice)
-	if v.Kind() != reflect.Slice {
-		return InValues{
-			err: fmt.Errorf("bun: In(non-slice %T)", slice),
-		}
-	}
-	return InValues{
-		slice: v,
-	}
-}
-
-func (in InValues) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if in.err != nil {
-		return nil, in.err
-	}
-	return appendIn(fmter, b, in.slice), nil
-}
-
-func appendIn(fmter schema.Formatter, b []byte, slice reflect.Value) []byte {
-	sliceLen := slice.Len()
-	for i := 0; i < sliceLen; i++ {
-		if i > 0 {
-			b = append(b, ", "...)
-		}
-
-		elem := slice.Index(i)
-		if elem.Kind() == reflect.Interface {
-			elem = elem.Elem()
-		}
-
-		if elem.Kind() == reflect.Slice {
-			b = append(b, '(')
-			b = appendIn(fmter, b, elem)
-			b = append(b, ')')
-		} else {
-			b = fmter.AppendValue(b, elem)
-		}
-	}
-	return b
+func In(slice interface{}) schema.QueryAppender {
+	return schema.In(slice)
 }
