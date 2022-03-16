@@ -3,7 +3,7 @@
 To run migrations:
 
 ```shell
-go run . db migrate
+BUNDEBUG=2 go run . db migrate
 ```
 
 To rollback migrations:

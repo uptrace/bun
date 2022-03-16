@@ -25,7 +25,10 @@ func main() {
 	}
 
 	db := bun.NewDB(sqldb, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(""),
+	))
 
 	app := &cli.App{
 		Name: "bun",

@@ -1,5 +1,7 @@
-SELECT 1
+CREATE TABLE test (
+  id bigint PRIMARY KEY
+);
 
 --bun:split
 
-SELECT 2
+ALTER TABLE test ADD COLUMN name varchar(100);
