@@ -1,4 +1,4 @@
-# Simple and performant client for PostgreSQL, MySQL, MSSQL, and SQLite
+# SQL-first Go ORM for PostgreSQL, MySQL, MSSQL, and SQLite
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
