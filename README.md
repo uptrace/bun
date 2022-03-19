@@ -29,6 +29,7 @@ Resources:
 - [**Get started**](https://bun.uptrace.dev/guide/getting-started.html)
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
 - [Discussions](https://github.com/uptrace/bun/discussions)
+- [Chat](https://discord.gg/rWtp5Aj)
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
 
