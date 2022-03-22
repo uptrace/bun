@@ -1,3 +1,17 @@
+# [](https://github.com/uptrace/bun/compare/v1.1.1...v) (2022-03-22)
+
+
+### Bug Fixes
+
+* correctly handle bun.In([][]byte{...}) ([800616e](https://github.com/uptrace/bun/commit/800616ed28ca600ad676319a10adb970b2b4daf6))
+
+
+### Features
+
+* accept extend option to allow extending existing models ([48b80e4](https://github.com/uptrace/bun/commit/48b80e4f7e3ed8a28fd305f7853ebe7ab984a497))
+
+
+
 # [1.1.0](https://github.com/uptrace/bun/compare/v1.1.0-beta.1...v1.1.0) (2022-02-28)
 
 ### Features
