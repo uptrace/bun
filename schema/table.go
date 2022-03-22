@@ -621,7 +621,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 				rel.BaseFields = append(rel.BaseFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s has-one %s: %s must have column %s",
+					"bun: %s has-many %s: %s must have column %s",
 					t.TypeName, field.GoName, t.TypeName, baseColumn,
 				))
 			}
@@ -630,7 +630,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 				rel.JoinFields = append(rel.JoinFields, f)
 			} else {
 				panic(fmt.Errorf(
-					"bun: %s has-one %s: %s must have column %s",
+					"bun: %s has-many %s: %s must have column %s",
 					t.TypeName, field.GoName, t.TypeName, baseColumn,
 				))
 			}
