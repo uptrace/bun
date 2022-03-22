@@ -232,7 +232,7 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 				t.addFields(fieldType, "", withIndex(index, f.Index))
 
 				tag := tagparser.Parse(f.Tag.Get("bun"))
-				if _, inherit := tag.Options["inherit"]; inherit {
+				if tag.HasOption("inherit") || tag.HasOption("extend") {
 					embeddedTable := t.dialect.Tables().Ref(fieldType)
 					t.TypeName = embeddedTable.TypeName
 					t.SQLName = embeddedTable.SQLName

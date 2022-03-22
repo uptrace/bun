@@ -504,10 +504,10 @@ func (*Book) BeforeAppendModel(ctx context.Context, query bun.Query) error {
 }
 
 // BookWithCommentCount is like Book model, but has additional CommentCount
-// field that is used to select data into it. The use of `bun:",inherit"` tag
-// is essential here so it inherits internal model properties such as table name.
+// field that is used to select data into it. The use of `bun:",extend"` tag
+// is essential here.
 type BookWithCommentCount struct {
-	Book `bun:",inherit"`
+	Book `bun:",extend"`
 
 	CommentCount int
 }
