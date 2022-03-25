@@ -187,14 +187,15 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	for i := len(lastGroup.Migrations) - 1; i >= 0; i-- {
 		migration := &lastGroup.Migrations[i]
 
+		// Always mark migration as unapplied to match migrate behavior.
+		if err := m.MarkUnapplied(ctx, migration); err != nil {
+			return nil, err
+		}
+
 		if !cfg.nop && migration.Down != nil {
 			if err := migration.Down(ctx, m.db); err != nil {
 				return nil, err
 			}
-		}
-
-		if err := m.MarkUnapplied(ctx, migration); err != nil {
-			return nil, err
 		}
 	}
 
