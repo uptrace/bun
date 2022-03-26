@@ -926,7 +926,7 @@ type selectQueryBuilder struct {
 }
 
 func (q *selectQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
-	q.SelectQuery.WhereGroup(sep, func(qs *SelectQuery) *SelectQuery {
+	q.SelectQuery = q.SelectQuery.WhereGroup(sep, func(qs *SelectQuery) *SelectQuery {
 		return fn(q).(*selectQueryBuilder).SelectQuery
 	})
 	return q

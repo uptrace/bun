@@ -293,7 +293,7 @@ type deleteQueryBuilder struct {
 }
 
 func (q *deleteQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
-	q.DeleteQuery.WhereGroup(sep, func(qs *DeleteQuery) *DeleteQuery {
+	q.DeleteQuery = q.DeleteQuery.WhereGroup(sep, func(qs *DeleteQuery) *DeleteQuery {
 		return fn(q).(*deleteQueryBuilder).DeleteQuery
 	})
 	return q
