@@ -65,6 +65,17 @@ var (
 	_ IDB = (*Tx)(nil)
 )
 
+// QueryBuilder is used SelectQuery,UpdateQuery, DeleteQuery for adding new Where conditions
+type QueryBuilder interface {
+	Query
+	Where(query string, args ...interface{}) QueryBuilder
+	WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder
+	WhereOr(query string, args ...interface{}) QueryBuilder
+	WhereDeleted() QueryBuilder
+	WhereAllWithDeleted() QueryBuilder
+	WherePK(cols ...string) QueryBuilder
+	Unwrap() interface{}
+}
 type baseQuery struct {
 	db   *DB
 	conn IConn
