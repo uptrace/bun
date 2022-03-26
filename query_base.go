@@ -65,6 +65,24 @@ var (
 	_ IDB = (*Tx)(nil)
 )
 
+// QueryBuilder is used for common query methods
+type QueryBuilder interface {
+	Query
+	Where(query string, args ...interface{}) QueryBuilder
+	WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder
+	WhereOr(query string, args ...interface{}) QueryBuilder
+	WhereDeleted() QueryBuilder
+	WhereAllWithDeleted() QueryBuilder
+	WherePK(cols ...string) QueryBuilder
+	Unwrap() interface{}
+}
+
+var (
+	_ QueryBuilder = (*selectQueryBuilder)(nil)
+	_ QueryBuilder = (*updateQueryBuilder)(nil)
+	_ QueryBuilder = (*deleteQueryBuilder)(nil)
+)
+
 type baseQuery struct {
 	db   *DB
 	conn IConn

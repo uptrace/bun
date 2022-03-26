@@ -702,6 +702,78 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewSelect().Where("x IN (?)", bun.In(values))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Query().
+				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 1").Where("b = 1")
+				}).
+				WhereGroup(" OR ", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 2").Where("b = 2")
+				})
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(Model)).Query().Where("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(Model)).Query().WhereOr("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete1)).Query().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete1)).Query().WhereDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(SoftDelete1)).Query().WhereAllWithDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().
+				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 1").Where("b = 1")
+				}).
+				WhereGroup(" OR ", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 2").Where("b = 2")
+				})
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(Model)).Query().Where("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(Model)).Query().WhereOr("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().WhereDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().WhereAllWithDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().
+				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 1").Where("b = 1")
+				}).
+				WhereGroup(" OR ", func(q bun.QueryBuilder) bun.QueryBuilder {
+					return q.Where("a = 2").Where("b = 2")
+				})
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(Model)).Query().Where("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(Model)).Query().WhereOr("id = 42")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().WhereDeleted()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().WhereAllWithDeleted()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

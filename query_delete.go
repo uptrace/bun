@@ -286,3 +286,48 @@ func (q *DeleteQuery) afterDeleteHook(ctx context.Context) error {
 	}
 	return nil
 }
+
+//------------------------------------------------------------------------------
+type deleteQueryBuilder struct {
+	*DeleteQuery
+}
+
+func (q *deleteQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
+	q.DeleteQuery = q.DeleteQuery.WhereGroup(sep, func(qs *DeleteQuery) *DeleteQuery {
+		return fn(q).(*deleteQueryBuilder).DeleteQuery
+	})
+	return q
+}
+
+func (q *deleteQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+	q.DeleteQuery.Where(query, args...)
+	return q
+}
+
+func (q *deleteQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+	q.DeleteQuery.WhereOr(query, args...)
+	return q
+}
+
+func (q *deleteQueryBuilder) WhereDeleted() QueryBuilder {
+	q.DeleteQuery.WhereDeleted()
+	return q
+}
+
+func (q *deleteQueryBuilder) WhereAllWithDeleted() QueryBuilder {
+	q.DeleteQuery.WhereAllWithDeleted()
+	return q
+}
+
+func (q *deleteQueryBuilder) WherePK(cols ...string) QueryBuilder {
+	q.DeleteQuery.WherePK(cols...)
+	return q
+}
+
+func (q *deleteQueryBuilder) Unwrap() interface{} {
+	return q.DeleteQuery
+}
+
+func (q *DeleteQuery) Query() QueryBuilder {
+	return &deleteQueryBuilder{q}
+}

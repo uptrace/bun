@@ -486,3 +486,48 @@ func (q *UpdateQuery) FQN(column string) Ident {
 func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
 	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
+
+//------------------------------------------------------------------------------
+type updateQueryBuilder struct {
+	*UpdateQuery
+}
+
+func (q *updateQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
+	q.UpdateQuery = q.UpdateQuery.WhereGroup(sep, func(qs *UpdateQuery) *UpdateQuery {
+		return fn(q).(*updateQueryBuilder).UpdateQuery
+	})
+	return q
+}
+
+func (q *updateQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+	q.UpdateQuery.Where(query, args...)
+	return q
+}
+
+func (q *updateQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+	q.UpdateQuery.WhereOr(query, args...)
+	return q
+}
+
+func (q *updateQueryBuilder) WhereDeleted() QueryBuilder {
+	q.UpdateQuery.WhereDeleted()
+	return q
+}
+
+func (q *updateQueryBuilder) WhereAllWithDeleted() QueryBuilder {
+	q.UpdateQuery.WhereAllWithDeleted()
+	return q
+}
+
+func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
+	q.UpdateQuery.WherePK(cols...)
+	return q
+}
+
+func (q *updateQueryBuilder) Unwrap() interface{} {
+	return q.UpdateQuery
+}
+
+func (q *UpdateQuery) Query() QueryBuilder {
+	return &updateQueryBuilder{q}
+}

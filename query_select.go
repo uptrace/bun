@@ -921,6 +921,51 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 }
 
 //------------------------------------------------------------------------------
+type selectQueryBuilder struct {
+	*SelectQuery
+}
+
+func (q *selectQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
+	q.SelectQuery = q.SelectQuery.WhereGroup(sep, func(qs *SelectQuery) *SelectQuery {
+		return fn(q).(*selectQueryBuilder).SelectQuery
+	})
+	return q
+}
+
+func (q *selectQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+	q.SelectQuery.Where(query, args...)
+	return q
+}
+
+func (q *selectQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+	q.SelectQuery.WhereOr(query, args...)
+	return q
+}
+
+func (q *selectQueryBuilder) WhereDeleted() QueryBuilder {
+	q.SelectQuery.WhereDeleted()
+	return q
+}
+
+func (q *selectQueryBuilder) WhereAllWithDeleted() QueryBuilder {
+	q.SelectQuery.WhereAllWithDeleted()
+	return q
+}
+
+func (q *selectQueryBuilder) WherePK(cols ...string) QueryBuilder {
+	q.SelectQuery.WherePK(cols...)
+	return q
+}
+
+func (q *selectQueryBuilder) Unwrap() interface{} {
+	return q.SelectQuery
+}
+
+func (q *SelectQuery) Query() QueryBuilder {
+	return &selectQueryBuilder{q}
+}
+
+//------------------------------------------------------------------------------
 
 type joinQuery struct {
 	join schema.QueryWithArgs
