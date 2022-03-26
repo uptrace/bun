@@ -7,10 +7,10 @@ cd internal/dbtest
 ./test.sh
 ```
 
-You can also run tests and print all executed queries to stdout:
+To ease debugging, you can run tests and print all executed queries:
 
 ```shell
-BUNDEBUG=2 TZ= go test
+BUNDEBUG=2 TZ= go test -run=TestName
 ```
 
 ## Releasing
