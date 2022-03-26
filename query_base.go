@@ -65,7 +65,7 @@ var (
 	_ IDB = (*Tx)(nil)
 )
 
-// QueryBuilder is used SelectQuery,UpdateQuery, DeleteQuery for adding new Where conditions
+// QueryBuilder is used for common query methods
 type QueryBuilder interface {
 	Query
 	Where(query string, args ...interface{}) QueryBuilder
