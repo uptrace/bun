@@ -76,6 +76,13 @@ type QueryBuilder interface {
 	WherePK(cols ...string) QueryBuilder
 	Unwrap() interface{}
 }
+
+var (
+	_ QueryBuilder = (*selectQueryBuilder)(nil)
+	_ QueryBuilder = (*updateQueryBuilder)(nil)
+	_ QueryBuilder = (*deleteQueryBuilder)(nil)
+)
+
 type baseQuery struct {
 	db   *DB
 	conn IConn

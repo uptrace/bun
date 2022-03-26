@@ -494,7 +494,7 @@ type updateQueryBuilder struct {
 
 func (q *updateQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
 	q.UpdateQuery.WhereGroup(sep, func(qs *UpdateQuery) *UpdateQuery {
-		return fn(&updateQueryBuilder{qs}).(*updateQueryBuilder).UpdateQuery
+		return fn(q).(*updateQueryBuilder).UpdateQuery
 	})
 	return q
 }
