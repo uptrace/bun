@@ -7,7 +7,7 @@ replace github.com/uptrace/bun => ../..
 exclude go.opentelemetry.io/proto/otlp v0.15.0
 
 require (
-	github.com/uptrace/bun v1.1.2
+	github.com/uptrace/bun v1.1.3
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.11
 	go.opentelemetry.io/otel v1.6.1
 	go.opentelemetry.io/otel/metric v0.28.0
