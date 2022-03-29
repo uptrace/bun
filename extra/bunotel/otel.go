@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -23,12 +23,12 @@ import (
 
 var (
 	tracer = otel.Tracer("github.com/uptrace/bun")
-	meter  = metric.Must(global.Meter("github.com/uptrace/bun"))
+	meter  = global.MeterProvider().Meter("github.com/uptrace/bun")
 
-	queryHistogram = meter.NewInt64Histogram(
+	queryHistogram, _ = meter.SyncInt64().Histogram(
 		"go.sql.query_timing",
-		metric.WithDescription("Timing of processed queries"),
-		metric.WithUnit("milliseconds"),
+		instrument.WithDescription("Timing of processed queries"),
+		instrument.WithUnit("milliseconds"),
 	)
 )
 
