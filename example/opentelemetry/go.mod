@@ -18,10 +18,10 @@ exclude go.opentelemetry.io/proto/otlp v0.15.0
 
 require (
 	github.com/brianvoe/gofakeit/v5 v5.11.2
-	github.com/uptrace/bun v1.1.2
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.2
-	github.com/uptrace/bun/driver/sqliteshim v1.1.2
-	github.com/uptrace/bun/extra/bunotel v1.1.2
+	github.com/uptrace/bun v1.1.3
+	github.com/uptrace/bun/dialect/sqlitedialect v1.1.3
+	github.com/uptrace/bun/driver/sqliteshim v1.1.3
+	github.com/uptrace/bun/extra/bunotel v1.1.3
 	github.com/uptrace/opentelemetry-go-extra/otelplay v0.1.11
 	go.opentelemetry.io/otel v1.6.1
 )
