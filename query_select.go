@@ -926,6 +926,10 @@ func (q *SelectQuery) QueryBuilder() QueryBuilder {
 	return &selectQueryBuilder{q}
 }
 
+func (q *SelectQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *SelectQuery {
+	return fn(q.QueryBuilder()).Unwrap().(*SelectQuery)
+}
+
 type selectQueryBuilder struct {
 	*SelectQuery
 }
