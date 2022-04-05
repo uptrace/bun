@@ -921,11 +921,18 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 }
 
 //------------------------------------------------------------------------------
+
+func (q *SelectQuery) QueryBuilder() QueryBuilder {
+	return &selectQueryBuilder{q}
+}
+
 type selectQueryBuilder struct {
 	*SelectQuery
 }
 
-func (q *selectQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
+func (q *selectQueryBuilder) WhereGroup(
+	sep string, fn func(QueryBuilder) QueryBuilder,
+) QueryBuilder {
 	q.SelectQuery = q.SelectQuery.WhereGroup(sep, func(qs *SelectQuery) *SelectQuery {
 		return fn(q).(*selectQueryBuilder).SelectQuery
 	})
@@ -959,10 +966,6 @@ func (q *selectQueryBuilder) WherePK(cols ...string) QueryBuilder {
 
 func (q *selectQueryBuilder) Unwrap() interface{} {
 	return q.SelectQuery
-}
-
-func (q *SelectQuery) Query() QueryBuilder {
-	return &selectQueryBuilder{q}
 }
 
 //------------------------------------------------------------------------------

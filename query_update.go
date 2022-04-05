@@ -488,6 +488,11 @@ func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
 }
 
 //------------------------------------------------------------------------------
+
+func (q *UpdateQuery) QueryBuilder() QueryBuilder {
+	return &updateQueryBuilder{q}
+}
+
 type updateQueryBuilder struct {
 	*UpdateQuery
 }
@@ -526,8 +531,4 @@ func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
 
 func (q *updateQueryBuilder) Unwrap() interface{} {
 	return q.UpdateQuery
-}
-
-func (q *UpdateQuery) Query() QueryBuilder {
-	return &updateQueryBuilder{q}
 }

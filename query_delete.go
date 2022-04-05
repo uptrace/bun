@@ -288,6 +288,11 @@ func (q *DeleteQuery) afterDeleteHook(ctx context.Context) error {
 }
 
 //------------------------------------------------------------------------------
+
+func (q *DeleteQuery) QueryBuilder() QueryBuilder {
+	return &deleteQueryBuilder{q}
+}
+
 type deleteQueryBuilder struct {
 	*DeleteQuery
 }
@@ -326,8 +331,4 @@ func (q *deleteQueryBuilder) WherePK(cols ...string) QueryBuilder {
 
 func (q *deleteQueryBuilder) Unwrap() interface{} {
 	return q.DeleteQuery
-}
-
-func (q *DeleteQuery) Query() QueryBuilder {
-	return &deleteQueryBuilder{q}
 }

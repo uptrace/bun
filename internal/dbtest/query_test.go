@@ -703,7 +703,8 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Where("x IN (?)", bun.In(values))
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Query().
+			return db.NewSelect().
+				QueryBuilder().
 				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
 					return q.Where("a = 1").Where("b = 1")
 				}).
@@ -712,22 +713,22 @@ func TestQuery(t *testing.T) {
 				})
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).Query().Where("id = 42")
+			return db.NewSelect().Model(new(Model)).QueryBuilder().Where("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).Query().WhereOr("id = 42")
+			return db.NewSelect().Model(new(Model)).QueryBuilder().WhereOr("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete1)).Query().WherePK()
+			return db.NewSelect().Model(new(SoftDelete1)).QueryBuilder().WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete1)).Query().WhereDeleted()
+			return db.NewSelect().Model(new(SoftDelete1)).QueryBuilder().WhereDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(SoftDelete1)).Query().WhereAllWithDeleted()
+			return db.NewSelect().Model(new(SoftDelete1)).QueryBuilder().WhereAllWithDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().
+			return db.NewUpdate().Model(new(SoftDelete1)).QueryBuilder().WherePK().
 				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
 					return q.Where("a = 1").Where("b = 1")
 				}).
@@ -736,22 +737,29 @@ func TestQuery(t *testing.T) {
 				})
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(Model)).Query().Where("id = 42")
+			return db.NewUpdate().Model(new(Model)).QueryBuilder().Where("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(Model)).Query().WhereOr("id = 42")
+			return db.NewUpdate().Model(new(Model)).QueryBuilder().WhereOr("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK()
+			return db.NewUpdate().Model(new(SoftDelete1)).QueryBuilder().WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().WhereDeleted()
+			return db.NewUpdate().Model(new(SoftDelete1)).QueryBuilder().WherePK().WhereDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(new(SoftDelete1)).Query().WherePK().WhereAllWithDeleted()
+			return db.NewUpdate().
+				Model(new(SoftDelete1)).
+				QueryBuilder().
+				WherePK().
+				WhereAllWithDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().
+			return db.NewDelete().
+				Model(new(SoftDelete1)).
+				QueryBuilder().
+				WherePK().
 				WhereGroup("", func(q bun.QueryBuilder) bun.QueryBuilder {
 					return q.Where("a = 1").Where("b = 1")
 				}).
@@ -760,19 +768,23 @@ func TestQuery(t *testing.T) {
 				})
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(Model)).Query().Where("id = 42")
+			return db.NewDelete().Model(new(Model)).QueryBuilder().Where("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(Model)).Query().WhereOr("id = 42")
+			return db.NewDelete().Model(new(Model)).QueryBuilder().WhereOr("id = 42")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK()
+			return db.NewDelete().Model(new(SoftDelete1)).QueryBuilder().WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().WhereDeleted()
+			return db.NewDelete().Model(new(SoftDelete1)).QueryBuilder().WherePK().WhereDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewDelete().Model(new(SoftDelete1)).Query().WherePK().WhereAllWithDeleted()
+			return db.NewDelete().
+				Model(new(SoftDelete1)).
+				QueryBuilder().
+				WherePK().
+				WhereAllWithDeleted()
 		},
 	}
 
