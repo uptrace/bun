@@ -263,6 +263,9 @@ func parseDSN(dsn string) ([]Option, error) {
 	if d := q.duration("dial_timeout"); d != 0 {
 		opts = append(opts, WithDialTimeout(d))
 	}
+	if d := q.duration("connect_timeout"); d != 0 {
+		opts = append(opts, WithDialTimeout(d))
+	}
 	if d := q.duration("read_timeout"); d != 0 {
 		opts = append(opts, WithReadTimeout(d))
 	}
