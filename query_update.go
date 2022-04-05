@@ -493,11 +493,17 @@ func (q *UpdateQuery) QueryBuilder() QueryBuilder {
 	return &updateQueryBuilder{q}
 }
 
+func (q *UpdateQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *UpdateQuery {
+	return fn(q.QueryBuilder()).Unwrap().(*UpdateQuery)
+}
+
 type updateQueryBuilder struct {
 	*UpdateQuery
 }
 
-func (q *updateQueryBuilder) WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder {
+func (q *updateQueryBuilder) WhereGroup(
+	sep string, fn func(QueryBuilder) QueryBuilder,
+) QueryBuilder {
 	q.UpdateQuery = q.UpdateQuery.WhereGroup(sep, func(qs *UpdateQuery) *UpdateQuery {
 		return fn(q).(*updateQueryBuilder).UpdateQuery
 	})
