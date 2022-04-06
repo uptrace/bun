@@ -97,6 +97,19 @@ func TestParseDSN(t *testing.T) {
 				WriteTimeout: 5 * time.Second,
 			},
 		},
+		{
+			dsn: "postgres://user:password@localhost:5432/testDatabase?connect_timeout=3",
+			cfg: &pgdriver.Config{
+				Network:      "tcp",
+				Addr:         "localhost:5432",
+				User:         "user",
+				Password:     "password",
+				Database:     "testDatabase",
+				DialTimeout:  3 * time.Second,
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 5 * time.Second,
+			},
+		},
 	}
 
 	for i, test := range tests {
