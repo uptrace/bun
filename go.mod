@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/jinzhu/inflection v1.0.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 )
