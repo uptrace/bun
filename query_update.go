@@ -273,7 +273,9 @@ func (q *UpdateQuery) appendSetStruct(
 	isTemplate := fmter.IsNop()
 	pos := len(b)
 	for _, f := range fields {
-		if q.omitZero && f.HasZeroValue(model.strct) {
+		app, hasValue := q.modelValues[f.Name]
+
+		if !hasValue && q.omitZero && f.HasZeroValue(model.strct) {
 			continue
 		}
 
@@ -290,8 +292,7 @@ func (q *UpdateQuery) appendSetStruct(
 			continue
 		}
 
-		app, ok := q.modelValues[f.Name]
-		if ok {
+		if hasValue {
 			b, err = app.AppendQuery(fmter, b)
 			if err != nil {
 				return nil, err
