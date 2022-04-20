@@ -227,13 +227,14 @@ func (q *baseQuery) whereAllWithDeleted() {
 		q.setErr(err)
 		return
 	}
-	q.flags = q.flags.Set(allWithDeletedFlag)
-	q.flags = q.flags.Remove(deletedFlag)
+	q.flags = q.flags.Set(allWithDeletedFlag).Remove(deletedFlag)
 }
 
 func (q *baseQuery) isSoftDelete() bool {
 	if q.table != nil {
-		return q.table.SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
+		return q.table.SoftDeleteField != nil &&
+			!q.flags.Has(allWithDeletedFlag) &&
+			!q.flags.Has(forceDeleteFlag)
 	}
 	return false
 }
