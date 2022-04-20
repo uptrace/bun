@@ -374,6 +374,7 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 	}
 	if s, ok := tag.Option("default"); ok {
 		field.SQLDefault = s
+		field.NullZero = true
 	}
 	if s, ok := field.Tag.Option("type"); ok {
 		field.UserSQLType = s
