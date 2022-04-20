@@ -20,6 +20,7 @@ func TestSoftDelete(t *testing.T) {
 		{run: testSoftDeleteNilModel},
 		{run: testSoftDeleteAPI},
 		{run: testSoftDeleteBulk},
+		{run: testSoftDeleteForce},
 	}
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, test := range tests {
@@ -100,6 +101,26 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 
 	// Count deleted.
 	count, err = db.NewSelect().Model((*Video)(nil)).WhereDeleted().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+}
+
+func testSoftDeleteForce(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Video)(nil))
+	require.NoError(t, err)
+
+	video1 := &Video{
+		ID: 1,
+	}
+	_, err = db.NewInsert().Model(video1).Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewDelete().Model(video1).WherePK().ForceDelete().Exec(ctx)
+	require.NoError(t, err)
+
+	count, err := db.NewSelect().Model((*Video)(nil)).WhereAllWithDeleted().Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, count)
 }
