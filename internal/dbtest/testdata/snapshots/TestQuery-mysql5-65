@@ -1,1 +1,1 @@
-DELETE FROM `soft_deletes` WHERE `soft_deletes`.`deleted_at` IS NOT NULL AND (`id` = NULL)
+DELETE FROM `soft_deletes` WHERE (`id` = NULL)
