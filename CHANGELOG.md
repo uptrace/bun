@@ -1,17 +1,17 @@
-# [](https://github.com/uptrace/bun/compare/v1.1.2...v) (2022-03-29)
-
+# [1.1.3](https://github.com/uptrace/bun/compare/v1.1.2...v) (2022-03-29)
 
 ### Bug Fixes
 
-* fix panic message when has-many encounter an error ([cfd2747](https://github.com/uptrace/bun/commit/cfd27475fac89a1c8cf798bfa64898bd77bbba79))
-* **migrate:** change rollback to match migrate behavior ([df5af9c](https://github.com/uptrace/bun/commit/df5af9c9cbdf54ce243e037bbb2c7b154f8422b3))
-
+- fix panic message when has-many encounter an error
+  ([cfd2747](https://github.com/uptrace/bun/commit/cfd27475fac89a1c8cf798bfa64898bd77bbba79))
+- **migrate:** change rollback to match migrate behavior
+  ([df5af9c](https://github.com/uptrace/bun/commit/df5af9c9cbdf54ce243e037bbb2c7b154f8422b3))
 
 ### Features
 
-* added QueryBuilder interface for SelectQuery, UpdateQuery, DeleteQuery ([#499](https://github.com/uptrace/bun/issues/499)) ([59fef48](https://github.com/uptrace/bun/commit/59fef48f6b3ec7f32bdda779b6693c333ff1dfdb))
-
-
+- added QueryBuilder interface for SelectQuery, UpdateQuery, DeleteQuery
+  ([#499](https://github.com/uptrace/bun/issues/499))
+  ([59fef48](https://github.com/uptrace/bun/commit/59fef48f6b3ec7f32bdda779b6693c333ff1dfdb))
 
 # [1.1.2](https://github.com/uptrace/bun/compare/v1.1.2...v) (2022-03-22)
 

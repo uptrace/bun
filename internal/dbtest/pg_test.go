@@ -19,7 +19,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 )
 
-func TestPGArray(t *testing.T) {
+func TestPostgresArray(t *testing.T) {
 	type Model struct {
 		ID     int64     `bun:",pk,autoincrement"`
 		Array1 []string  `bun:",array"`
@@ -63,7 +63,7 @@ func TestPGArray(t *testing.T) {
 	require.Nil(t, strs)
 }
 
-func TestPGArrayQuote(t *testing.T) {
+func TestPostgresArrayQuote(t *testing.T) {
 	db := pg(t)
 	defer db.Close()
 
@@ -94,7 +94,7 @@ func (h Hash) Value() (driver.Value, error) {
 	return h[:], nil
 }
 
-func TestPGArrayValuer(t *testing.T) {
+func TestPostgresArrayValuer(t *testing.T) {
 	type Model struct {
 		ID    int64  `bun:",pk,autoincrement"`
 		Array []Hash `bun:",array"`
@@ -142,7 +142,7 @@ type IngredientRecipe struct {
 	IngredientID int         `bun:",pk"`
 }
 
-func TestPGMultiTenant(t *testing.T) {
+func TestPostgresMultiTenant(t *testing.T) {
 	db := pg(t)
 
 	db = db.WithNamedArg("tenant", bun.Safe("public"))
@@ -185,7 +185,7 @@ func TestPGMultiTenant(t *testing.T) {
 	require.Equal(t, 1, recipe.Ingredients[0].ID)
 }
 
-func TestPGInsertNoRows(t *testing.T) {
+func TestPostgresInsertNoRows(t *testing.T) {
 	type User struct {
 		ID int64 `bun:",pk,autoincrement"`
 	}
@@ -222,7 +222,7 @@ func TestPGInsertNoRows(t *testing.T) {
 	}
 }
 
-func TestPGScanonlyField(t *testing.T) {
+func TestPostgresScanonlyField(t *testing.T) {
 	type Model struct {
 		Array []string `bun:",scanonly,array"`
 	}
@@ -243,7 +243,7 @@ func TestPGScanonlyField(t *testing.T) {
 	require.Equal(t, []string(nil), model.Array)
 }
 
-func TestPGScanUUID(t *testing.T) {
+func TestPostgresScanUUID(t *testing.T) {
 	type Model struct {
 		Array []uuid.UUID `bun:"type:uuid[],array"`
 	}
@@ -272,7 +272,7 @@ func TestPGScanUUID(t *testing.T) {
 	require.Equal(t, []uuid.UUID(nil), model.Array)
 }
 
-func TestPGInvalidQuery(t *testing.T) {
+func TestPostgresInvalidQuery(t *testing.T) {
 	db := pg(t)
 
 	_, err := db.Exec("invalid query")
@@ -283,7 +283,7 @@ func TestPGInvalidQuery(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestPGTransaction(t *testing.T) {
+func TestPostgresTransaction(t *testing.T) {
 	db := pg(t)
 
 	type Model struct {
@@ -311,7 +311,7 @@ func TestPGTransaction(t *testing.T) {
 	require.Contains(t, err.Error(), "does not exist")
 }
 
-func TestPGScanWithoutResult(t *testing.T) {
+func TestPostgresScanWithoutResult(t *testing.T) {
 	db := pg(t)
 	defer db.Close()
 
@@ -327,7 +327,7 @@ func TestPGScanWithoutResult(t *testing.T) {
 	require.Equal(t, sql.ErrNoRows, err)
 }
 
-func TestPGIPNet(t *testing.T) {
+func TestPostgresIPNet(t *testing.T) {
 	type Model struct {
 		Network net.IPNet `bun:"type:inet"`
 	}
@@ -350,7 +350,7 @@ func TestPGIPNet(t *testing.T) {
 	require.Equal(t, *ipv4Net, model.Network)
 }
 
-func TestPGBytea(t *testing.T) {
+func TestPostgresBytea(t *testing.T) {
 	type Model struct {
 		Bytes []byte
 	}
@@ -370,7 +370,7 @@ func TestPGBytea(t *testing.T) {
 	require.Equal(t, []byte("hello"), model.Bytes)
 }
 
-func TestPGByteaArray(t *testing.T) {
+func TestPostgresByteaArray(t *testing.T) {
 	type Model struct {
 		BytesSlice [][]byte `bun:"type:bytea[]"`
 	}
@@ -391,7 +391,7 @@ func TestPGByteaArray(t *testing.T) {
 	require.Equal(t, model1.BytesSlice, model2.BytesSlice)
 }
 
-func TestPGDate(t *testing.T) {
+func TestPostgresDate(t *testing.T) {
 	db := pg(t)
 	defer db.Close()
 
@@ -416,7 +416,7 @@ func TestPGDate(t *testing.T) {
 	require.False(t, nullTime.IsZero())
 }
 
-func TestPGTimetz(t *testing.T) {
+func TestPostgresTimetz(t *testing.T) {
 	db := pg(t)
 	defer db.Close()
 
@@ -426,7 +426,7 @@ func TestPGTimetz(t *testing.T) {
 	require.NotZero(t, tm)
 }
 
-func TestPGOnConflictDoUpdate(t *testing.T) {
+func TestPostgresOnConflictDoUpdate(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
 		UpdatedAt time.Time
@@ -463,7 +463,7 @@ func TestPGOnConflictDoUpdate(t *testing.T) {
 	}
 }
 
-func TestPGCopyFromCopyTo(t *testing.T) {
+func TestPostgresCopyFromCopyTo(t *testing.T) {
 	ctx := context.Background()
 
 	db := pg(t)
@@ -517,4 +517,26 @@ func TestPGCopyFromCopyTo(t *testing.T) {
 			err.Error(),
 		)
 	})
+}
+
+func TestPostgresUUID(t *testing.T) {
+	type Model struct {
+		ID uuid.UUID `bun:",pk,nullzero,type:uuid,default:uuid_generate_v4()"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
+	require.NoError(t, err)
+
+	err = db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := new(Model)
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+	require.NotZero(t, model.ID)
 }
