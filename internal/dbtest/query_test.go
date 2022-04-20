@@ -786,6 +786,18 @@ func TestQuery(t *testing.T) {
 				WherePK().
 				WhereAllWithDeleted()
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID        int64 `bun:",pk"`
+				UpdatedAt time.Time
+			}
+			return db.NewUpdate().
+				Model(&Model{}).
+				OmitZero().
+				WherePK().
+				Value("updated_at", "NOW()").
+				Returning("*")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
