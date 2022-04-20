@@ -7,11 +7,11 @@ replace github.com/uptrace/bun => ../..
 exclude go.opentelemetry.io/proto/otlp v0.15.0
 
 require (
-	github.com/uptrace/bun v1.1.3
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.11
-	go.opentelemetry.io/otel v1.6.1
-	go.opentelemetry.io/otel/metric v0.28.0
-	go.opentelemetry.io/otel/trace v1.6.1
+	github.com/uptrace/bun v1.1.4
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.12
+	go.opentelemetry.io/otel v1.6.3
+	go.opentelemetry.io/otel/metric v0.29.0
+	go.opentelemetry.io/otel/trace v1.6.3
 )
 
 require (
@@ -21,5 +21,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 )
