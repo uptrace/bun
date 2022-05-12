@@ -28,15 +28,15 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.7.0
-	github.com/uptrace/bun v1.1.4
-	github.com/uptrace/bun/dbfixture v1.1.4
-	github.com/uptrace/bun/dialect/mssqldialect v1.1.4
-	github.com/uptrace/bun/dialect/mysqldialect v1.1.4
-	github.com/uptrace/bun/dialect/pgdialect v1.1.4
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.4
-	github.com/uptrace/bun/driver/pgdriver v1.1.4
-	github.com/uptrace/bun/driver/sqliteshim v1.1.4
-	github.com/uptrace/bun/extra/bundebug v1.1.4
+	github.com/uptrace/bun v1.1.5
+	github.com/uptrace/bun/dbfixture v1.1.5
+	github.com/uptrace/bun/dialect/mssqldialect v1.1.5
+	github.com/uptrace/bun/dialect/mysqldialect v1.1.5
+	github.com/uptrace/bun/dialect/pgdialect v1.1.5
+	github.com/uptrace/bun/dialect/sqlitedialect v1.1.5
+	github.com/uptrace/bun/driver/pgdriver v1.1.5
+	github.com/uptrace/bun/driver/sqliteshim v1.1.5
+	github.com/uptrace/bun/extra/bundebug v1.1.5
 )
 
 require (
