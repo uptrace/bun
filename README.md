@@ -27,7 +27,7 @@
 
 Resources:
 
-- [**Get started**](https://bun.uptrace.dev/guide/getting-started.html)
+- [**Get started**](https://bun.uptrace.dev/guide/golang-orm.html)
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
 - [Discussions](https://github.com/uptrace/bun/discussions)
 - [Chat](https://discord.gg/rWtp5Aj)
@@ -254,7 +254,7 @@ topRegions := db.NewSelect().
 	TableExpr("regional_sales").
 	Where("total_sales > (SELECT SUM(total_sales) / 10 FROM regional_sales)")
 
-var items map[string]interface{}
+var items []map[string]interface{}
 err := db.NewSelect().
 	With("regional_sales", regionalSales).
 	With("top_regions", topRegions).
@@ -302,7 +302,7 @@ if err := db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx); err != nil {
 }
 ```
 
-See [**Getting started**](https://bun.uptrace.dev/guide/getting-started.html) guide and check
+See [**Getting started**](https://bun.uptrace.dev/guide/golang-orm.html) guide and check
 [examples](example).
 
 ## See also
