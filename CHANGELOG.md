@@ -1,3 +1,12 @@
+## [1.1.5](https://github.com/uptrace/bun/compare/v1.1.4...v1.1.5) (2022-05-12)
+
+
+### Bug Fixes
+
+* **driver/sqliteshim:** make it work with recent version of modernc sqlite ([2360584](https://github.com/uptrace/bun/commit/23605846c20684e39bf1eaac50a2147a1b68a729))
+
+
+
 ## [1.1.4](https://github.com/uptrace/bun/compare/v1.1.3...v1.1.4) (2022-04-20)
 
 
