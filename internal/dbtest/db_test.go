@@ -879,7 +879,7 @@ func testWithForeignKeys(t *testing.T, db *bun.DB) {
 		ID       int `bun:",pk,autoincrement"`
 		UserID   int
 		UserType string
-		User     *User `bun:"rel:belongs-to,join:user_id=id,join:user_type=type"`
+		User     *User `bun:"rel:belongs-to,join:user_id=id,join:user_type=type,on_update:cascade,on_delete:set null"`
 	}
 
 	if db.Dialect().Name() == dialect.SQLite {
