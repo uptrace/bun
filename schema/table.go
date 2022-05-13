@@ -479,7 +479,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 	}
 
-	rel.OnUpdate = "ON DELETE NO ACTION"
+	rel.OnUpdate = "ON UPDATE NO ACTION"
 	if onUpdate, ok := field.Tag.Options["on_update"]; ok {
 		if len(onUpdate) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_update option must be a single field", t.TypeName, field.GoName))
