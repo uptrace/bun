@@ -33,8 +33,8 @@ var (
 )
 
 type QueryHook struct {
-	attrs      []attribute.KeyValue
-	formatting bool
+	attrs         []attribute.KeyValue
+	formatQueries bool
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -148,7 +148,7 @@ func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 
 	var query string
 
-	if h.formatting && len(event.Query) <= softQueryLimit {
+	if h.formatQueries && len(event.Query) <= softQueryLimit {
 		query = event.Query
 	} else {
 		query = unformattedQuery(event)
