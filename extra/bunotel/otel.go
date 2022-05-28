@@ -33,7 +33,8 @@ var (
 )
 
 type QueryHook struct {
-	attrs []attribute.KeyValue
+	attrs         []attribute.KeyValue
+	formatQueries bool
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -83,7 +84,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	span.SetName(operation)
 	defer span.End()
 
-	query := eventQuery(event)
+	query := h.eventQuery(event)
 	fn, file, line := funcFileLine("github.com/uptrace/bun")
 
 	attrs := make([]attribute.KeyValue, 0, 10)
@@ -141,13 +142,13 @@ func funcFileLine(pkg string) (string, string, int) {
 	return fn, file, line
 }
 
-func eventQuery(event *bun.QueryEvent) string {
+func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 	const softQueryLimit = 8000
 	const hardQueryLimit = 16000
 
 	var query string
 
-	if len(event.Query) <= softQueryLimit {
+	if h.formatQueries && len(event.Query) <= softQueryLimit {
 		query = event.Query
 	} else {
 		query = unformattedQuery(event)

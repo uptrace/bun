@@ -20,3 +20,13 @@ func WithDBName(name string) Option {
 		h.attrs = append(h.attrs, semconv.DBNameKey.String(name))
 	}
 }
+
+// WithFormattedQueries enables formatting of the query that is added
+// as the statement attribute to the trace.
+// This means that all placeholders and arguments will be filled first
+// and the query will contain all information as sent to the database.
+func WithFormattedQueries(format bool) Option {
+	return func(h *QueryHook) {
+		h.formatQueries = format
+	}
+}
