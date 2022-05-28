@@ -121,7 +121,11 @@ func enableSSL(ctx context.Context, cn *Conn, tlsConf *tls.Config) error {
 		return errors.New("pgdriver: SSL is not enabled on the server")
 	}
 
-	cn.netConn = tls.Client(cn.netConn, tlsConf)
+	tlsCN := tls.Client(cn.netConn, tlsConf)
+	if err := tlsCN.HandshakeContext(ctx); err != nil {
+		return fmt.Errorf("pgdriver: TLS handshake failed: %w", err)
+	}
+	cn.netConn = tlsCN
 	rd.Reset(cn.netConn)
 
 	return nil
