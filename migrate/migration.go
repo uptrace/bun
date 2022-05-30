@@ -89,6 +89,22 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 			idb = conn
 		}
 
+		var retErr error
+
+		defer func() {
+			if tx, ok := idb.(bun.Tx); ok {
+				retErr = tx.Commit()
+				return
+			}
+
+			if conn, ok := idb.(bun.Conn); ok {
+				retErr = conn.Close()
+				return
+			}
+
+			panic("not reached")
+		}()
+
 		for _, q := range queries {
 			_, err = idb.ExecContext(ctx, q)
 			if err != nil {
@@ -96,13 +112,7 @@ func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 			}
 		}
 
-		if tx, ok := idb.(bun.Tx); ok {
-			return tx.Commit()
-		} else if conn, ok := idb.(bun.Conn); ok {
-			return conn.Close()
-		}
-
-		panic("not reached")
+		return retErr
 	}
 }
 
