@@ -278,6 +278,9 @@ func (q *UpdateQuery) appendSetStruct(
 		if !hasValue && q.omitZero && f.HasZeroValue(model.strct) {
 			continue
 		}
+		if f.SkipUpdate() {
+			continue
+		}
 
 		if len(b) != pos {
 			b = append(b, ", "...)

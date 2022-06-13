@@ -611,3 +611,48 @@ func TestPostgresHStoreQuote(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wanted, m)
 }
+
+func TestPostgresSkipupdateField(t *testing.T) {
+	type Model struct {
+		ID        int64 `bun:",pk,autoincrement"`
+		Name      string
+		CreatedAt time.Time `bun:",skipupdate"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	now := time.Now().Truncate(time.Minute).UTC()
+
+	model := &Model{ID: 1, Name: "foo", CreatedAt: now}
+
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.NoError(t, err)
+	require.NotZero(t, model.CreatedAt)
+
+	//
+	// update field with tag "skipupdate"
+	//
+	model.CreatedAt = now.Add(2 * time.Minute)
+	_, err = db.NewUpdate().Model(model).WherePK().Exec(ctx)
+	require.NoError(t, err)
+
+	//
+	// check
+	//
+	model_ := new(Model)
+	model_.ID = model.ID
+	err = db.NewSelect().Model(model_).WherePK().Scan(ctx)
+	require.NoError(t, err, "select")
+	require.NotEmpty(t, model_)
+	require.EqualValues(t, model.ID, model_.ID)
+	require.EqualValues(t, model.Name, model_.Name)
+	require.EqualValues(t, now.UTC(), model_.CreatedAt.UTC())
+
+	require.NotEqualValues(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
+}

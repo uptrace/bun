@@ -120,6 +120,10 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 	return f.ScanWithCheck(fv, src)
 }
 
+func (f *Field) SkipUpdate() bool {
+	return f.Tag.HasOption("skipupdate")
+}
+
 func indexEqual(ind1, ind2 []int) bool {
 	if len(ind1) != len(ind2) {
 		return false
