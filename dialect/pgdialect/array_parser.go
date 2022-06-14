@@ -8,17 +8,13 @@ import (
 )
 
 type arrayParser struct {
-	b []byte
-	i int
-
-	buf []byte
+	*streamParser
 	err error
 }
 
 func newArrayParser(b []byte) *arrayParser {
 	p := &arrayParser{
-		b: b,
-		i: 1,
+		streamParser: newStreamParser(b, 1),
 	}
 	if len(b) < 2 || b[0] != '{' || b[len(b)-1] != '}' {
 		p.err = fmt.Errorf("bun: can't parse array: %q", b)
@@ -134,32 +130,4 @@ func (p *arrayParser) readSubstring() ([]byte, error) {
 	}
 
 	return p.buf, nil
-}
-
-func (p *arrayParser) valid() bool {
-	return p.i < len(p.b)
-}
-
-func (p *arrayParser) readByte() (byte, error) {
-	if p.valid() {
-		c := p.b[p.i]
-		p.i++
-		return c, nil
-	}
-	return 0, io.EOF
-}
-
-func (p *arrayParser) unreadByte() {
-	p.i--
-}
-
-func (p *arrayParser) peek() byte {
-	if p.valid() {
-		return p.b[p.i]
-	}
-	return 0
-}
-
-func (p *arrayParser) skipNext() {
-	p.i++
 }

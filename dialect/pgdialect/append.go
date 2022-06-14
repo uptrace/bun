@@ -307,3 +307,58 @@ func arrayAppendString(b []byte, s string) []byte {
 	b = append(b, '"')
 	return b
 }
+
+//------------------------------------------------------------------------------
+
+var mapStringStringType = reflect.TypeOf(map[string]string(nil))
+
+func (d *Dialect) hstoreAppender(typ reflect.Type) schema.AppenderFunc {
+	kind := typ.Kind()
+
+	switch kind {
+	case reflect.Ptr:
+		if fn := d.hstoreAppender(typ.Elem()); fn != nil {
+			return schema.PtrAppender(fn)
+		}
+	case reflect.Map:
+		// ok:
+	default:
+		return nil
+	}
+
+	if typ.Key() == stringType && typ.Elem() == stringType {
+		return appendMapStringStringValue
+	}
+
+	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+		err := fmt.Errorf("bun: Hstore(unsupported %s)", v.Type())
+		return dialect.AppendError(b, err)
+	}
+}
+
+func appendMapStringString(b []byte, m map[string]string) []byte {
+	if m == nil {
+		return dialect.AppendNull(b)
+	}
+
+	b = append(b, '\'')
+
+	for key, value := range m {
+		b = arrayAppendString(b, key)
+		b = append(b, '=', '>')
+		b = arrayAppendString(b, value)
+		b = append(b, ',')
+	}
+	if len(m) > 0 {
+		b = b[:len(b)-1] // Strip trailing comma.
+	}
+
+	b = append(b, '\'')
+
+	return b
+}
+
+func appendMapStringStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	m := v.Convert(mapStringStringType).Interface().(map[string]string)
+	return appendMapStringString(b, m)
+}

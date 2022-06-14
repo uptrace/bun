@@ -88,6 +88,11 @@ func (d *Dialect) onField(field *schema.Field) {
 		field.Append = d.arrayAppender(field.StructField.Type)
 		field.Scan = arrayScanner(field.StructField.Type)
 	}
+
+	if field.DiscoveredSQLType == sqltype.HSTORE {
+		field.Append = d.hstoreAppender(field.StructField.Type)
+		field.Scan = hstoreScanner(field.StructField.Type)
+	}
 }
 
 func (d *Dialect) IdentQuote() byte {

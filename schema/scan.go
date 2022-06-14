@@ -449,6 +449,11 @@ func PtrScanner(fn ScannerFunc) ScannerFunc {
 		if dest.IsNil() {
 			dest.Set(reflect.New(dest.Type().Elem()))
 		}
+
+		if dest.Kind() == reflect.Map {
+			return fn(dest, src)
+		}
+
 		return fn(dest.Elem(), src)
 	}
 }

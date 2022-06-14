@@ -540,3 +540,74 @@ func TestPostgresUUID(t *testing.T) {
 	require.NoError(t, err)
 	require.NotZero(t, model.ID)
 }
+
+func TestPostgresHStore(t *testing.T) {
+	type Model struct {
+		ID     int64              `bun:",pk,autoincrement"`
+		Attrs1 map[string]string  `bun:",hstore"`
+		Attrs2 *map[string]string `bun:",hstore"`
+		Attrs3 *map[string]string `bun:",hstore"`
+	}
+
+	db := pg(t)
+	defer db.Close()
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS HSTORE;`)
+	require.NoError(t, err)
+
+	_, err = db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().Model((*Model)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	model1 := &Model{
+		ID:     123,
+		Attrs1: map[string]string{"one": "two", "three": "four"},
+		Attrs2: &map[string]string{"two": "three", "four": "five"},
+	}
+	_, err = db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, model1, model2)
+
+	attrs1 := make(map[string]string)
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("attrs1").
+		Scan(ctx, pgdialect.HStore(&attrs1))
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"one": "two", "three": "four"}, attrs1)
+
+	attrs2 := make(map[string]string)
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("attrs2").
+		Scan(ctx, pgdialect.HStore(&attrs2))
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"two": "three", "four": "five"}, attrs2)
+
+	var attrs3 map[string]string
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("attrs3").
+		Scan(ctx, pgdialect.HStore(&attrs3))
+	require.NoError(t, err)
+	require.Nil(t, attrs3)
+}
+
+func TestPostgresHStoreQuote(t *testing.T) {
+	db := pg(t)
+	defer db.Close()
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS HSTORE;`)
+	require.NoError(t, err)
+
+	wanted := map[string]string{"'": "'", "''": "''", "'''": "'''", "\"": "\""}
+	m := make(map[string]string)
+	err = db.NewSelect().
+		ColumnExpr("?::hstore", pgdialect.HStore(wanted)).
+		Scan(ctx, pgdialect.HStore(&m))
+	require.NoError(t, err)
+	require.Equal(t, wanted, m)
+}
