@@ -479,6 +479,10 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 	}
 
+	if field.Tag.HasOption("join_on") {
+		rel.Condition = field.Tag.Options["join_on"]
+	}
+
 	rel.OnUpdate = "ON UPDATE NO ACTION"
 	if onUpdate, ok := field.Tag.Options["on_update"]; ok {
 		if len(onUpdate) > 1 {
@@ -569,6 +573,10 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 	}
 
+	if field.Tag.HasOption("join_on") {
+		rel.Condition = field.Tag.Options["join_on"]
+	}
+
 	if join, ok := field.Tag.Options["join"]; ok {
 		baseColumns, joinColumns := parseRelationJoin(join)
 		for i, baseColumn := range baseColumns {
@@ -630,11 +638,17 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 
 	joinTable := t.dialect.Tables().Ref(indirectType(field.IndirectType.Elem()))
 	polymorphicValue, isPolymorphic := field.Tag.Option("polymorphic")
+
 	rel := &Relation{
 		Type:      HasManyRelation,
 		Field:     field,
 		JoinTable: joinTable,
 	}
+
+	if field.Tag.HasOption("join_on") {
+		rel.Condition = field.Tag.Options["join_on"]
+	}
+
 	var polymorphicColumn string
 
 	if join, ok := field.Tag.Options["join"]; ok {
@@ -745,6 +759,11 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 		M2MTable:  m2mTable,
 	}
+
+	if field.Tag.HasOption("join_on") {
+		rel.Condition = field.Tag.Options["join_on"]
+	}
+
 	var leftColumn, rightColumn string
 
 	if join, ok := field.Tag.Options["join"]; ok {
