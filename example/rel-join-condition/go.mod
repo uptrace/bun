@@ -1,14 +1,6 @@
-module github.com/uptrace/bun/example/rel_join_on_tag
+module github.com/mazitovt/bun/example/rel-join-condition
 
-go 1.17
-
-replace github.com/uptrace/bun => ../..
-
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
-
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
-
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+go 1.18
 
 require (
 	github.com/uptrace/bun v1.1.5
