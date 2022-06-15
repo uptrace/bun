@@ -305,6 +305,17 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
+	if len(join.Relation.Condition) > 0 {
+		apl := func(q *SelectQuery) *SelectQuery {
+			for _, opt := range join.Relation.Condition {
+				q.addWhere(schema.SafeQueryWithSep(opt, nil, " AND "))
+			}
+			return q
+		}
+
+		join.apply = apl
+	}
+
 	if len(apply) == 1 {
 		join.apply = apply[0]
 	}
