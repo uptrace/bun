@@ -1096,3 +1096,40 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 	}
 	return b
 }
+
+//------------------------------------------------------------------------------
+
+type idxHintsQuery struct {
+	idxHints [][]schema.QueryWithArgs
+}
+
+func (ih *idxHintsQuery) addIdxHints(indexes ...string) {
+	item := make([]schema.QueryWithArgs, 0, len(indexes))
+	for _, idx := range indexes {
+		item = append(item, schema.UnsafeIdent(idx))
+	}
+	ih.idxHints = append(ih.idxHints, item)
+}
+
+func (ih *idxHintsQuery) appendIndexHints(
+	fmter schema.Formatter, b []byte,
+) ([]byte, error) {
+	var err error
+	for _, hint := range ih.idxHints {
+		if len(hint) == 0 {
+			continue
+		}
+		b = append(b, " USE INDEX ("...)
+		for i, f := range hint {
+			if i > 0 {
+				b = append(b, ", "...)
+			}
+			b, err = f.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+		}
+		b = append(b, ")"...)
+	}
+	return b, nil
+}
