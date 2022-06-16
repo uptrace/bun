@@ -159,6 +159,7 @@ func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 }
 
 //------------------------------------------------------------------------------
+
 func (q *SelectQuery) IndexHints(indexes ...string) *SelectQuery {
 	q.addIdxHints(indexes...)
 	return q

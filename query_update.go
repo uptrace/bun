@@ -16,6 +16,7 @@ type UpdateQuery struct {
 	returningQuery
 	customValueQuery
 	setQuery
+	idxHintsQuery
 
 	omitZero bool
 }
@@ -200,6 +201,11 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	} else {
 		b, err = q.appendFirstTable(fmter, b)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	b, err = q.appendIndexHints(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -538,4 +544,11 @@ func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
 
 func (q *updateQueryBuilder) Unwrap() interface{} {
 	return q.UpdateQuery
+}
+
+//------------------------------------------------------------------------------
+
+func (q *UpdateQuery) IndexHints(indexes ...string) *UpdateQuery {
+	q.addIdxHints(indexes...)
+	return q
 }
