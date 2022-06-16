@@ -488,6 +488,15 @@ func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
 	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
 
+func (q *UpdateQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
+
 //------------------------------------------------------------------------------
 
 func (q *UpdateQuery) QueryBuilder() QueryBuilder {

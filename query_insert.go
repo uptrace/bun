@@ -641,3 +641,12 @@ func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error 
 
 	return nil
 }
+
+func (q *InsertQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
