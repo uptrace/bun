@@ -53,11 +53,11 @@ func fieldSQLType(field *schema.Field) string {
 	if v, ok := field.Tag.Option("composite"); ok {
 		return v
 	}
-	if _, ok := field.Tag.Option("hstore"); ok {
-		return "hstore"
+	if field.Tag.HasOption("hstore") {
+		return sqltype.HSTORE
 	}
 
-	if _, ok := field.Tag.Options["array"]; ok {
+	if field.Tag.HasOption("array") {
 		switch field.IndirectType.Kind() {
 		case reflect.Slice, reflect.Array:
 			sqlType := sqlType(field.IndirectType.Elem())
