@@ -32,6 +32,8 @@ type SelectQuery struct {
 	offset     int32
 	selFor     schema.QueryWithArgs
 
+	WhereFields
+
 	union []union
 }
 
@@ -125,11 +127,13 @@ func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
 
 func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
+	q.addWhereField(query)
 	return q
 }
 
 func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
+	q.addWhereField(query)
 	return q
 }
 
