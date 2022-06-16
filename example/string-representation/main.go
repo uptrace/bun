@@ -24,11 +24,5 @@ func main() {
 
 	q := db.NewSelect().Model((*Item)(nil)).Where("id > ?", 0)
 
-	var buf []byte
-	buf, err = q.AppendQuery(db.Formatter(), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(buf))
+	fmt.Println(q.String())
 }

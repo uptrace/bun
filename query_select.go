@@ -920,6 +920,15 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	return n == 1, nil
 }
 
+func (q *SelectQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
+
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) QueryBuilder() QueryBuilder {
