@@ -1261,9 +1261,9 @@ func testUpdateWithSkipupdateTag(t *testing.T, db *bun.DB) {
 	err := db.ResetModel(ctx, (*Model)(nil))
 	require.NoError(t, err)
 
-	now := time.Now().Truncate(time.Minute).UTC()
+	createdAt := time.Now().Truncate(time.Minute).UTC()
 
-	model := &Model{ID: 1, Name: "foo", CreatedAt: now}
+	model := &Model{ID: 1, Name: "foo", CreatedAt: createdAt}
 
 	_, err = db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
@@ -1272,7 +1272,7 @@ func testUpdateWithSkipupdateTag(t *testing.T, db *bun.DB) {
 	//
 	// update field with tag "skipupdate"
 	//
-	model.CreatedAt = now.Add(2 * time.Minute)
+	model.CreatedAt = model.CreatedAt.Add(2 * time.Minute)
 	_, err = db.NewUpdate().Model(model).WherePK().Exec(ctx)
 	require.NoError(t, err)
 
@@ -1284,11 +1284,11 @@ func testUpdateWithSkipupdateTag(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().Model(model_).WherePK().Scan(ctx)
 	require.NoError(t, err, "select")
 	require.NotEmpty(t, model_)
-	require.EqualValues(t, model.ID, model_.ID)
-	require.EqualValues(t, model.Name, model_.Name)
-	require.EqualValues(t, now.UTC(), model_.CreatedAt.UTC())
+	require.Equal(t, model.ID, model_.ID)
+	require.Equal(t, model.Name, model_.Name)
+	require.Equal(t, createdAt.UTC(), model_.CreatedAt.UTC())
 
-	require.NotEqualValues(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
+	require.NotEqual(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
 }
 
 func testTxScanAndCount(t *testing.T, db *bun.DB) {
