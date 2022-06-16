@@ -26,6 +26,7 @@ type SelectQuery struct {
 	distinctOn []schema.QueryWithArgs
 	joins      []joinQuery
 	group      []schema.QueryWithArgs
+	idxHints   []schema.QueryWithArgs
 	having     []schema.QueryWithArgs
 	order      []schema.QueryWithArgs
 	limit      int32
@@ -154,6 +155,14 @@ func (q *SelectQuery) WhereDeleted() *SelectQuery {
 
 func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 	q.whereAllWithDeleted()
+	return q
+}
+
+//------------------------------------------------------------------------------
+func (q *SelectQuery) IndexHints(indexes ...string) *SelectQuery {
+	for _, idx := range indexes {
+		q.idxHints = append(q.idxHints, schema.UnsafeIdent(idx))
+	}
 	return q
 }
 
@@ -439,6 +448,20 @@ func (q *SelectQuery) appendQuery(
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(q.idxHints) > 0 {
+		b = append(b, " USE INDEX ("...)
+		for i, f := range q.idxHints {
+			if i > 0 {
+				b = append(b, ", "...)
+			}
+			b, err = f.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+		}
+		b = append(b, ")"...)
 	}
 
 	b, err = q.appendWhere(fmter, b, true)
