@@ -21,7 +21,7 @@ type Profile struct {
 type User struct {
 	ID       int64 `bun:",pk,autoincrement"`
 	Name     string
-	Profiles []*Profile `bun:"rel:has-many,join:id=user_id,join_on:active IS TRUE,join_on:lang='ru'"`
+	Profiles []*Profile `bun:"rel:has-many,join:id=user_id,join_on: active IS TRUE"`
 }
 
 func main() {
@@ -45,15 +45,23 @@ func main() {
 	if err := db.NewSelect().
 		Model(user).
 		Column("user.*").
-		Relation("Profiles").
+		Relation("Profiles", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.Where("lang = 'ru'")
+		}).
 		OrderExpr("user.id ASC").
 		Limit(1).
 		Scan(ctx); err != nil {
 		panic(err)
 	}
 
-	fmt.Println(user.ID, user.Name, user.Profiles[0])
-	// Output: 1 user &{2 ru true 1}
+	fmt.Printf("user.ID: %d, user.Name: %q\n", user.ID, user.Name)
+	fmt.Printf("user.Profiles: ")
+	for _, p := range user.Profiles {
+		fmt.Printf("%v, ", p)
+	}
+	fmt.Println()
+	// Output: 	user.ID: 1, user.Name: "user 1"
+	//			user.Profiles: &{2 ru true 1},
 }
 
 func createSchema(ctx context.Context, db *bun.DB) error {
@@ -78,7 +86,8 @@ func createSchema(ctx context.Context, db *bun.DB) error {
 	profiles := []*Profile{
 		{ID: 1, Lang: "en", Active: true, UserID: 1},
 		{ID: 2, Lang: "ru", Active: true, UserID: 1},
-		{ID: 3, Lang: "md", Active: false, UserID: 1},
+		{ID: 3, Lang: "ru", Active: false, UserID: 1},
+		{ID: 4, Lang: "md", Active: false, UserID: 1},
 	}
 	if _, err := db.NewInsert().Model(&profiles).Exec(ctx); err != nil {
 		return err
