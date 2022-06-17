@@ -20,6 +20,7 @@ type Relation struct {
 	JoinFields []*Field
 	OnUpdate   string
 	OnDelete   string
+	Condition  []string
 
 	PolymorphicField *Field
 	PolymorphicValue string
