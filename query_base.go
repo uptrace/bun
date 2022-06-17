@@ -1100,26 +1100,84 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 //------------------------------------------------------------------------------
 
 type idxHintsQuery struct {
-	idxHints [][]schema.QueryWithArgs
+	uIndex           [][]schema.QueryWithArgs
+	uIndexForJoin    [][]schema.QueryWithArgs
+	uIndexForOrderBy [][]schema.QueryWithArgs
+	uIndexForGroupBy [][]schema.QueryWithArgs
 }
 
-func (ih *idxHintsQuery) addIdxHints(indexes ...string) {
+func (ih *idxHintsQuery) addIdxHints(idxHints [][]schema.QueryWithArgs, indexes ...string) [][]schema.QueryWithArgs {
 	if len(indexes) == 0 {
-		return
+		return idxHints
 	}
 	item := make([]schema.QueryWithArgs, 0, len(indexes))
 	for _, idx := range indexes {
 		item = append(item, schema.UnsafeIdent(idx))
 	}
-	ih.idxHints = append(ih.idxHints, item)
+	return append(idxHints, item)
+}
+
+func (ih *idxHintsQuery) appendUseIndex(indexes ...string) {
+	ih.uIndex = ih.addIdxHints(ih.uIndex, indexes...)
+}
+
+func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
+	ih.uIndexForJoin = ih.addIdxHints(ih.uIndexForJoin, indexes...)
+}
+
+func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
+	ih.uIndexForOrderBy = ih.addIdxHints(ih.uIndexForOrderBy, indexes...)
+}
+
+func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
+	ih.uIndexForGroupBy = ih.addIdxHints(ih.uIndexForGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIndexHints(
 	fmter schema.Formatter, b []byte,
 ) ([]byte, error) {
+	type IdxHint struct {
+		Name   string
+		Values [][]schema.QueryWithArgs
+	}
+
+	hints := []IdxHint{
+		{
+			Name:   "USE INDEX",
+			Values: ih.uIndex,
+		},
+		{
+			Name:   "USE INDEX FOR JOIN",
+			Values: ih.uIndexForJoin,
+		},
+		{
+			Name:   "USE INDEX FOR ORDER BY",
+			Values: ih.uIndexForOrderBy,
+		},
+		{
+			Name:   "USE INDEX FOR GROUP BY",
+			Values: ih.uIndexForGroupBy,
+		},
+	}
+
 	var err error
-	for _, hint := range ih.idxHints {
-		b = append(b, " USE INDEX ("...)
+	for _, h := range hints {
+		b, err = ih.outIndexHints(h.Name, h.Values, fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
+func (ih *idxHintsQuery) outIndexHints(
+	name string,
+	hints [][]schema.QueryWithArgs,
+	fmter schema.Formatter, b []byte,
+) ([]byte, error) {
+	var err error
+	for _, hint := range hints {
+		b = append(b, fmt.Sprintf(" %s (", name)...)
 		for i, f := range hint {
 			if i > 0 {
 				b = append(b, ", "...)
