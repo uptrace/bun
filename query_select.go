@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/uptrace/bun/dialect"
+
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -160,8 +162,31 @@ func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) IndexHints(indexes ...string) *SelectQuery {
-	q.addIdxHints(indexes...)
+func (q *SelectQuery) UseIndex(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndex(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) UseIndexForJoin(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForJoin(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForOrderBy(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForGroupBy(indexes...)
+	}
 	return q
 }
 

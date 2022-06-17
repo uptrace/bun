@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/uptrace/bun/dialect"
+
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -548,7 +550,30 @@ func (q *updateQueryBuilder) Unwrap() interface{} {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) IndexHints(indexes ...string) *UpdateQuery {
-	q.addIdxHints(indexes...)
+func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndex(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) UseIndexForJoin(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForJoin(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) UseIndexForOrderBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForOrderBy(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) UseIndexForGroupBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendUseIndexForGroupBy(indexes...)
+	}
 	return q
 }
