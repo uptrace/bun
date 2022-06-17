@@ -1,0 +1,1 @@
+SELECT `id` FROM `models` AS `model` USE INDEX FOR GROUP BY (`ix1, ix2`)
