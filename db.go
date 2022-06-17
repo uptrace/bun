@@ -141,13 +141,19 @@ func (db *DB) Dialect() schema.Dialect {
 }
 
 func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
+	defer rows.Close()
+
 	model, err := newModel(db, dest)
 	if err != nil {
 		return err
 	}
 
 	_, err = model.ScanRows(ctx, rows)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return rows.Err()
 }
 
 func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
