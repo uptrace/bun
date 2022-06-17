@@ -1104,6 +1104,9 @@ type idxHintsQuery struct {
 }
 
 func (ih *idxHintsQuery) addIdxHints(indexes ...string) {
+	if len(indexes) == 0 {
+		return
+	}
 	item := make([]schema.QueryWithArgs, 0, len(indexes))
 	for _, idx := range indexes {
 		item = append(item, schema.UnsafeIdent(idx))
@@ -1116,9 +1119,6 @@ func (ih *idxHintsQuery) appendIndexHints(
 ) ([]byte, error) {
 	var err error
 	for _, hint := range ih.idxHints {
-		if len(hint) == 0 {
-			continue
-		}
 		b = append(b, " USE INDEX ("...)
 		for i, f := range hint {
 			if i > 0 {
