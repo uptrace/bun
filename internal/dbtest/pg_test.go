@@ -526,27 +526,28 @@ func TestPostgresCopyFromCopyTo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("run in transaction", func(t *testing.T) {
-		require.NoError(t, db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-			tblName := "test_copy_from"
-			qs := []string{
-				"CREATE TEMP TABLE %s (n int)",
-				"INSERT INTO %s SELECT generate_series(1, 100)",
-				"TRUNCATE %s",
-			}
-			for _, q := range qs {
-				_, err := conn.ExecContext(ctx, fmt.Sprintf(q, tblName))
-				require.NoError(t, err)
-			}
-
-			res, err := pgdriver.CopyFrom(ctx, conn, bufReader, fmt.Sprintf("COPY %s FROM STDIN", tblName))
+		tblName := "test_copy_from"
+		qs := []string{
+			"CREATE TEMP TABLE %s (n int)",
+			"INSERT INTO %s SELECT generate_series(1, 100)",
+		}
+		for _, q := range qs {
+			_, err := conn.ExecContext(ctx, fmt.Sprintf(q, tblName))
 			require.NoError(t, err)
+		}
 
-			n, err := res.RowsAffected()
-			require.NoError(t, err)
-			require.Equal(t, int64(1000), n)
+		tx, err := conn.BeginTx(ctx, nil)
+		require.NoError(t, err)
 
-			return err
-		}))
+		_, err = tx.Exec(fmt.Sprintf("TRUNCATE %s", tblName))
+		require.NoError(t, err)
+
+		res, err := pgdriver.CopyFrom(ctx, conn, bufReader, fmt.Sprintf("COPY %s FROM STDIN", tblName))
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1000), n)
 	})
 }
 
