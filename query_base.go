@@ -1112,8 +1112,8 @@ type indexHints struct {
 	forGroupBy []schema.QueryWithArgs
 }
 
-func (ih *idxHintsQuery) addIdxHints(hints []schema.QueryWithArgs, indexes ...string) []schema.QueryWithArgs {
-	hints = make([]schema.QueryWithArgs, 0, len(indexes))
+func (ih *idxHintsQuery) addIdxHints(indexes ...string) []schema.QueryWithArgs {
+	hints := make([]schema.QueryWithArgs, 0, len(indexes))
 	for _, idx := range indexes {
 		hints = append(hints, schema.UnsafeIdent(idx))
 	}
@@ -1127,7 +1127,7 @@ func (ih *idxHintsQuery) appendUseIndex(indexes ...string) {
 	if ih.use == nil {
 		ih.use = new(indexHints)
 	}
-	ih.use.names = ih.addIdxHints(ih.use.names, indexes...)
+	ih.use.names = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
@@ -1137,7 +1137,7 @@ func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
 	if ih.use == nil {
 		ih.use = new(indexHints)
 	}
-	ih.use.forJoin = ih.addIdxHints(ih.use.forJoin, indexes...)
+	ih.use.forJoin = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
@@ -1147,7 +1147,7 @@ func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
 	if ih.use == nil {
 		ih.use = new(indexHints)
 	}
-	ih.use.forOrderBy = ih.addIdxHints(ih.use.forOrderBy, indexes...)
+	ih.use.forOrderBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
@@ -1157,7 +1157,7 @@ func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
 	if ih.use == nil {
 		ih.use = new(indexHints)
 	}
-	ih.use.forGroupBy = ih.addIdxHints(ih.use.forGroupBy, indexes...)
+	ih.use.forGroupBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
@@ -1167,7 +1167,7 @@ func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
 	if ih.ignore == nil {
 		ih.ignore = new(indexHints)
 	}
-	ih.ignore.names = ih.addIdxHints(ih.ignore.names, indexes...)
+	ih.ignore.names = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
@@ -1177,7 +1177,7 @@ func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
 	if ih.ignore == nil {
 		ih.ignore = new(indexHints)
 	}
-	ih.ignore.forJoin = ih.addIdxHints(ih.ignore.forJoin, indexes...)
+	ih.ignore.forJoin = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
@@ -1187,7 +1187,7 @@ func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
 	if ih.ignore == nil {
 		ih.ignore = new(indexHints)
 	}
-	ih.ignore.forOrderBy = ih.addIdxHints(ih.ignore.forOrderBy, indexes...)
+	ih.ignore.forOrderBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
@@ -1197,7 +1197,7 @@ func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
 	if ih.ignore == nil {
 		ih.ignore = new(indexHints)
 	}
-	ih.ignore.forGroupBy = ih.addIdxHints(ih.ignore.forGroupBy, indexes...)
+	ih.ignore.forGroupBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendForceIndex(indexes ...string) {
@@ -1207,7 +1207,7 @@ func (ih *idxHintsQuery) appendForceIndex(indexes ...string) {
 	if ih.force == nil {
 		ih.force = new(indexHints)
 	}
-	ih.force.names = ih.addIdxHints(ih.force.names, indexes...)
+	ih.force.names = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendForceIndexForJoin(indexes ...string) {
@@ -1217,7 +1217,7 @@ func (ih *idxHintsQuery) appendForceIndexForJoin(indexes ...string) {
 	if ih.force == nil {
 		ih.force = new(indexHints)
 	}
-	ih.force.forJoin = ih.addIdxHints(ih.force.forJoin, indexes...)
+	ih.force.forJoin = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendForceIndexForOrderBy(indexes ...string) {
@@ -1227,7 +1227,7 @@ func (ih *idxHintsQuery) appendForceIndexForOrderBy(indexes ...string) {
 	if ih.force == nil {
 		ih.force = new(indexHints)
 	}
-	ih.force.forOrderBy = ih.addIdxHints(ih.force.forOrderBy, indexes...)
+	ih.force.forOrderBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendForceIndexForGroupBy(indexes ...string) {
@@ -1237,7 +1237,7 @@ func (ih *idxHintsQuery) appendForceIndexForGroupBy(indexes ...string) {
 	if ih.force == nil {
 		ih.force = new(indexHints)
 	}
-	ih.force.forGroupBy = ih.addIdxHints(ih.force.forGroupBy, indexes...)
+	ih.force.forGroupBy = ih.addIdxHints(indexes...)
 }
 
 func (ih *idxHintsQuery) appendIndexHints(
