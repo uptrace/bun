@@ -577,3 +577,31 @@ func (q *UpdateQuery) UseIndexForGroupBy(indexes ...string) *UpdateQuery {
 	}
 	return q
 }
+
+func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndex(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) IgnoreIndexForJoin(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForJoin(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) IgnoreIndexForOrderBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForOrderBy(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) IgnoreIndexForGroupBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForGroupBy(indexes...)
+	}
+	return q
+}

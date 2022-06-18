@@ -1121,7 +1121,7 @@ func (ih *idxHintsQuery) addIdxHints(hints []schema.QueryWithArgs, indexes ...st
 }
 
 func (ih *idxHintsQuery) appendUseIndex(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.use == nil {
@@ -1131,7 +1131,7 @@ func (ih *idxHintsQuery) appendUseIndex(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.use == nil {
@@ -1141,7 +1141,7 @@ func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.use == nil {
@@ -1151,7 +1151,7 @@ func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.use == nil {
@@ -1161,7 +1161,7 @@ func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.ignore == nil {
@@ -1171,7 +1171,7 @@ func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.ignore == nil {
@@ -1181,7 +1181,7 @@ func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.ignore == nil {
@@ -1191,7 +1191,7 @@ func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
-	if len(indexes) > 0 {
+	if len(indexes) == 0 {
 		return
 	}
 	if ih.ignore == nil {
