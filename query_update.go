@@ -605,3 +605,31 @@ func (q *UpdateQuery) IgnoreIndexForGroupBy(indexes ...string) *UpdateQuery {
 	}
 	return q
 }
+
+func (q *UpdateQuery) ForceIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendForceIndex(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) ForceIndexForJoin(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendForceIndexForJoin(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) ForceIndexForOrderBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendForceIndexForOrderBy(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) ForceIndexForGroupBy(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendForceIndexForGroupBy(indexes...)
+	}
+	return q
+}
