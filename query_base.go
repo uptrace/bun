@@ -1100,10 +1100,17 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 //------------------------------------------------------------------------------
 
 type idxHintsQuery struct {
+	// use index
 	uIndex           [][]schema.QueryWithArgs
 	uIndexForJoin    [][]schema.QueryWithArgs
 	uIndexForOrderBy [][]schema.QueryWithArgs
 	uIndexForGroupBy [][]schema.QueryWithArgs
+
+	// ignore index
+	ignIndex           [][]schema.QueryWithArgs
+	ignIndexForJoin    [][]schema.QueryWithArgs
+	ignIndexForOrderBy [][]schema.QueryWithArgs
+	ignIndexForGroupBy [][]schema.QueryWithArgs
 }
 
 func (ih *idxHintsQuery) addIdxHints(idxHints [][]schema.QueryWithArgs, indexes ...string) [][]schema.QueryWithArgs {
@@ -1133,6 +1140,22 @@ func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
 	ih.uIndexForGroupBy = ih.addIdxHints(ih.uIndexForGroupBy, indexes...)
 }
 
+func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
+	ih.ignIndex = ih.addIdxHints(ih.ignIndex, indexes...)
+}
+
+func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
+	ih.ignIndexForJoin = ih.addIdxHints(ih.ignIndexForJoin, indexes...)
+}
+
+func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
+	ih.ignIndexForOrderBy = ih.addIdxHints(ih.ignIndexForOrderBy, indexes...)
+}
+
+func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
+	ih.ignIndexForGroupBy = ih.addIdxHints(ih.ignIndexForGroupBy, indexes...)
+}
+
 func (ih *idxHintsQuery) appendIndexHints(
 	fmter schema.Formatter, b []byte,
 ) ([]byte, error) {
@@ -1158,11 +1181,27 @@ func (ih *idxHintsQuery) appendIndexHints(
 			Name:   "USE INDEX FOR GROUP BY",
 			Values: ih.uIndexForGroupBy,
 		},
+		{
+			Name:   "IGNORE INDEX",
+			Values: ih.ignIndex,
+		},
+		{
+			Name:   "IGNORE INDEX FOR JOIN",
+			Values: ih.ignIndexForJoin,
+		},
+		{
+			Name:   "IGNORE INDEX FOR ORDER BY",
+			Values: ih.ignIndexForOrderBy,
+		},
+		{
+			Name:   "IGNORE INDEX FOR GROUP BY",
+			Values: ih.ignIndexForGroupBy,
+		},
 	}
 
 	var err error
 	for _, h := range hints {
-		b, err = ih.outIndexHints(h.Name, h.Values, fmter, b)
+		b, err = ih.bufIndexHints(h.Name, h.Values, fmter, b)
 		if err != nil {
 			return nil, err
 		}
@@ -1170,7 +1209,7 @@ func (ih *idxHintsQuery) appendIndexHints(
 	return b, nil
 }
 
-func (ih *idxHintsQuery) outIndexHints(
+func (ih *idxHintsQuery) bufIndexHints(
 	name string,
 	hints [][]schema.QueryWithArgs,
 	fmter schema.Formatter, b []byte,
