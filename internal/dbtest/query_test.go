@@ -834,6 +834,18 @@ func TestQuery(t *testing.T) {
 				Str: "hello",
 			}).UseIndexForGroupBy("ix1, ix2").Where("id = 3")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndex("ix1, ix2")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForJoin("ix1, ix2")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForOrderBy("ix1, ix2")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForGroupBy("ix1, ix2")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

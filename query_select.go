@@ -190,6 +190,34 @@ func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) IgnoreIndex(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndex(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForJoin(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForOrderBy(indexes...)
+	}
+	return q
+}
+
+func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) *SelectQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.appendIgnoreIndexForGroupBy(indexes...)
+	}
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *SelectQuery) Group(columns ...string) *SelectQuery {
