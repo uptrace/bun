@@ -1200,6 +1200,46 @@ func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
 	ih.ignore.forGroupBy = ih.addIdxHints(ih.ignore.forGroupBy, indexes...)
 }
 
+func (ih *idxHintsQuery) appendForceIndex(indexes ...string) {
+	if len(indexes) == 0 {
+		return
+	}
+	if ih.force == nil {
+		ih.force = new(indexHints)
+	}
+	ih.force.names = ih.addIdxHints(ih.force.names, indexes...)
+}
+
+func (ih *idxHintsQuery) appendForceIndexForJoin(indexes ...string) {
+	if len(indexes) == 0 {
+		return
+	}
+	if ih.force == nil {
+		ih.force = new(indexHints)
+	}
+	ih.force.forJoin = ih.addIdxHints(ih.force.forJoin, indexes...)
+}
+
+func (ih *idxHintsQuery) appendForceIndexForOrderBy(indexes ...string) {
+	if len(indexes) == 0 {
+		return
+	}
+	if ih.force == nil {
+		ih.force = new(indexHints)
+	}
+	ih.force.forOrderBy = ih.addIdxHints(ih.force.forOrderBy, indexes...)
+}
+
+func (ih *idxHintsQuery) appendForceIndexForGroupBy(indexes ...string) {
+	if len(indexes) == 0 {
+		return
+	}
+	if ih.force == nil {
+		ih.force = new(indexHints)
+	}
+	ih.force.forGroupBy = ih.addIdxHints(ih.force.forGroupBy, indexes...)
+}
+
 func (ih *idxHintsQuery) appendIndexHints(
 	fmter schema.Formatter, b []byte,
 ) ([]byte, error) {
@@ -1248,6 +1288,27 @@ func (ih *idxHintsQuery) appendIndexHints(
 			{
 				Name:   "IGNORE INDEX FOR GROUP BY",
 				Values: ih.ignore.forGroupBy,
+			},
+		}...)
+	}
+
+	if ih.force != nil {
+		hints = append(hints, []IdxHint{
+			{
+				Name:   "FORCE INDEX",
+				Values: ih.force.names,
+			},
+			{
+				Name:   "FORCE INDEX FOR JOIN",
+				Values: ih.force.forJoin,
+			},
+			{
+				Name:   "FORCE INDEX FOR ORDER BY",
+				Values: ih.force.forOrderBy,
+			},
+			{
+				Name:   "FORCE INDEX FOR GROUP BY",
+				Values: ih.force.forGroupBy,
 			},
 		}...)
 	}
