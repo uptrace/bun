@@ -1,1 +1,1 @@
-SELECT `id` FROM `models` AS `model` USE INDEX FOR ORDER BY (`ix1, ix2`)
+SELECT `id` FROM `models` AS `model` USE INDEX FOR ORDER BY (`ix1`, `ix2`)

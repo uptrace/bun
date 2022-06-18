@@ -1,1 +1,1 @@
-SELECT `id` FROM `models` AS `model` USE INDEX (`ix1, ix2`)
+SELECT `id` FROM `models` AS `model` USE INDEX (`ix1`, `ix2`)

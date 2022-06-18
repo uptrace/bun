@@ -1100,60 +1100,104 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 //------------------------------------------------------------------------------
 
 type idxHintsQuery struct {
-	// use index
-	uIndex           [][]schema.QueryWithArgs
-	uIndexForJoin    [][]schema.QueryWithArgs
-	uIndexForOrderBy [][]schema.QueryWithArgs
-	uIndexForGroupBy [][]schema.QueryWithArgs
-
-	// ignore index
-	ignIndex           [][]schema.QueryWithArgs
-	ignIndexForJoin    [][]schema.QueryWithArgs
-	ignIndexForOrderBy [][]schema.QueryWithArgs
-	ignIndexForGroupBy [][]schema.QueryWithArgs
+	use    *indexHints
+	ignore *indexHints
+	force  *indexHints
 }
 
-func (ih *idxHintsQuery) addIdxHints(idxHints [][]schema.QueryWithArgs, indexes ...string) [][]schema.QueryWithArgs {
-	if len(indexes) == 0 {
-		return idxHints
-	}
-	item := make([]schema.QueryWithArgs, 0, len(indexes))
+type indexHints struct {
+	names      []schema.QueryWithArgs
+	forJoin    []schema.QueryWithArgs
+	forOrderBy []schema.QueryWithArgs
+	forGroupBy []schema.QueryWithArgs
+}
+
+func (ih *idxHintsQuery) addIdxHints(hints []schema.QueryWithArgs, indexes ...string) []schema.QueryWithArgs {
+	hints = make([]schema.QueryWithArgs, 0, len(indexes))
 	for _, idx := range indexes {
-		item = append(item, schema.UnsafeIdent(idx))
+		hints = append(hints, schema.UnsafeIdent(idx))
 	}
-	return append(idxHints, item)
+	return hints
 }
 
 func (ih *idxHintsQuery) appendUseIndex(indexes ...string) {
-	ih.uIndex = ih.addIdxHints(ih.uIndex, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.use == nil {
+		ih.use = new(indexHints)
+	}
+	ih.use.names = ih.addIdxHints(ih.use.names, indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForJoin(indexes ...string) {
-	ih.uIndexForJoin = ih.addIdxHints(ih.uIndexForJoin, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.use == nil {
+		ih.use = new(indexHints)
+	}
+	ih.use.forJoin = ih.addIdxHints(ih.use.forJoin, indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForOrderBy(indexes ...string) {
-	ih.uIndexForOrderBy = ih.addIdxHints(ih.uIndexForOrderBy, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.use == nil {
+		ih.use = new(indexHints)
+	}
+	ih.use.forOrderBy = ih.addIdxHints(ih.use.forOrderBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendUseIndexForGroupBy(indexes ...string) {
-	ih.uIndexForGroupBy = ih.addIdxHints(ih.uIndexForGroupBy, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.use == nil {
+		ih.use = new(indexHints)
+	}
+	ih.use.forGroupBy = ih.addIdxHints(ih.use.forGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndex(indexes ...string) {
-	ih.ignIndex = ih.addIdxHints(ih.ignIndex, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.ignore == nil {
+		ih.ignore = new(indexHints)
+	}
+	ih.ignore.names = ih.addIdxHints(ih.ignore.names, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForJoin(indexes ...string) {
-	ih.ignIndexForJoin = ih.addIdxHints(ih.ignIndexForJoin, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.ignore == nil {
+		ih.ignore = new(indexHints)
+	}
+	ih.ignore.forJoin = ih.addIdxHints(ih.ignore.forJoin, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForOrderBy(indexes ...string) {
-	ih.ignIndexForOrderBy = ih.addIdxHints(ih.ignIndexForOrderBy, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.ignore == nil {
+		ih.ignore = new(indexHints)
+	}
+	ih.ignore.forOrderBy = ih.addIdxHints(ih.ignore.forOrderBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIgnoreIndexForGroupBy(indexes ...string) {
-	ih.ignIndexForGroupBy = ih.addIdxHints(ih.ignIndexForGroupBy, indexes...)
+	if len(indexes) > 0 {
+		return
+	}
+	if ih.ignore == nil {
+		ih.ignore = new(indexHints)
+	}
+	ih.ignore.forGroupBy = ih.addIdxHints(ih.ignore.forGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIndexHints(
@@ -1161,42 +1205,51 @@ func (ih *idxHintsQuery) appendIndexHints(
 ) ([]byte, error) {
 	type IdxHint struct {
 		Name   string
-		Values [][]schema.QueryWithArgs
+		Values []schema.QueryWithArgs
 	}
 
-	hints := []IdxHint{
-		{
-			Name:   "USE INDEX",
-			Values: ih.uIndex,
-		},
-		{
-			Name:   "USE INDEX FOR JOIN",
-			Values: ih.uIndexForJoin,
-		},
-		{
-			Name:   "USE INDEX FOR ORDER BY",
-			Values: ih.uIndexForOrderBy,
-		},
-		{
-			Name:   "USE INDEX FOR GROUP BY",
-			Values: ih.uIndexForGroupBy,
-		},
-		{
-			Name:   "IGNORE INDEX",
-			Values: ih.ignIndex,
-		},
-		{
-			Name:   "IGNORE INDEX FOR JOIN",
-			Values: ih.ignIndexForJoin,
-		},
-		{
-			Name:   "IGNORE INDEX FOR ORDER BY",
-			Values: ih.ignIndexForOrderBy,
-		},
-		{
-			Name:   "IGNORE INDEX FOR GROUP BY",
-			Values: ih.ignIndexForGroupBy,
-		},
+	hints := []IdxHint{}
+
+	if ih.use != nil {
+		hints = append(hints, []IdxHint{
+			{
+				Name:   "USE INDEX",
+				Values: ih.use.names,
+			},
+			{
+				Name:   "USE INDEX FOR JOIN",
+				Values: ih.use.forJoin,
+			},
+			{
+				Name:   "USE INDEX FOR ORDER BY",
+				Values: ih.use.forOrderBy,
+			},
+			{
+				Name:   "USE INDEX FOR GROUP BY",
+				Values: ih.use.forGroupBy,
+			},
+		}...)
+	}
+
+	if ih.ignore != nil {
+		hints = append(hints, []IdxHint{
+			{
+				Name:   "IGNORE INDEX",
+				Values: ih.ignore.names,
+			},
+			{
+				Name:   "IGNORE INDEX FOR JOIN",
+				Values: ih.ignore.forJoin,
+			},
+			{
+				Name:   "IGNORE INDEX FOR ORDER BY",
+				Values: ih.ignore.forOrderBy,
+			},
+			{
+				Name:   "IGNORE INDEX FOR GROUP BY",
+				Values: ih.ignore.forGroupBy,
+			},
+		}...)
 	}
 
 	var err error
@@ -1211,22 +1264,23 @@ func (ih *idxHintsQuery) appendIndexHints(
 
 func (ih *idxHintsQuery) bufIndexHints(
 	name string,
-	hints [][]schema.QueryWithArgs,
+	hints []schema.QueryWithArgs,
 	fmter schema.Formatter, b []byte,
 ) ([]byte, error) {
 	var err error
-	for _, hint := range hints {
-		b = append(b, fmt.Sprintf(" %s (", name)...)
-		for i, f := range hint {
-			if i > 0 {
-				b = append(b, ", "...)
-			}
-			b, err = f.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		}
-		b = append(b, ")"...)
+	if len(hints) == 0 {
+		return b, nil
 	}
+	b = append(b, fmt.Sprintf(" %s (", name)...)
+	for i, f := range hints {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+		b, err = f.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	b = append(b, ")"...)
 	return b, nil
 }
