@@ -548,6 +548,9 @@ func TestPostgresCopyFromCopyTo(t *testing.T) {
 		n, err := res.RowsAffected()
 		require.NoError(t, err)
 		require.Equal(t, int64(1000), n)
+
+		err = tx.Commit()
+		require.NoError(t, err)
 	})
 }
 
