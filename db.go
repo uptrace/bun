@@ -368,6 +368,46 @@ func (c Conn) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(c.db).Conn(c)
 }
 
+// RunInTx runs the function in a transaction. If the function returns an error,
+// the transaction is rolled back. Otherwise, the transaction is committed.
+func (c Conn) RunInTx(
+	ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
+) error {
+	tx, err := c.BeginTx(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	var done bool
+
+	defer func() {
+		if !done {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if err := fn(ctx, tx); err != nil {
+		return err
+	}
+
+	done = true
+	return tx.Commit()
+}
+
+func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	ctx, event := c.db.beforeQuery(ctx, nil, "BEGIN", nil, "BEGIN", nil)
+	tx, err := c.Conn.BeginTx(ctx, opts)
+	c.db.afterQuery(ctx, event, nil, err)
+	if err != nil {
+		return Tx{}, err
+	}
+	return Tx{
+		ctx: ctx,
+		db:  c.db,
+		Tx:  tx,
+	}, nil
+}
+
 //------------------------------------------------------------------------------
 
 type Stmt struct {
