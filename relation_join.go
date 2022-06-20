@@ -2,10 +2,10 @@ package bun
 
 import (
 	"context"
-	"reflect"
-
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
+	"reflect"
+	"regexp"
 )
 
 type relationJoin struct {
@@ -30,7 +30,32 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 	table, q.table = q.table, j.JoinModel.Table()
 	columns, q.columns = q.columns, nil
 
+	oldWhere := q.where
+
 	q = j.apply(q)
+
+	var newWhere []schema.QueryWithSep
+
+	var alias string
+	switch j.Relation.Type {
+	case schema.HasOneRelation, schema.BelongsToRelation:
+		alias = string(j.appendAlias(q.db.fmter, []byte{}))
+	case schema.HasManyRelation:
+		alias = j.Relation.JoinTable.Alias
+	case schema.ManyToManyRelation:
+		alias = j.Relation.JoinTable.Alias
+	}
+
+	var re = regexp.MustCompile(`\?TableAlias\b`)
+
+	for i, w := range q.where {
+		if i >= len(oldWhere) {
+			w.Query = re.ReplaceAllString(w.Query, " "+alias)
+		}
+		newWhere = append(newWhere, w)
+	}
+
+	q.where = newWhere
 
 	// Restore state.
 	q.table = table
