@@ -557,20 +557,6 @@ func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) UseIndexForJoin(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendUseIndexForJoin(indexes...)
-	}
-	return q
-}
-
-func (q *UpdateQuery) UseIndexForOrderBy(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendUseIndexForOrderBy(indexes...)
-	}
-	return q
-}
-
 func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.appendIgnoreIndex(indexes...)
@@ -578,37 +564,9 @@ func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) IgnoreIndexForJoin(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendIgnoreIndexForJoin(indexes...)
-	}
-	return q
-}
-
-func (q *UpdateQuery) IgnoreIndexForOrderBy(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendIgnoreIndexForOrderBy(indexes...)
-	}
-	return q
-}
-
 func (q *UpdateQuery) ForceIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.appendForceIndex(indexes...)
-	}
-	return q
-}
-
-func (q *UpdateQuery) ForceIndexForJoin(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendForceIndexForJoin(indexes...)
-	}
-	return q
-}
-
-func (q *UpdateQuery) ForceIndexForOrderBy(indexes ...string) *UpdateQuery {
-	if q.db.dialect.Name() == dialect.MySQL {
-		q.appendForceIndexForOrderBy(indexes...)
 	}
 	return q
 }

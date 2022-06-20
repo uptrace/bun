@@ -1,1 +1,1 @@
-UPDATE `models` AS `model` USE INDEX FOR ORDER BY (`ix1`, `ix2`) SET `str` = 'hello' WHERE (id = 3)
+SELECT `id` FROM `models` AS `model` IGNORE INDEX FOR JOIN (`ix1`, `ix2`)

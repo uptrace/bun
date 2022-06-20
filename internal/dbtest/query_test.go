@@ -816,18 +816,7 @@ func TestQuery(t *testing.T) {
 				Str: "hello",
 			}).UseIndex("ix1", "ix2").Where("id = 3")
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).UseIndexForJoin("ix1", "ix2").Where("id = 3")
-		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).UseIndexForOrderBy("ix1", "ix2").Where("id = 3")
-		},
+
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndex("ix1", "ix2")
 		},
@@ -847,18 +836,6 @@ func TestQuery(t *testing.T) {
 			}).IgnoreIndex("ix1", "ix2").Where("id = 3")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).IgnoreIndexForJoin("ix1", "ix2").Where("id = 3")
-		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).IgnoreIndexForOrderBy("ix1", "ix2").Where("id = 3")
-		},
-		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").ForceIndex("ix1", "ix2")
 		},
 		func(db *bun.DB) schema.QueryAppender {
@@ -875,18 +852,6 @@ func TestQuery(t *testing.T) {
 				ID:  1,
 				Str: "hello",
 			}).ForceIndex("ix1", "ix2").Where("id = 3")
-		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).ForceIndexForJoin("ix1", "ix2").Where("id = 3")
-		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewUpdate().Model(&Model{
-				ID:  1,
-				Str: "hello",
-			}).ForceIndexForOrderBy("ix1", "ix2").Where("id = 3")
 		},
 	}
 

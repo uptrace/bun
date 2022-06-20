@@ -1,1 +1,0 @@
-SELECT `id` FROM `models` AS `model` FORCE INDEX FOR JOIN (`ix1`, `ix2`)
