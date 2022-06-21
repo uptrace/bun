@@ -802,13 +802,18 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").UseIndex("ix1", "ix2")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").UseIndexForJoin("ix1", "ix2")
+			return db.NewSelect().Model(new(Story)).Relation("User").UseIndexForJoin("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").UseIndexForOrderBy("ix1", "ix2")
+			return db.NewSelect().Model(&Model{}).Order("model.str ASC").UseIndexForOrderBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").UseIndexForGroupBy("ix1", "ix2")
+			return db.NewSelect().
+				Model(&Model{}).
+				ColumnExpr("SUM(model.id) AS total_ids").
+				Column("model.str").
+				Group("model.str").
+				UseIndexForGroupBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{
@@ -821,13 +826,18 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndex("ix1", "ix2")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForJoin("ix1", "ix2")
+			return db.NewSelect().Model(new(Story)).Relation("User").IgnoreIndexForJoin("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForOrderBy("ix1", "ix2")
+			return db.NewSelect().Model(&Model{}).Order("model.str ASC").IgnoreIndexForOrderBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndexForGroupBy("ix1", "ix2")
+			return db.NewSelect().
+				Model(&Model{}).
+				ColumnExpr("SUM(model.id) AS total_ids").
+				Column("model.str").
+				Group("model.str").
+				IgnoreIndexForGroupBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{
@@ -839,13 +849,17 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").ForceIndex("ix1", "ix2")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").ForceIndexForJoin("ix1", "ix2")
+			return db.NewSelect().Model(new(Story)).Relation("User").ForceIndexForJoin("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").ForceIndexForOrderBy("ix1", "ix2")
+			return db.NewSelect().Model(&Model{}).Order("model.str ASC").ForceIndexForOrderBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").ForceIndexForGroupBy("ix1", "ix2")
+			return db.NewSelect().
+				Model(&Model{}).
+				ColumnExpr("SUM(model.id) AS total_ids").
+				Column("model.str").Group("model.str").
+				ForceIndexForGroupBy("ix1")
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{
