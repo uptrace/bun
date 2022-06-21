@@ -45,6 +45,8 @@ func NewSelectQuery(db *DB) *SelectQuery {
 				conn: db.DB,
 			},
 		},
+		offset: -1,
+		limit:  -1,
 	}
 }
 
@@ -505,7 +507,7 @@ func (q *SelectQuery) appendQuery(
 		}
 
 		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.offset >= 0 {
+			if q.limit >= 0 && q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 				b = append(b, " ROWS"...)
@@ -513,13 +515,17 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " FETCH NEXT "...)
 				b = strconv.AppendInt(b, int64(q.limit), 10)
 				b = append(b, " ROWS ONLY"...)
+			} else if q.offset >= 0 {
+				b = append(b, " OFFSET "...)
+				b = strconv.AppendInt(b, int64(q.offset), 10)
+				b = append(b, " ROWS"...)
 			}
 		} else {
-			if q.limit != 0 {
+			if q.limit >= 0 {
 				b = append(b, " LIMIT "...)
 				b = strconv.AppendInt(b, int64(q.limit), 10)
 			}
-			if q.offset != 0 {
+			if q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 			}
