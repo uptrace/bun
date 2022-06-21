@@ -1,1 +1,1 @@
-SELECT "id" FROM "models" AS "model"
+SELECT "model"."id", "model"."str" FROM "models" AS "model" ORDER BY "model"."str" ASC

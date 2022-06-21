@@ -1,1 +1,1 @@
-SELECT `id` FROM `models` AS `model` FORCE INDEX FOR ORDER BY (`ix1`, `ix2`)
+SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` FORCE INDEX FOR ORDER BY (`ix1`) ORDER BY `model`.`str` ASC
