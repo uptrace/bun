@@ -1,1 +1,1 @@
-SELECT `id` FROM `models` AS `model` USE INDEX FOR GROUP BY (`ix1`, `ix2`)
+SELECT SUM(model.id) AS total_ids, `model`.`str` FROM `models` AS `model` USE INDEX FOR GROUP BY (`ix1`) GROUP BY `model`.`str`
