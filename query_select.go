@@ -505,7 +505,7 @@ func (q *SelectQuery) appendQuery(
 		}
 
 		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.offset != 0 {
+			if q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 				b = append(b, " ROWS"...)
