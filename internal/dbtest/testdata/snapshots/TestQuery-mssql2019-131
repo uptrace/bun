@@ -1,0 +1,1 @@
+SELECT "model"."id", "model"."str" FROM "models" AS "model" ORDER BY "id" DESC OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY

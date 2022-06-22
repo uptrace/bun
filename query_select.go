@@ -515,6 +515,12 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " FETCH NEXT "...)
 				b = strconv.AppendInt(b, int64(q.limit), 10)
 				b = append(b, " ROWS ONLY"...)
+			} else if q.limit >= 0 {
+				b = append(b, " OFFSET 0 ROWS"...)
+
+				b = append(b, " FETCH NEXT "...)
+				b = strconv.AppendInt(b, int64(q.limit), 10)
+				b = append(b, " ROWS ONLY"...)
 			} else if q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
