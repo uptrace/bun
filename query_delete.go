@@ -287,6 +287,15 @@ func (q *DeleteQuery) afterDeleteHook(ctx context.Context) error {
 	return nil
 }
 
+func (q *DeleteQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DeleteQuery) QueryBuilder() QueryBuilder {

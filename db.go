@@ -141,13 +141,19 @@ func (db *DB) Dialect() schema.Dialect {
 }
 
 func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
+	defer rows.Close()
+
 	model, err := newModel(db, dest)
 	if err != nil {
 		return err
 	}
 
 	_, err = model.ScanRows(ctx, rows)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return rows.Err()
 }
 
 func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
@@ -360,6 +366,46 @@ func (c Conn) NewAddColumn() *AddColumnQuery {
 
 func (c Conn) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(c.db).Conn(c)
+}
+
+// RunInTx runs the function in a transaction. If the function returns an error,
+// the transaction is rolled back. Otherwise, the transaction is committed.
+func (c Conn) RunInTx(
+	ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
+) error {
+	tx, err := c.BeginTx(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	var done bool
+
+	defer func() {
+		if !done {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if err := fn(ctx, tx); err != nil {
+		return err
+	}
+
+	done = true
+	return tx.Commit()
+}
+
+func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	ctx, event := c.db.beforeQuery(ctx, nil, "BEGIN", nil, "BEGIN", nil)
+	tx, err := c.Conn.BeginTx(ctx, opts)
+	c.db.afterQuery(ctx, event, nil, err)
+	if err != nil {
+		return Tx{}, err
+	}
+	return Tx{
+		ctx: ctx,
+		db:  c.db,
+		Tx:  tx,
+	}, nil
 }
 
 //------------------------------------------------------------------------------

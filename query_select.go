@@ -48,6 +48,8 @@ func NewSelectQuery(db *DB) *SelectQuery {
 				conn: db.DB,
 			},
 		},
+		offset: -1,
+		limit:  -1,
 	}
 }
 
@@ -394,8 +396,32 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
+	var apply1, apply2 func(*SelectQuery) *SelectQuery
+
+	if len(join.Relation.Condition) > 0 {
+		apply1 = func(q *SelectQuery) *SelectQuery {
+
+			for _, opt := range join.Relation.Condition {
+				q.addWhere(schema.SafeQueryWithSep(opt, nil, " AND "))
+			}
+
+			return q
+		}
+	}
+
 	if len(apply) == 1 {
-		join.apply = apply[0]
+		apply2 = apply[0]
+	}
+
+	join.apply = func(q *SelectQuery) *SelectQuery {
+		if apply1 != nil {
+			q = apply1(q)
+		}
+		if apply2 != nil {
+			q = apply2(q)
+		}
+
+		return q
 	}
 
 	return q
@@ -575,7 +601,7 @@ func (q *SelectQuery) appendQuery(
 		}
 
 		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.offset != 0 {
+			if q.limit >= 0 && q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 				b = append(b, " ROWS"...)
@@ -583,13 +609,23 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " FETCH NEXT "...)
 				b = strconv.AppendInt(b, int64(q.limit), 10)
 				b = append(b, " ROWS ONLY"...)
+			} else if q.limit >= 0 {
+				b = append(b, " OFFSET 0 ROWS"...)
+
+				b = append(b, " FETCH NEXT "...)
+				b = strconv.AppendInt(b, int64(q.limit), 10)
+				b = append(b, " ROWS ONLY"...)
+			} else if q.offset >= 0 {
+				b = append(b, " OFFSET "...)
+				b = strconv.AppendInt(b, int64(q.offset), 10)
+				b = append(b, " ROWS"...)
 			}
 		} else {
-			if q.limit != 0 {
+			if q.limit >= 0 {
 				b = append(b, " LIMIT "...)
 				b = strconv.AppendInt(b, int64(q.limit), 10)
 			}
-			if q.offset != 0 {
+			if q.offset >= 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 			}
@@ -1012,6 +1048,15 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	}
 
 	return n == 1, nil
+}
+
+func (q *SelectQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
 }
 
 //------------------------------------------------------------------------------

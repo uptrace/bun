@@ -12,4 +12,5 @@ const (
 	Timestamp       = "TIMESTAMP"
 	JSON            = "JSON"
 	JSONB           = "JSONB"
+	HSTORE          = "HSTORE"
 )
