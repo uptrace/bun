@@ -5,7 +5,6 @@ import (
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 	"reflect"
-	"regexp"
 )
 
 type relationJoin struct {
@@ -16,6 +15,23 @@ type relationJoin struct {
 
 	apply   func(*SelectQuery) *SelectQuery
 	columns []schema.QueryWithArgs
+}
+
+type tableAliasArg struct {
+	j     *relationJoin
+	alias string
+}
+
+func (a *tableAliasArg) AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
+	if name != "TableAlias" {
+		return nil, false
+	}
+
+	if a.alias == "" {
+		return a.j.appendAlias(fmter, b), true
+	}
+
+	return fmter.AppendIdent(b, a.alias), true
 }
 
 func (j *relationJoin) applyTo(q *SelectQuery) {
@@ -37,20 +53,16 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 	var newWhere []schema.QueryWithSep
 
 	var alias string
-	switch j.Relation.Type {
-	case schema.HasOneRelation, schema.BelongsToRelation:
-		alias = string(j.appendAlias(q.db.fmter, []byte{}))
-	case schema.HasManyRelation:
-		alias = j.Relation.JoinTable.Alias
-	case schema.ManyToManyRelation:
+
+	if j.Relation.Type == schema.HasManyRelation || j.Relation.Type == schema.ManyToManyRelation {
 		alias = j.Relation.JoinTable.Alias
 	}
 
-	var re = regexp.MustCompile(`\?TableAlias\b`)
+	fmter := q.db.fmter.WithArg(&tableAliasArg{j: j, alias: alias})
 
 	for i, w := range q.where {
 		if i >= len(oldWhere) {
-			w.Query = re.ReplaceAllString(w.Query, " "+alias)
+			w.Query = string(fmter.AppendQuery([]byte{}, w.Query))
 		}
 		newWhere = append(newWhere, w)
 	}
