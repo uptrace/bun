@@ -15,6 +15,7 @@ type relationJoin struct {
 
 	apply   func(*SelectQuery) *SelectQuery
 	columns []schema.QueryWithArgs
+	joinOn  []schema.QueryWithSep
 }
 
 type tableAliasArg struct {
@@ -41,12 +42,17 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 
 	var table *schema.Table
 	var columns []schema.QueryWithArgs
+	var joins []joinQuery
 
 	// Save state.
 	table, q.table = q.table, j.JoinModel.Table()
 	columns, q.columns = q.columns, nil
 
 	oldWhere := q.where
+
+	if j.Relation.Type == schema.HasOneRelation || j.Relation.Type == schema.BelongsToRelation {
+		joins, q.joins = q.joins, []joinQuery{{}}
+	}
 
 	q = j.apply(q)
 
@@ -68,6 +74,17 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 	}
 
 	q.where = newWhere
+
+	if j.Relation.Type == schema.HasOneRelation || j.Relation.Type == schema.BelongsToRelation {
+		var joinOn []schema.QueryWithSep
+
+		for _, on := range q.joins[0].on {
+			on.Query = string(fmter.AppendQuery([]byte{}, on.Query))
+			joinOn = append(joinOn, on)
+		}
+
+		j.joinOn, q.joins = joinOn, joins
+	}
 
 	// Restore state.
 	q.table = table
@@ -307,6 +324,31 @@ func (j *relationJoin) appendHasOneJoin(
 		b = append(b, baseField.SQLName...)
 	}
 	b = append(b, ')')
+
+	if len(j.joinOn) > 0 {
+		b = append(b, " AND "...)
+
+		if len(j.joinOn) > 1 {
+			b = append(b, '(')
+		}
+
+		for i, on := range j.joinOn {
+			if i > 0 {
+				b = append(b, on.Sep...)
+			}
+
+			b = append(b, '(')
+			b, err = on.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+			b = append(b, ')')
+		}
+
+		if len(j.joinOn) > 1 {
+			b = append(b, ')')
+		}
+	}
 
 	if isSoftDelete {
 		b = append(b, " AND "...)
