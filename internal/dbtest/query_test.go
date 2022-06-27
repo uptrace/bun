@@ -798,6 +798,25 @@ func TestQuery(t *testing.T) {
 				Value("updated_at", "NOW()").
 				Returning("*")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().
+				Model((*Model)(nil)).
+				Order("id DESC").
+				Limit(20)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().
+				Model((*Model)(nil)).
+				Order("id DESC").
+				Offset(20).
+				Limit(20)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().
+				Model((*Model)(nil)).
+				Order("id DESC").
+				Offset(20)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

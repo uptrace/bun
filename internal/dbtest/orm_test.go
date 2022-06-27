@@ -127,6 +127,7 @@ func testAuthorRelations(t *testing.T, db *bun.DB) {
 		Relation("Books.Translations", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.OrderExpr("tr.id ASC")
 		}).
+		OrderExpr("author.id ASC").
 		Limit(1).
 		Scan(ctx)
 	require.NoError(t, err)
