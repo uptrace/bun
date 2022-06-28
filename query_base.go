@@ -57,6 +57,9 @@ type IDB interface {
 	NewTruncateTable() *TruncateTableQuery
 	NewAddColumn() *AddColumnQuery
 	NewDropColumn() *DropColumnQuery
+
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error)
+	RunInTx(ctx context.Context, opts *sql.TxOptions, f func(ctx context.Context, tx Tx) error) error
 }
 
 var (

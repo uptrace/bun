@@ -2,7 +2,9 @@ package bun
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
@@ -431,6 +433,8 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 type Tx struct {
 	ctx context.Context
 	db  *DB
+	// name is the name of a savepoint
+	name string
 	*sql.Tx
 }
 
@@ -479,16 +483,48 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 }
 
 func (tx Tx) Commit() error {
+	if tx.name == "" {
+		return tx.commitTX()
+	}
+	return tx.commitSP()
+}
+
+func (tx Tx) commitTX() error {
 	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "COMMIT", nil, "COMMIT", nil)
 	err := tx.Tx.Commit()
 	tx.db.afterQuery(ctx, event, nil, err)
 	return err
 }
 
+func (tx Tx) commitSP() error {
+	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+		return nil
+	}
+	query := "RELEASE SAVEPOINT " + tx.name
+	_, err := tx.ExecContext(tx.ctx, query)
+	return err
+}
+
 func (tx Tx) Rollback() error {
+	if tx.name == "" {
+		return tx.rollbackTX()
+	}
+	return tx.rollbackSP()
+}
+
+func (tx Tx) rollbackTX() error {
 	ctx, event := tx.db.beforeQuery(tx.ctx, nil, "ROLLBACK", nil, "ROLLBACK", nil)
 	err := tx.Tx.Rollback()
 	tx.db.afterQuery(ctx, event, nil, err)
+	return err
+}
+
+func (tx Tx) rollbackSP() error {
+	query := "ROLLBACK TO SAVEPOINT " + tx.name
+	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+		query = "ROLLBACK TRANSACTION " + tx.name
+	}
+	_, err := tx.ExecContext(tx.ctx, query)
 	return err
 }
 
@@ -533,6 +569,60 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 }
 
 //------------------------------------------------------------------------------
+
+func (tx Tx) Begin() (Tx, error) {
+	return tx.BeginTx(tx.ctx, nil)
+}
+
+// BeginTx will save a point in the running transaction.
+func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
+	// mssql savepoint names are limited to 32 characters
+	sp := make([]byte, 14)
+	_, err := rand.Read(sp)
+	if err != nil {
+		return Tx{}, err
+	}
+
+	qName := "SP_" + hex.EncodeToString(sp)
+	query := "SAVEPOINT " + qName
+	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+		query = "SAVE TRANSACTION " + qName
+	}
+	_, err = tx.ExecContext(ctx, query)
+	if err != nil {
+		return Tx{}, err
+	}
+	return Tx{
+		ctx:  ctx,
+		db:   tx.db,
+		Tx:   tx.Tx,
+		name: qName,
+	}, nil
+}
+
+func (tx Tx) RunInTx(
+	ctx context.Context, _ *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
+) error {
+	sp, err := tx.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	var done bool
+
+	defer func() {
+		if !done {
+			_ = sp.Rollback()
+		}
+	}()
+
+	if err := fn(ctx, sp); err != nil {
+		return err
+	}
+
+	done = true
+	return sp.Commit()
+}
 
 func (tx Tx) Dialect() schema.Dialect {
 	return tx.db.Dialect()

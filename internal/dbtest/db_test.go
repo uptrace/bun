@@ -271,6 +271,7 @@ func TestDB(t *testing.T) {
 		{testEmbedModelPointer},
 		{testJSONMarshaler},
 		{testNilDriverValue},
+		{testRunInTxAndSavepoint},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1400,4 +1401,100 @@ func testNilDriverValue(t *testing.T, db *bun.DB) {
 
 	_, err = db.NewInsert().Model(&Model{Value: &DriverValue{s: "hello"}}).Exec(ctx)
 	require.NoError(t, err)
+}
+
+func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
+	type Counter struct {
+		Count int64
+	}
+
+	err := db.ResetModel(ctx, (*Counter)(nil))
+	require.NoError(t, err)
+
+	_, err = db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
+	require.NoError(t, err)
+
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		err := tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
+			_, err := sp.NewUpdate().Model((*Counter)(nil)).
+				Set("count = count + 1").
+				Where("1 = 1").
+				Exec(ctx)
+			return err
+		})
+		require.NoError(t, err)
+		// rolling back the transaction should rollback what happened inside savepoint
+		return errors.New("fake error")
+	})
+	require.Error(t, err)
+
+	var count int
+	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		err := tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
+			_, err := sp.NewInsert().Model(&Counter{Count: 1}).
+				Exec(ctx)
+			require.NoError(t, err)
+			return err
+		})
+		require.NoError(t, err)
+
+		// ignored on purpose this error
+		// rolling back a savepoint should not affect the transaction
+		// nor other savepoints on the same level
+		_ = tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
+			_, err := sp.NewInsert().Model(&Counter{Count: 2}).
+				Exec(ctx)
+			require.NoError(t, err)
+			return errors.New("fake error")
+		})
+
+		return err
+	})
+	require.NoError(t, err)
+
+	count, err = db.NewSelect().Model((*Counter)(nil)).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, count)
+
+	err = db.ResetModel(ctx, (*Counter)(nil))
+	require.NoError(t, err)
+
+	// happy path, commit transaction, savepoints and sub-savepoints
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		_, err := tx.NewInsert().Model(&Counter{Count: 1}).
+			Exec(ctx)
+		require.NoError(t, err)
+
+		err = tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
+			_, err := sp.NewInsert().Model(&Counter{Count: 1}).
+				Exec(ctx)
+			if err != nil {
+				return err
+			}
+
+			return sp.RunInTx(ctx, nil, func(ctx context.Context, subSp bun.Tx) error {
+				_, err := subSp.NewInsert().Model(&Counter{Count: 1}).
+					Exec(ctx)
+				return err
+			})
+		})
+		require.NoError(t, err)
+
+		err = tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
+			_, err := sp.NewInsert().Model(&Counter{Count: 2}).
+				Exec(ctx)
+			return err
+		})
+
+		return err
+	})
+	require.NoError(t, err)
+
+	count, err = db.NewSelect().Model((*Counter)(nil)).Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 4, count)
 }

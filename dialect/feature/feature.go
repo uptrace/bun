@@ -29,4 +29,5 @@ const (
 	OffsetFetch
 	SelectExists
 	UpdateFromTable
+	MSSavepoint
 )

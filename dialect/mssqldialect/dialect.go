@@ -46,7 +46,8 @@ func New() *Dialect {
 		feature.Identity |
 		feature.Output |
 		feature.OffsetFetch |
-		feature.UpdateFromTable
+		feature.UpdateFromTable |
+		feature.MSSavepoint
 	return d
 }
 
