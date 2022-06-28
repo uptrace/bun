@@ -240,6 +240,22 @@ func (db *DB) ExecContext(
 	return res, err
 }
 
+func (db *DB) RawQuery(query string, args ...interface{}) (*sql.Rows, error) {
+	return db.RawQueryContext(context.Background(), query, args)
+}
+
+func (db *DB) RawQueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return db.DB.QueryContext(ctx, query, args)
+}
+
+func (db *DB) RawQueryRow(query string, args ...interface{}) *sql.Row {
+	return db.RawQueryRowContext(context.Background(), query, args)
+}
+
+func (db *DB) RawQueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return db.DB.QueryRowContext(ctx, query, args)
+}
+
 func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	return db.QueryContext(context.Background(), query, args...)
 }
