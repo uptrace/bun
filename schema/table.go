@@ -901,6 +901,7 @@ func isKnownFieldOption(name string) bool {
 		"unique",
 		"soft_delete",
 		"scanonly",
+		"skipupdate",
 
 		"pk",
 		"autoincrement",
