@@ -1133,8 +1133,7 @@ func (ih *idxHintsQuery) lazyForce() *indexHints {
 	return ih.force
 }
 
-func (ih *idxHintsQuery) idxQueries(indexes ...string) []schema.QueryWithArgs {
-	hints := make([]schema.QueryWithArgs, 0, len(indexes))
+func (ih *idxHintsQuery) appendIndexes(hints []schema.QueryWithArgs, indexes ...string) []schema.QueryWithArgs {
 	for _, idx := range indexes {
 		hints = append(hints, schema.UnsafeIdent(idx))
 	}
@@ -1145,84 +1144,84 @@ func (ih *idxHintsQuery) addUseIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyUse().names = ih.idxQueries(indexes...)
+	ih.lazyUse().names = ih.appendIndexes(ih.use.names, indexes...)
 }
 
 func (ih *idxHintsQuery) addUseIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyUse().forJoin = ih.idxQueries(indexes...)
+	ih.lazyUse().forJoin = ih.appendIndexes(ih.use.forJoin, indexes...)
 }
 
 func (ih *idxHintsQuery) addUseIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyUse().forOrderBy = ih.idxQueries(indexes...)
+	ih.lazyUse().forOrderBy = ih.appendIndexes(ih.use.forOrderBy, indexes...)
 }
 
 func (ih *idxHintsQuery) addUseIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyUse().forGroupBy = ih.idxQueries(indexes...)
+	ih.lazyUse().forGroupBy = ih.appendIndexes(ih.use.forGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) addIgnoreIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyIgnore().names = ih.idxQueries(indexes...)
+	ih.lazyIgnore().names = ih.appendIndexes(ih.ignore.names, indexes...)
 }
 
 func (ih *idxHintsQuery) addIgnoreIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyIgnore().forJoin = ih.idxQueries(indexes...)
+	ih.lazyIgnore().forJoin = ih.appendIndexes(ih.ignore.forJoin, indexes...)
 }
 
 func (ih *idxHintsQuery) addIgnoreIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyIgnore().forOrderBy = ih.idxQueries(indexes...)
+	ih.lazyIgnore().forOrderBy = ih.appendIndexes(ih.ignore.forOrderBy, indexes...)
 }
 
 func (ih *idxHintsQuery) addIgnoreIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyIgnore().forGroupBy = ih.idxQueries(indexes...)
+	ih.lazyIgnore().forGroupBy = ih.appendIndexes(ih.ignore.forGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) addForceIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyForce().names = ih.idxQueries(indexes...)
+	ih.lazyForce().names = ih.appendIndexes(ih.force.names, indexes...)
 }
 
 func (ih *idxHintsQuery) addForceIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyForce().forJoin = ih.idxQueries(indexes...)
+	ih.lazyForce().forJoin = ih.appendIndexes(ih.force.forJoin, indexes...)
 }
 
 func (ih *idxHintsQuery) addForceIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyForce().forOrderBy = ih.idxQueries(indexes...)
+	ih.lazyForce().forOrderBy = ih.appendIndexes(ih.force.forOrderBy, indexes...)
 }
 
 func (ih *idxHintsQuery) addForceIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
-	ih.lazyForce().forGroupBy = ih.idxQueries(indexes...)
+	ih.lazyForce().forGroupBy = ih.appendIndexes(ih.force.forGroupBy, indexes...)
 }
 
 func (ih *idxHintsQuery) appendIndexHints(

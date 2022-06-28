@@ -821,7 +821,6 @@ func TestQuery(t *testing.T) {
 				Str: "hello",
 			}).UseIndex("ix1", "ix2").Where("id = 3")
 		},
-
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").IgnoreIndex("ix1", "ix2")
 		},
@@ -885,6 +884,17 @@ func TestQuery(t *testing.T) {
 				Model((*Model)(nil)).
 				Order("id DESC").
 				Offset(20)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(&Model{}).ColumnExpr("?PKs").
+				UseIndex("ix1", "ix2").
+				UseIndex("ix3")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{
+				ID:  1,
+				Str: "hello",
+			}).UseIndex("ix1", "ix2").UseIndex("ix3").Where("id = 3")
 		},
 	}
 
