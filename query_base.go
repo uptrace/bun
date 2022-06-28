@@ -1141,84 +1141,84 @@ func (ih *idxHintsQuery) idxQueries(indexes ...string) []schema.QueryWithArgs {
 	return hints
 }
 
-func (ih *idxHintsQuery) setUseIndex(indexes ...string) {
+func (ih *idxHintsQuery) addUseIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyUse().names = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setUseIndexForJoin(indexes ...string) {
+func (ih *idxHintsQuery) addUseIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyUse().forJoin = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setUseIndexForOrderBy(indexes ...string) {
+func (ih *idxHintsQuery) addUseIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyUse().forOrderBy = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setUseIndexForGroupBy(indexes ...string) {
+func (ih *idxHintsQuery) addUseIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyUse().forGroupBy = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setIgnoreIndex(indexes ...string) {
+func (ih *idxHintsQuery) addIgnoreIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyIgnore().names = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setIgnoreIndexForJoin(indexes ...string) {
+func (ih *idxHintsQuery) addIgnoreIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyIgnore().forJoin = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setIgnoreIndexForOrderBy(indexes ...string) {
+func (ih *idxHintsQuery) addIgnoreIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyIgnore().forOrderBy = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setIgnoreIndexForGroupBy(indexes ...string) {
+func (ih *idxHintsQuery) addIgnoreIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyIgnore().forGroupBy = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setForceIndex(indexes ...string) {
+func (ih *idxHintsQuery) addForceIndex(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyForce().names = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setForceIndexForJoin(indexes ...string) {
+func (ih *idxHintsQuery) addForceIndexForJoin(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyForce().forJoin = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setForceIndexForOrderBy(indexes ...string) {
+func (ih *idxHintsQuery) addForceIndexForOrderBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}
 	ih.lazyForce().forOrderBy = ih.idxQueries(indexes...)
 }
 
-func (ih *idxHintsQuery) setForceIndexForGroupBy(indexes ...string) {
+func (ih *idxHintsQuery) addForceIndexForGroupBy(indexes ...string) {
 	if len(indexes) == 0 {
 		return
 	}

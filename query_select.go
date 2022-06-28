@@ -166,84 +166,84 @@ func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 
 func (q *SelectQuery) UseIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setUseIndex(indexes...)
+		q.addUseIndex(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) UseIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setUseIndexForJoin(indexes...)
+		q.addUseIndexForJoin(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setUseIndexForOrderBy(indexes...)
+		q.addUseIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setUseIndexForGroupBy(indexes...)
+		q.addUseIndexForGroupBy(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) IgnoreIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setIgnoreIndex(indexes...)
+		q.addIgnoreIndex(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setIgnoreIndexForJoin(indexes...)
+		q.addIgnoreIndexForJoin(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setIgnoreIndexForOrderBy(indexes...)
+		q.addIgnoreIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setIgnoreIndexForGroupBy(indexes...)
+		q.addIgnoreIndexForGroupBy(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) ForceIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setForceIndex(indexes...)
+		q.addForceIndex(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) ForceIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setForceIndexForJoin(indexes...)
+		q.addForceIndexForJoin(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) ForceIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setForceIndexForOrderBy(indexes...)
+		q.addForceIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
 func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setForceIndexForGroupBy(indexes...)
+		q.addForceIndexForGroupBy(indexes...)
 	}
 	return q
 }

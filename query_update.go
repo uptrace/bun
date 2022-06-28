@@ -561,21 +561,21 @@ func (q *updateQueryBuilder) Unwrap() interface{} {
 
 func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setUseIndex(indexes...)
+		q.addUseIndex(indexes...)
 	}
 	return q
 }
 
 func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setIgnoreIndex(indexes...)
+		q.addIgnoreIndex(indexes...)
 	}
 	return q
 }
 
 func (q *UpdateQuery) ForceIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
-		q.setForceIndex(indexes...)
+		q.addForceIndex(indexes...)
 	}
 	return q
 }
