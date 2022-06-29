@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/uptrace/bun/dialect"
+
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -16,6 +18,7 @@ type UpdateQuery struct {
 	returningQuery
 	customValueQuery
 	setQuery
+	idxHintsQuery
 
 	omitZero bool
 }
@@ -200,6 +203,11 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	} else {
 		b, err = q.appendFirstTable(fmter, b)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	b, err = q.appendIndexHints(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -551,4 +559,27 @@ func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
 
 func (q *updateQueryBuilder) Unwrap() interface{} {
 	return q.UpdateQuery
+}
+
+//------------------------------------------------------------------------------
+
+func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.addUseIndex(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.addIgnoreIndex(indexes...)
+	}
+	return q
+}
+
+func (q *UpdateQuery) ForceIndex(indexes ...string) *UpdateQuery {
+	if q.db.dialect.Name() == dialect.MySQL {
+		q.addForceIndex(indexes...)
+	}
+	return q
 }

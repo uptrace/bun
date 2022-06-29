@@ -1,1 +1,1 @@
-SELECT "model"."id", "model"."str" FROM "models" AS "model" ORDER BY "id" DESC LIMIT 20
+SELECT "id" FROM "models" AS "model"

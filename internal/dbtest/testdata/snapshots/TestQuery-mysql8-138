@@ -1,0 +1,1 @@
+SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` IGNORE INDEX FOR ORDER BY (`ix1`) ORDER BY `model`.`str` ASC

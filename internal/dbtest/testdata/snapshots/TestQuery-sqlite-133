@@ -1,1 +1,1 @@
-SELECT "model"."id", "model"."str" FROM "models" AS "model" ORDER BY "id" DESC OFFSET 20
+SELECT "model"."id", "model"."str" FROM "models" AS "model" ORDER BY "model"."str" ASC
