@@ -254,6 +254,7 @@ func TestDB(t *testing.T) {
 		{testJSONInterface},
 		{testJSONValuer},
 		{testSelectBool},
+		{testRawQuery},
 		{testFKViolation},
 		{testWithForeignKeysAndRules},
 		{testWithForeignKeys},
@@ -818,6 +819,14 @@ func testSelectBool(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().ColumnExpr("0").Scan(ctx, &flag)
 	require.NoError(t, err)
 	require.False(t, flag)
+}
+
+func testRawQuery(t *testing.T, db *bun.DB) {
+	var num int
+	err := db.Raw("SELECT ?", 123).Scan(ctx, &num)
+
+	require.NoError(t, err)
+	require.Equal(t, 123, num)
 }
 
 func testFKViolation(t *testing.T, db *bun.DB) {

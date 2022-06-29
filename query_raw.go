@@ -39,10 +39,7 @@ func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
 }
 
 func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	query := []byte(fmter.FormatQuery(q.query, q.args))
-	b = append(b, query...)
-
-	return b, nil
+	return fmter.AppendQuery(b, q.query, q.args), nil
 }
 
 func (q *RawQuery) Operation() string {
