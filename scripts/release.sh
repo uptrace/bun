@@ -6,7 +6,7 @@ help() {
     cat <<- EOF
 Usage: TAG=tag $0
 
-Updates version in go.mod files and pushes a new brash to GitHub.
+Updates version in go.mod files and pushes a new branch to GitHub.
 
 VARIABLES:
   TAG        git tag, for example, v1.0.0

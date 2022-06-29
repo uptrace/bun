@@ -247,9 +247,8 @@ type channel struct {
 	ctx context.Context
 	ln  *Listener
 
-	size            int
-	pingTimeout     time.Duration
-	chanSendTimeout time.Duration
+	size        int
+	pingTimeout time.Duration
 
 	ch     chan Notification
 	pingCh chan struct{}
@@ -260,9 +259,8 @@ func newChannel(ln *Listener, opts []ChannelOption) *channel {
 		ctx: context.TODO(),
 		ln:  ln,
 
-		size:            100,
-		pingTimeout:     5 * time.Second,
-		chanSendTimeout: time.Minute,
+		size:        1000,
+		pingTimeout: 5 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -279,9 +277,6 @@ func newChannel(ln *Listener, opts []ChannelOption) *channel {
 }
 
 func (c *channel) startReceive() {
-	timer := time.NewTimer(time.Minute)
-	timer.Stop()
-
 	var errCount int
 	for {
 		channel, payload, err := c.ln.Receive(c.ctx)
@@ -311,19 +306,10 @@ func (c *channel) startReceive() {
 		case pingChannel:
 			// ignore
 		default:
-			timer.Reset(c.chanSendTimeout)
 			select {
 			case c.ch <- Notification{channel, payload}:
-				if !timer.Stop() {
-					<-timer.C
-				}
-			case <-timer.C:
-				Logger.Printf(
-					c.ctx,
-					"pgdriver: %s channel is full for %s (notification is dropped)",
-					c,
-					c.chanSendTimeout,
-				)
+			default:
+				Logger.Printf(c.ctx, "pgdriver: Listener buffer is full (message is dropped)")
 			}
 		}
 	}
