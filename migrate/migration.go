@@ -25,11 +25,11 @@ type Migration struct {
 	Down MigrationFunc `bun:"-"`
 }
 
-func (m *Migration) String() string {
+func (m Migration) String() string {
 	return m.Name
 }
 
-func (m *Migration) IsApplied() bool {
+func (m Migration) IsApplied() bool {
 	return m.ID > 0
 }
 
