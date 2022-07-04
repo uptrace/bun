@@ -232,11 +232,11 @@ type MigrationGroup struct {
 	Migrations MigrationSlice
 }
 
-func (g *MigrationGroup) IsZero() bool {
+func (g MigrationGroup) IsZero() bool {
 	return g.ID == 0 && len(g.Migrations) == 0
 }
 
-func (g *MigrationGroup) String() string {
+func (g MigrationGroup) String() string {
 	if g.IsZero() {
 		return "nil"
 	}
