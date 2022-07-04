@@ -25,11 +25,11 @@ type Migration struct {
 	Down MigrationFunc `bun:"-"`
 }
 
-func (m *Migration) String() string {
+func (m Migration) String() string {
 	return m.Name
 }
 
-func (m *Migration) IsApplied() bool {
+func (m Migration) IsApplied() bool {
 	return m.ID > 0
 }
 
@@ -232,11 +232,11 @@ type MigrationGroup struct {
 	Migrations MigrationSlice
 }
 
-func (g *MigrationGroup) IsZero() bool {
+func (g MigrationGroup) IsZero() bool {
 	return g.ID == 0 && len(g.Migrations) == 0
 }
 
-func (g *MigrationGroup) String() string {
+func (g MigrationGroup) String() string {
 	if g.IsZero() {
 		return "nil"
 	}
