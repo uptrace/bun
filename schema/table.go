@@ -353,6 +353,9 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 		field.AutoIncrement = true
 		field.NullZero = true
 	}
+	if tag.HasOption("identity") {
+		field.Identity = true
+	}
 
 	if v, ok := tag.Options["unique"]; ok {
 		var names []string
@@ -911,7 +914,8 @@ func isKnownFieldOption(name string) bool {
 		"on_update",
 		"on_delete",
 		"m2m",
-		"polymorphic":
+		"polymorphic",
+		"identity":
 		return true
 	}
 	return false

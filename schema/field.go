@@ -32,6 +32,7 @@ type Field struct {
 	NotNull       bool
 	NullZero      bool
 	AutoIncrement bool
+	Identity      bool
 
 	Append AppenderFunc
 	Scan   ScannerFunc

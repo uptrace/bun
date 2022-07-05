@@ -30,4 +30,5 @@ const (
 	SelectExists
 	UpdateFromTable
 	MSSavepoint
+	GeneratedIdentity
 )
