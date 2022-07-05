@@ -896,6 +896,12 @@ func TestQuery(t *testing.T) {
 				Str: "hello",
 			}).UseIndex("ix1", "ix2").UseIndex("ix3").Where("id = 3")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type User struct {
+				ID int64 `bun:",pk,autoincrement,identity"`
+			}
+			return db.NewCreateTable().Model(new(User))
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

@@ -222,6 +222,43 @@ func TestPostgresInsertNoRows(t *testing.T) {
 	}
 }
 
+func TestPostgresInsertNoRowsIdentity(t *testing.T) {
+	type User struct {
+		ID int64 `bun:",pk,identity"`
+	}
+
+	db := pg(t)
+
+	err := db.ResetModel(ctx, (*User)(nil))
+	require.NoError(t, err)
+
+	{
+		res, err := db.NewInsert().
+			Model(&User{ID: 1}).
+			On("CONFLICT DO NOTHING").
+			Returning("*").
+			Exec(ctx)
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(1), n)
+	}
+
+	{
+		res, err := db.NewInsert().
+			Model(&User{ID: 1}).
+			On("CONFLICT DO NOTHING").
+			Returning("*").
+			Exec(ctx)
+		require.NoError(t, err)
+
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.Equal(t, int64(0), n)
+	}
+}
+
 func TestPostgresScanonlyField(t *testing.T) {
 	type Model struct {
 		Array []string `bun:",scanonly,array"`
@@ -429,6 +466,43 @@ func TestPostgresTimetz(t *testing.T) {
 func TestPostgresOnConflictDoUpdate(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
+		UpdatedAt time.Time
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{ID: 1}
+
+	_, err = db.NewInsert().
+		Model(model).
+		On("CONFLICT (id) DO UPDATE").
+		Set("updated_at = now()").
+		Returning("id, updated_at").
+		Exec(ctx)
+	require.NoError(t, err)
+	require.Zero(t, model.UpdatedAt)
+
+	for i := 0; i < 2; i++ {
+		_, err = db.NewInsert().
+			Model(model).
+			On("CONFLICT (id) DO UPDATE").
+			Set("updated_at = now()").
+			Returning("id, updated_at").
+			Exec(ctx)
+		require.NoError(t, err)
+		require.NotZero(t, model.UpdatedAt)
+	}
+}
+
+func TestPostgresOnConflictDoUpdateIdentity(t *testing.T) {
+	type Model struct {
+		ID        int64 `bun:",pk,identity"`
 		UpdatedAt time.Time
 	}
 
