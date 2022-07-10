@@ -66,7 +66,8 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	operation := event.Operation()
 	dbOperation := semconv.DBOperationKey.String(operation)
 
-	labels := make([]attribute.KeyValue, 0, 2)
+	labels := make([]attribute.KeyValue, 0, len(h.attrs)+2)
+	labels = append(labels, h.attrs...)
 	labels = append(labels, dbOperation)
 	if event.IQuery != nil {
 		if tableName := event.IQuery.GetTableName(); tableName != "" {
