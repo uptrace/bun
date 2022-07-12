@@ -30,6 +30,9 @@ func indirectType(t reflect.Type) reflect.Type {
 
 func fieldByIndex(v reflect.Value, index []int) (_ reflect.Value, ok bool) {
 	if len(index) == 1 {
+		if !v.IsValid() {
+			return v, false
+		}
 		return v.Field(index[0]), true
 	}
 
@@ -41,6 +44,9 @@ func fieldByIndex(v reflect.Value, index []int) (_ reflect.Value, ok bool) {
 				}
 				v = v.Elem()
 			}
+		}
+		if !v.IsValid() {
+			return v, false
 		}
 		v = v.Field(idx)
 	}
