@@ -2,6 +2,7 @@ package bun
 
 import (
 	"context"
+
 	"github.com/uptrace/bun/schema"
 )
 
@@ -39,7 +40,7 @@ func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
 }
 
 func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, q.query, q.args), nil
+	return fmter.AppendQuery(b, q.query, q.args...), nil
 }
 
 func (q *RawQuery) Operation() string {
