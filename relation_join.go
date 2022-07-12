@@ -2,10 +2,9 @@ package bun
 
 import (
 	"context"
-	"reflect"
-
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
+	"reflect"
 )
 
 type relationJoin struct {
@@ -16,6 +15,24 @@ type relationJoin struct {
 
 	apply   func(*SelectQuery) *SelectQuery
 	columns []schema.QueryWithArgs
+	joinOn  []schema.QueryWithSep
+}
+
+type tableAliasArg struct {
+	j     *relationJoin
+	alias string
+}
+
+func (a *tableAliasArg) AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
+	if name != "TableAlias" {
+		return nil, false
+	}
+
+	if a.alias == "" {
+		return a.j.appendAlias(fmter, b), true
+	}
+
+	return fmter.AppendIdent(b, a.alias), true
 }
 
 func (j *relationJoin) applyTo(q *SelectQuery) {
@@ -25,12 +42,49 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 
 	var table *schema.Table
 	var columns []schema.QueryWithArgs
+	var joins []joinQuery
 
 	// Save state.
 	table, q.table = q.table, j.JoinModel.Table()
 	columns, q.columns = q.columns, nil
 
+	oldWhere := q.where
+
+	if j.Relation.Type == schema.HasOneRelation || j.Relation.Type == schema.BelongsToRelation {
+		joins, q.joins = q.joins, []joinQuery{{}}
+	}
+
 	q = j.apply(q)
+
+	var newWhere []schema.QueryWithSep
+
+	var alias string
+
+	if j.Relation.Type == schema.HasManyRelation || j.Relation.Type == schema.ManyToManyRelation {
+		alias = j.Relation.JoinTable.Alias
+	}
+
+	fmter := q.db.fmter.WithArg(&tableAliasArg{j: j, alias: alias})
+
+	for i, w := range q.where {
+		if i >= len(oldWhere) {
+			w.Query = string(fmter.AppendQuery([]byte{}, w.Query))
+		}
+		newWhere = append(newWhere, w)
+	}
+
+	q.where = newWhere
+
+	if j.Relation.Type == schema.HasOneRelation || j.Relation.Type == schema.BelongsToRelation {
+		var joinOn []schema.QueryWithSep
+
+		for _, on := range q.joins[0].on {
+			on.Query = string(fmter.AppendQuery([]byte{}, on.Query))
+			joinOn = append(joinOn, on)
+		}
+
+		j.joinOn, q.joins = joinOn, joins
+	}
 
 	// Restore state.
 	q.table = table
@@ -270,6 +324,31 @@ func (j *relationJoin) appendHasOneJoin(
 		b = append(b, baseField.SQLName...)
 	}
 	b = append(b, ')')
+
+	if len(j.joinOn) > 0 {
+		b = append(b, " AND "...)
+
+		if len(j.joinOn) > 1 {
+			b = append(b, '(')
+		}
+
+		for i, on := range j.joinOn {
+			if i > 0 {
+				b = append(b, on.Sep...)
+			}
+
+			b = append(b, '(')
+			b, err = on.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+			b = append(b, ')')
+		}
+
+		if len(j.joinOn) > 1 {
+			b = append(b, ')')
+		}
+	}
 
 	if isSoftDelete {
 		b = append(b, " AND "...)
