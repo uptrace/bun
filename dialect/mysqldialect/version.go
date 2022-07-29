@@ -2,5 +2,5 @@ package mysqldialect
 
 // Version is the current release version.
 func Version() string {
-	return "1.1.6"
+	return "1.1.7"
 }

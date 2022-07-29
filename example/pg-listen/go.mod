@@ -11,10 +11,10 @@ replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
 require (
-	github.com/uptrace/bun v1.1.6
-	github.com/uptrace/bun/dialect/pgdialect v1.1.6
-	github.com/uptrace/bun/driver/pgdriver v1.1.6
-	github.com/uptrace/bun/extra/bundebug v1.1.6
+	github.com/uptrace/bun v1.1.7
+	github.com/uptrace/bun/dialect/pgdialect v1.1.7
+	github.com/uptrace/bun/driver/pgdriver v1.1.7
+	github.com/uptrace/bun/extra/bundebug v1.1.7
 )
 
 require (
@@ -25,8 +25,8 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	mellium.im/sasl v0.2.1 // indirect
 )

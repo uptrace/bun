@@ -1,3 +1,12 @@
+## [1.1.7](https://github.com/uptrace/bun/compare/v1.1.6...v1.1.7) (2022-07-29)
+
+
+### Bug Fixes
+
+* change ScanAndCount without a limit to select all rows ([de5c570](https://github.com/uptrace/bun/commit/de5c5704166563aea41a82f7863f2db88ff108e2))
+
+
+
 ## [1.1.6](https://github.com/uptrace/bun/compare/v1.1.5...v1.1.6) (2022-07-10)
 
 
