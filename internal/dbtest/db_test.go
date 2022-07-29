@@ -269,7 +269,7 @@ func TestDB(t *testing.T) {
 		{testUpsert},
 		{testMultiUpdate},
 		{testUpdateWithSkipupdateTag},
-		{testTxScanAndCount},
+		{testScanAndCount},
 		{testEmbedModelValue},
 		{testEmbedModelPointer},
 		{testJSONMarshaler},
@@ -1301,7 +1301,7 @@ func testUpdateWithSkipupdateTag(t *testing.T, db *bun.DB) {
 	require.NotEqual(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
 }
 
-func testTxScanAndCount(t *testing.T, db *bun.DB) {
+func testScanAndCount(t *testing.T, db *bun.DB) {
 	type Model struct {
 		ID  int64 `bun:",pk,autoincrement"`
 		Str string
@@ -1312,14 +1312,33 @@ func testTxScanAndCount(t *testing.T, db *bun.DB) {
 	err := db.ResetModel(ctx, (*Model)(nil))
 	require.NoError(t, err)
 
-	for i := 0; i < 100; i++ {
-		err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-			var models []Model
-			_, err := tx.NewSelect().Model(&models).ScanAndCount(ctx)
-			return err
-		})
+	t.Run("tx", func(t *testing.T) {
+		for i := 0; i < 100; i++ {
+			err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+				var models []Model
+				count, err := tx.NewSelect().Model(&models).ScanAndCount(ctx)
+				require.NoError(t, err)
+				require.Equal(t, 0, count)
+				return err
+			})
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("no limit", func(t *testing.T) {
+		src := []Model{
+			{Str: "str1"},
+			{Str: "str2"},
+		}
+		_, err = db.NewInsert().Model(&src).Exec(ctx)
 		require.NoError(t, err)
-	}
+
+		var dest []Model
+		count, err := db.NewSelect().Model(&dest).ScanAndCount(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 2, count)
+		require.Equal(t, 2, len(dest))
+	})
 }
 
 func testEmbedModelValue(t *testing.T, db *bun.DB) {
