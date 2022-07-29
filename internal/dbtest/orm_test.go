@@ -31,6 +31,7 @@ func TestORM(t *testing.T) {
 		{testRelationExcludeAll},
 		{testM2MRelationExcludeColumn},
 		{testRelationBelongsToSelf},
+		{testCompositeHasMany},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -429,6 +430,18 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 }
 
+func testCompositeHasMany(t *testing.T, db *bun.DB) {
+	department := new(Department)
+	err := db.NewSelect().
+		Model(department).
+		Where("company_no=? AND no=?", "company one", "hr").
+		Relation("Employees").
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "hr", department.No)
+	require.Equal(t, 2, len(department.Employees))
+}
+
 type Genre struct {
 	ID     int `bun:",pk"`
 	Name   string
@@ -530,6 +543,20 @@ type Comment struct {
 	Text          string
 }
 
+type Department struct {
+	bun.BaseModel `bun:"alias:d"`
+	CompanyNo     string     `bun:",pk"`
+	No            string     `bun:",pk"`
+	Employees     []Employee `bun:"rel:has-many,join:company_no=company_no,join:no=department_no"`
+}
+
+type Employee struct {
+	bun.BaseModel `bun:"alias:p"`
+	CompanyNo     string `bun:",pk"`
+	DepartmentNo  string `bun:",pk"`
+	Name          string `bun:",pk"`
+}
+
 func createTestSchema(t *testing.T, db *bun.DB) {
 	_ = db.Table(reflect.TypeOf((*BookGenre)(nil)).Elem())
 
@@ -541,6 +568,8 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 		(*BookGenre)(nil),
 		(*Translation)(nil),
 		(*Comment)(nil),
+		(*Department)(nil),
+		(*Employee)(nil),
 	}
 	for _, model := range models {
 		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)

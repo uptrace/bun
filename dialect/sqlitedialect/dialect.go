@@ -38,7 +38,8 @@ func New() *Dialect {
 		feature.DeleteTableAlias |
 		feature.InsertOnConflict |
 		feature.TableNotExists |
-		feature.SelectExists
+		feature.SelectExists |
+		feature.CompositeIn
 	return d
 }
 

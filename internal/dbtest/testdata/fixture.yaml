@@ -80,3 +80,25 @@
     - trackable_id: 1000
       trackable_type: translation
       text: comment3
+
+- model: Department
+  rows:
+    - company_no: company one
+      no: accounting
+    - company_no: company one
+      no: 'hr'
+
+- model: Employee
+  rows:
+    - company_no: company one
+      department_no: accounting
+      name: 'adam'
+    - company_no: company one
+      department_no: accounting
+      name: 'bravo'
+    - company_no: company one
+      department_no: hr
+      name: 'charlie'
+    - company_no: company one
+      department_no: hr
+      name: 'foxtrot'
