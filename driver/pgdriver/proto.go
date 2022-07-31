@@ -1026,7 +1026,14 @@ func readError(rd *reader) (error, error) {
 		}
 		m[c] = s
 	}
-	return Error{m: m}, nil
+	switch err := (Error{m: m}); err.Field('V') {
+	case "FATAL", "PANIC":
+		// Return this as an error and stop processing.
+		return nil, err
+	default:
+		// Return this as an error message and continue processing.
+		return err, nil
+	}
 }
 
 //------------------------------------------------------------------------------
