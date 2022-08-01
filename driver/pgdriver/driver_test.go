@@ -54,6 +54,30 @@ func TestConnector(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestConnector_WithResetSessionFunc(t *testing.T) {
+	var resetCalled int
+
+	db := sql.OpenDB(pgdriver.NewConnector(
+		pgdriver.WithDSN(dsn()),
+		pgdriver.WithResetSessionFunc(func(context.Context, *pgdriver.Conn) error {
+			resetCalled++
+			return nil
+		}),
+	))
+
+	db.SetMaxOpenConns(1)
+
+	for i := 0; i < 3; i++ {
+		err := db.Ping()
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, 2, resetCalled)
+
+	err := db.Close()
+	require.NoError(t, err)
+}
+
 func TestStmtSelect(t *testing.T) {
 	ctx := context.Background()
 	db := sqlDB()
