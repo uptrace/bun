@@ -349,6 +349,8 @@ func (cn *Conn) checkBadConn(err error) error {
 	return err
 }
 
+func (cn *Conn) Conn() net.Conn { return cn.netConn }
+
 //------------------------------------------------------------------------------
 
 type rows struct {
