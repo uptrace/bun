@@ -42,6 +42,9 @@ type Config struct {
 	ReadTimeout time.Duration
 	// Timeout for socket writes. If reached, commands fail with a timeout instead of blocking.
 	WriteTimeout time.Duration
+
+	// ResetSessionFunc is called prior to executing a query on a connection that has been used before.
+	ResetSessionFunc func(context.Context, *Conn) error
 }
 
 func newDefaultConfig() *Config {
@@ -170,6 +173,15 @@ func WithReadTimeout(readTimeout time.Duration) Option {
 func WithWriteTimeout(writeTimeout time.Duration) Option {
 	return func(cfg *Config) {
 		cfg.WriteTimeout = writeTimeout
+	}
+}
+
+// WithResetSessionFunc configures a function that is called prior to executing
+// a query on a connection that has been used before.
+// If the func returns driver.ErrBadConn, the connection is discarded.
+func WithResetSessionFunc(fn func(context.Context, *Conn) error) Option {
+	return func(cfg *Config) {
+		cfg.ResetSessionFunc = fn
 	}
 }
 

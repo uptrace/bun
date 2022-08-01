@@ -328,6 +328,18 @@ func (cn *Conn) IsValid() bool {
 	return !cn.isClosed()
 }
 
+var _ driver.SessionResetter = (*Conn)(nil)
+
+func (cn *Conn) ResetSession(ctx context.Context) error {
+	if cn.isClosed() {
+		return driver.ErrBadConn
+	}
+	if cn.cfg.ResetSessionFunc != nil {
+		return cn.cfg.ResetSessionFunc(ctx, cn)
+	}
+	return nil
+}
+
 func (cn *Conn) checkBadConn(err error) error {
 	if isBadConn(err, false) {
 		// Close and return driver.ErrBadConn next time the conn is used.
