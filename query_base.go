@@ -50,6 +50,7 @@ type IDB interface {
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery
 	NewDelete() *DeleteQuery
+	NewRaw(query string, args ...interface{}) *RawQuery
 	NewCreateTable() *CreateTableQuery
 	NewDropTable() *DropTableQuery
 	NewCreateIndex() *CreateIndexQuery
@@ -647,6 +648,10 @@ func (q *baseQuery) NewUpdate() *UpdateQuery {
 
 func (q *baseQuery) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(q.db).Conn(q.conn)
+}
+
+func (q *baseQuery) NewRaw(query string, args ...interface{}) *RawQuery {
+	return NewRawQuery(q.db, query, args...).Conn(q.conn)
 }
 
 func (q *baseQuery) NewCreateTable() *CreateTableQuery {

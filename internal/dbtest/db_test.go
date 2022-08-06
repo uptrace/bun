@@ -824,10 +824,25 @@ func testSelectBool(t *testing.T, db *bun.DB) {
 
 func testRawQuery(t *testing.T, db *bun.DB) {
 	var num int
-	err := db.Raw("SELECT ?", 123).Scan(ctx, &num)
+	err := db.NewRaw("SELECT ?", 123).Scan(ctx, &num)
 
 	require.NoError(t, err)
 	require.Equal(t, 123, num)
+
+	_ = db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		var num int
+		err := db.NewRaw("SELECT ?", 456).Scan(ctx, &num)
+		require.NoError(t, err)
+		require.Equal(t, 456, num)
+		return nil
+	})
+
+	conn, err := db.Conn(context.Background())
+	require.NoError(t, err)
+
+	err = conn.NewRaw("SELECT ?", 789).Scan(ctx, &num)
+	require.NoError(t, err)
+	require.Equal(t, 789, num)
 }
 
 func testFKViolation(t *testing.T, db *bun.DB) {

@@ -98,6 +98,10 @@ func (db *DB) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(db)
 }
 
+func (db *DB) NewRaw(query string, args ...interface{}) *RawQuery {
+	return NewRawQuery(db, query, args...)
+}
+
 func (db *DB) NewCreateTable() *CreateTableQuery {
 	return NewCreateTableQuery(db)
 }
@@ -340,6 +344,10 @@ func (c Conn) NewUpdate() *UpdateQuery {
 
 func (c Conn) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(c.db).Conn(c)
+}
+
+func (c Conn) NewRaw(query string, args ...interface{}) *RawQuery {
+	return NewRawQuery(c.db, query, args...).Conn(c)
 }
 
 func (c Conn) NewCreateTable() *CreateTableQuery {
@@ -646,6 +654,10 @@ func (tx Tx) NewUpdate() *UpdateQuery {
 
 func (tx Tx) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(tx.db).Conn(tx)
+}
+
+func (tx Tx) NewRaw(query string, args ...interface{}) *RawQuery {
+	return NewRawQuery(tx.db, query, args...).Conn(tx)
 }
 
 func (tx Tx) NewCreateTable() *CreateTableQuery {
