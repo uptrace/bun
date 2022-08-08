@@ -345,33 +345,19 @@ func appendChildValues(
 	return b
 }
 
-func getColumns(table schema.Safe, fields []*schema.Field) [][]byte {
-	//Based upon query_base.appendColumns
-	var list [][]byte
-	for _, f := range fields {
-		b := []byte{}
-
-		if len(table) > 0 {
-			b = append(b, table...)
-			b = append(b, '.')
-		}
-		b = append(b, f.SQLName...)
-		list = append(list, b)
-	}
-	return list
-}
-
+// appendMultiValues is an alternative to appendChildValues that doesn't use the sql keyword ID
+// but instead use a old style ((k1=v1) AND (k2=v2)) OR (...) of conditions.
 func appendMultiValues(
-	fmter schema.Formatter, b []byte, v reflect.Value, index []int, baseFields, joinFields []*schema.Field, table schema.Safe,
+	fmter schema.Formatter, b []byte, v reflect.Value, index []int, baseFields, joinFields []*schema.Field, joinTable schema.Safe,
 ) []byte {
-	// This is a mix of appendChildValues and query_base.appendColumns
+	// This is based on a mix of appendChildValues and query_base.appendColumns
+
+	// These should never missmatch in length but nice to know if it does
 	if len(joinFields) != len(baseFields) {
-		panic("asdfasdf")
+		panic("not reached")
 	}
 
-	// First get the columns
-	joins := getColumns(table, joinFields)
-	// Then values
+	// walk the relations
 	b = append(b, '(')
 	seen := make(map[string]struct{})
 	walk(v, index, func(v reflect.Value) {
@@ -383,7 +369,12 @@ func appendMultiValues(
 			if len(baseFields) > 1 {
 				b = append(b, '(')
 			}
-			b = append(b, joins[i]...)
+			// Field name
+			b = append(b, joinTable...)
+			b = append(b, '.')
+			b = append(b, []byte(joinFields[i].SQLName)...)
+
+			// Equals value
 			b = append(b, '=')
 			b = f.AppendValue(fmter, b, v)
 			if len(baseFields) > 1 {
