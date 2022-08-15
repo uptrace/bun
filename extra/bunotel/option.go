@@ -2,7 +2,7 @@ package bunotel
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 type Option func(h *QueryHook)

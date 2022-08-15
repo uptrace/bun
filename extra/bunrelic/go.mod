@@ -1,11 +1,11 @@
 module github.com/uptrace/bun/extra/bunrelic
 
-go 1.17
+go 1.18
 
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/newrelic/go-agent/v3 v3.17.0
+	github.com/newrelic/go-agent/v3 v3.18.0
 	github.com/uptrace/bun v1.1.7
 )
 
@@ -15,10 +15,10 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/net v0.0.0-20220728211354-c7608f3a8462 // indirect
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220728213248-dd149ef739b9 // indirect
+	google.golang.org/genproto v0.0.0-20220812140447-cec7f5303424 // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )

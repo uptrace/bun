@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/dialect/mysqldialect
 
-go 1.17
+go 1.18
 
 replace github.com/uptrace/bun => ../..
 
@@ -14,5 +14,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 )
