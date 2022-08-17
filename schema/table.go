@@ -287,17 +287,17 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 }
 
-//nolint
+// nolint
 func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Field {
 	tag := tagparser.Parse(f.Tag.Get("bun"))
 
-	if prefix, ok := tag.Option("embed"); ok {
+	if nextPrefix, ok := tag.Option("embed"); ok {
 		fieldType := indirectType(f.Type)
 		if fieldType.Kind() != reflect.Struct {
 			panic(fmt.Errorf("bun: embed %s.%s: got %s, wanted reflect.Struct",
 				t.TypeName, f.Name, fieldType.Kind()))
 		}
-		t.addFields(fieldType, prefix, withIndex(index, f.Index))
+		t.addFields(fieldType, prefix+nextPrefix, withIndex(index, f.Index))
 		return nil
 	}
 
