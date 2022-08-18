@@ -89,6 +89,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	fn, file, line := funcFileLine("github.com/uptrace/bun")
 
 	attrs := make([]attribute.KeyValue, 0, 10)
+	attrs = append(attrs, h.attrs...)
 	attrs = append(attrs,
 		dbOperation,
 		semconv.DBStatementKey.String(query),
