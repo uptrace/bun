@@ -183,7 +183,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	//nolint
 	var join []byte
 	join = append(join, "JOIN "...)
-	join = fmter.AppendQuery(join, string(j.Relation.M2MTable.Name))
+	join = fmter.AppendQuery(join, string(j.Relation.M2MTable.SQLName))
 	join = append(join, " AS "...)
 	join = append(join, j.Relation.M2MTable.SQLAlias...)
 	join = append(join, " ON ("...)
