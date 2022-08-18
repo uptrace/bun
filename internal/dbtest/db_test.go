@@ -1357,9 +1357,15 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 }
 
 func testEmbedModelValue(t *testing.T, db *bun.DB) {
+	type DoubleEmbed struct {
+		A string
+		B string
+	}
 	type Embed struct {
 		Foo string
 		Bar string
+		C   DoubleEmbed `bun:"embed:c_"`
+		D   DoubleEmbed `bun:"embed:d_"`
 	}
 	type Model struct {
 		X Embed `bun:"embed:x_"`
@@ -1372,8 +1378,30 @@ func testEmbedModelValue(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	m1 := &Model{
-		X: Embed{Foo: "x.foo", Bar: "x.bar"},
-		Y: Embed{Foo: "y.foo", Bar: "y.bar"},
+		X: Embed{
+			Foo: "x.foo",
+			Bar: "x.bar",
+			C: DoubleEmbed{
+				A: "x.c.a",
+				B: "x.c.b",
+			},
+			D: DoubleEmbed{
+				A: "x.d.a",
+				B: "x.d.b",
+			},
+		},
+		Y: Embed{
+			Foo: "y.foo",
+			Bar: "y.bar",
+			C: DoubleEmbed{
+				A: "y.c.a",
+				B: "y.c.b",
+			},
+			D: DoubleEmbed{
+				A: "y.d.a",
+				B: "y.d.b",
+			},
+		},
 	}
 	_, err = db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
@@ -1385,9 +1413,15 @@ func testEmbedModelValue(t *testing.T, db *bun.DB) {
 }
 
 func testEmbedModelPointer(t *testing.T, db *bun.DB) {
+	type DoubleEmbed struct {
+		A string
+		B string
+	}
 	type Embed struct {
 		Foo string
 		Bar string
+		C   *DoubleEmbed `bun:"embed:c_"`
+		D   *DoubleEmbed `bun:"embed:d_"`
 	}
 	type Model struct {
 		X *Embed `bun:"embed:x_"`
@@ -1400,8 +1434,30 @@ func testEmbedModelPointer(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	m1 := &Model{
-		X: &Embed{Foo: "x.foo", Bar: "x.bar"},
-		Y: &Embed{Foo: "y.foo", Bar: "y.bar"},
+		X: &Embed{
+			Foo: "x.foo",
+			Bar: "x.bar",
+			C: &DoubleEmbed{
+				A: "x.c.a",
+				B: "x.c.b",
+			},
+			D: &DoubleEmbed{
+				A: "x.d.a",
+				B: "x.d.b",
+			},
+		},
+		Y: &Embed{
+			Foo: "y.foo",
+			Bar: "y.bar",
+			C: &DoubleEmbed{
+				A: "y.c.a",
+				B: "y.c.b",
+			},
+			D: &DoubleEmbed{
+				A: "y.d.a",
+				B: "y.d.b",
+			},
+		},
 	}
 	_, err = db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
