@@ -274,6 +274,9 @@ func appendDriverValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	if err != nil {
 		return dialect.AppendError(b, err)
 	}
+	if _, ok := value.(driver.Valuer); ok {
+		return dialect.AppendError(b, fmt.Errorf("driver.Valuer returns unsupported type %T", value))
+	}
 	return Append(fmter, b, value)
 }
 

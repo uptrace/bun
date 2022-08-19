@@ -275,6 +275,8 @@ func TestDB(t *testing.T) {
 		{testJSONMarshaler},
 		{testNilDriverValue},
 		{testRunInTxAndSavepoint},
+		{testEmbedTypeField},
+		{testDriverValuerReturnsItself},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1640,4 +1642,32 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 	count, err = db.NewSelect().Model((*Counter)(nil)).Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 4, count)
+}
+
+type anotherString string
+
+var (
+	_ driver.Valuer = (*anotherString)(nil)
+)
+
+func (v anotherString) Value() (driver.Value, error) {
+	return v, nil
+}
+
+func testDriverValuerReturnsItself(t *testing.T, db *bun.DB) {
+	var expectedValue = anotherString("example value")
+
+	type Model struct {
+		ID    int           `bun:",pk,autoincrement"`
+		Value anotherString `bun:"value"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	model := &Model{Value: expectedValue}
+	_, err = db.NewInsert().Model(model).Exec(ctx)
+	require.Error(t, err)
 }
