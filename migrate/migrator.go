@@ -74,7 +74,7 @@ func (m *Migrator) MigrationsWithStatus(ctx context.Context) (MigrationSlice, er
 func (m *Migrator) migrationsWithStatus(ctx context.Context) (MigrationSlice, int64, error) {
 	sorted := m.migrations.Sorted()
 
-	applied, err := m.selectAppliedMigrations(ctx)
+	applied, err := m.AppliedMigrations(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -338,8 +338,31 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 	return err
 }
 
-// selectAppliedMigrations selects applied (applied) migrations in descending order.
-func (m *Migrator) selectAppliedMigrations(ctx context.Context) (MigrationSlice, error) {
+func (m *Migrator) TruncateTable(ctx context.Context) error {
+	_, err := m.db.Exec("TRUNCATE TABLE ?", bun.Ident(m.table))
+	return err
+}
+
+// MissingMigrations returns applied migrations that can no longer be found.
+func (m *Migrator) MissingMigrations(ctx context.Context) (MigrationSlice, error) {
+	applied, err := m.AppliedMigrations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	existing := migrationMap(m.migrations.ms)
+	for i := len(applied) - 1; i >= 0; i-- {
+		m := &applied[i]
+		if _, ok := existing[m.Name]; ok {
+			applied = append(applied[:i], applied[i+1:]...)
+		}
+	}
+
+	return applied, nil
+}
+
+// AppliedMigrations selects applied (applied) migrations in descending order.
+func (m *Migrator) AppliedMigrations(ctx context.Context) (MigrationSlice, error) {
 	var ms MigrationSlice
 	if err := m.db.NewSelect().
 		ColumnExpr("*").
