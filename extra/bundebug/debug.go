@@ -44,14 +44,17 @@ func WithWriter(w io.Writer) Option {
 //    - BUNDEBUG=0 - disables the hook.
 //    - BUNDEBUG=1 - enables the hook.
 //    - BUNDEBUG=2 - enables the hook and verbose mode.
-func FromEnv(key string) Option {
-	if key == "" {
-		key = "BUNDEBUG"
+func FromEnv(keys ...string) Option {
+	if len(keys) == 0 {
+		keys = []string{"BUNDEBUG"}
 	}
 	return func(h *QueryHook) {
-		if env, ok := os.LookupEnv(key); ok {
-			h.enabled = env != "" && env != "0"
-			h.verbose = env == "2"
+		for _, key := range keys {
+			if env, ok := os.LookupEnv(key); ok {
+				h.enabled = env != "" && env != "0"
+				h.verbose = env == "2"
+				break
+			}
 		}
 	}
 }
