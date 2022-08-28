@@ -94,6 +94,9 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 	}
 
 	if (f.IsPtr && fv.IsNil()) || (f.NullZero && f.IsZero(fv)) {
+		if f.NotNull {
+			return f.Append(fmter, b, fv)
+		}
 		return dialect.AppendNull(b)
 	}
 	if f.Append == nil {
