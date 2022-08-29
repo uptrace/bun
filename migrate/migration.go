@@ -18,6 +18,7 @@ type Migration struct {
 
 	ID         int64 `bun:",pk,autoincrement"`
 	Name       string
+	Comment    string `bun:"-"`
 	GroupID    int64
 	MigratedAt time.Time `bun:",notnull,nullzero,default:current_timestamp"`
 
@@ -26,7 +27,7 @@ type Migration struct {
 }
 
 func (m Migration) String() string {
-	return m.Name
+	return fmt.Sprintf("%s_%s", m.Name, m.Comment)
 }
 
 func (m Migration) IsApplied() bool {

@@ -50,15 +50,16 @@ func (m *Migrations) MustRegister(up, down MigrationFunc) {
 
 func (m *Migrations) Register(up, down MigrationFunc) error {
 	fpath := migrationFile()
-	name, err := extractMigrationName(fpath)
+	name, comment, err := extractMigrationName(fpath)
 	if err != nil {
 		return err
 	}
 
 	m.Add(Migration{
-		Name: name,
-		Up:   up,
-		Down: down,
+		Name:    name,
+		Comment: comment,
+		Up:      up,
+		Down:    down,
 	})
 
 	return nil
@@ -89,7 +90,7 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 			return nil
 		}
 
-		name, err := extractMigrationName(path)
+		name, comment, err := extractMigrationName(path)
 		if err != nil {
 			return err
 		}
@@ -98,6 +99,8 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 		if err != nil {
 			return err
 		}
+
+		migration.Comment = comment
 		migrationFunc := NewSQLMigrationFunc(fsys, path)
 
 		if strings.HasSuffix(path, ".up.sql") {
@@ -154,15 +157,15 @@ func migrationFile() string {
 	return ""
 }
 
-var fnameRE = regexp.MustCompile(`^(\d{14})_[0-9a-z_\-]+\.`)
+var fnameRE = regexp.MustCompile(`^(\d{14})_([0-9a-z_\-]+)\.`)
 
-func extractMigrationName(fpath string) (string, error) {
+func extractMigrationName(fpath string) (string, string, error) {
 	fname := filepath.Base(fpath)
 
 	matches := fnameRE.FindStringSubmatch(fname)
 	if matches == nil {
-		return "", fmt.Errorf("migrate: unsupported migration name format: %q", fname)
+		return "", "", fmt.Errorf("migrate: unsupported migration name format: %q", fname)
 	}
 
-	return matches[1], nil
+	return matches[1], matches[2], nil
 }
