@@ -339,7 +339,7 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 }
 
 func (m *Migrator) TruncateTable(ctx context.Context) error {
-	_, err := m.db.Exec("TRUNCATE TABLE ?", bun.Ident(m.table))
+	_, err := m.db.NewTruncateTable().TableExpr(m.table).Exec(ctx)
 	return err
 }
 
