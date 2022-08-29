@@ -167,7 +167,7 @@ func (ms MigrationSlice) String() string {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(ms[i].Name)
+		sb.WriteString(ms[i].String())
 	}
 
 	return sb.String()
