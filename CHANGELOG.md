@@ -1,3 +1,25 @@
+## [1.1.8](https://github.com/uptrace/bun/compare/v1.1.7...v1.1.8) (2022-08-29)
+
+
+### Bug Fixes
+
+* **bunotel:** handle option attributes ([#656](https://github.com/uptrace/bun/issues/656)) ([9f1e0bd](https://github.com/uptrace/bun/commit/9f1e0bd19fc0300f12996b3e6595f093024e06b6))
+* driver.Valuer returns itself causes stackoverflow ([c9f51d3](https://github.com/uptrace/bun/commit/c9f51d3e2dabed0c29c26a4221abbc426a7206f3)), closes [#657](https://github.com/uptrace/bun/issues/657)
+* **pgdriver:** return FATAL and PANIC errors immediately ([4595e38](https://github.com/uptrace/bun/commit/4595e385d3706116e47bf9dc295186ec7a2ab0f9))
+* quote m2m table name fixes [#649](https://github.com/uptrace/bun/issues/649) ([61a634e](https://github.com/uptrace/bun/commit/61a634e4cd5c18df4b75f756d4b0f06ea94bc3c8))
+* support multi-level embed column ([177ec4c](https://github.com/uptrace/bun/commit/177ec4c6e04f92957614ad4724bc82c422649a4b)), closes [#643](https://github.com/uptrace/bun/issues/643)
+
+
+### Features
+
+* conditions not supporting composite in ([e5d78d4](https://github.com/uptrace/bun/commit/e5d78d464b94b78438cf275b4c35f713d129961d))
+* **idb:** support raw query ([be4e688](https://github.com/uptrace/bun/commit/be4e6886ad94b4b6ca42f24f73d79a15b1ac3188))
+* **migrate:** add MissingMigrations ([42567d0](https://github.com/uptrace/bun/commit/42567d052280f2c412d4796df7178915e537e6d9))
+* **pgdriver:** implement database/sql/driver.SessionResetter ([bda298a](https://github.com/uptrace/bun/commit/bda298ac66305e5b00ba67d72d3973625930c6b9))
+* **pgdriver:** provide access to the underlying net.Conn ([d07ea0e](https://github.com/uptrace/bun/commit/d07ea0ed1541225b5f08e59a4c87383811f7f051))
+
+
+
 ## [1.1.7](https://github.com/uptrace/bun/compare/v1.1.6...v1.1.7) (2022-07-29)
 
 
