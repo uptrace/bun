@@ -43,7 +43,7 @@ func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
 }
 
 func (q *UpdateQuery) Model(model interface{}) *UpdateQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

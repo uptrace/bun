@@ -31,7 +31,7 @@ func (q *DropColumnQuery) Conn(db IConn) *DropColumnQuery {
 }
 
 func (q *DropColumnQuery) Model(model interface{}) *DropColumnQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

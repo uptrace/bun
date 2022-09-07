@@ -36,7 +36,7 @@ func (q *DropIndexQuery) Conn(db IConn) *DropIndexQuery {
 }
 
 func (q *DropIndexQuery) Model(model interface{}) *DropIndexQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

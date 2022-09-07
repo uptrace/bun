@@ -28,7 +28,7 @@ func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 			conn: db.DB,
 		},
 	}
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

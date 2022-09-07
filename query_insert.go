@@ -44,7 +44,7 @@ func (q *InsertQuery) Conn(db IConn) *InsertQuery {
 }
 
 func (q *InsertQuery) Model(model interface{}) *InsertQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

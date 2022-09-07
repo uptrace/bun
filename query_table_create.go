@@ -42,7 +42,7 @@ func (q *CreateTableQuery) Conn(db IConn) *CreateTableQuery {
 }
 
 func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

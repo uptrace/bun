@@ -158,8 +158,7 @@ func (q *baseQuery) setConn(db IConn) {
 	}
 }
 
-// TODO: rename to setModel
-func (q *baseQuery) setTableModel(modeli interface{}) {
+func (q *baseQuery) setModel(modeli interface{}) {
 	model, err := newSingleModel(q.db, modeli)
 	if err != nil {
 		q.setErr(err)
