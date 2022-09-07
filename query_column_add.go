@@ -33,7 +33,7 @@ func (q *AddColumnQuery) Conn(db IConn) *AddColumnQuery {
 }
 
 func (q *AddColumnQuery) Model(model interface{}) *AddColumnQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

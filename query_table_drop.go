@@ -33,7 +33,7 @@ func (q *DropTableQuery) Conn(db IConn) *DropTableQuery {
 }
 
 func (q *DropTableQuery) Model(model interface{}) *DropTableQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

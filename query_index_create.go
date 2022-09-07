@@ -42,7 +42,7 @@ func (q *CreateIndexQuery) Conn(db IConn) *CreateIndexQuery {
 }
 
 func (q *CreateIndexQuery) Model(model interface{}) *CreateIndexQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

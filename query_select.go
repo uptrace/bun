@@ -57,7 +57,7 @@ func (q *SelectQuery) Conn(db IConn) *SelectQuery {
 }
 
 func (q *SelectQuery) Model(model interface{}) *SelectQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

@@ -34,7 +34,7 @@ func (q *TruncateTableQuery) Conn(db IConn) *TruncateTableQuery {
 }
 
 func (q *TruncateTableQuery) Model(model interface{}) *TruncateTableQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 

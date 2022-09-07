@@ -35,7 +35,7 @@ func (q *DeleteQuery) Conn(db IConn) *DeleteQuery {
 }
 
 func (q *DeleteQuery) Model(model interface{}) *DeleteQuery {
-	q.setTableModel(model)
+	q.setModel(model)
 	return q
 }
 
