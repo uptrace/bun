@@ -902,6 +902,22 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewCreateTable().Model(new(User))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID           int64 `bun:",pk,autoincrement"`
+				SoftDeleteID int64
+				SoftDelete   *SoftDelete1 `bun:"rel:belongs-to"`
+			}
+			return db.NewSelect().Model(new(Model)).Relation("SoftDelete")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID           int64 `bun:",pk,autoincrement"`
+				SoftDeleteID int64
+				SoftDelete   *SoftDelete2 `bun:"rel:belongs-to"`
+			}
+			return db.NewSelect().Model(new(Model)).Relation("SoftDelete")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

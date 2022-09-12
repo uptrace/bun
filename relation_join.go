@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -256,14 +257,27 @@ func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte 
 	return append(b, j.BaseModel.Table().SQLAlias...)
 }
 
-func (j *relationJoin) appendSoftDelete(b []byte, flags internal.Flag) []byte {
+func (j *relationJoin) appendSoftDelete(fmter schema.Formatter, b []byte, flags internal.Flag) []byte {
 	b = append(b, '.')
-	b = append(b, j.JoinModel.Table().SoftDeleteField.SQLName...)
-	if flags.Has(deletedFlag) {
-		b = append(b, " IS NOT NULL"...)
+
+	field := j.JoinModel.Table().SoftDeleteField
+	b = append(b, field.SQLName...)
+
+	if field.IsPtr || field.NullZero {
+		if flags.Has(deletedFlag) {
+			b = append(b, " IS NOT NULL"...)
+		} else {
+			b = append(b, " IS NULL"...)
+		}
 	} else {
-		b = append(b, " IS NULL"...)
+		if flags.Has(deletedFlag) {
+			b = append(b, " != "...)
+		} else {
+			b = append(b, " = "...)
+		}
+		b = fmter.Dialect().AppendTime(b, time.Time{})
 	}
+
 	return b
 }
 
@@ -306,7 +320,7 @@ func (j *relationJoin) appendHasOneJoin(
 	if isSoftDelete {
 		b = append(b, " AND "...)
 		b = j.appendAlias(fmter, b)
-		b = j.appendSoftDelete(b, q.flags)
+		b = j.appendSoftDelete(fmter, b, q.flags)
 	}
 
 	return b, nil
