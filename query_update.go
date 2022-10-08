@@ -380,9 +380,14 @@ func (q *UpdateQuery) updateSliceSet(
 	}
 
 	var b []byte
-	for i, field := range fields {
-		if i > 0 {
+	pos := len(b)
+	for _, field := range fields {
+		if field.SkipUpdate() {
+			continue
+		}
+		if len(b) != pos {
 			b = append(b, ", "...)
+			pos = len(b)
 		}
 		if fmter.HasFeature(feature.UpdateMultiTable) {
 			b = append(b, model.table.SQLAlias...)
