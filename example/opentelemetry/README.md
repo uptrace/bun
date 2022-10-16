@@ -1,28 +1,50 @@
 # Example for Bun's OpenTelemetry instrumentation
 
-See [Performance and errors monitoring](https://bun.uptrace.dev/guide/tracing.html) for details.
+This example demonstrates how to monitor Bun SQL client using OpenTelemetry and
+[Uptrace](https://github.com/uptrace/uptrace). It requires Docker to start PostgreSQL and Uptrace.
 
-You can run this example with different OpenTelemetry exporters by providing environment variables.
+See
+[SQL performance and errors monitoring](https://bun.uptrace.dev/guide/performance-monitoring.html)
+for details.
 
-**Stdout** exporter (default):
-
-```shell
-go run .
-```
-
-**Jaeger** exporter:
+**Step 1**. Download the example using Git:
 
 ```shell
-OTEL_EXPORTER_JAEGER_ENDPOINT=http://localhost:14268/api/traces go run .
+git clone https://github.com/uptrace/bun.git
+cd example/opentelemetry
 ```
 
-[Uptrace](https://github.com/uptrace/uptrace) exporter:
+**Step 2**. Start the services using Docker:
 
 ```shell
-UPTRACE_DSN="https://<token>@uptrace.dev/<project_id>" go run .
+docker-compose pull
+docker-compose up -d
 ```
+
+**Step 3**. Make sure Uptrace is running:
+
+```shell
+docker-compose logs uptrace
+```
+
+**Step 4**. Run the Bun client example:
+
+```shell
+UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
+```
+
+**Step 5**. Follow the link from the CLI to view the trace:
+
+```shell
+UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
+trace: http://localhost:14318/traces/ee029d8782242c8ed38b16d961093b35
+```
+
+You can also open Uptrace UI at [http://localhost:14318](http://localhost:14318) to view available
+spans, logs, and metrics. ``
 
 ## Links
 
-- [Find instrumentations](https://opentelemetry.uptrace.dev/instrumentations/?lang=go)
-- [OpenTelemetry Go Tracing API](https://opentelemetry.uptrace.dev/guide/go-tracing.html)
+- [Uptrace open-source APM](https://uptrace.dev/get/open-source-apm.html)
+- [OpenTelemetry Go instrumentations](https://uptrace.dev/opentelemetry/instrumentations/?lang=go)
+- [OpenTelemetry Go Tracing API](https://uptrace.dev/opentelemetry/go-tracing.html)

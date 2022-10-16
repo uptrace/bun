@@ -6,9 +6,9 @@
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
 
 > Bun is brought to you by :star: [**uptrace/uptrace**](https://github.com/uptrace/uptrace). Uptrace
-> is an open source and blazingly fast
-> [distributed tracing tool](https://get.uptrace.dev/compare/distributed-tracing-tools.html) powered
-> by OpenTelemetry and ClickHouse. Give it a star as well!
+> is an open-source APM tool that supports distributed tracing, metrics, and logs. You can use it to
+> monitor applications and set up automatic alerts to receive notifications via email, Slack,
+> Telegram, and others. Star it as well!
 
 ## Features
 
