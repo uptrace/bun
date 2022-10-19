@@ -41,7 +41,7 @@ trace: http://localhost:14318/traces/ee029d8782242c8ed38b16d961093b35
 ```
 
 You can also open Uptrace UI at [http://localhost:14318](http://localhost:14318) to view available
-spans, logs, and metrics. ``
+spans, logs, and metrics.
 
 ## Links
 
