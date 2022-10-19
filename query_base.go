@@ -20,8 +20,9 @@ const (
 )
 
 type withQuery struct {
-	name  string
-	query schema.QueryAppender
+	name      string
+	query     schema.QueryAppender
+	recursive bool
 }
 
 // IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
@@ -244,10 +245,11 @@ func (q *baseQuery) isSoftDelete() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) addWith(name string, query schema.QueryAppender) {
+func (q *baseQuery) addWith(name string, query schema.QueryAppender, recursive bool) {
 	q.with = append(q.with, withQuery{
-		name:  name,
-		query: query,
+		name:      name,
+		query:     query,
+		recursive: recursive,
 	})
 }
 
@@ -260,6 +262,10 @@ func (q *baseQuery) appendWith(fmter schema.Formatter, b []byte) (_ []byte, err 
 	for i, with := range q.with {
 		if i > 0 {
 			b = append(b, ", "...)
+		}
+
+		if with.recursive {
+			b = append(b, "RECURSIVE "...)
 		}
 
 		b, err = q.appendCTE(fmter, b, with)

@@ -54,7 +54,12 @@ func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
 }
 
 func (q *InsertQuery) With(name string, query schema.QueryAppender) *InsertQuery {
-	q.addWith(name, query)
+	q.addWith(name, query, false)
+	return q
+}
+
+func (q *InsertQuery) WithRecursive(name string, query schema.QueryAppender) *InsertQuery {
+	q.addWith(name, query, true)
 	return q
 }
 

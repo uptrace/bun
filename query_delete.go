@@ -45,7 +45,12 @@ func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
 }
 
 func (q *DeleteQuery) With(name string, query schema.QueryAppender) *DeleteQuery {
-	q.addWith(name, query)
+	q.addWith(name, query, false)
+	return q
+}
+
+func (q *DeleteQuery) WithRecursive(name string, query schema.QueryAppender) *DeleteQuery {
+	q.addWith(name, query, true)
 	return q
 }
 
