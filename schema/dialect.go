@@ -29,6 +29,7 @@ type Dialect interface {
 	AppendString(b []byte, s string) []byte
 	AppendBytes(b []byte, bs []byte) []byte
 	AppendJSON(b, jsonb []byte) []byte
+	AppendBool(b []byte, v bool) []byte
 }
 
 //------------------------------------------------------------------------------
@@ -124,6 +125,10 @@ func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
 	b = append(b, '\'')
 
 	return b
+}
+
+func (BaseDialect) AppendBool(b []byte, v bool) []byte {
+	return dialect.AppendBool(b, v)
 }
 
 //------------------------------------------------------------------------------
