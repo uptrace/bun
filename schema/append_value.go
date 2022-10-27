@@ -183,7 +183,7 @@ func PtrAppender(fn AppenderFunc) AppenderFunc {
 }
 
 func AppendBoolValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return dialect.AppendBool(b, v.Bool())
+	return fmter.Dialect().AppendBool(b, v.Bool())
 }
 
 func AppendIntValue(fmter Formatter, b []byte, v reflect.Value) []byte {
