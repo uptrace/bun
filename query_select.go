@@ -67,7 +67,12 @@ func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 }
 
 func (q *SelectQuery) With(name string, query schema.QueryAppender) *SelectQuery {
-	q.addWith(name, query)
+	q.addWith(name, query, false)
+	return q
+}
+
+func (q *SelectQuery) WithRecursive(name string, query schema.QueryAppender) *SelectQuery {
+	q.addWith(name, query, true)
 	return q
 }
 
