@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,6 +115,16 @@ func (*Dialect) AppendBytes(b, bs []byte) []byte {
 	hex.Encode(b[s:], bs)
 
 	return b
+}
+
+func (*Dialect) AppendBool(b []byte, v bool) []byte {
+	num := 0
+
+	if v {
+		num = 1
+	}
+
+	return strconv.AppendUint(b, uint64(num), 10)
 }
 
 func sqlType(field *schema.Field) string {
