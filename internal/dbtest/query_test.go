@@ -426,9 +426,14 @@ func TestQuery(t *testing.T) {
 			return db.NewSelect().Model(new(SoftDelete1)).WhereAllWithDeleted()
 		},
 		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID   int64 `bun:",pk,autoincrement"`
+				Str1 string
+				Str2 string `bun:",skipupdate"`
+			}
 			models := []Model{
-				{42, "hello"},
-				{43, "world"},
+				{42, "hello", "skip"},
+				{43, "world", "skip"},
 			}
 			return db.NewUpdate().
 				Model(&models).
