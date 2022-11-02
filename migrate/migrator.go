@@ -380,7 +380,7 @@ func (m *Migrator) formattedTableName(db *bun.DB) string {
 
 func (m *Migrator) validate() error {
 	if len(m.ms) == 0 {
-		return errors.New("migrate: there are no any migrations")
+		return errors.New("migrate: there are no migrations")
 	}
 	return nil
 }
