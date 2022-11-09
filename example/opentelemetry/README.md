@@ -40,6 +40,8 @@ UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
 trace: http://localhost:14318/traces/ee029d8782242c8ed38b16d961093b35
 ```
 
+![Bun trace](./image/bun-trace.png)
+
 You can also open Uptrace UI at [http://localhost:14318](http://localhost:14318) to view available
 spans, logs, and metrics.
 
