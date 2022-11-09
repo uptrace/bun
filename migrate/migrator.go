@@ -136,11 +136,6 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		return nil, err
 	}
 
-	if err := m.Lock(ctx); err != nil {
-		return nil, err
-	}
-	defer m.Unlock(ctx) //nolint:errcheck
-
 	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
@@ -187,11 +182,6 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	if err := m.validate(); err != nil {
 		return nil, err
 	}
-
-	if err := m.Lock(ctx); err != nil {
-		return nil, err
-	}
-	defer m.Unlock(ctx) //nolint:errcheck
 
 	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {

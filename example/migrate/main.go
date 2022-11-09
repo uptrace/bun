@@ -58,6 +58,11 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "migrate",
 				Usage: "migrate database",
 				Action: func(c *cli.Context) error {
+					if err := migrator.Lock(c.Context); err != nil {
+						return err
+					}
+					defer migrator.Unlock(c.Context) //nolint:errcheck
+
 					group, err := migrator.Migrate(c.Context)
 					if err != nil {
 						return err
@@ -74,6 +79,11 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				Name:  "rollback",
 				Usage: "rollback the last migration group",
 				Action: func(c *cli.Context) error {
+					if err := migrator.Lock(c.Context); err != nil {
+						return err
+					}
+					defer migrator.Unlock(c.Context) //nolint:errcheck
+
 					group, err := migrator.Rollback(c.Context)
 					if err != nil {
 						return err
