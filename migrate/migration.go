@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
 	"sort"
 	"strings"
@@ -38,83 +39,86 @@ type MigrationFunc func(ctx context.Context, db *bun.DB) error
 
 func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
 	return func(ctx context.Context, db *bun.DB) error {
-		isTx := strings.HasSuffix(name, ".tx.up.sql") || strings.HasSuffix(name, ".tx.down.sql")
-
 		f, err := fsys.Open(name)
 		if err != nil {
 			return err
 		}
 
-		scanner := bufio.NewScanner(f)
-		var queries []string
+		isTx := strings.HasSuffix(name, ".tx.up.sql") || strings.HasSuffix(name, ".tx.down.sql")
+		return Exec(ctx, db, f, isTx)
+	}
+}
 
-		var query []byte
-		for scanner.Scan() {
-			b := scanner.Bytes()
+// Exec reads and executes the SQL migration in the f.
+func Exec(ctx context.Context, db *bun.DB, f io.Reader, isTx bool) error {
+	scanner := bufio.NewScanner(f)
+	var queries []string
 
-			const prefix = "--bun:"
-			if bytes.HasPrefix(b, []byte(prefix)) {
-				b = b[len(prefix):]
-				if bytes.Equal(b, []byte("split")) {
-					queries = append(queries, string(query))
-					query = query[:0]
-					continue
-				}
-				return fmt.Errorf("bun: unknown directive: %q", b)
+	var query []byte
+	for scanner.Scan() {
+		b := scanner.Bytes()
+
+		const prefix = "--bun:"
+		if bytes.HasPrefix(b, []byte(prefix)) {
+			b = b[len(prefix):]
+			if bytes.Equal(b, []byte("split")) {
+				queries = append(queries, string(query))
+				query = query[:0]
+				continue
 			}
-
-			query = append(query, b...)
-			query = append(query, '\n')
+			return fmt.Errorf("bun: unknown directive: %q", b)
 		}
 
-		if len(query) > 0 {
-			queries = append(queries, string(query))
-		}
-		if err := scanner.Err(); err != nil {
+		query = append(query, b...)
+		query = append(query, '\n')
+	}
+
+	if len(query) > 0 {
+		queries = append(queries, string(query))
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	var idb bun.IConn
+
+	if isTx {
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
 			return err
 		}
-
-		var idb bun.IConn
-
-		if isTx {
-			tx, err := db.BeginTx(ctx, nil)
-			if err != nil {
-				return err
-			}
-			idb = tx
-		} else {
-			conn, err := db.Conn(ctx)
-			if err != nil {
-				return err
-			}
-			idb = conn
+		idb = tx
+	} else {
+		conn, err := db.Conn(ctx)
+		if err != nil {
+			return err
 		}
-
-		var retErr error
-
-		defer func() {
-			if tx, ok := idb.(bun.Tx); ok {
-				retErr = tx.Commit()
-				return
-			}
-
-			if conn, ok := idb.(bun.Conn); ok {
-				retErr = conn.Close()
-				return
-			}
-
-			panic("not reached")
-		}()
-
-		for _, q := range queries {
-			_, err = idb.ExecContext(ctx, q)
-			if err != nil {
-				return err
-			}
-		}
-
-		return retErr
+		idb = conn
 	}
+
+	var retErr error
+
+	defer func() {
+		if tx, ok := idb.(bun.Tx); ok {
+			retErr = tx.Commit()
+			return
+		}
+
+		if conn, ok := idb.(bun.Conn); ok {
+			retErr = conn.Close()
+			return
+		}
+
+		panic("not reached")
+	}()
+
+	for _, q := range queries {
+		if _, err := idb.ExecContext(ctx, q); err != nil {
+			return err
+		}
+	}
+
+	return retErr
 }
 
 const goTemplate = `package %s
