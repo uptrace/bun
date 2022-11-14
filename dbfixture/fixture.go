@@ -39,7 +39,7 @@ func WithRecreateTables() FixtureOption {
 
 func WithTruncateTables() FixtureOption {
 	return func(l *Fixture) {
-		if l.truncateTables {
+		if l.recreateTables {
 			panic("don't use WithTruncateTables together with WithRecreateTables")
 		}
 		l.truncateTables = true
