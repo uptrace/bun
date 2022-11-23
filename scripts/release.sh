@@ -57,7 +57,6 @@ do
       "s/uptrace\/bun\([^ ]*\) v.*/uptrace\/bun\1 ${TAG}/" "${dir}/go.mod"
 done
 
-
 sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./version.go
 sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mysqldialect/version.go
 sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mssqldialect/version.go

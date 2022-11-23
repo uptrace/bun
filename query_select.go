@@ -1034,12 +1034,7 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	}
 
 	query := internal.String(queryBytes)
-	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
-
-	res, err := q.exec(ctx, q, query)
-
-	q.db.afterQuery(ctx, event, nil, err)
-
+	res, err := q.exec(ctx, qq, query)
 	if err != nil {
 		return false, err
 	}
