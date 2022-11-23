@@ -1,3 +1,23 @@
+## [1.1.9](https://github.com/uptrace/bun/compare/v1.1.8...v1.1.9) (2022-11-23)
+
+
+### Bug Fixes
+
+* addng dialect override for append-bool ([#695](https://github.com/uptrace/bun/issues/695)) ([338f2f0](https://github.com/uptrace/bun/commit/338f2f04105ad89e64530db86aeb387e2ad4789e))
+* don't call hooks twice for whereExists ([9057857](https://github.com/uptrace/bun/commit/90578578e717f248e4b6eb114c5b495fd8d4ed41))
+* don't lock migrations when running Migrate and Rollback ([69a7354](https://github.com/uptrace/bun/commit/69a7354d987ff2ed5338c9ef5f4ce320724299ab))
+* **query:** make WhereDeleted compatible with ForceDelete ([299c3fd](https://github.com/uptrace/bun/commit/299c3fd57866aaecd127a8f219c95332898475db)), closes [#673](https://github.com/uptrace/bun/issues/673)
+* relation join soft delete SQL generate ([a98f4e9](https://github.com/uptrace/bun/commit/a98f4e9f2bbdbc2b81cd13aa228a1a91eb905ba2))
+
+
+### Features
+
+* add migrate.Exec ([d368bbe](https://github.com/uptrace/bun/commit/d368bbe52bb1ee3dabf0aada190bf967eec10255))
+* **update:** "skipupdate" while bulk ([1a32b2f](https://github.com/uptrace/bun/commit/1a32b2ffbd5bc9a8d8b5978dd0f16c9fb79242ee))
+* **zerolog:** added zerolog hook ([9d2267d](https://github.com/uptrace/bun/commit/9d2267d414b47164ab6ceada55bf311ad548a6b0))
+
+
+
 ## [1.1.8](https://github.com/uptrace/bun/compare/v1.1.7...v1.1.8) (2022-08-29)
 
 

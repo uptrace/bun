@@ -5,8 +5,8 @@ go 1.18
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/uptrace/bun v1.1.8
-	golang.org/x/mod v0.5.1
+	github.com/uptrace/bun v1.1.9
+	golang.org/x/mod v0.7.0
 )
 
 require (
@@ -14,5 +14,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
+	golang.org/x/sys v0.2.0 // indirect
 )
