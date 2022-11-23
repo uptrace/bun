@@ -111,15 +111,48 @@ func testSoftDeleteForce(t *testing.T, db *bun.DB) {
 	err := db.ResetModel(ctx, (*Video)(nil))
 	require.NoError(t, err)
 
-	video1 := &Video{
-		ID: 1,
+	videos := []Video{
+		{Name: "video1"},
+		{Name: "video2"},
+		{Name: "video3"},
 	}
-	_, err = db.NewInsert().Model(video1).Exec(ctx)
+
+	_, err = db.NewInsert().Model(&videos).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = db.NewDelete().Model(video1).WherePK().ForceDelete().Exec(ctx)
+	// Force delete video1.
+	_, err = db.NewDelete().Model((*Video)(nil)).Where("name = ?", "video1").ForceDelete().Exec(ctx)
 	require.NoError(t, err)
 
+	// Soft delete video2.
+	_, err = db.NewDelete().Model((*Video)(nil)).Where("name = ?", "video2").Exec(ctx)
+	require.NoError(t, err)
+
+	// Check one visible video.
+	var res []Video
+	err = db.NewSelect().Model((*Video)(nil)).Column("name").Scan(ctx, &res)
+	require.NoError(t, err)
+	require.Equal(t, []Video{{Name: "video3"}}, res)
+
+	// Check one soft deleted video.
+	err = db.NewSelect().Model((*Video)(nil)).Column("name").WhereDeleted().Scan(ctx, &res)
+	require.NoError(t, err)
+	require.Equal(t, []Video{{Name: "video2"}}, res)
+
+	// Force delete only soft deleted videos.
+	_, err = db.NewDelete().Model((*Video)(nil)).WhereDeleted().ForceDelete().Exec(ctx)
+	require.NoError(t, err)
+
+	// Check one remaining video.
+	err = db.NewSelect().Model((*Video)(nil)).Column("name").WhereAllWithDeleted().Scan(ctx, &res)
+	require.NoError(t, err)
+	require.Equal(t, []Video{{Name: "video3"}}, res)
+
+	// Force delete all videos.
+	_, err = db.NewDelete().Model((*Video)(nil)).Where("1 = 1").ForceDelete().Exec(ctx)
+	require.NoError(t, err)
+
+	// Check no remaining videos.
 	count, err := db.NewSelect().Model((*Video)(nil)).WhereAllWithDeleted().Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, count)

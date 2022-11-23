@@ -238,7 +238,7 @@ func (q *baseQuery) isSoftDelete() bool {
 	if q.table != nil {
 		return q.table.SoftDeleteField != nil &&
 			!q.flags.Has(allWithDeletedFlag) &&
-			!q.flags.Has(forceDeleteFlag)
+			(!q.flags.Has(forceDeleteFlag) || q.flags.Has(deletedFlag))
 	}
 	return false
 }
@@ -773,7 +773,7 @@ func (q *whereBaseQuery) addWhereCols(cols []string) {
 func (q *whereBaseQuery) mustAppendWhere(
 	fmter schema.Formatter, b []byte, withAlias bool,
 ) ([]byte, error) {
-	if len(q.where) == 0 && q.whereFields == nil {
+	if len(q.where) == 0 && q.whereFields == nil && !q.flags.Has(deletedFlag) {
 		err := errors.New("bun: Update and Delete queries require at least one Where")
 		return nil, err
 	}
