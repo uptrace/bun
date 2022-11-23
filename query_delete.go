@@ -189,6 +189,14 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		}
 	}
 
+	if q.hasFeature(feature.Output) {
+		b = append(b, " OUTPUT "...)
+		b, err = q.appendOutput(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	b, err = q.mustAppendWhere(fmter, b, withAlias)
 	if err != nil {
 		return nil, err
