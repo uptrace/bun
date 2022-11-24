@@ -127,13 +127,6 @@ func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery 
 	return q
 }
 
-func (q *DeleteQuery) hasReturning() bool {
-	if !q.db.features.Has(feature.Returning) {
-		return false
-	}
-	return q.returningQuery.hasReturning()
-}
-
 //------------------------------------------------------------------------------
 
 func (q *DeleteQuery) Operation() string {
@@ -184,6 +177,14 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.hasMultiTables() {
 		b = append(b, " USING "...)
 		b, err = q.appendOtherTables(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if q.hasFeature(feature.Output) && q.hasReturning() {
+		b = append(b, " OUTPUT "...)
+		b, err = q.appendOutput(fmter, b)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +248,8 @@ func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result
 
 	var res sql.Result
 
-	if hasDest := len(dest) > 0; hasDest || q.hasReturning() {
+	if hasDest := len(dest) > 0; hasDest ||
+		(q.hasReturning() && q.hasFeature(feature.Returning|feature.Output)) {
 		model, err := q.getModel(dest)
 		if err != nil {
 			return nil, err
