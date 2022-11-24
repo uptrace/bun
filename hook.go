@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"github.com/uptrace/bun/schema"
 )
@@ -35,13 +36,15 @@ func (e *QueryEvent) Operation() string {
 }
 
 func queryOperation(query string) string {
-	if idx := strings.IndexByte(query, ' '); idx > 0 {
-		query = query[:idx]
+	queryOp := strings.TrimLeftFunc(query, unicode.IsSpace)
+
+	if idx := strings.IndexByte(queryOp, ' '); idx > 0 {
+		queryOp = queryOp[:idx]
 	}
-	if len(query) > 16 {
-		query = query[:16]
+	if len(queryOp) > 16 {
+		queryOp = queryOp[:16]
 	}
-	return query
+	return queryOp
 }
 
 type QueryHook interface {
