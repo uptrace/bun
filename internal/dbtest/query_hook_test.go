@@ -24,6 +24,7 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
+			require.Equal(t, "SELECT", event.Operation())
 			require.Equal(
 				t, "SELECT * FROM (SELECT 1 AS c) AS t WHERE ('foo' = 'bar')", string(event.Query))
 
@@ -47,6 +48,7 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
+			require.Equal(t, "SELECT", event.Operation())
 			require.Equal(t, "SELECT 1", string(event.Query))
 			return ctx
 		}
@@ -61,12 +63,15 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 		hook.beforeQuery = func(
 			ctx context.Context, event *bun.QueryEvent,
 		) context.Context {
-			require.Equal(t, "SELECT 1", string(event.Query))
+			require.Equal(t, "SELECT", event.Operation())
+			require.Equal(t, "\n\t\t\tSELECT 1\n\t\t", string(event.Query))
 			return ctx
 		}
 
 		var num int
-		err := db.QueryRow("SELECT 1").Scan(&num)
+		err := db.QueryRow(`
+			SELECT 1
+		`).Scan(&num)
 		require.NoError(t, err)
 		require.Equal(t, 1, num)
 		hook.require(t)
