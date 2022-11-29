@@ -89,12 +89,12 @@ func makeSliceNextElemFunc(v reflect.Value) func() reflect.Value {
 				if elem.IsNil() {
 					elem.Set(reflect.New(elemType))
 				}
-				return elem.Elem()
+				return elem
 			}
 
 			elem := reflect.New(elemType)
 			v.Set(reflect.Append(v, elem))
-			return elem.Elem()
+			return elem
 		}
 	}
 
