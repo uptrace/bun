@@ -82,6 +82,10 @@ func (db *DB) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(db, model)
 }
 
+func (db *DB) NewMerge() *MergeQuery {
+	return NewMergeQuery(db)
+}
+
 func (db *DB) NewSelect() *SelectQuery {
 	return NewSelectQuery(db)
 }
@@ -328,6 +332,10 @@ func (c Conn) Dialect() schema.Dialect {
 
 func (c Conn) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
+}
+
+func (c Conn) NewMerge() *MergeQuery {
+	return NewMergeQuery(c.db).Conn(c)
 }
 
 func (c Conn) NewSelect() *SelectQuery {
@@ -638,6 +646,10 @@ func (tx Tx) Dialect() schema.Dialect {
 
 func (tx Tx) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
+}
+
+func (tx Tx) NewMerge() *MergeQuery {
+	return NewMergeQuery(tx.db).Conn(tx)
 }
 
 func (tx Tx) NewSelect() *SelectQuery {
