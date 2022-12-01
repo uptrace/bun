@@ -41,7 +41,10 @@ func (q *DeleteQuery) Model(model interface{}) *DeleteQuery {
 
 // Apply calls the fn passing the DeleteQuery as an argument.
 func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
-	return fn(q)
+	if fn != nil {
+		return fn(q)
+	}
+	return q
 }
 
 func (q *DeleteQuery) With(name string, query schema.QueryAppender) *DeleteQuery {

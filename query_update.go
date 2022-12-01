@@ -49,7 +49,10 @@ func (q *UpdateQuery) Model(model interface{}) *UpdateQuery {
 
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
-	return fn(q)
+	if fn != nil {
+		return fn(q)
+	}
+	return q
 }
 
 func (q *UpdateQuery) With(name string, query schema.QueryAppender) *UpdateQuery {
