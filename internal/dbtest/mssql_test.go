@@ -47,7 +47,7 @@ func TestMssqlMerge(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, changes, 2)
-	require.Equal(t, "INSERT", changes[0])
-	require.Equal(t, "UPDATE", changes[1])
+	require.Equal(t, "UPDATE", changes[0])
+	require.Equal(t, "INSERT", changes[1])
 
 }
