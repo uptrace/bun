@@ -76,25 +76,6 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQue
 
 //------------------------------------------------------------------------------
 
-func (q *MergeQuery) Column(columns ...string) *MergeQuery {
-	for _, column := range columns {
-		q.addColumn(schema.UnsafeIdent(column))
-	}
-	return q
-}
-
-func (q *MergeQuery) ColumnExpr(query string, args ...interface{}) *MergeQuery {
-	q.addColumn(schema.SafeQuery(query, args))
-	return q
-}
-
-func (q *MergeQuery) ExcludeColumn(columns ...string) *MergeQuery {
-	q.excludeColumn(columns)
-	return q
-}
-
-//------------------------------------------------------------------------------
-
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
