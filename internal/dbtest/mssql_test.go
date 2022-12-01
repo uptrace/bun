@@ -1,19 +1,9 @@
 package dbtest_test
 
 import (
-	"bytes"
-	"context"
-	"database/sql"
-	"database/sql/driver"
-	"fmt"
-	"net"
-	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/uptrace/bun"
 )
 
 func TestMssqlMerge(t *testing.T) {
@@ -45,7 +35,6 @@ func TestMssqlMerge(t *testing.T) {
 	}
 
 	changes := []string{}
-
 	_, err = db.NewMerge().
 		Model(&Model{}).
 		With("_data", db.NewValues(&newModels)).
