@@ -50,7 +50,10 @@ func (q *InsertQuery) Model(model interface{}) *InsertQuery {
 
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
-	return fn(q)
+	if fn != nil {
+		return fn(q)
+	}
+	return q
 }
 
 func (q *InsertQuery) With(name string, query schema.QueryAppender) *InsertQuery {
