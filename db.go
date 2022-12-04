@@ -191,7 +191,7 @@ func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
 
-// RegisterModel registers models by name so they can be referenced in table relations
+// RegisterModel registers models by name, so they can be referenced in table relations
 // and fixtures.
 func (db *DB) RegisterModel(models ...interface{}) {
 	db.dialect.Tables().Register(models...)
@@ -230,7 +230,7 @@ func (db *DB) HasFeature(feat feature.Feature) bool {
 	return db.fmter.HasFeature(feat)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return db.ExecContext(context.Background(), query, args...)
@@ -276,7 +276,7 @@ func (db *DB) format(query string, args []interface{}) string {
 	return db.fmter.FormatQuery(query, args...)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type Conn struct {
 	db *DB
@@ -418,7 +418,7 @@ func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	}, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type Stmt struct {
 	*sql.Stmt
@@ -436,7 +436,7 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 	return Stmt{Stmt: stmt}, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type Tx struct {
 	ctx context.Context
@@ -576,7 +576,7 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interfac
 	return row
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (tx Tx) Begin() (Tx, error) {
 	return tx.BeginTx(tx.ctx, nil)
@@ -688,7 +688,7 @@ func (tx Tx) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(tx.db).Conn(tx)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (db *DB) makeQueryBytes() []byte {
 	// TODO: make this configurable?

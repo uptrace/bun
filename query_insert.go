@@ -149,7 +149,7 @@ func (q *InsertQuery) Ignore() *InsertQuery {
 	return q
 }
 
-// Replaces generates a `REPLACE INTO` query (MySQL and MariaDB).
+// Replace generates a `REPLACE INTO` query (MySQL and MariaDB).
 func (q *InsertQuery) Replace() *InsertQuery {
 	q.replace = true
 	return q
