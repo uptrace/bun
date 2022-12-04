@@ -224,6 +224,13 @@ func funcName(x interface{}) string {
 	return s
 }
 
+func skipIfNotHasFeature(tb testing.TB, db *bun.DB, feat feature.Feature, featName string) {
+	tb.Helper()
+	if !db.HasFeature(feat) {
+		tb.Skipf("%q dialect does not support %q", db.Dialect().Name(), featName)
+	}
+}
+
 func TestDB(t *testing.T) {
 	type Test struct {
 		run func(t *testing.T, db *bun.DB)
@@ -319,10 +326,7 @@ func testSelectScan(t *testing.T, db *bun.DB) {
 }
 
 func testSelectCount(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-		return
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
@@ -364,9 +368,7 @@ func testSelectMap(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMapSlice(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
@@ -463,9 +465,7 @@ func testSelectNestedStructPtr(t *testing.T, db *bun.DB) {
 }
 
 func testSelectStructSlice(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	type Model struct {
 		Num int `bun:"column1"`
@@ -490,9 +490,7 @@ func testSelectStructSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectSingleSlice(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"column1": 1},
@@ -510,9 +508,7 @@ func testSelectSingleSlice(t *testing.T, db *bun.DB) {
 }
 
 func testSelectMultiSlice(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"a": 1, "b": "foo"},
@@ -615,9 +611,7 @@ func testScanSingleRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
@@ -649,9 +643,7 @@ func testScanSingleRowByRow(t *testing.T, db *bun.DB) {
 }
 
 func testScanRows(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	values := db.NewValues(&[]map[string]interface{}{
 		{"num": 1},
@@ -1244,10 +1236,7 @@ func testUpsert(t *testing.T, db *bun.DB) {
 }
 
 func testMultiUpdate(t *testing.T, db *bun.DB) {
-	if !db.Dialect().Features().Has(feature.CTE) {
-		t.Skip()
-		return
-	}
+	skipIfNotHasFeature(t, db, feature.CTE, "CTE")
 
 	type Model struct {
 		ID  int64 `bun:",pk,autoincrement"`
