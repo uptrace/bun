@@ -140,10 +140,10 @@ func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery 
 //   - On MySQL, it generates `INSERT IGNORE INTO`.
 //   - On PostgreSQL, it generates `ON CONFLICT DO NOTHING`.
 func (q *InsertQuery) Ignore() *InsertQuery {
-	if q.db.fmter.HasFeature(feature.InsertOnConflict) {
+	if q.db.HasFeature(feature.InsertOnConflict) {
 		return q.On("CONFLICT DO NOTHING")
 	}
-	if q.db.fmter.HasFeature(feature.InsertIgnore) {
+	if q.db.HasFeature(feature.InsertIgnore) {
 		q.ignore = true
 	}
 	return q
