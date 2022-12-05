@@ -2,14 +2,22 @@ package bun
 
 import "github.com/uptrace/bun/schema"
 
+type ifExists bool
+
+func (ifexists ifExists) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
+	if !ifexists {
+		return b, nil
+	}
+	return append(b, "IF EXISTS "...), nil
+}
+
+type ifExistsAppender interface {
+	AppendIfExists(schema.Formatter, []byte) ([]byte, error)
+}
+
 type AlterTableQuery struct {
 	baseQuery
-
-	ifExists    bool
-	renameTable schema.RenameQueryArg
-
-	// TODO: collect in an array, use internal.Warn.Printf to warn of multiple conflicting RENAME COLUMN entries
-	renameColumn schema.RenameQueryArg
+	subquery schema.QueryAppender
 }
 
 var _ schema.QueryAppender = (*AlterTableQuery)(nil)
@@ -30,21 +38,16 @@ func (q *AlterTableQuery) Model(model interface{}) *AlterTableQuery {
 
 // ------------------------------------------------------------------------------
 
-func (q *AlterTableQuery) Rename(to string) *AlterTableQuery {
-	q.renameTable = schema.RenameQueryArg{To: to}
-	return q
+func (q *AlterTableQuery) Rename(to string) *RenameTableQuery {
+	sq := newRenameTableQuery(q.db, q, to)
+	q.subquery = sq
+	return sq
 }
 
-func (q *AlterTableQuery) RenameColumn(column, to string) *AlterTableQuery {
-	q.renameColumn = schema.RenameQueryArg{Original: column, To: to}
-	return q
-}
-
-// ------------------------------------------------------------------------------
-
-func (q *AlterTableQuery) IfExists() *AlterTableQuery {
-	q.ifExists = true
-	return q
+func (q *AlterTableQuery) RenameColumn(column, to string) *RenameColumnQuery {
+	sq := newRenameColumnQuery(q.db, q, column, to)
+	q.subquery = sq
+	return sq
 }
 
 // ------------------------------------------------------------------------------
@@ -56,30 +59,117 @@ func (q *AlterTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 
 	b = append(b, "ALTER TABLE "...)
 
-	if q.ifExists {
-		b = append(b, "IF EXISTS "...)
+	if sub, ok := q.subquery.(ifExistsAppender); ok {
+		b, err = sub.AppendIfExists(fmter, b)
 	}
 
 	b, err = q.appendFirstTable(fmter, b)
 	if err != nil {
 		return nil, err
 	}
+	return b, nil
+}
 
-	if !q.renameTable.IsZero() {
-		b = append(b, " RENAME "...)
-		b, err = q.renameTable.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
+// RENAME ---------------------------------------------------------------------
+
+type RenameTableQuery struct {
+	baseQuery
+	ifExists
+	root    *AlterTableQuery
+	newName schema.RenameQueryArg
+}
+
+var (
+	_ schema.QueryAppender = (*RenameTableQuery)(nil)
+	_ ifExistsAppender     = (*RenameTableQuery)(nil)
+)
+
+func newRenameTableQuery(db *DB, root *AlterTableQuery, newName string) *RenameTableQuery {
+	return &RenameTableQuery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		root:    root,
+		newName: schema.RenameQueryArg{To: newName},
+	}
+}
+
+func (q *RenameTableQuery) IfExists() *RenameTableQuery {
+	q.ifExists = true
+	return q
+}
+
+func (q *RenameTableQuery) AppendIfExists(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.ifExists.AppendQuery(fmter, b)
+}
+
+func (q *RenameTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b, err = q.root.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
 	}
 
-	if !q.renameColumn.IsZero() {
-		b = append(b, " RENAME COLUMN "...)
-		b, err = q.renameColumn.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
+	if q.newName.IsZero() {
+		return b, nil
 	}
 
+	b = append(b, " RENAME "...)
+	b, err = q.newName.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// RENAME COLUMN --------------------------------------------------------------
+
+type RenameColumnQuery struct {
+	baseQuery
+	ifExists
+	root    *AlterTableQuery
+	newName schema.RenameQueryArg
+}
+
+var (
+	_ schema.QueryAppender = (*RenameColumnQuery)(nil)
+	_ ifExistsAppender     = (*RenameColumnQuery)(nil)
+)
+
+func newRenameColumnQuery(db *DB, root *AlterTableQuery, oldName, newName string) *RenameColumnQuery {
+	return &RenameColumnQuery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		root:    root,
+		newName: schema.RenameQueryArg{Original: oldName, To: newName},
+	}
+}
+
+func (q *RenameColumnQuery) IfExists() *RenameColumnQuery {
+	q.ifExists = true
+	return q
+}
+
+func (q *RenameColumnQuery) AppendIfExists(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.ifExists.AppendQuery(fmter, b)
+}
+
+func (q *RenameColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b, err = q.root.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+
+	if q.newName.IsZero() {
+		return b, nil
+	}
+
+	b = append(b, " RENAME COLUMN "...)
+	b, err = q.newName.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
+	}
 	return b, nil
 }

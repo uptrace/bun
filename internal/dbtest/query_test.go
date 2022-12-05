@@ -967,7 +967,7 @@ func TestAlterTable(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			// Rename table IF EXISTS
-			return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+			return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models").IfExists()
 		},
 	} {
 		testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
