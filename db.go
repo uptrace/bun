@@ -130,6 +130,10 @@ func (db *DB) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(db)
 }
 
+func (db *DB) NewAlterTable() *AlterTableQuery {
+	return NewAlterTableQuery(db)
+}
+
 func (db *DB) ResetModel(ctx context.Context, models ...interface{}) error {
 	for _, model := range models {
 		if _, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx); err != nil {

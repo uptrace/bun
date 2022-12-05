@@ -85,3 +85,22 @@ func SafeQueryWithSep(query string, args []interface{}, sep string) QueryWithSep
 		Sep:           sep,
 	}
 }
+
+// ------------------------------------------------------------------------------
+
+type RenameQueryArg struct {
+	Original, To string
+}
+
+var _ QueryAppender = (*RenameQueryArg)(nil)
+
+func (q RenameQueryArg) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
+	if q.Original != "" {
+		b = fmter.AppendIdent(b, q.Original)
+		b = append(b, " "...)
+	}
+
+	b = append(b, "TO "...)
+	b = fmter.AppendIdent(b, q.To)
+	return b, nil
+}

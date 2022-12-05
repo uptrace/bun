@@ -48,7 +48,8 @@ func New() *Dialect {
 		feature.InsertOnConflict |
 		feature.SelectExists |
 		feature.GeneratedIdentity |
-		feature.CompositeIn
+		feature.CompositeIn |
+		feature.AlterTableQuery
 	return d
 }
 

@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uptrace/bun/dialect/feature"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -18,6 +19,8 @@ func init() {
 	snapshotsDir := filepath.Join("testdata", "snapshots")
 	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory(snapshotsDir))
 }
+
+var timeRE = regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
 
 func TestQuery(t *testing.T) {
 	type Model struct {
@@ -925,8 +928,6 @@ func TestQuery(t *testing.T) {
 		},
 	}
 
-	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
-
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for i, fn := range queries {
 			t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
@@ -942,4 +943,40 @@ func TestQuery(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAlterTable(t *testing.T) {
+	type Model struct {
+		ID  int64
+		Old string
+	}
+
+	// TODO: add names for test cases
+	for _, fn := range []func(*bun.DB) schema.QueryAppender{
+		func(db *bun.DB) schema.QueryAppender {
+			// Rename column
+			return db.NewAlterTable().Model((*Model)(nil)).RenameColumn("old", "new")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Bad model
+			return db.NewAlterTable().Model(1)
+		},
+	} {
+		testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+			skipIfNotHasFeature(t, db, feature.AlterTableQuery, "ALTER TABLE")
+			snapshotFormattedQuery(t, db, fn(db))
+		})
+	}
+}
+
+func snapshotFormattedQuery(t *testing.T, db *bun.DB, q schema.QueryAppender) {
+	t.Helper()
+	query, err := q.AppendQuery(db.Formatter(), nil)
+	if err != nil {
+		cupaloy.SnapshotT(t, err.Error())
+		return
+	}
+
+	query = timeRE.ReplaceAll(query, []byte("[TIME]"))
+	cupaloy.SnapshotT(t, string(query))
 }
