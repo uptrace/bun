@@ -3,19 +3,32 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"errors"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
+type whenClause struct {
+	expr string
+}
+
 type MergeQuery struct {
 	baseQuery
 	returningQuery
 
+	setQuery
+	insertValues []columnValue
+
 	using schema.QueryWithArgs
 	on    schema.QueryWithArgs
 	when  []schema.QueryWithArgs
+
+	whenUpdate *whenClause
+	whenInsert *whenClause
+	whenDelete *whenClause
 }
 
 var _ Query = (*MergeQuery)(nil)
@@ -26,6 +39,9 @@ func NewMergeQuery(db *DB) *MergeQuery {
 			db:   db,
 			conn: db.DB,
 		},
+	}
+	if !(q.db.dialect.Name() == dialect.MSSQL || q.db.dialect.Name() == dialect.PG) {
+		q.err = errors.New("bun: merge not supported for current dialect")
 	}
 	return q
 }
@@ -40,9 +56,12 @@ func (q *MergeQuery) Model(model interface{}) *MergeQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
+// Apply calls the fn passing the MergeQuery as an argument.
 func (q *MergeQuery) Apply(fn func(*MergeQuery) *MergeQuery) *MergeQuery {
-	return fn(q)
+	if fn != nil {
+		return fn(q)
+	}
+	return q
 }
 
 func (q *MergeQuery) With(name string, query schema.QueryAppender) *MergeQuery {
@@ -79,6 +98,7 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQue
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
+// Only for mssql output, postgres not supported returning in merge query
 func (q *MergeQuery) Returning(query string, args ...interface{}) *MergeQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
@@ -103,12 +123,11 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 	}
 
 	b = append(b, "MERGE "...)
-
-	if q.db.features.Has(feature.InsertTableAlias) && !q.on.IsZero() {
-		b, err = q.appendFirstTableWithAlias(fmter, b)
-	} else {
-		b, err = q.appendFirstTable(fmter, b)
+	if q.db.dialect.Name() == dialect.PG {
+		b = append(b, "INTO "...)
 	}
+
+	b, err = q.appendFirstTableWithAlias(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +142,52 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 	b, err = q.on.AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
+	}
+
+	if q.whenUpdate != nil {
+		b = append(b, " WHEN "...)
+		b = append(b, q.whenUpdate.expr...)
+		if len(q.set) > 0 {
+			b = append(b, " THEN UPDATE SET "...)
+			b, err = q.appendSet(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if q.whenInsert != nil {
+		b = append(b, " WHEN "...)
+		b = append(b, q.whenInsert.expr...)
+		if len(q.insertValues) > 0 {
+			b = append(b, " THEN INSERT "...)
+			b = append(b, "("...)
+			for i, v := range q.insertValues {
+				if i > 0 {
+					b = append(b, ", "...)
+				}
+				b = append(b, v.column...)
+			}
+			b = append(b, ")"...)
+			b = append(b, " VALUES ("...)
+			for i, v := range q.insertValues {
+				if i > 0 {
+					b = append(b, ", "...)
+				}
+				b, err = v.value.AppendQuery(fmter, b)
+				if err != nil {
+					return nil, err
+				}
+			}
+			b = append(b, ')')
+		}
+	}
+
+	if q.whenDelete != nil {
+		b = append(b, " WHEN "...)
+		b = append(b, q.whenDelete.expr...)
+		b = append(b, " THEN "...)
+		b = append(b, "DELETE"...)
 	}
 
 	for _, w := range q.when {
@@ -159,15 +224,60 @@ func (q *MergeQuery) On(s string, args ...interface{}) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) When(s string, args ...interface{}) *MergeQuery {
-	q.when = append(q.when, schema.SafeQuery(s, args))
+// Set for update
+func (q *MergeQuery) Set(query string, args ...interface{}) *MergeQuery {
+	q.addSet(schema.SafeQuery(query, args))
+	return q
+}
+
+// Value for insert
+func (q *MergeQuery) Value(column string, expr string, args ...interface{}) *MergeQuery {
+	q.insertValues = append(q.insertValues, columnValue{
+		column: column,
+		value:  schema.SafeQuery(expr, args),
+	})
+	return q
+}
+
+// WhenUpdate for when update clause
+func (q *MergeQuery) WhenUpdate(expr string, fn func(q *MergeQuery) *MergeQuery) *MergeQuery {
+	if fn != nil {
+		q = fn(q)
+	}
+	q.whenUpdate = &whenClause{
+		expr: expr,
+	}
+	return q
+}
+
+// WhenInsert for when insert clause
+func (q *MergeQuery) WhenInsert(expr string, fn func(q *MergeQuery) *MergeQuery) *MergeQuery {
+	if fn != nil {
+		q = fn(q)
+	}
+	q.whenInsert = &whenClause{
+		expr: expr,
+	}
+	return q
+}
+
+// WhenDelete for when delete clause
+func (q *MergeQuery) WhenDelete(expr string) *MergeQuery {
+	q.whenDelete = &whenClause{
+		expr: expr,
+	}
+	return q
+}
+
+// WhenExpr for raw expression clause
+func (q *MergeQuery) WhenExpr(expr string, args ...interface{}) *MergeQuery {
+	q.when = append(q.when, schema.SafeQuery(expr, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
 func (q *MergeQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-
 	if q.err != nil {
 		return nil, q.err
 	}
