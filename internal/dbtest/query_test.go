@@ -961,6 +961,14 @@ func TestAlterTable(t *testing.T) {
 			// Bad model
 			return db.NewAlterTable().Model(1)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Rename table
+			return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Rename table IF EXISTS
+			return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+		},
 	} {
 		testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 			skipIfNotHasFeature(t, db, feature.AlterTableQuery, "ALTER TABLE")

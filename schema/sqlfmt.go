@@ -92,7 +92,10 @@ type RenameQueryArg struct {
 	Original, To string
 }
 
-var _ QueryAppender = (*RenameQueryArg)(nil)
+var (
+	_ QueryAppender = (*RenameQueryArg)(nil)
+	_ isZeroer      = (*RenameQueryArg)(nil)
+)
 
 func (q RenameQueryArg) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	if q.Original != "" {
@@ -103,4 +106,9 @@ func (q RenameQueryArg) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	b = append(b, "TO "...)
 	b = fmter.AppendIdent(b, q.To)
 	return b, nil
+}
+
+func (q RenameQueryArg) IsZero() bool {
+	// Original is an optional field
+	return q.To == ""
 }
