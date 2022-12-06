@@ -923,6 +923,52 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewSelect().Model(new(Model)).Relation("SoftDelete")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID    int64 `bun:",pk,autoincrement"`
+				Name  string
+				Value string
+			}
+
+			newModels := []*Model{
+				{Name: "A", Value: "world"},
+				{Name: "B", Value: "test"},
+			}
+
+			return db.NewMerge().
+				Model(new(Model)).
+				With("_data", db.NewValues(&newModels)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+					return q.Set("value = _data.value")
+				}).
+				WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+					return q.Value("name", "_data.name").Value("value", "_data.value")
+				}).
+				Returning("$action")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID    int64 `bun:",pk,autoincrement"`
+				Name  string
+				Value string
+			}
+
+			newModels := []*Model{
+				{Name: "A", Value: "world"},
+				{Name: "B", Value: "test"},
+			}
+
+			return db.NewMerge().
+				Model(new(Model)).
+				With("_data", db.NewValues(&newModels)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenDelete("MATCHED").
+				When("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
+				Returning("$action")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
