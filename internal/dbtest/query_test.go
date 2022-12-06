@@ -940,10 +940,10 @@ func TestQuery(t *testing.T) {
 				With("_data", db.NewValues(&newModels)).
 				Using("_data").
 				On("?TableAlias.name = _data.name").
-				WhenUpdate("MATCHED", func(q *bun.MergeQuery) *bun.MergeQuery {
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
 					return q.Set("value = _data.value")
 				}).
-				WhenInsert("NOT MATCHED", func(q *bun.MergeQuery) *bun.MergeQuery {
+				WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
 					return q.Value("name", "_data.name").Value("value", "_data.value")
 				}).
 				Returning("$action")
@@ -966,7 +966,7 @@ func TestQuery(t *testing.T) {
 				Using("_data").
 				On("?TableAlias.name = _data.name").
 				WhenDelete("MATCHED").
-				WhenExpr("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
+				When("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
 				Returning("$action")
 		},
 	}

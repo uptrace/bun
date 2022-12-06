@@ -11,24 +11,57 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-type whenClause struct {
+type whenInsert struct {
+	expr  string
+	query *InsertQuery
+}
+
+func (w whenInsert) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, w.expr...)
+	if w.query != nil {
+		b = append(b, " THEN INSERT"...)
+		b, err = w.query.appendColumnsValues(fmter, b, true)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
+type whenUpdate struct {
+	expr  string
+	query *UpdateQuery
+}
+
+func (w whenUpdate) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, w.expr...)
+	if w.query != nil {
+		b = append(b, " THEN UPDATE SET "...)
+		b, err = w.query.appendSet(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
+type whenDelete struct {
 	expr string
+}
+
+func (w whenDelete) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, w.expr...)
+	b = append(b, " THEN DELETE"...)
+	return b, nil
 }
 
 type MergeQuery struct {
 	baseQuery
 	returningQuery
 
-	setQuery
-	insertValues []columnValue
-
 	using schema.QueryWithArgs
 	on    schema.QueryWithArgs
-	when  []schema.QueryWithArgs
-
-	whenUpdate *whenClause
-	whenInsert *whenClause
-	whenDelete *whenClause
+	when  []schema.QueryAppender
 }
 
 var _ Query = (*MergeQuery)(nil)
@@ -144,52 +177,6 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 		return nil, err
 	}
 
-	if q.whenUpdate != nil {
-		b = append(b, " WHEN "...)
-		b = append(b, q.whenUpdate.expr...)
-		if len(q.set) > 0 {
-			b = append(b, " THEN UPDATE SET "...)
-			b, err = q.appendSet(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	if q.whenInsert != nil {
-		b = append(b, " WHEN "...)
-		b = append(b, q.whenInsert.expr...)
-		if len(q.insertValues) > 0 {
-			b = append(b, " THEN INSERT "...)
-			b = append(b, "("...)
-			for i, v := range q.insertValues {
-				if i > 0 {
-					b = append(b, ", "...)
-				}
-				b = append(b, v.column...)
-			}
-			b = append(b, ")"...)
-			b = append(b, " VALUES ("...)
-			for i, v := range q.insertValues {
-				if i > 0 {
-					b = append(b, ", "...)
-				}
-				b, err = v.value.AppendQuery(fmter, b)
-				if err != nil {
-					return nil, err
-				}
-			}
-			b = append(b, ')')
-		}
-	}
-
-	if q.whenDelete != nil {
-		b = append(b, " WHEN "...)
-		b = append(b, q.whenDelete.expr...)
-		b = append(b, " THEN "...)
-		b = append(b, "DELETE"...)
-	}
-
 	for _, w := range q.when {
 		b = append(b, " WHEN "...)
 		b, err = w.AppendQuery(fmter, b)
@@ -224,53 +211,38 @@ func (q *MergeQuery) On(s string, args ...interface{}) *MergeQuery {
 	return q
 }
 
-// Set for update
-func (q *MergeQuery) Set(query string, args ...interface{}) *MergeQuery {
-	q.addSet(schema.SafeQuery(query, args))
-	return q
-}
-
-// Value for insert
-func (q *MergeQuery) Value(column string, expr string, args ...interface{}) *MergeQuery {
-	q.insertValues = append(q.insertValues, columnValue{
-		column: column,
-		value:  schema.SafeQuery(expr, args),
-	})
-	return q
-}
-
 // WhenUpdate for when update clause
-func (q *MergeQuery) WhenUpdate(expr string, fn func(q *MergeQuery) *MergeQuery) *MergeQuery {
-	if fn != nil {
-		q = fn(q)
+func (q *MergeQuery) WhenUpdate(expr string, fn func(q *UpdateQuery) *UpdateQuery) *MergeQuery {
+	sq := NewUpdateQuery(q.db)
+	//apply the model as default into sub query
+	if q.model != nil {
+		sq = sq.Model(q.model)
 	}
-	q.whenUpdate = &whenClause{
-		expr: expr,
-	}
+	sq = sq.Apply(fn)
+	q.when = append(q.when, whenUpdate{expr: expr, query: sq})
 	return q
 }
 
 // WhenInsert for when insert clause
-func (q *MergeQuery) WhenInsert(expr string, fn func(q *MergeQuery) *MergeQuery) *MergeQuery {
-	if fn != nil {
-		q = fn(q)
+func (q *MergeQuery) WhenInsert(expr string, fn func(q *InsertQuery) *InsertQuery) *MergeQuery {
+	sq := NewInsertQuery(q.db)
+	//apply the model as default into sub query, since appendColumnsValues required
+	if q.model != nil {
+		sq = sq.Model(q.model)
 	}
-	q.whenInsert = &whenClause{
-		expr: expr,
-	}
+	sq = sq.Apply(fn)
+	q.when = append(q.when, whenInsert{expr: expr, query: sq})
 	return q
 }
 
 // WhenDelete for when delete clause
 func (q *MergeQuery) WhenDelete(expr string) *MergeQuery {
-	q.whenDelete = &whenClause{
-		expr: expr,
-	}
+	q.when = append(q.when, whenDelete{expr: expr})
 	return q
 }
 
-// WhenExpr for raw expression clause
-func (q *MergeQuery) WhenExpr(expr string, args ...interface{}) *MergeQuery {
+// When for raw expression clause
+func (q *MergeQuery) When(expr string, args ...interface{}) *MergeQuery {
 	q.when = append(q.when, schema.SafeQuery(expr, args))
 	return q
 }

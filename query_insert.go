@@ -192,7 +192,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	b, err = q.appendColumnsValues(fmter, b)
+	b, err = q.appendColumnsValues(fmter, b, false)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *InsertQuery) appendColumnsValues(
-	fmter schema.Formatter, b []byte,
+	fmter schema.Formatter, b []byte, skipOutput bool,
 ) (_ []byte, err error) {
 	if q.hasMultiTables() {
 		if q.columns != nil {
@@ -275,7 +275,7 @@ func (q *InsertQuery) appendColumnsValues(
 	b = q.appendFields(fmter, b, fields)
 	b = append(b, ")"...)
 
-	if q.hasFeature(feature.Output) && q.hasReturning() {
+	if q.hasFeature(feature.Output) && q.hasReturning() && !skipOutput {
 		b = append(b, " OUTPUT "...)
 		b, err = q.appendOutput(fmter, b)
 		if err != nil {
