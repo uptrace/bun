@@ -14,7 +14,7 @@ type ColumnsAppender interface {
 	AppendColumns(fmter Formatter, b []byte) ([]byte, error)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // Safe represents a safe SQL query.
 type Safe string
@@ -25,7 +25,7 @@ func (s Safe) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return append(b, s...), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // Ident represents a SQL identifier, for example, table or column name.
 type Ident string
@@ -36,7 +36,7 @@ func (s Ident) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.AppendIdent(b, string(s)), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type QueryWithArgs struct {
 	Query string
@@ -72,7 +72,7 @@ func (q QueryWithArgs) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.AppendQuery(b, q.Query, q.Args...), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type QueryWithSep struct {
 	QueryWithArgs
@@ -84,31 +84,4 @@ func SafeQueryWithSep(query string, args []interface{}, sep string) QueryWithSep
 		QueryWithArgs: SafeQuery(query, args),
 		Sep:           sep,
 	}
-}
-
-// ------------------------------------------------------------------------------
-
-type RenameQueryArg struct {
-	Original, To string
-}
-
-var (
-	_ QueryAppender = (*RenameQueryArg)(nil)
-	_ isZeroer      = (*RenameQueryArg)(nil)
-)
-
-func (q RenameQueryArg) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
-	if q.Original != "" {
-		b = fmter.AppendIdent(b, q.Original)
-		b = append(b, " "...)
-	}
-
-	b = append(b, "TO "...)
-	b = fmter.AppendIdent(b, q.To)
-	return b, nil
-}
-
-func (q RenameQueryArg) IsZero() bool {
-	// Original is an optional field
-	return q.To == ""
 }

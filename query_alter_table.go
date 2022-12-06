@@ -116,7 +116,7 @@ func (q *AlterTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 type RenameTableQuery struct {
 	baseQuery
 	parent  *AlterTableQuery
-	newName schema.RenameQueryArg
+	newName schema.QueryWithArgs
 }
 
 var (
@@ -130,15 +130,11 @@ func newRenameTableQuery(db *DB, parent *AlterTableQuery, newName string) *Renam
 			conn: db.DB,
 		},
 		parent:  parent,
-		newName: schema.RenameQueryArg{To: newName},
+		newName: renameQuery("", newName),
 	}
 }
 
 func (q *RenameTableQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if q.newName.IsZero() {
-		return b, nil
-	}
-
 	b = append(b, "RENAME "...)
 	b, err = q.newName.AppendQuery(fmter, b)
 	if err != nil {
@@ -156,7 +152,7 @@ func (q *RenameTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 type RenameColumnQuery struct {
 	baseQuery
 	parent  *AlterTableQuery
-	newName schema.RenameQueryArg
+	newName schema.QueryWithArgs
 }
 
 var (
@@ -170,15 +166,11 @@ func newRenameColumnQuery(db *DB, parent *AlterTableQuery, oldName, newName stri
 			conn: db.DB,
 		},
 		parent:  parent,
-		newName: schema.RenameQueryArg{Original: oldName, To: newName},
+		newName: renameQuery(oldName, newName),
 	}
 }
 
 func (q *RenameColumnQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if q.newName.IsZero() {
-		return b, nil
-	}
-
 	b = append(b, "RENAME COLUMN "...)
 	b, err = q.newName.AppendQuery(fmter, b)
 	if err != nil {
@@ -247,3 +239,13 @@ func (q *AlterColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 }
 
 func (q *AlterColumnQuery) chain() {}
+
+// ------------------------------------------------------------------------------
+
+func renameQuery(from, to string) schema.QueryWithArgs {
+	query, args := "? TO ?", []interface{}{schema.Ident(from), schema.Ident(to)}
+	if from == "" {
+		query, args = "TO ?", []interface{}{schema.Ident(to)}
+	}
+	return schema.QueryWithArgs{Query: query, Args: args}
+}
