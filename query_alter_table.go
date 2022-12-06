@@ -4,11 +4,22 @@ import "github.com/uptrace/bun/schema"
 
 type ifExists bool
 
+// AppendQuery adds IF EXISTS clause to the query, if its value is true. It always returns a nil error.
 func (ifexists ifExists) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
 	if !ifexists {
 		return b, nil
 	}
 	return append(b, "IF EXISTS "...), nil
+}
+
+type ifNotExists bool
+
+// AppendQuery adds IF NOT EXISTS clause to the query, if its value is true. It always returns a nil error.
+func (ifnotexists ifNotExists) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
+	if !ifnotexists {
+		return b, nil
+	}
+	return append(b, "IF NOT EXISTS "...), nil
 }
 
 type SubqueryAppender interface {
@@ -63,6 +74,18 @@ func (q *AlterTableQuery) AlterColumn(column string) *AlterColumnQuery {
 	return sq
 }
 
+func (q *AlterTableQuery) AddColumn() *AddColumnSubquery {
+	sq := newAddColumnSubquery(q.db, q)
+	q.subqueries = append(q.subqueries, sq)
+	return sq
+}
+
+func (q *AlterTableQuery) DropColumn() *DropColumnSubquery {
+	sq := newDropColumnSubquery(q.db, q)
+	q.subqueries = append(q.subqueries, sq)
+	return sq
+}
+
 // ------------------------------------------------------------------------------
 
 func (q *AlterTableQuery) IfExists() *AlterTableQuery {
@@ -78,10 +101,7 @@ func (q *AlterTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 	}
 
 	b = append(b, "ALTER TABLE "...)
-	b, err = q.ifExists.AppendQuery(fmter, b)
-	if err != nil {
-		return nil, err
-	}
+	b, _ = q.ifExists.AppendQuery(fmter, b)
 
 	b, err = q.appendFirstTable(fmter, b)
 	if err != nil {
@@ -239,6 +259,102 @@ func (q *AlterColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 }
 
 func (q *AlterColumnQuery) chain() {}
+
+// ADD COLUMN -----------------------------------------------------------------
+
+type AddColumnSubquery struct {
+	baseQuery
+	ifNotExists
+	column schema.QueryAppender
+	parent *AlterTableQuery
+}
+
+func newAddColumnSubquery(db *DB, parent *AlterTableQuery) *AddColumnSubquery {
+	return &AddColumnSubquery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		parent: parent,
+	}
+}
+
+func (q *AddColumnSubquery) ColumnExpr(query string, args ...interface{}) *AddColumnSubquery {
+	q.column = schema.SafeQuery(query, args)
+	return q
+}
+
+func (q *AddColumnSubquery) AddColumn() *AddColumnSubquery {
+	return q.parent.AddColumn()
+}
+
+func (q *AddColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, "ADD COLUMN "...)
+	b, _ = q.ifNotExists.AppendQuery(fmter, b)
+
+	b, err = q.column.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (q *AddColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.parent.AppendQuery(fmter, b)
+}
+
+func (q *AddColumnSubquery) chain() {}
+
+// DROP COLUMN -----------------------------------------------------------------
+
+type DropColumnSubquery struct {
+	baseQuery
+	ifExists
+	column schema.QueryAppender
+	parent *AlterTableQuery
+}
+
+func newDropColumnSubquery(db *DB, parent *AlterTableQuery) *DropColumnSubquery {
+	return &DropColumnSubquery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		parent: parent,
+	}
+}
+
+func (q *DropColumnSubquery) Column(column string) *DropColumnSubquery {
+	q.column = schema.UnsafeIdent(column)
+	return q
+}
+
+func (q *DropColumnSubquery) ColumnExpr(query string, args ...interface{}) *DropColumnSubquery {
+	q.column = schema.SafeQuery(query, args)
+	return q
+}
+
+func (q *DropColumnSubquery) IfExists() *DropColumnSubquery {
+	q.ifExists = true
+	return q
+}
+
+func (q *DropColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, "DROP COLUMN "...)
+	b, _ = q.ifExists.AppendQuery(fmter, b)
+
+	b, err = q.column.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (q *DropColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.parent.AppendQuery(fmter, b)
+}
+
+func (q *DropColumnSubquery) chain() {}
 
 // ------------------------------------------------------------------------------
 

@@ -995,7 +995,35 @@ func TestAlterTable(t *testing.T) {
 					AlterColumn("active").Type(sqltype.SmallInt)
 			},
 		},
+		{
+			"add column", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).AddColumn().
+					ColumnExpr("deadline ?", bun.Safe(sqltype.Timestamp))
+			},
+		},
+		{
+			"add several columns", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AddColumn().ColumnExpr("one INTEGER").
+					AddColumn().ColumnExpr("two BIGINT")
+			},
+		},
+		{
+			"drop column if exists", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).DropColumn().IfExists().Column("old")
+			},
+		},
+		{
+			"drop column expression", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).DropColumn().ColumnExpr("old CASCADE")
+			},
+		},
 	}
+
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for i, tt := range cases {
 			skipIfNotHasFeature(t, db, tt.req.Feature, tt.req.Name)
