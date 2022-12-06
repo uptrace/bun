@@ -765,3 +765,48 @@ func TestPostgresSkipupdateField(t *testing.T) {
 
 	require.NotEqual(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
 }
+
+type Issue722 struct {
+	V []byte
+}
+
+func (t *Issue722) Value() (driver.Value, error) {
+	return t.V, nil
+}
+
+func (t *Issue722) Scan(src any) error {
+	if src == nil {
+		return nil
+	}
+
+	bytes, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("unsupported data type: %T", src)
+	}
+
+	t.V = bytes
+	return nil
+}
+
+func TestPostgresCustomTypeBytes(t *testing.T) {
+	type Model struct {
+		ID   int64       `bun:",pk,autoincrement"`
+		Data []*Issue722 `bun:",array,type:bytea[]"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	in := &Model{Data: []*Issue722{{V: []byte("hello")}}}
+	_, err = db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
+}
