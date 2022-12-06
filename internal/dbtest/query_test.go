@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -947,8 +948,9 @@ func TestQuery(t *testing.T) {
 
 func TestAlterTable(t *testing.T) {
 	type Model struct {
-		ID  int64
-		Old string
+		ID     int64
+		Old    string
+		Active bool
 	}
 
 	// TODO: add names for test cases
@@ -967,7 +969,17 @@ func TestAlterTable(t *testing.T) {
 		},
 		func(db *bun.DB) schema.QueryAppender {
 			// Rename table IF EXISTS
-			return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models").IfExists()
+			return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Change column type with common SQL data type
+			return db.NewAlterTable().Model((*Model)(nil)).AlterColumn("old").Type(sqltype.Blob)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Alter 2 columns in a chained query
+			return db.NewAlterTable().Model((*Model)(nil)).
+				AlterColumn("old").Type(sqltype.Blob).
+				AlterColumn("active").Type(sqltype.SmallInt)
 		},
 	} {
 		testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
