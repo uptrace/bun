@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -33,7 +34,7 @@ func newSliceTableModel(
 
 		slice:    slice,
 		sliceLen: slice.Len(),
-		nextElem: makeSliceNextElemFunc(slice),
+		nextElem: internal.MakeSliceNextElemFunc(slice),
 	}
 	m.init(slice.Type())
 	return m

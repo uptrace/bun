@@ -129,9 +129,11 @@ See [**Getting started**](https://bun.uptrace.dev/guide/golang-orm.html) guide a
 - [Golang ClickHouse ORM](https://github.com/uptrace/go-clickhouse)
 - [Golang msgpack](https://github.com/vmihailenco/msgpack)
 
-## Contributors
+## Contributing
 
-Thanks to all the people who already contributed!
+See [CONTRIBUTING.md](CONTRIBUTING.md) for some hints.
+
+And thanks to all the people who already contributed!
 
 <a href="https://github.com/uptrace/bun/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=uptrace/bun" />
