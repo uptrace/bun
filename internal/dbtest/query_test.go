@@ -947,49 +947,67 @@ func TestQuery(t *testing.T) {
 }
 
 func TestAlterTable(t *testing.T) {
+	needsAlterTable := needs(feature.AlterTableQuery, "ALTER TABLE")
 	type Model struct {
 		ID     int64
 		Old    string
 		Active bool
 	}
 
-	// TODO: add names for test cases
-	for _, fn := range []func(*bun.DB) schema.QueryAppender{
-		func(db *bun.DB) schema.QueryAppender {
-			// Rename column
-			return db.NewAlterTable().Model((*Model)(nil)).RenameColumn("old", "new")
+	cases := []TestCase{
+		{
+			"rename column", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).RenameColumn("old", "new")
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			// Bad model
-			return db.NewAlterTable().Model(1)
+		{
+			"invalid model", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model(1)
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			// Rename table
-			return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models")
+		{
+			"rename table", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models")
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			// Rename table IF EXISTS
-			return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+		{
+			"rename table if exists", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			// Change column type with common SQL data type
-			return db.NewAlterTable().Model((*Model)(nil)).AlterColumn("old").Type(sqltype.Blob)
+		{
+			"change column type", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				// Change column type with common SQL data type
+				return db.NewAlterTable().Model((*Model)(nil)).AlterColumn("old").Type(sqltype.Blob)
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			// Alter 2 columns in a chained query
-			return db.NewAlterTable().Model((*Model)(nil)).
-				AlterColumn("old").Type(sqltype.Blob).
-				AlterColumn("active").Type(sqltype.SmallInt)
+		{
+			"change column type chained", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				// Alter 2 columns in a chained query
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AlterColumn("old").Type(sqltype.Blob).
+					AlterColumn("active").Type(sqltype.SmallInt)
+			},
 		},
-	} {
-		testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-			skipIfNotHasFeature(t, db, feature.AlterTableQuery, "ALTER TABLE")
-			snapshotFormattedQuery(t, db, fn(db))
-		})
 	}
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		for i, tt := range cases {
+			skipIfNotHasFeature(t, db, tt.req.Feature, tt.req.Name)
+
+			t.Run(fmt.Sprintf("%d-%s", i, tt.name), func(t *testing.T) {
+				checkQuerySnapshot(t, db, tt.fn(db))
+			})
+		}
+	})
 }
 
-func snapshotFormattedQuery(t *testing.T, db *bun.DB, q schema.QueryAppender) {
+func checkQuerySnapshot(t *testing.T, db *bun.DB, q schema.QueryAppender) {
 	t.Helper()
 	query, err := q.AppendQuery(db.Formatter(), nil)
 	if err != nil {
@@ -999,4 +1017,24 @@ func snapshotFormattedQuery(t *testing.T, db *bun.DB, q schema.QueryAppender) {
 
 	query = timeRE.ReplaceAll(query, []byte("[TIME]"))
 	cupaloy.SnapshotT(t, string(query))
+}
+
+// Example:
+// tt := TestCase{
+// 	"common table expressions", needs(feature.CTE, "CTE"),
+// 	func(db *bun.DB) schema.QueryAppender {...},
+// }
+type TestCase struct {
+	name string
+	req  *requiredFeature
+	fn   func(db *bun.DB) schema.QueryAppender
+}
+
+type requiredFeature struct {
+	feature.Feature
+	Name string
+}
+
+func needs(feat feature.Feature, name string) *requiredFeature {
+	return &requiredFeature{feat, name}
 }
