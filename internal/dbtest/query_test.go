@@ -958,7 +958,8 @@ func TestAlterTable(t *testing.T) {
 		{
 			"rename column", needsAlterTable,
 			func(db *bun.DB) schema.QueryAppender {
-				return db.NewAlterTable().Model((*Model)(nil)).RenameColumn("old", "new")
+				return db.NewAlterTable().Model((*Model)(nil)).
+					RenameColumn().Column("old").To("new")
 			},
 		},
 		{
@@ -970,20 +971,23 @@ func TestAlterTable(t *testing.T) {
 		{
 			"rename table", needsAlterTable,
 			func(db *bun.DB) schema.QueryAppender {
-				return db.NewAlterTable().Model((*Model)(nil)).Rename("new_models")
+				return db.NewAlterTable().Model((*Model)(nil)).
+					Rename().To("new_models")
 			},
 		},
 		{
 			"rename table if exists", needsAlterTable,
 			func(db *bun.DB) schema.QueryAppender {
-				return db.NewAlterTable().Model((*Model)(nil)).IfExists().Rename("new_models")
+				return db.NewAlterTable().Model((*Model)(nil)).IfExists().
+					Rename().To("new_models")
 			},
 		},
 		{
 			"change column type", needsAlterTable,
 			func(db *bun.DB) schema.QueryAppender {
 				// Change column type with common SQL data type
-				return db.NewAlterTable().Model((*Model)(nil)).AlterColumn("old").Type(sqltype.Blob)
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AlterColumn().Column("old").Type(sqltype.Blob)
 			},
 		},
 		{
@@ -991,8 +995,8 @@ func TestAlterTable(t *testing.T) {
 			func(db *bun.DB) schema.QueryAppender {
 				// Alter 2 columns in a chained query
 				return db.NewAlterTable().Model((*Model)(nil)).
-					AlterColumn("old").Type(sqltype.Blob).
-					AlterColumn("active").Type(sqltype.SmallInt)
+					AlterColumn().Column("old").Type(sqltype.Blob).
+					AlterColumn().Column("active").Type(sqltype.SmallInt)
 			},
 		},
 		{

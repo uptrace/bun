@@ -32,13 +32,35 @@ type ChainableSubquery interface {
 	chain()
 }
 
+// chainableAlterTableSubquery allows doing multiple modifications in a single ALTER TABLE query.
+// Structs that implement SubqueryAppender can embed chainableAlterTableSubquery to implement ChainableSubquery too.
+type chainableAlterTableSubquery struct {
+	parent *AlterTableQuery
+}
+
+func (_ *chainableAlterTableSubquery) chain() {}
+
+func (q *chainableAlterTableSubquery) AlterColumn() *AlterColumnSubquery {
+	return q.parent.AlterColumn()
+}
+
+func (q *chainableAlterTableSubquery) AddColumn() *AddColumnSubquery {
+	return q.parent.AddColumn()
+}
+
+func (q *chainableAlterTableSubquery) DropColumn() *DropColumnSubquery {
+	return q.parent.DropColumn()
+}
+
+// ------------------------------------------------------------------------------
+
 type AlterTableQuery struct {
 	baseQuery
 	ifExists
 	subqueries []SubqueryAppender
 }
 
-var _ schema.QueryAppender = (*AlterTableQuery)(nil)
+var _ Query = (*AlterTableQuery)(nil)
 
 func NewAlterTableQuery(db *DB) *AlterTableQuery {
 	return &AlterTableQuery{
@@ -49,6 +71,10 @@ func NewAlterTableQuery(db *DB) *AlterTableQuery {
 	}
 }
 
+func (q *AlterTableQuery) Operation() string {
+	return "ALTER TABLE"
+}
+
 func (q *AlterTableQuery) Model(model interface{}) *AlterTableQuery {
 	q.setModel(model)
 	return q
@@ -56,20 +82,20 @@ func (q *AlterTableQuery) Model(model interface{}) *AlterTableQuery {
 
 // ------------------------------------------------------------------------------
 
-func (q *AlterTableQuery) Rename(to string) *RenameTableQuery {
-	sq := newRenameTableQuery(q.db, q, to)
+func (q *AlterTableQuery) Rename() *RenameTableSubquery {
+	sq := newRenameTableQuery(q.db, q)
 	q.subqueries = append(q.subqueries, sq)
 	return sq
 }
 
-func (q *AlterTableQuery) RenameColumn(column, to string) *RenameColumnQuery {
-	sq := newRenameColumnQuery(q.db, q, column, to)
+func (q *AlterTableQuery) RenameColumn() *RenameColumnSubquery {
+	sq := newRenameColumnQuery(q.db, q)
 	q.subqueries = append(q.subqueries, sq)
 	return sq
 }
 
-func (q *AlterTableQuery) AlterColumn(column string) *AlterColumnQuery {
-	sq := newAlterColumnQuery(q.db, q, column)
+func (q *AlterTableQuery) AlterColumn() *AlterColumnSubquery {
+	sq := newAlterColumnQuery(q.db, q)
 	q.subqueries = append(q.subqueries, sq)
 	return sq
 }
@@ -133,105 +159,119 @@ func (q *AlterTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 
 // RENAME TO ------------------------------------------------------------------
 
-type RenameTableQuery struct {
+type RenameTableSubquery struct {
 	baseQuery
-	parent  *AlterTableQuery
-	newName schema.QueryWithArgs
+	parent *AlterTableQuery
 }
 
 var (
-	_ schema.QueryAppender = (*RenameTableQuery)(nil)
+	_ SubqueryAppender = (*RenameTableSubquery)(nil)
 )
 
-func newRenameTableQuery(db *DB, parent *AlterTableQuery, newName string) *RenameTableQuery {
-	return &RenameTableQuery{
-		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
-		},
-		parent:  parent,
-		newName: renameQuery("", newName),
-	}
-}
-
-func (q *RenameTableQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	b = append(b, "RENAME "...)
-	b, err = q.newName.AppendQuery(fmter, b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func (q *RenameTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	return q.parent.AppendQuery(fmter, b)
-}
-
-// RENAME COLUMN --------------------------------------------------------------
-
-type RenameColumnQuery struct {
-	baseQuery
-	parent  *AlterTableQuery
-	newName schema.QueryWithArgs
-}
-
-var (
-	_ schema.QueryAppender = (*RenameColumnQuery)(nil)
-)
-
-func newRenameColumnQuery(db *DB, parent *AlterTableQuery, oldName, newName string) *RenameColumnQuery {
-	return &RenameColumnQuery{
-		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
-		},
-		parent:  parent,
-		newName: renameQuery(oldName, newName),
-	}
-}
-
-func (q *RenameColumnQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	b = append(b, "RENAME COLUMN "...)
-	b, err = q.newName.AppendQuery(fmter, b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func (q *RenameColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	return q.parent.AppendQuery(fmter, b)
-}
-
-// ALTER COLUMN ---------------------------------------------------------------
-
-type AlterColumnQuery struct {
-	baseQuery
-	parent       *AlterTableQuery
-	column       schema.QueryWithArgs
-	modification schema.QueryAppender
-}
-
-var (
-	_ ChainableSubquery = (*AlterColumnQuery)(nil)
-)
-
-func newAlterColumnQuery(db *DB, parent *AlterTableQuery, column string) *AlterColumnQuery {
-	return &AlterColumnQuery{
+func newRenameTableQuery(db *DB, parent *AlterTableQuery) *RenameTableSubquery {
+	return &RenameTableSubquery{
 		baseQuery: baseQuery{
 			db:   db,
 			conn: db.DB,
 		},
 		parent: parent,
-		column: schema.UnsafeIdent(column),
 	}
 }
 
-func (q *AlterColumnQuery) AlterColumn(column string) *AlterColumnQuery {
-	return q.parent.AlterColumn(column)
+func (q *RenameTableSubquery) To(newName string) *RenameTableSubquery {
+	q.addColumn(renameQuery("", newName))
+	return q
 }
 
-func (q *AlterColumnQuery) Type(typ string) *AlterColumnQuery {
+func (q *RenameTableSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, "RENAME "...)
+	b, err = q.appendFirstColumn(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (q *RenameTableSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.parent.AppendQuery(fmter, b)
+}
+
+// RENAME COLUMN --------------------------------------------------------------
+
+type RenameColumnSubquery struct {
+	baseQuery
+	parent *AlterTableQuery
+	which  string
+}
+
+var (
+	_ SubqueryAppender = (*RenameColumnSubquery)(nil)
+)
+
+func newRenameColumnQuery(db *DB, parent *AlterTableQuery) *RenameColumnSubquery {
+	return &RenameColumnSubquery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		parent: parent,
+	}
+}
+
+func (q *RenameColumnSubquery) Column(column string) *RenameColumnSubquery {
+	q.which = column
+	return q
+}
+
+func (q *RenameColumnSubquery) To(newName string) *RenameColumnSubquery {
+	q.addColumn(renameQuery(q.which, newName))
+	return q
+}
+
+func (q *RenameColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = append(b, "RENAME COLUMN "...)
+	b, err = q.appendFirstColumn(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (q *RenameColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	return q.parent.AppendQuery(fmter, b)
+}
+
+// ALTER COLUMN ---------------------------------------------------------------
+
+type AlterColumnSubquery struct {
+	baseQuery
+	chainableAlterTableSubquery
+	which        schema.QueryWithArgs
+	modification schema.QueryAppender
+}
+
+var (
+	_ ChainableSubquery = (*AlterColumnSubquery)(nil)
+)
+
+func newAlterColumnQuery(db *DB, parent *AlterTableQuery) *AlterColumnSubquery {
+	return &AlterColumnSubquery{
+		baseQuery: baseQuery{
+			db:   db,
+			conn: db.DB,
+		},
+		chainableAlterTableSubquery: chainableAlterTableSubquery{
+			parent: parent,
+		},
+	}
+}
+
+func (q *AlterColumnSubquery) Column(column string) *AlterColumnSubquery {
+	q.which = schema.UnsafeIdent(column)
+	return q
+}
+
+func (q *AlterColumnSubquery) Type(typ string) *AlterColumnSubquery {
 	q.modification = schema.QueryWithArgs{
 		Query: "SET DATA TYPE ?",
 		Args:  []interface{}{schema.Safe(typ)},
@@ -239,9 +279,9 @@ func (q *AlterColumnQuery) Type(typ string) *AlterColumnQuery {
 	return q
 }
 
-func (q *AlterColumnQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *AlterColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, "ALTER COLUMN "...)
-	b, err = q.column.AppendQuery(fmter, b)
+	b, err = q.which.AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -254,20 +294,21 @@ func (q *AlterColumnQuery) AppendSubquery(fmter schema.Formatter, b []byte) (_ [
 	return b, nil
 }
 
-func (q *AlterColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *AlterColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	return q.parent.AppendQuery(fmter, b)
 }
-
-func (q *AlterColumnQuery) chain() {}
 
 // ADD COLUMN -----------------------------------------------------------------
 
 type AddColumnSubquery struct {
 	baseQuery
+	chainableAlterTableSubquery
 	ifNotExists
-	column schema.QueryAppender
-	parent *AlterTableQuery
 }
+
+var (
+	_ ChainableSubquery = (*AddColumnSubquery)(nil)
+)
 
 func newAddColumnSubquery(db *DB, parent *AlterTableQuery) *AddColumnSubquery {
 	return &AddColumnSubquery{
@@ -275,24 +316,22 @@ func newAddColumnSubquery(db *DB, parent *AlterTableQuery) *AddColumnSubquery {
 			db:   db,
 			conn: db.DB,
 		},
-		parent: parent,
+		chainableAlterTableSubquery: chainableAlterTableSubquery{
+			parent: parent,
+		},
 	}
 }
 
 func (q *AddColumnSubquery) ColumnExpr(query string, args ...interface{}) *AddColumnSubquery {
-	q.column = schema.SafeQuery(query, args)
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
-}
-
-func (q *AddColumnSubquery) AddColumn() *AddColumnSubquery {
-	return q.parent.AddColumn()
 }
 
 func (q *AddColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, "ADD COLUMN "...)
 	b, _ = q.ifNotExists.AppendQuery(fmter, b)
 
-	b, err = q.column.AppendQuery(fmter, b)
+	b, err = q.appendFirstColumn(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -303,16 +342,17 @@ func (q *AddColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []b
 	return q.parent.AppendQuery(fmter, b)
 }
 
-func (q *AddColumnSubquery) chain() {}
-
 // DROP COLUMN -----------------------------------------------------------------
 
 type DropColumnSubquery struct {
 	baseQuery
+	chainableAlterTableSubquery
 	ifExists
-	column schema.QueryAppender
-	parent *AlterTableQuery
 }
+
+var (
+	_ ChainableSubquery = (*DropColumnSubquery)(nil)
+)
 
 func newDropColumnSubquery(db *DB, parent *AlterTableQuery) *DropColumnSubquery {
 	return &DropColumnSubquery{
@@ -320,17 +360,19 @@ func newDropColumnSubquery(db *DB, parent *AlterTableQuery) *DropColumnSubquery 
 			db:   db,
 			conn: db.DB,
 		},
-		parent: parent,
+		chainableAlterTableSubquery: chainableAlterTableSubquery{
+			parent: parent,
+		},
 	}
 }
 
 func (q *DropColumnSubquery) Column(column string) *DropColumnSubquery {
-	q.column = schema.UnsafeIdent(column)
+	q.addColumn(schema.UnsafeIdent(column))
 	return q
 }
 
 func (q *DropColumnSubquery) ColumnExpr(query string, args ...interface{}) *DropColumnSubquery {
-	q.column = schema.SafeQuery(query, args)
+	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
@@ -343,7 +385,7 @@ func (q *DropColumnSubquery) AppendSubquery(fmter schema.Formatter, b []byte) (_
 	b = append(b, "DROP COLUMN "...)
 	b, _ = q.ifExists.AppendQuery(fmter, b)
 
-	b, err = q.column.AppendQuery(fmter, b)
+	b, err = q.appendFirstColumn(fmter, b)
 	if err != nil {
 		return nil, err
 	}
@@ -354,10 +396,10 @@ func (q *DropColumnSubquery) AppendQuery(fmter schema.Formatter, b []byte) (_ []
 	return q.parent.AppendQuery(fmter, b)
 }
 
-func (q *DropColumnSubquery) chain() {}
-
 // ------------------------------------------------------------------------------
 
+// renameQuery is a convenient wrapper to create query of the form `1? TO 2?` with optionally empty 1st argument.
+// It can be used in RENAME clauses for various database objects.
 func renameQuery(from, to string) schema.QueryWithArgs {
 	query, args := "? TO ?", []interface{}{schema.Ident(from), schema.Ident(to)}
 	if from == "" {

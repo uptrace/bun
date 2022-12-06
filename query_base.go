@@ -200,7 +200,7 @@ func (q *baseQuery) hasFeature(feature feature.Feature) bool {
 	return q.db.features.Has(feature)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) checkSoftDelete() error {
 	if q.table == nil {
@@ -243,7 +243,7 @@ func (q *baseQuery) isSoftDelete() bool {
 	return false
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) addWith(name string, query schema.QueryAppender, recursive bool) {
 	q.with = append(q.with, withQuery{
@@ -333,7 +333,7 @@ func (q *baseQuery) appendSelectFromValues(
 	return b, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) addTable(table schema.QueryWithArgs) {
 	q.tables = append(q.tables, table)
@@ -378,7 +378,7 @@ func (q *baseQuery) _excludeColumn(column string) bool {
 	return false
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) modelHasTableName() bool {
 	if !q.modelTableName.IsZero() {
@@ -493,7 +493,7 @@ func (q *baseQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []byt
 	return b, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	for i, f := range q.columns {
@@ -506,6 +506,13 @@ func (q *baseQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, e
 		}
 	}
 	return b, nil
+}
+
+func (q *baseQuery) appendFirstColumn(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	if len(q.columns) == 0 {
+		return b, nil
+	}
+	return q.columns[0].AppendQuery(fmter, b)
 }
 
 func (q *baseQuery) getFields() ([]*schema.Field, error) {
@@ -592,7 +599,7 @@ func (q *baseQuery) exec(
 	return res, err
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool) {
 	if q.table == nil {
@@ -629,7 +636,7 @@ func (q *baseQuery) AppendNamedArg(fmter schema.Formatter, b []byte, name string
 	return b, false
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func (q *baseQuery) Dialect() schema.Dialect {
 	return q.db.Dialect()
@@ -687,7 +694,7 @@ func (q *baseQuery) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(q.db).Conn(q.conn)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 func appendColumns(b []byte, table schema.Safe, fields []*schema.Field) []byte {
 	for i, f := range fields {
@@ -711,7 +718,7 @@ func formatterWithModel(fmter schema.Formatter, model schema.NamedArgAppender) s
 	return fmter.WithArg(model)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type whereBaseQuery struct {
 	baseQuery
@@ -971,7 +978,7 @@ func (q *whereBaseQuery) appendWhereSliceFields(
 	return b, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type returningQuery struct {
 	returning       []schema.QueryWithArgs
@@ -1039,7 +1046,7 @@ func (q *returningQuery) hasReturning() bool {
 	return len(q.returning) > 0 || len(q.returningFields) > 0
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type columnValue struct {
 	column string
@@ -1067,7 +1074,7 @@ func (q *customValueQuery) addValue(
 	}
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type setQuery struct {
 	set []schema.QueryWithArgs
@@ -1090,7 +1097,7 @@ func (q setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err err
 	return b, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type cascadeQuery struct {
 	cascade  bool
@@ -1110,7 +1117,7 @@ func (q cascadeQuery) appendCascade(fmter schema.Formatter, b []byte) []byte {
 	return b
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type idxHintsQuery struct {
 	use    *indexHints
