@@ -1,7 +1,6 @@
 package mysqldialect
 
 import (
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -49,7 +48,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Init(db *sql.DB) {
+func (d *Dialect) Init(db bun.SQLRepo) {
 	var version string
 	if err := db.QueryRow("SELECT version()").Scan(&version); err != nil {
 		log.Printf("can't discover MySQL version: %s", err)

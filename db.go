@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -32,8 +34,31 @@ func WithDiscardUnknownColumns() DBOption {
 	}
 }
 
+type SQLRepo interface {
+	Begin() (*sql.Tx, error)
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+	Close() error
+	Conn(ctx context.Context) (*sql.Conn, error)
+	Driver() driver.Driver
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Ping() error
+	PingContext(ctx context.Context) error
+	Prepare(query string) (Stmt, error)
+	PrepareContext(ctx context.Context, query string) (Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	SetConnMaxIdleTime(d time.Duration)
+	SetConnMaxLifetime(d time.Duration)
+	SetMaxIdleConns(n int)
+	SetMaxOpenConns(n int)
+	Stats() sql.DBStats
+}
+
 type DB struct {
-	*sql.DB
+	SQLRepo
 
 	dialect  schema.Dialect
 	features feature.Feature
@@ -46,11 +71,11 @@ type DB struct {
 	stats DBStats
 }
 
-func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
+func NewDB(sqldb SQLRepo, dialect schema.Dialect, opts ...DBOption) *DB {
 	dialect.Init(sqldb)
 
 	db := &DB{
-		DB:       sqldb,
+		SQLRepo:  sqldb,
 		dialect:  dialect,
 		features: dialect.Features(),
 		fmter:    schema.NewFormatter(dialect),
@@ -65,7 +90,7 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 
 func (db *DB) String() string {
 	var b strings.Builder
-	b.WriteString("DB<dialect=")
+	b.WriteString("SQLRepo<dialect=")
 	b.WriteString(db.dialect.Name().String())
 	b.WriteString(">")
 	return b.String()
@@ -245,7 +270,7 @@ func (db *DB) ExecContext(
 ) (sql.Result, error) {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
-	res, err := db.DB.ExecContext(ctx, formattedQuery)
+	res, err := db.SQLRepo.ExecContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, res, err)
 	return res, err
 }
@@ -259,7 +284,7 @@ func (db *DB) QueryContext(
 ) (*sql.Rows, error) {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
-	rows, err := db.DB.QueryContext(ctx, formattedQuery)
+	rows, err := db.SQLRepo.QueryContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
@@ -271,7 +296,7 @@ func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
-	row := db.DB.QueryRowContext(ctx, formattedQuery)
+	row := db.SQLRepo.QueryRowContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, nil, row.Err())
 	return row
 }
@@ -288,7 +313,7 @@ type Conn struct {
 }
 
 func (db *DB) Conn(ctx context.Context) (Conn, error) {
-	conn, err := db.DB.Conn(ctx)
+	conn, err := db.SQLRepo.Conn(ctx)
 	if err != nil {
 		return Conn{}, err
 	}
@@ -428,8 +453,14 @@ func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 
 //------------------------------------------------------------------------------
 
-type Stmt struct {
-	*sql.Stmt
+type Stmt interface {
+	Close() error
+	Exec(...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error)
+	Query(...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error)
+	QueryRow(args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, args ...interface{}) *sql.Row
 }
 
 func (db *DB) Prepare(query string) (Stmt, error) {
@@ -437,11 +468,11 @@ func (db *DB) Prepare(query string) (Stmt, error) {
 }
 
 func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
-	stmt, err := db.DB.PrepareContext(ctx, query)
+	stmt, err := db.SQLRepo.PrepareContext(ctx, query)
 	if err != nil {
-		return Stmt{}, err
+		return stmt, err
 	}
-	return Stmt{Stmt: stmt}, nil
+	return &sql.Stmt{}, nil
 }
 
 //------------------------------------------------------------------------------
@@ -486,7 +517,7 @@ func (db *DB) Begin() (Tx, error) {
 
 func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	ctx, event := db.beforeQuery(ctx, nil, "BEGIN", nil, "BEGIN", nil)
-	tx, err := db.DB.BeginTx(ctx, opts)
+	tx, err := db.SQLRepo.BeginTx(ctx, opts)
 	db.afterQuery(ctx, event, nil, err)
 	if err != nil {
 		return Tx{}, err

@@ -1,7 +1,6 @@
 package pgdialect
 
 import (
-	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -52,7 +51,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Init(*sql.DB) {}
+func (d *Dialect) Init(bun.SQLRepo) {}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.PG

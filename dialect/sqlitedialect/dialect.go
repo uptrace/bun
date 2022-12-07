@@ -1,7 +1,6 @@
 package sqlitedialect
 
 import (
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 
@@ -43,7 +42,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Init(*sql.DB) {}
+func (d *Dialect) Init(bun.SQLRepo) {}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.SQLite

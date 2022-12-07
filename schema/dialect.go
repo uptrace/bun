@@ -1,8 +1,8 @@
 package schema
 
 import (
-	"database/sql"
 	"encoding/hex"
+	"github.com/uptrace/bun"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -13,7 +13,7 @@ import (
 )
 
 type Dialect interface {
-	Init(db *sql.DB)
+	Init(db bun.SQLRepo)
 
 	Name() dialect.Name
 	Features() feature.Feature
@@ -147,7 +147,7 @@ func newNopDialect() *nopDialect {
 	return d
 }
 
-func (d *nopDialect) Init(*sql.DB) {}
+func (d *nopDialect) Init(bun.SQLRepo) {}
 
 func (d *nopDialect) Name() dialect.Name {
 	return dialect.Invalid

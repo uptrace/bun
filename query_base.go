@@ -25,7 +25,7 @@ type withQuery struct {
 	recursive bool
 }
 
-// IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
+// IConn is a common interface for bun.SQLRepo, *sql.Conn, and *sql.Tx.
 type IConn interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
@@ -33,7 +33,7 @@ type IConn interface {
 }
 
 var (
-	_ IConn = (*sql.DB)(nil)
+	_ IConn = (bun.SQLRepo)(nil)
 	_ IConn = (*sql.Conn)(nil)
 	_ IConn = (*sql.Tx)(nil)
 	_ IConn = (*DB)(nil)
