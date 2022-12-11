@@ -47,7 +47,7 @@ func TestNoImports(t *testing.T) {
 	}
 }
 
-func sqlOpen(t *testing.T, driverName string) (schema.SQLRepo, error) {
+func sqlOpen(t *testing.T, driverName string) (*sql.DB, error) {
 	sqldb, err := sql.Open(driverName, ":memory:")
 	if err != nil {
 		return sqldb, err
