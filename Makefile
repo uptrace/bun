@@ -28,3 +28,6 @@ run-examples:
 	  echo "go run . in $${dir}"; \
 	  (cd "$${dir}" && go run .); \
 	done
+
+lint:
+	./bin/golangci-lint run ./...
