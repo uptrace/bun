@@ -276,11 +276,12 @@ func TestStatementTimeout(t *testing.T) {
 	require.True(t, pgerr.StatementTimeout())
 }
 
-func sqlDB() bun.SQLRepo {
+func sqlDB() *sql.DB {
 	db, err := sql.Open("pg", dsn())
 	if err != nil {
 		panic(err)
 	}
+
 	return db
 }
 

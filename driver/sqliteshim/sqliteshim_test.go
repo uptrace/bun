@@ -2,7 +2,6 @@ package sqliteshim_test
 
 import (
 	"database/sql"
-	"github.com/uptrace/bun"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestNoImports(t *testing.T) {
 	}
 }
 
-func sqlOpen(t *testing.T, driverName string) (bun.SQLRepo, error) {
+func sqlOpen(t *testing.T, driverName string) (schema.SQLRepo, error) {
 	sqldb, err := sql.Open(driverName, ":memory:")
 	if err != nil {
 		return sqldb, err
