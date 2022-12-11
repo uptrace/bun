@@ -4,17 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
-	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
-	"reflect"
-	"strings"
-	"sync/atomic"
-	"time"
-
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
+	"reflect"
+	"strings"
+	"sync/atomic"
 )
 
 const (
@@ -34,31 +31,8 @@ func WithDiscardUnknownColumns() DBOption {
 	}
 }
 
-type SQLRepo interface {
-	Begin() (*sql.Tx, error)
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
-	Close() error
-	Conn(ctx context.Context) (*sql.Conn, error)
-	Driver() driver.Driver
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	Ping() error
-	PingContext(ctx context.Context) error
-	Prepare(query string) (Stmt, error)
-	PrepareContext(ctx context.Context, query string) (Stmt, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-	SetConnMaxIdleTime(d time.Duration)
-	SetConnMaxLifetime(d time.Duration)
-	SetMaxIdleConns(n int)
-	SetMaxOpenConns(n int)
-	Stats() sql.DBStats
-}
-
 type DB struct {
-	SQLRepo
+	schema.SQLRepo
 
 	dialect  schema.Dialect
 	features feature.Feature
@@ -71,7 +45,7 @@ type DB struct {
 	stats DBStats
 }
 
-func NewDB(sqldb SQLRepo, dialect schema.Dialect, opts ...DBOption) *DB {
+func NewDB(sqldb schema.SQLRepo, dialect schema.Dialect, opts ...DBOption) *DB {
 	dialect.Init(sqldb)
 
 	db := &DB{
@@ -453,21 +427,11 @@ func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 
 //------------------------------------------------------------------------------
 
-type Stmt interface {
-	Close() error
-	Exec(...interface{}) (sql.Result, error)
-	ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error)
-	Query(...interface{}) (*sql.Rows, error)
-	QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error)
-	QueryRow(args ...interface{}) *sql.Row
-	QueryRowContext(ctx context.Context, args ...interface{}) *sql.Row
-}
-
-func (db *DB) Prepare(query string) (Stmt, error) {
+func (db *DB) Prepare(query string) (schema.Stmt, error) {
 	return db.PrepareContext(context.Background(), query)
 }
 
-func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
+func (db *DB) PrepareContext(ctx context.Context, query string) (schema.Stmt, error) {
 	stmt, err := db.SQLRepo.PrepareContext(ctx, query)
 	if err != nil {
 		return stmt, err

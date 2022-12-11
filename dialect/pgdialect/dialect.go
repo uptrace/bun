@@ -51,7 +51,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Init(bun.SQLRepo) {}
+func (d *Dialect) Init(schema.SQLRepo) {}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.PG

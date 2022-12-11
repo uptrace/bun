@@ -48,7 +48,7 @@ func New() *Dialect {
 	return d
 }
 
-func (d *Dialect) Init(db bun.SQLRepo) {
+func (d *Dialect) Init(db schema.SQLRepo) {
 	var version string
 	if err := db.QueryRow("SELECT version()").Scan(&version); err != nil {
 		log.Printf("can't discover MySQL version: %s", err)
