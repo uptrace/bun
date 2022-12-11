@@ -33,7 +33,7 @@ type IConn interface {
 }
 
 var (
-	_ IConn = (bun.SQLRepo)(nil)
+	_ IConn = (schema.SQLRepo)(nil)
 	_ IConn = (*sql.Conn)(nil)
 	_ IConn = (*sql.Tx)(nil)
 	_ IConn = (*DB)(nil)
