@@ -28,7 +28,7 @@
 - [Migrations](https://bun.uptrace.dev/guide/migrations.html).
 - [Soft deletes](https://bun.uptrace.dev/guide/soft-deletes.html).
 
-Resources:
+### Resources
 
 - [**Get started**](https://bun.uptrace.dev/guide/golang-orm.html)
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
@@ -37,7 +37,11 @@ Resources:
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
 
-Featured projects using Bun:
+### Tutorials
+
+Wrote a tutorial for Bun? Create a PR to add here and on [Bun](https://bun.uptrace.dev/) site.
+
+### Featured projects using Bun
 
 - [uptrace](https://github.com/uptrace/uptrace) - Distributed tracing and metrics.
 - [paralus](https://github.com/paralus/paralus) - All-in-one Kubernetes access manager.
