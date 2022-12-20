@@ -295,7 +295,11 @@ func (j *relationJoin) appendHasOneJoin(
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
-	b = append(b, "LEFT JOIN "...)
+	if j.Relation.Field.Tag.HasOption("join") {
+		b = append(b, "INNER JOIN "...)
+	} else {
+		b = append(b, "LEFT JOIN "...)
+	}
 	b = fmter.AppendQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
 	b = append(b, " AS "...)
 	b = j.appendAlias(fmter, b)

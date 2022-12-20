@@ -911,6 +911,7 @@ func isKnownFieldOption(name string) bool {
 		"rel",
 		"join",
 		"join_on",
+		"left_join",
 		"on_update",
 		"on_delete",
 		"m2m",
