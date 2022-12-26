@@ -1,8 +1,7 @@
 module github.com/uptrace/bun/extra/bundebug
 
-go 1.18
+go 1.19
 
-replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/fatih/color v1.13.0

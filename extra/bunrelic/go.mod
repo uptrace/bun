@@ -1,8 +1,7 @@
 module github.com/uptrace/bun/extra/bunrelic
 
-go 1.18
+go 1.19
 
-replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/newrelic/go-agent/v3 v3.20.1
@@ -11,6 +10,7 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect

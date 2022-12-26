@@ -1,14 +1,13 @@
 module github.com/uptrace/bun/example/migrate
 
-go 1.18
+go 1.19
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+
+
+
 
 require (
 	github.com/uptrace/bun v1.1.9

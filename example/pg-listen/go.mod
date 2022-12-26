@@ -1,14 +1,13 @@
 module github.com/uptrace/bun/example/pg-listen
 
-go 1.18
+go 1.19
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
+
+
+
 
 require (
 	github.com/uptrace/bun v1.1.9
@@ -27,6 +26,5 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	mellium.im/sasl v0.3.0 // indirect
 )

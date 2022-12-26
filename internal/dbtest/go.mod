@@ -1,33 +1,32 @@
 module github.com/uptrace/bun/internal/dbtest
 
-go 1.18
+go 1.19
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
-replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialect
 
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
-replace github.com/uptrace/bun/dialect/mssqldialect => ../../dialect/mssqldialect
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
+
+
+
+
+
+
+
+
 
 require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.1
-	github.com/denisenkom/go-mssqldb v0.11.0
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/denisenkom/go-mssqldb v0.12.2
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.11.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/uptrace/bun v1.1.9
 	github.com/uptrace/bun/dbfixture v1.1.9
 	github.com/uptrace/bun/dialect/mssqldialect v1.1.9
@@ -42,7 +41,8 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
+	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
+	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.8.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -55,6 +55,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20220927061507-ef77025ab5aa // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
