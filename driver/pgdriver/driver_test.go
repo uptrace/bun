@@ -256,6 +256,21 @@ func TestConnParams(t *testing.T) {
 	require.Equal(t, "foo", searchPath)
 }
 
+func TestConnParamsArray(t *testing.T) {
+	db := sql.OpenDB(pgdriver.NewConnector(
+		pgdriver.WithDSN(dsn()),
+		pgdriver.WithConnParams(map[string]interface{}{
+			"search_path": []string{"foo", "bar"},
+		}),
+	))
+	defer db.Close()
+
+	var searchPath string
+	err := db.QueryRow("SHOW search_path").Scan(&searchPath)
+	require.NoError(t, err)
+	require.Equal(t, "foo, bar", searchPath)
+}
+
 func TestStatementTimeout(t *testing.T) {
 	ctx := context.Background()
 
