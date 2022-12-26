@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -135,9 +136,13 @@ func newConn(ctx context.Context, cfg *Config) (*Conn, error) {
 
 	for k, v := range cfg.ConnParams {
 		if v != nil {
-			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
-				{Value: v},
-			})
+			if vals, ok := v.([]string); ok {
+				_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO %s", k, strings.Join(vals, ",")), nil)
+			} else {
+				_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
+					{Value: v},
+				})
+			}
 		} else {
 			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO DEFAULT", k), nil)
 		}
