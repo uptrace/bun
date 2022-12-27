@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/internal/dbtest
 
-go 1.19
+go 1.18
 
 require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible

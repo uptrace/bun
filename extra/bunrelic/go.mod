@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/extra/bunrelic
 
-go 1.19
+go 1.18
 
 require (
 	github.com/newrelic/go-agent/v3 v3.20.2

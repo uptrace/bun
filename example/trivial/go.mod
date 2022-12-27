@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/trivial
 
-go 1.19
+go 1.18
 
 require (
 	github.com/denisenkom/go-mssqldb v0.12.2

@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/tx-composition
 
-go 1.19
+go 1.18
 
 require (
 	github.com/uptrace/bun v1.1.9

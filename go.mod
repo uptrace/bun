@@ -1,6 +1,6 @@
 module github.com/uptrace/bun
 
-go 1.19
+go 1.18
 
 require (
 	github.com/jinzhu/inflection v1.0.0

@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/rel-has-many-polymorphic
 
-go 1.19
+go 1.18
 
 require (
 	github.com/davecgh/go-spew v1.1.1

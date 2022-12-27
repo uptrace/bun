@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/opentelemetry
 
-go 1.19
+go 1.18
 
 require (
 	github.com/brianvoe/gofakeit/v5 v5.11.2
