@@ -89,6 +89,7 @@ func (q *CreateTableQuery) IfNotExists() *CreateTableQuery {
 	return q
 }
 
+// Varchar sets default length for VARCHAR columns.
 func (q *CreateTableQuery) Varchar(n uint) *CreateTableQuery {
 	q.varchar = n
 	return q
