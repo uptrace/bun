@@ -45,7 +45,7 @@ var (
 	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
 )
 
-func (d *Dialect) DefaultVarcharLen() int {
+func (d *Dialect) DefaultVarcharLen() uint {
 	return 0
 }
 
