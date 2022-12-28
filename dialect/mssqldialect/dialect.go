@@ -127,10 +127,12 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 	return strconv.AppendUint(b, uint64(num), 10)
 }
 
+func (d *Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
 func sqlType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
-	case sqltype.VarChar:
-		return field.DiscoveredSQLType + "(255)"
 	case sqltype.Timestamp:
 		return datetimeType
 	case sqltype.Boolean:
