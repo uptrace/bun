@@ -235,14 +235,15 @@ func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
 
 	// For all common SQL types except VARCHAR, both UserDefinedSQLType and DiscoveredSQLType specify the correct type,
 	// and we needn't modify it. For VARCHAR columns, we will stop to check if a valid length has been set in .Varchar(int).
-	if q.varchar > 0 && strings.EqualFold(field.CreateTableSQLType, sqltype.VarChar) {
-		b = append(b, "varchar("...)
-		b = strconv.AppendInt(b, int64(q.varchar), 10)
-		b = append(b, ")"...)
-		return b
+	if !strings.EqualFold(field.CreateTableSQLType, sqltype.VarChar) || q.varchar <= 0 {
+		return append(b, field.CreateTableSQLType...)
 	}
 
-	return append(b, field.CreateTableSQLType...)
+	b = append(b, sqltype.VarChar...)
+	b = append(b, "("...)
+	b = strconv.AppendInt(b, int64(q.varchar), 10)
+	b = append(b, ")"...)
+	return b
 }
 
 func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []byte) []byte {
