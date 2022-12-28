@@ -463,6 +463,59 @@ func TestPostgresTimetz(t *testing.T) {
 	require.NotZero(t, tm)
 }
 
+func TestPostgresTimeArray(t *testing.T) {
+	type Model struct {
+		ID     int64        `bun:",pk,autoincrement"`
+		Array1 []time.Time  `bun:",array"`
+		Array2 *[]time.Time `bun:",array"`
+		Array3 *[]time.Time `bun:",array"`
+	}
+	db := pg(t)
+	defer db.Close()
+
+	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().Model((*Model)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	time1 := time.Now()
+	time2 := time.Now().Add(time.Hour)
+	time3 := time.Now().AddDate(0, 0, 1)
+
+	model1 := &Model{
+		ID:     123,
+		Array1: []time.Time{time1, time2, time3},
+		Array2: &[]time.Time{time1, time2, time3},
+	}
+	_, err = db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, len(model1.Array1), len(model2.Array1))
+
+	var times []time.Time
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array1").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, len(times), len(model1.Array1))
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array2").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(*model1.Array2))
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array3").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Nil(t, times)
+}
+
 func TestPostgresOnConflictDoUpdate(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
