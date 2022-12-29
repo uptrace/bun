@@ -87,7 +87,7 @@ func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
 	return b
 }
 
-func (d *Dialect) DefaultVarcharLen() uint {
+func (d *Dialect) DefaultVarcharLen() int {
 	return 0
 }
 

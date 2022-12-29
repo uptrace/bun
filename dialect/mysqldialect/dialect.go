@@ -172,7 +172,7 @@ func (*Dialect) AppendJSON(b, jsonb []byte) []byte {
 	return b
 }
 
-func (d *Dialect) DefaultVarcharLen() uint {
+func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
 

@@ -34,7 +34,7 @@ type Dialect interface {
 	// DefaultVarcharLen should be returned for dialects in which specifying VARCHAR length
 	// is mandatory in queries that modify the schema (CREATE TABLE / ADD COLUMN, etc).
 	// Dialects that do not have such requirement may return 0, which should be interpreted so by the caller.
-	DefaultVarcharLen() uint
+	DefaultVarcharLen() int
 }
 
 // ------------------------------------------------------------------------------
@@ -174,6 +174,6 @@ func (d *nopDialect) IdentQuote() byte {
 	return '"'
 }
 
-func (d *nopDialect) DefaultVarcharLen() uint {
+func (d *nopDialect) DefaultVarcharLen() int {
 	return 0
 }
