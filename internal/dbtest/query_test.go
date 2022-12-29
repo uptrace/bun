@@ -982,6 +982,10 @@ func TestQuery(t *testing.T) {
 			// Set default VARCHAR length to 10
 			return db.NewCreateTable().Model((*Model)(nil)).Varchar(10)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Non-positive VARCHAR length is illegal
+			return db.NewCreateTable().Model((*Model)(nil)).Varchar(-20)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
