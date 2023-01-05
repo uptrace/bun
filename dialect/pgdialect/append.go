@@ -27,6 +27,9 @@ var (
 
 	float64Type      = reflect.TypeOf((*float64)(nil)).Elem()
 	sliceFloat64Type = reflect.TypeOf([]float64(nil))
+
+	timeType      = reflect.TypeOf((*time.Time)(nil)).Elem()
+	sliceTimeType = reflect.TypeOf([]time.Time(nil))
 )
 
 func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
@@ -93,6 +96,8 @@ func (d *Dialect) arrayAppender(typ reflect.Type) schema.AppenderFunc {
 			return appendInt64SliceValue
 		case float64Type:
 			return appendFloat64SliceValue
+		case timeType:
+			return appendTimeSliceValue
 		}
 	}
 
@@ -305,6 +310,32 @@ func arrayAppendString(b []byte, s string) []byte {
 		}
 	}
 	b = append(b, '"')
+	return b
+}
+
+func appendTimeSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	ts := v.Convert(sliceTimeType).Interface().([]time.Time)
+	return appendTimeSlice(fmter, b, ts)
+}
+
+func appendTimeSlice(fmter schema.Formatter, b []byte, ts []time.Time) []byte {
+	if ts == nil {
+		return dialect.AppendNull(b)
+	}
+	b = append(b, '\'')
+	b = append(b, '{')
+	for _, t := range ts {
+		b = append(b, '"')
+		b = t.UTC().AppendFormat(b, "2006-01-02 15:04:05.999999-07:00")
+		b = append(b, '"')
+		b = append(b, ',')
+	}
+	if len(ts) > 0 {
+		b[len(b)-1] = '}' // Replace trailing comma.
+	} else {
+		b = append(b, '}')
+	}
+	b = append(b, '\'')
 	return b
 }
 
