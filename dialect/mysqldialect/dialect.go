@@ -172,11 +172,12 @@ func (*Dialect) AppendJSON(b, jsonb []byte) []byte {
 	return b
 }
 
+func (d *Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
 func sqlType(field *schema.Field) string {
-	switch field.DiscoveredSQLType {
-	case sqltype.VarChar:
-		return field.DiscoveredSQLType + "(255)"
-	case sqltype.Timestamp:
+	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType
 	}
 	return field.DiscoveredSQLType

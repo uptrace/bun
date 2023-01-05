@@ -969,6 +969,23 @@ func TestQuery(t *testing.T) {
 				When("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
 				Returning("$action")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Note: not all dialects require specifying VARCHAR length
+			type Model struct {
+				// ID has the reflection-based type (DiscoveredSQLType) with default length
+				ID string
+				// Name has specific type and length defined (UserSQLType)
+				Name string `bun:",type:varchar(50)"`
+				// Title has user-defined type (UserSQLType) with default length
+				Title string `bun:",type:varchar"`
+			}
+			// Set default VARCHAR length to 10
+			return db.NewCreateTable().Model((*Model)(nil)).Varchar(10)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Non-positive VARCHAR length is illegal
+			return db.NewCreateTable().Model((*Model)(nil)).Varchar(-20)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

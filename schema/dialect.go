@@ -30,9 +30,14 @@ type Dialect interface {
 	AppendBytes(b []byte, bs []byte) []byte
 	AppendJSON(b, jsonb []byte) []byte
 	AppendBool(b []byte, v bool) []byte
+
+	// DefaultVarcharLen should be returned for dialects in which specifying VARCHAR length
+	// is mandatory in queries that modify the schema (CREATE TABLE / ADD COLUMN, etc).
+	// Dialects that do not have such requirement may return 0, which should be interpreted so by the caller.
+	DefaultVarcharLen() int
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type BaseDialect struct{}
 
@@ -131,7 +136,7 @@ func (BaseDialect) AppendBool(b []byte, v bool) []byte {
 	return dialect.AppendBool(b, v)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type nopDialect struct {
 	BaseDialect
@@ -167,4 +172,8 @@ func (d *nopDialect) OnTable(table *Table) {}
 
 func (d *nopDialect) IdentQuote() byte {
 	return '"'
+}
+
+func (d *nopDialect) DefaultVarcharLen() int {
+	return 0
 }

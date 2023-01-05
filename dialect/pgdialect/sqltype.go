@@ -45,6 +45,10 @@ var (
 	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
 )
 
+func (d *Dialect) DefaultVarcharLen() int {
+	return 0
+}
+
 func fieldSQLType(field *schema.Field) string {
 	if field.UserSQLType != "" {
 		return field.UserSQLType
