@@ -94,6 +94,7 @@ func (q *CreateTableQuery) IfNotExists() *CreateTableQuery {
 func (q *CreateTableQuery) Varchar(n int) *CreateTableQuery {
 	if n <= 0 {
 		q.setErr(fmt.Errorf("bun: illegal VARCHAR length: %d", n))
+		return q
 	}
 	q.varchar = n
 	return q
