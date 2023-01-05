@@ -360,7 +360,7 @@ func TestPostgresScanWithoutResult(t *testing.T) {
 	require.NoError(t, err)
 
 	var num int64
-	_, err = db.NewUpdate().Model(new(Model)).Set("id = NULL").Where("id = 0").Exec(ctx, &num)
+	err = db.NewUpdate().Model(new(Model)).Set("id = NULL").Where("id = 0").Scan(ctx, &num)
 	require.Equal(t, sql.ErrNoRows, err)
 }
 

@@ -232,8 +232,8 @@ func (q *DeleteQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	return err
 }
 
-func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	return q.scanOrExec(ctx, dest, len(dest) > 0)
+func (q *DeleteQuery) Exec(ctx context.Context) (sql.Result, error) {
+	return q.scanOrExec(ctx, nil, false)
 }
 
 func (q *DeleteQuery) scanOrExec(

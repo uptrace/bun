@@ -35,7 +35,7 @@ func TestMssqlMerge(t *testing.T) {
 	}
 
 	changes := []string{}
-	_, err = db.NewMerge().
+	err = db.NewMerge().
 		Model(&Model{}).
 		With("_data", db.NewValues(&newModels)).
 		Using("_data").
@@ -43,7 +43,7 @@ func TestMssqlMerge(t *testing.T) {
 		When("MATCHED THEN UPDATE SET ?TableAlias.value = _data.value").
 		When("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
 		Returning("$action").
-		Exec(ctx, &changes)
+		Scan(ctx, &changes)
 	require.NoError(t, err)
 
 	require.Len(t, changes, 2)

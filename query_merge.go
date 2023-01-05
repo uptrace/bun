@@ -210,8 +210,8 @@ func (q *MergeQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	return err
 }
 
-func (q *MergeQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
-	return q.scanOrExec(ctx, dest, len(dest) > 0)
+func (q *MergeQuery) Exec(ctx context.Context) (sql.Result, error) {
+	return q.scanOrExec(ctx, nil, false)
 }
 
 func (q *MergeQuery) scanOrExec(
