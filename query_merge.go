@@ -205,30 +205,49 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 
 //------------------------------------------------------------------------------
 
+func (q *MergeQuery) Scan(ctx context.Context, dest ...interface{}) error {
+	_, err := q.scanOrExec(ctx, dest, true)
+	return err
+}
+
 func (q *MergeQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+	return q.scanOrExec(ctx, dest, len(dest) > 0)
+}
+
+func (q *MergeQuery) scanOrExec(
+	ctx context.Context, dest []interface{}, hasDest bool,
+) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	// Run append model hooks before generating the query.
 	if err := q.beforeAppendModel(ctx, q); err != nil {
 		return nil, err
 	}
 
+	// Generate the query before checking hasReturning.
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
 
-	query := internal.String(queryBytes)
-	var res sql.Result
+	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output))
+	var model Model
 
-	if hasDest := len(dest) > 0; hasDest ||
-		(q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output)) {
-		model, err := q.getModel(dest)
+	if useScan {
+		var err error
+		model, err = q.getModel(dest)
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		res, err = q.scan(ctx, q, query, model, hasDest)
+	query := internal.String(queryBytes)
+	var res sql.Result
+
+	if useScan {
+		res, err = q.scan(ctx, q, query, model, true)
 		if err != nil {
 			return nil, err
 		}
