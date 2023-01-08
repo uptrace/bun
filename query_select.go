@@ -61,6 +61,11 @@ func (q *SelectQuery) Model(model interface{}) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) Err(err error) *SelectQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	if fn != nil {

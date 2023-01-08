@@ -35,6 +35,18 @@ func (q *DropColumnQuery) Model(model interface{}) *DropColumnQuery {
 	return q
 }
 
+func (q *DropColumnQuery) Err(err error) *DropColumnQuery {
+	q.setErr(err)
+	return q
+}
+
+func (q *DropColumnQuery) Apply(fn func(*DropColumnQuery) *DropColumnQuery) *DropColumnQuery {
+	if fn != nil {
+		return fn(q)
+	}
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DropColumnQuery) Table(tables ...string) *DropColumnQuery {

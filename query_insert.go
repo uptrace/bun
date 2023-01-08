@@ -48,6 +48,11 @@ func (q *InsertQuery) Model(model interface{}) *InsertQuery {
 	return q
 }
 
+func (q *InsertQuery) Err(err error) *InsertQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
 	if fn != nil {

@@ -38,6 +38,11 @@ func (q *TruncateTableQuery) Model(model interface{}) *TruncateTableQuery {
 	return q
 }
 
+func (q *TruncateTableQuery) Err(err error) *TruncateTableQuery {
+	q.setErr(err)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) Table(tables ...string) *TruncateTableQuery {
