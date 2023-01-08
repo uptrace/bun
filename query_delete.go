@@ -39,6 +39,11 @@ func (q *DeleteQuery) Model(model interface{}) *DeleteQuery {
 	return q
 }
 
+func (q *DeleteQuery) Err(err error) *DeleteQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the DeleteQuery as an argument.
 func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
 	if fn != nil {

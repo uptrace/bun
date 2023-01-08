@@ -47,6 +47,11 @@ func (q *UpdateQuery) Model(model interface{}) *UpdateQuery {
 	return q
 }
 
+func (q *UpdateQuery) Err(err error) *UpdateQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
 	if fn != nil {

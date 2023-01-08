@@ -40,6 +40,11 @@ func (q *DropIndexQuery) Model(model interface{}) *DropIndexQuery {
 	return q
 }
 
+func (q *DropIndexQuery) Err(err error) *DropIndexQuery {
+	q.setErr(err)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DropIndexQuery) Concurrently() *DropIndexQuery {
