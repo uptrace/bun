@@ -37,6 +37,11 @@ func (q *ValuesQuery) Conn(db IConn) *ValuesQuery {
 	return q
 }
 
+func (q *ValuesQuery) Err(err error) *ValuesQuery {
+	q.setErr(err)
+	return q
+}
+
 func (q *ValuesQuery) Column(columns ...string) *ValuesQuery {
 	for _, column := range columns {
 		q.addColumn(schema.UnsafeIdent(column))

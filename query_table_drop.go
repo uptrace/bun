@@ -37,6 +37,11 @@ func (q *DropTableQuery) Model(model interface{}) *DropTableQuery {
 	return q
 }
 
+func (q *DropTableQuery) Err(err error) *DropTableQuery {
+	q.setErr(err)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DropTableQuery) Table(tables ...string) *DropTableQuery {

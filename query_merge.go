@@ -45,6 +45,11 @@ func (q *MergeQuery) Model(model interface{}) *MergeQuery {
 	return q
 }
 
+func (q *MergeQuery) Err(err error) *MergeQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the MergeQuery as an argument.
 func (q *MergeQuery) Apply(fn func(*MergeQuery) *MergeQuery) *MergeQuery {
 	if fn != nil {

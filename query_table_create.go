@@ -54,6 +54,11 @@ func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
 	return q
 }
 
+func (q *CreateTableQuery) Err(err error) *CreateTableQuery {
+	q.setErr(err)
+	return q
+}
+
 // ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Table(tables ...string) *CreateTableQuery {

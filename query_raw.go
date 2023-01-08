@@ -41,6 +41,11 @@ func (q *RawQuery) Conn(db IConn) *RawQuery {
 	return q
 }
 
+func (q *RawQuery) Err(err error) *RawQuery {
+	q.setErr(err)
+	return q
+}
+
 func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	if q.err != nil {
 		return q.err
