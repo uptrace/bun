@@ -3,7 +3,7 @@ module github.com/uptrace/bun/dialect/mysqldialect
 go 1.18
 
 require (
-	github.com/uptrace/bun v1.1.9
+	github.com/uptrace/bun v1.1.10
 	golang.org/x/mod v0.7.0
 )
 

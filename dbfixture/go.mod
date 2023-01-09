@@ -3,7 +3,7 @@ module github.com/uptrace/bun/dbfixture
 go 1.18
 
 require (
-	github.com/uptrace/bun v1.1.9
+	github.com/uptrace/bun v1.1.10
 	gopkg.in/yaml.v3 v3.0.1
 )
 

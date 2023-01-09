@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/fatih/color v1.13.0
-	github.com/uptrace/bun v1.1.9
+	github.com/uptrace/bun v1.1.10
 )
 
 require (

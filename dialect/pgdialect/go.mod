@@ -2,7 +2,7 @@ module github.com/uptrace/bun/dialect/pgdialect
 
 go 1.18
 
-require github.com/uptrace/bun v1.1.9
+require github.com/uptrace/bun v1.1.10
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect

@@ -4,11 +4,11 @@ go 1.18
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/uptrace/bun v1.1.9
-	github.com/uptrace/bun/dbfixture v1.1.9
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.9
-	github.com/uptrace/bun/driver/sqliteshim v1.1.9
-	github.com/uptrace/bun/extra/bundebug v1.1.9
+	github.com/uptrace/bun v1.1.10
+	github.com/uptrace/bun/dbfixture v1.1.10
+	github.com/uptrace/bun/dialect/sqlitedialect v1.1.10
+	github.com/uptrace/bun/driver/sqliteshim v1.1.10
+	github.com/uptrace/bun/extra/bundebug v1.1.10
 )
 
 require (

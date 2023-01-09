@@ -3,9 +3,9 @@ module github.com/uptrace/bun/example/get-where-fields
 go 1.18
 
 require (
-	github.com/uptrace/bun v1.1.9
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.9
-	github.com/uptrace/bun/driver/sqliteshim v1.1.9
+	github.com/uptrace/bun v1.1.10
+	github.com/uptrace/bun/dialect/sqlitedialect v1.1.10
+	github.com/uptrace/bun/driver/sqliteshim v1.1.10
 )
 
 require (

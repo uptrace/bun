@@ -3,7 +3,7 @@ module github.com/uptrace/bun/extra/bunotel
 go 1.18
 
 require (
-	github.com/uptrace/bun v1.1.9
+	github.com/uptrace/bun v1.1.10
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.17
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/metric v0.34.0
