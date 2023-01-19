@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ type CreateTableQuery struct {
 	// Because some dialects require that length is always specified for VARCHAR type,
 	// we will use the exact user-defined type if length is set explicitly, as in `bun:",type:varchar(5)"`,
 	// but assume the new default length when it's omitted, e.g. `bun:",type:varchar"`.
-	varchar uint
+	varchar int
 
 	fks         []schema.QueryWithArgs
 	partitionBy schema.QueryWithArgs
@@ -95,7 +96,11 @@ func (q *CreateTableQuery) IfNotExists() *CreateTableQuery {
 }
 
 // Varchar sets default length for VARCHAR columns.
-func (q *CreateTableQuery) Varchar(n uint) *CreateTableQuery {
+func (q *CreateTableQuery) Varchar(n int) *CreateTableQuery {
+	if n <= 0 {
+		q.setErr(fmt.Errorf("bun: illegal VARCHAR length: %d", n))
+		return q
+	}
 	q.varchar = n
 	return q
 }
