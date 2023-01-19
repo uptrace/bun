@@ -66,6 +66,8 @@ sed --in-place "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 
 conventional-changelog -p angular -i CHANGELOG.md -s
 
+go work sync
+
 git checkout -b release/${TAG} master
 git add -u
 git commit -m "chore: release $TAG (release.sh)"
