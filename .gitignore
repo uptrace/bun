@@ -3,4 +3,5 @@
 *.s3db
 node_modules/
 vendor/
-.idea/
+.idea
+.DS_Store
