@@ -2,22 +2,6 @@ module github.com/uptrace/bun/example/trivial
 
 go 1.18
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/go-sql-driver/mysql v1.7.0

@@ -35,6 +35,16 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYmW5DyG0UqvY96Bu5QYsTLvCHdrgo=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc/go.mod h1:bciPuU6GHm1iF1pBvUfxfsH0Wmnc2VbpgvbI9ZWuIRs=
+github.com/uptrace/bun v1.1.10 h1:wx80lg32mWlOV1gNvmPTbR9znt6A2fYvvURzU5dzSPE=
+github.com/uptrace/bun v1.1.10/go.mod h1:pOWJSVU+W0jp3+cbn/TtHdcG/h+QxagECw4EYdKiaSw=
+github.com/uptrace/bun/dbfixture v1.1.10 h1:fjxGQ7CFoIcbfBp3sAg3R6Ee4xaAYGgMTLMY2VergWE=
+github.com/uptrace/bun/dbfixture v1.1.10/go.mod h1:cYs6r9hGlgnrh8mW0HYkhso3GMpP2/aY/FFQ45bj3Qw=
+github.com/uptrace/bun/dialect/sqlitedialect v1.1.10 h1:K/vpRFJc4HqVE03HeyU7TE7E/lj96s6jfj0S3KdZutU=
+github.com/uptrace/bun/dialect/sqlitedialect v1.1.10/go.mod h1:KlD+UbC5Xzd+HKGxScSgG0vPqXQttkNI3P9bN+4xDcM=
+github.com/uptrace/bun/driver/sqliteshim v1.1.10 h1:z+Qfy2hfvv2xmMfw4LC3KuSDEYINrzXKRjTJBiMOuDk=
+github.com/uptrace/bun/driver/sqliteshim v1.1.10/go.mod h1:xVrcM1W+T0pS7t2467usakBm5aeXHiLr9tE/6Q3CEHg=
+github.com/uptrace/bun/extra/bundebug v1.1.10 h1:dBqOF9DkLgJVWfOX9ReVdXOdM1eZm+3zhnTcQhiNN7o=
+github.com/uptrace/bun/extra/bundebug v1.1.10/go.mod h1:95exjcLLWAmzxk/4FaYZqgroa/AcH0S7o3cv192P3Tw=
 github.com/vmihailenco/msgpack/v5 v5.3.5 h1:5gO0H1iULLWGhs2H5tbAHIZTV8/cYafcFOr9znI5mJU=
 github.com/vmihailenco/msgpack/v5 v5.3.5/go.mod h1:7xyJ9e+0+9SaZT0Wt1RGleJXzli6Q/V5KbhBonMG9jc=
 github.com/vmihailenco/tagparser/v2 v2.0.0 h1:y09buUbR+b5aycVFQs/g70pqKVZNBmxwAhO7/IwNM9g=

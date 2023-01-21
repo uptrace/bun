@@ -2,8 +2,6 @@ module github.com/uptrace/bun/dialect/sqlitedialect
 
 go 1.18
 
-
-
 require github.com/uptrace/bun v1.1.10
 
 require (

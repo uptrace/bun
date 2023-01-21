@@ -2,14 +2,6 @@ module github.com/uptrace/bun/example/pg-listen
 
 go 1.18
 
-
-
-
-
-
-
-
-
 require (
 	github.com/uptrace/bun v1.1.10
 	github.com/uptrace/bun/dialect/pgdialect v1.1.10
