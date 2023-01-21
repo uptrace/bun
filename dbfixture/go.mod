@@ -2,7 +2,7 @@ module github.com/uptrace/bun/dbfixture
 
 go 1.18
 
-replace github.com/uptrace/bun => ../
+
 
 require (
 	github.com/uptrace/bun v1.1.10

@@ -2,7 +2,7 @@ module github.com/uptrace/bun/extra/bunrelic
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
+
 
 require (
 	github.com/newrelic/go-agent/v3 v3.20.2

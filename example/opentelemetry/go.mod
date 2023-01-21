@@ -2,17 +2,17 @@ module github.com/uptrace/bun/example/opentelemetry
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/extra/bunotel => ../../extra/bunotel
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
+
+
+
+
+
+
 
 require (
 	github.com/brianvoe/gofakeit/v5 v5.11.2

@@ -2,13 +2,13 @@ module github.com/uptrace/bun/example/pg-listen
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
+
+
+
+
 
 require (
 	github.com/uptrace/bun v1.1.10

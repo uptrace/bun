@@ -2,23 +2,23 @@ module github.com/uptrace/bun/internal/dbtest
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
 
-replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
-replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialect
 
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
-replace github.com/uptrace/bun/dialect/mssqldialect => ../../dialect/mssqldialect
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
+
+
+
+
+
+
+
+
+
 
 require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
