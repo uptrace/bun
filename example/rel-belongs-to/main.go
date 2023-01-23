@@ -21,7 +21,7 @@ type User struct {
 	ID        int64 `bun:",pk,autoincrement"`
 	Name      string
 	ProfileID int64
-	Profile   *Profile `bun:"rel:belongs-to,join=profile_id=id"`
+	Profile   *Profile `bun:"rel:belongs-to,join:profile_id=id"`
 }
 
 func main() {
