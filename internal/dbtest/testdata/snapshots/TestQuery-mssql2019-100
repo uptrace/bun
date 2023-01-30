@@ -1,1 +1,1 @@
-SELECT "model"."id", "model"."str" FROM "models" AS "model" WHERE ("model"."id", "model"."str") IN ((1, 'hello'), (2, 'world'))
+SELECT "model"."id", "model"."str" FROM "models" AS "model" WHERE ("model"."id", "model"."str") IN ((1, N'hello'), (2, N'world'))

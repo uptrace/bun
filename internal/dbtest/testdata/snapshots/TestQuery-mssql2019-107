@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str", "extra") OUTPUT INSERTED."id" VALUES ('hello', 'custom'), ('foo', 'custom')
+INSERT INTO "models" ("str", "extra") OUTPUT INSERTED."id" VALUES (N'hello', N'custom'), (N'foo', N'custom')

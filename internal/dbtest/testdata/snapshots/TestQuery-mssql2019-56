@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES ('hello'), ('world') ON DUPLICATE KEY UPDATE SET str = upper(str)
+INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES (N'hello'), (N'world') ON DUPLICATE KEY UPDATE SET str = upper(str)
