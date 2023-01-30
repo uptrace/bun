@@ -30,7 +30,7 @@ services:
       - '5432:5432'
 
   uptrace:
-    image: 'uptrace/uptrace:1.2.0'
+    image: 'uptrace/uptrace:1.3.0'
     #image: 'uptrace/uptrace-dev:latest'
     restart: on-failure
     volumes:
