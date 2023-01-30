@@ -127,6 +127,11 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 	return strconv.AppendUint(b, uint64(num), 10)
 }
 
+func (d *Dialect) AppendString(b []byte, s string) []byte {
+	b = append(b, 'N')
+	return d.BaseDialect.AppendString(b, s)
+}
+
 func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
