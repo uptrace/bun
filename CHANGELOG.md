@@ -1,3 +1,13 @@
+## [1.1.11](https://github.com/uptrace/bun/compare/v1.1.10...v1.1.11) (2023-02-01)
+
+
+### Bug Fixes
+
+* add support for inserting values with unicode encoding for mssql dialect ([e98c6c0](https://github.com/uptrace/bun/commit/e98c6c0f033b553bea3bbc783aa56c2eaa17718f))
+* fix relation tag ([a3eedff](https://github.com/uptrace/bun/commit/a3eedff49700490d4998dcdcdc04f554d8f17166))
+
+
+
 ## [1.1.10](https://github.com/uptrace/bun/compare/v1.1.9...v1.1.10) (2023-01-16)
 
 
