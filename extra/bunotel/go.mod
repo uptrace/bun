@@ -6,10 +6,10 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/uptrace/bun v1.1.10
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.18
-	go.opentelemetry.io/otel v1.11.2
-	go.opentelemetry.io/otel/metric v0.34.0
-	go.opentelemetry.io/otel/trace v1.11.2
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.19
+	go.opentelemetry.io/otel v1.12.0
+	go.opentelemetry.io/otel/metric v0.35.0
+	go.opentelemetry.io/otel/trace v1.12.0
 )
 
 require (
