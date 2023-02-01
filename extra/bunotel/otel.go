@@ -25,7 +25,7 @@ var (
 	tracer = otel.Tracer("github.com/uptrace/bun")
 	meter  = global.Meter("github.com/uptrace/bun")
 
-	queryHistogram, _ = meter.SyncInt64().Histogram(
+	queryHistogram, _ = meter.Int64Histogram(
 		"go.sql.query_timing",
 		instrument.WithDescription("Timing of processed queries"),
 		instrument.WithUnit("milliseconds"),
