@@ -139,6 +139,13 @@ func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) When(cond bool, cb func(*SelectQuery)) *SelectQuery {
+	if cond {
+		cb(q)
+	}
+	return q
+}
+
 func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
