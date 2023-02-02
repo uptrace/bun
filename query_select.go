@@ -139,9 +139,9 @@ func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) When(condition bool, fn func(*SelectQuery)) *SelectQuery {
+func (q *SelectQuery) When(condition bool, cb func(*SelectQuery)) *SelectQuery {
 	if condition {
-		fn(q)
+		cb(q)
 	}
 	return q
 }
