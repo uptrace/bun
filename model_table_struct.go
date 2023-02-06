@@ -74,15 +74,11 @@ func (m *structTableModel) initStruct() error {
 		return m.structInitErr
 	case reflect.Interface:
 		m.strct = m.strct.Elem()
-	}
-
-	if m.strct.Kind() == reflect.Ptr {
+	case reflect.Ptr:
 		if m.strct.IsNil() {
 			m.strct.Set(reflect.New(m.strct.Type().Elem()))
-			m.strct = m.strct.Elem()
-		} else {
-			m.strct = m.strct.Elem()
 		}
+		m.strct = m.strct.Elem()
 	}
 
 	m.mountJoins()
