@@ -1,6 +1,9 @@
 package internal
 
-import "reflect"
+import (
+	"database/sql"
+	"reflect"
+)
 
 var ifaceType = reflect.TypeOf((*interface{})(nil)).Elem()
 
@@ -9,8 +12,14 @@ type MapKey struct {
 }
 
 func NewMapKey(is []interface{}) MapKey {
-	return MapKey{
-		iface: newMapKey(is),
+	if maybeNullInt64, ok := newMapKey(is).(sql.NullInt64); ok {
+		if maybeNullInt64.Valid {
+			return MapKey{iface: maybeNullInt64.Int64}
+		} else {
+			return MapKey{iface: nil}
+		}
+	} else {
+		return MapKey{iface: maybeNullInt64}
 	}
 }
 
