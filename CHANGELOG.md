@@ -1,3 +1,7 @@
+## [1.1.12](https://github.com/uptrace/bun/compare/v1.1.11...v1.1.12) (2023-02-20)
+
+
+
 ## [1.1.11](https://github.com/uptrace/bun/compare/v1.1.10...v1.1.11) (2023-02-01)
 
 
