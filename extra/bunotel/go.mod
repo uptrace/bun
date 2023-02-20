@@ -6,10 +6,10 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/uptrace/bun v1.1.11
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.19
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/metric v0.35.0
-	go.opentelemetry.io/otel/trace v1.12.0
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.1.21
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/metric v0.36.0
+	go.opentelemetry.io/otel/trace v1.13.0
 )
 
 require (
@@ -19,5 +19,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 )
