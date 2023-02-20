@@ -68,6 +68,9 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 
 	for rows.Next() {
 		m.strct = m.nextElem()
+		if m.sliceOfPtr {
+			m.strct = m.strct.Elem()
+		}
 		m.structInited = false
 
 		if err := m.scanRow(ctx, rows, dest); err != nil {
