@@ -68,7 +68,7 @@ func (i *Int) Value() (driver.Value, error) {
 func (i *Int) Scan(value interface{}) error {
 	var x sql.NullString
 
-	if err := i.Scan(value); err != nil {
+	if err := x.Scan(value); err != nil {
 		return err
 	}
 
