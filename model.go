@@ -101,7 +101,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 		if typ.Kind() == reflect.Struct {
 			return newStructTableModel(db, dest, db.Table(typ)), nil
 		}
-		return nil, fmt.Errorf("bun: Model(nil %T)", dest)
+		return nil, fmt.Errorf("bun: Model(nil %s %T)", typ.Kind(), dest)
 	}
 
 	v = v.Elem()
