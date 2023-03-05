@@ -217,7 +217,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 
 type goMigrationConfig struct {
 	packageName string
-	content     string
+	goTemplate  string
 }
 
 type GoMigrationOption func(cfg *goMigrationConfig)
@@ -228,9 +228,9 @@ func WithPackageName(name string) GoMigrationOption {
 	}
 }
 
-func WithContent(content string) GoMigrationOption {
+func WithGoTemplate(template string) GoMigrationOption {
 	return func(cfg *goMigrationConfig) {
-		cfg.content = content
+		cfg.goTemplate = template
 	}
 }
 
@@ -240,7 +240,7 @@ func (m *Migrator) CreateGoMigration(
 ) (*MigrationFile, error) {
 	cfg := &goMigrationConfig{
 		packageName: "migrations",
-		content:     goTemplate,
+		goTemplate:  goTemplate,
 	}
 	for _, opt := range opts {
 		opt(cfg)
@@ -253,7 +253,7 @@ func (m *Migrator) CreateGoMigration(
 
 	fname := name + ".go"
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
-	content := fmt.Sprintf(cfg.content, cfg.packageName)
+	content := fmt.Sprintf(cfg.goTemplate, cfg.packageName)
 
 	if err := ioutil.WriteFile(fpath, []byte(content), 0o644); err != nil {
 		return nil, err
