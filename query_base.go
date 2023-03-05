@@ -180,13 +180,13 @@ func (q *baseQuery) setErr(err error) {
 }
 
 func (q *baseQuery) getModel(dest []interface{}) (Model, error) {
-	if len(dest) == 0 {
-		if q.model != nil {
-			return q.model, nil
-		}
-		return nil, errNilModel
+	if len(dest) > 0 {
+		return newModel(q.db, dest)
 	}
-	return newModel(q.db, dest)
+	if q.model != nil {
+		return q.model, nil
+	}
+	return nil, errNilModel
 }
 
 func (q *baseQuery) beforeAppendModel(ctx context.Context, query Query) error {

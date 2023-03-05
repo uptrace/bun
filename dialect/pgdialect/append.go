@@ -122,7 +122,8 @@ func (d *Dialect) arrayAppender(typ reflect.Type) schema.AppenderFunc {
 		b = append(b, '\'')
 
 		b = append(b, '{')
-		for i := 0; i < v.Len(); i++ {
+		ln := v.Len()
+		for i := 0; i < ln; i++ {
 			elem := v.Index(i)
 			b = appendElem(fmter, b, elem)
 			b = append(b, ',')
