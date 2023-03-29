@@ -171,6 +171,10 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 				return group, err
 			}
 		}
+
+		if cfg.targetVersion != "" && cfg.targetVersion == migration.Name {
+			return group, nil
+		}
 	}
 
 	return group, nil
@@ -209,6 +213,10 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 			if err := m.MarkUnapplied(ctx, migration); err != nil {
 				return lastGroup, err
 			}
+		}
+
+		if cfg.targetVersion != "" && cfg.targetVersion == migration.Name {
+			return lastGroup, nil
 		}
 	}
 
