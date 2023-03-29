@@ -142,6 +142,19 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	}
 	migrations = migrations.Unapplied()
 
+	if cfg.targetVersion != "" {
+		versionValid := false
+		for _, m := range migrations {
+			if m.Name == cfg.targetVersion {
+				versionValid = true
+				break
+			}
+		}
+		if !versionValid {
+			return nil, fmt.Errorf("version not found")
+		}
+	}
+
 	group := new(MigrationGroup)
 	if len(migrations) == 0 {
 		return group, nil
@@ -190,6 +203,19 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.targetVersion != "" {
+		versionValid := false
+		for _, m := range migrations {
+			if m.Name == cfg.targetVersion {
+				versionValid = true
+				break
+			}
+		}
+		if !versionValid {
+			return nil, fmt.Errorf("version not found")
+		}
 	}
 
 	lastGroup := migrations.LastGroup()
