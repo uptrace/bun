@@ -1,6 +1,11 @@
 ## Running tests
 
-To run tests, you need Docker which starts PostgreSQL and MySQL servers:
+To run tests, you need 
+- docker 
+- docker-compose
+- gcc
+
+which start PostgreSQL and MySQL servers, and build cgo:
 
 ```shell
 cd internal/dbtest
