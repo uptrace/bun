@@ -157,7 +157,7 @@ func migrationFile() string {
 	return ""
 }
 
-var fnameRE = regexp.MustCompile(`^(\d{14})_([0-9a-z_\-]+)\.`)
+var fnameRE = regexp.MustCompile(`^(\d{1,14})_([0-9a-z_\-]+)\.`)
 
 func extractMigrationName(fpath string) (string, string, error) {
 	fname := filepath.Base(fpath)
