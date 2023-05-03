@@ -66,7 +66,10 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	version = semver.MajorMinor("v" + cleanupVersion(version))
 	if semver.Compare(version, "v8.0") >= 0 {
-		d.features |= feature.CTE | feature.WithValues | feature.DeleteTableAlias
+		d.features |= feature.CTE | feature.WithValues
+	}
+	if semver.Compare(version, "v8.0.16") >= 0 {
+		d.features |= feature.DeleteTableAlias
 	}
 }
 
