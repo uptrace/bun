@@ -282,12 +282,12 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 		return nil, err
 	}
 
-	up, err := m.createSQL(ctx, name+".up.sql")
+	up, err := m.createSQL(ctx, name+".tx.up.sql")
 	if err != nil {
 		return nil, err
 	}
 
-	down, err := m.createSQL(ctx, name+".down.sql")
+	down, err := m.createSQL(ctx, name+".tx.down.sql")
 	if err != nil {
 		return nil, err
 	}
