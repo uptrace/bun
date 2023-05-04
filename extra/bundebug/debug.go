@@ -39,11 +39,19 @@ func WithWriter(w io.Writer) Option {
 	}
 }
 
+// WithContextKey configures to add an id to the logs
+// (by default, only failed queries are logged).
+func WithContextKey(ctxKey string) Option {
+	return func(h *QueryHook) {
+		h.ctxKey = ctxKey
+	}
+}
+
 // FromEnv configures the hook using the environment variable value.
 // For example, WithEnv("BUNDEBUG"):
-//    - BUNDEBUG=0 - disables the hook.
-//    - BUNDEBUG=1 - enables the hook.
-//    - BUNDEBUG=2 - enables the hook and verbose mode.
+//   - BUNDEBUG=0 - disables the hook.
+//   - BUNDEBUG=1 - enables the hook.
+//   - BUNDEBUG=2 - enables the hook and verbose mode.
 func FromEnv(keys ...string) Option {
 	if len(keys) == 0 {
 		keys = []string{"BUNDEBUG"}
@@ -62,6 +70,7 @@ func FromEnv(keys ...string) Option {
 type QueryHook struct {
 	enabled bool
 	verbose bool
+	ctxKey  string
 	writer  io.Writer
 }
 
@@ -96,11 +105,18 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		}
 	}
 
+	ctxId, _ := ctx.Value(h.ctxKey).(string)
+	if ctxId != "" {
+		ctxId = "[bun-" + ctxId + "]"
+	} else {
+		ctxId = "[bun]"
+	}
+
 	now := time.Now()
 	dur := now.Sub(event.StartTime)
 
 	args := []interface{}{
-		"[bun]",
+		ctxId,
 		now.Format(" 15:04:05.000 "),
 		formatOperation(event),
 		fmt.Sprintf(" %10s ", dur.Round(time.Microsecond)),

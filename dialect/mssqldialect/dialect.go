@@ -129,7 +129,7 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 
 func (d *Dialect) AppendString(b []byte, s string) []byte {
 	// 'N' prefix means the string uses unicode encoding.
-	b = append(b, 'N')
+	// b = append(b, 'N')
 	return d.BaseDialect.AppendString(b, s)
 }
 
