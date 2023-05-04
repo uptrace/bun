@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dialect/sqlitedialect"
+	"github.com/TommyLeng/bun/driver/sqliteshim"
+	"github.com/TommyLeng/bun/extra/bundebug"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/sqlitedialect"
-	"github.com/uptrace/bun/driver/sqliteshim"
-	"github.com/uptrace/bun/extra/bundebug"
 )
 
 func main() {

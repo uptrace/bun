@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/uptrace/bun/dialect"
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/dialect"
+	"github.com/TommyLeng/bun/schema"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/schema"
 )
 
 type HStoreValue struct {
@@ -20,7 +20,7 @@ type HStoreValue struct {
 //
 // For struct fields you can use hstore tag:
 //
-//    Attrs  map[string]string `bun:",hstore"`
+//	Attrs  map[string]string `bun:",hstore"`
 func HStore(vi interface{}) *HStoreValue {
 	v := reflect.ValueOf(vi)
 	if !v.IsValid() {

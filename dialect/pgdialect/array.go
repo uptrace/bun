@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/schema"
 )
 
 type ArrayValue struct {
@@ -20,7 +20,7 @@ type ArrayValue struct {
 //
 // For struct fields you can use array tag:
 //
-//    Emails  []string `bun:",array"`
+//	Emails  []string `bun:",array"`
 func Array(vi interface{}) *ArrayValue {
 	v := reflect.ValueOf(vi)
 	if !v.IsValid() {

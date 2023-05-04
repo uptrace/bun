@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uptrace/bun/driver/sqliteshim"
+	"github.com/TommyLeng/bun/driver/sqliteshim"
 )
 
 func TestShim(t *testing.T) {

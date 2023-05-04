@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uptrace/bun"
+	"github.com/TommyLeng/bun"
 )
 
 type Migration struct {
@@ -133,7 +133,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uptrace/bun"
+	"github.com/TommyLeng/bun"
 )
 
 func init() {

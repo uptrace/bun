@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dbfixture"
-	"github.com/uptrace/bun/dialect/feature"
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dbfixture"
+	"github.com/TommyLeng/bun/dialect/feature"
 )
 
 func TestORM(t *testing.T) {

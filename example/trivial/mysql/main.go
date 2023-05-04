@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dialect/mysqldialect"
+	"github.com/TommyLeng/bun/extra/bundebug"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/mysqldialect"
-	"github.com/uptrace/bun/extra/bundebug"
 )
 
 func main() {

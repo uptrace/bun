@@ -1,20 +1,20 @@
-module github.com/uptrace/bun/example/rel-belongs-to
+module github.com/TommyLeng/bun/example/rel-belongs-to
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
+replace github.com/TommyLeng/bun => ../..
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
+replace github.com/TommyLeng/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
+replace github.com/TommyLeng/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+replace github.com/TommyLeng/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.1.12
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.12
-	github.com/uptrace/bun/driver/sqliteshim v1.1.12
-	github.com/uptrace/bun/extra/bundebug v1.1.12
+	github.com/TommyLeng/bun v1.1.12
+	github.com/TommyLeng/bun/dialect/sqlitedialect v1.1.12
+	github.com/TommyLeng/bun/driver/sqliteshim v1.1.12
+	github.com/TommyLeng/bun/extra/bundebug v1.1.12
 )
 
 require (

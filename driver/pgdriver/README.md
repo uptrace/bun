@@ -1,19 +1,19 @@
 # pgdriver
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun/driver/pgdriver)](https://pkg.go.dev/github.com/uptrace/bun/driver/pgdriver)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/TommyLeng/bun/driver/pgdriver)](https://pkg.go.dev/github.com/TommyLeng/bun/driver/pgdriver)
 
 pgdriver is a database/sql driver for PostgreSQL based on [go-pg](https://github.com/go-pg/pg) code.
 
 You can install it with:
 
 ```shell
-go get github.com/uptrace/bun/driver/pgdriver
+go get github.com/TommyLeng/bun/driver/pgdriver
 ```
 
 And then create a `sql.DB` using it:
 
 ```go
-import _ "github.com/uptrace/bun/driver/pgdriver"
+import _ "github.com/TommyLeng/bun/driver/pgdriver"
 
 dsn := "postgres://postgres:@localhost:5432/test"
 db, err := sql.Open("pg", dsn)

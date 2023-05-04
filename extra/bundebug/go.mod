@@ -1,12 +1,12 @@
-module github.com/uptrace/bun/extra/bundebug
+module github.com/TommyLeng/bun/extra/bundebug
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
+replace github.com/TommyLeng/bun => ../..
 
 require (
 	github.com/fatih/color v1.14.1
-	github.com/uptrace/bun v1.1.12
+	github.com/TommyLeng/bun v1.1.12
 )
 
 require (

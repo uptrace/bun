@@ -1,10 +1,10 @@
-module github.com/uptrace/bun/dialect/pgdialect
+module github.com/TommyLeng/bun/dialect/pgdialect
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
+replace github.com/TommyLeng/bun => ../..
 
-require github.com/uptrace/bun v1.1.12
+require github.com/TommyLeng/bun v1.1.12
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect

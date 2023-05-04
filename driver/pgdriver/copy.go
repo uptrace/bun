@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/uptrace/bun"
+	"github.com/TommyLeng/bun"
 )
 
 // CopyFrom copies data from the reader to the query destination.

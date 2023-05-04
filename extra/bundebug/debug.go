@@ -11,7 +11,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"github.com/uptrace/bun"
+	"github.com/TommyLeng/bun"
 )
 
 type Option func(*QueryHook)

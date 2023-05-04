@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dialect/pgdialect"
+	"github.com/TommyLeng/bun/driver/pgdriver"
+	"github.com/TommyLeng/bun/extra/bunotel"
 	"github.com/brianvoe/gofakeit/v5"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/driver/pgdriver"
-	"github.com/uptrace/bun/extra/bunotel"
 	"github.com/uptrace/uptrace-go/uptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 
-var tracer = otel.Tracer("github.com/uptrace/bun/example/opentelemetry")
+var tracer = otel.Tracer("github.com/TommyLeng/bun/example/opentelemetry")
 
 func main() {
 	ctx := context.Background()

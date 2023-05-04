@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"reflect"
 
-	"github.com/uptrace/bun/internal"
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/internal"
+	"github.com/TommyLeng/bun/schema"
 )
 
 type sliceInfo struct {

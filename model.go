@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/schema"
 )
 
 var errNilModel = errors.New("bun: Model(nil)")

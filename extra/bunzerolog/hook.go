@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/TommyLeng/bun"
 	"github.com/rs/zerolog"
-	"github.com/uptrace/bun"
 )
 
 var _ bun.QueryHook = (*QueryHook)(nil)

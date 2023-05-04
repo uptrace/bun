@@ -10,7 +10,7 @@ for details.
 **Step 1**. Download the example using Git:
 
 ```shell
-git clone https://github.com/uptrace/bun.git
+git clone https://github.com/TommyLeng/bun.git
 cd example/opentelemetry
 ```
 

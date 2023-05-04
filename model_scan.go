@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"reflect"
 
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/schema"
 )
 
 type scanModel struct {

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/uptrace/bun/dialect/feature"
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun/dialect/feature"
+	"github.com/TommyLeng/bun/schema"
 )
 
 type ValuesQuery struct {

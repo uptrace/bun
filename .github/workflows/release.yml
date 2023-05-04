@@ -13,5 +13,5 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           body:
-            Please refer to [CHANGELOG.md](https://github.com/uptrace/bun/blob/master/CHANGELOG.md)
+            Please refer to [CHANGELOG.md](https://github.com/TommyLeng/bun/blob/master/CHANGELOG.md)
             for details

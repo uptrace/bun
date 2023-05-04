@@ -21,7 +21,7 @@ go_mod_tidy:
 
 fmt:
 	gofmt -w -s ./
-	goimports -w  -local github.com/uptrace/bun ./
+	goimports -w  -local github.com/TommyLeng/bun ./
 
 run-examples:
 	set -e; for dir in $(EXAMPLE_GO_MOD_DIRS); do \

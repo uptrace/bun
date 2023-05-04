@@ -1,6 +1,6 @@
 package migrations
 
-import "github.com/uptrace/bun/migrate"
+import "github.com/TommyLeng/bun/migrate"
 
 var Migrations = migrate.NewMigrations()
 

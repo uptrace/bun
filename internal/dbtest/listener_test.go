@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/TommyLeng/bun/driver/pgdriver"
 )
 
 func TestListenerReceive(t *testing.T) {

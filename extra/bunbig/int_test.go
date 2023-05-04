@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 
-	"github.com/uptrace/bun/extra/bunbig"
+	"github.com/TommyLeng/bun/extra/bunbig"
 )
 
 func TestInt(t *testing.T) {

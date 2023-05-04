@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dbfixture"
-	"github.com/uptrace/bun/dialect/sqlitedialect"
-	"github.com/uptrace/bun/driver/sqliteshim"
-	"github.com/uptrace/bun/extra/bundebug"
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dbfixture"
+	"github.com/TommyLeng/bun/dialect/sqlitedialect"
+	"github.com/TommyLeng/bun/driver/sqliteshim"
+	"github.com/TommyLeng/bun/extra/bundebug"
 )
 
 type User struct {

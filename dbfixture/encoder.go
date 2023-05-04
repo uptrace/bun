@@ -5,7 +5,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/uptrace/bun"
+	"github.com/TommyLeng/bun"
 	"gopkg.in/yaml.v3"
 )
 

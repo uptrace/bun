@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect"
-	"github.com/uptrace/bun/dialect/feature"
-	"github.com/uptrace/bun/dialect/sqltype"
-	"github.com/uptrace/bun/schema"
+	"github.com/TommyLeng/bun"
+	"github.com/TommyLeng/bun/dialect"
+	"github.com/TommyLeng/bun/dialect/feature"
+	"github.com/TommyLeng/bun/dialect/sqltype"
+	"github.com/TommyLeng/bun/schema"
 )
 
 var pgDialect = New()

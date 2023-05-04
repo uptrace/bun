@@ -1,34 +1,34 @@
-module github.com/uptrace/bun/example/trivial
+module github.com/TommyLeng/bun/example/trivial
 
 go 1.18
 
-replace github.com/uptrace/bun => ../..
+replace github.com/TommyLeng/bun => ../..
 
-replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
+replace github.com/TommyLeng/bun/extra/bundebug => ../../extra/bundebug
 
-replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
+replace github.com/TommyLeng/bun/dialect/sqlitedialect => ../../dialect/sqlitedialect
 
-replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
+replace github.com/TommyLeng/bun/driver/sqliteshim => ../../driver/sqliteshim
 
-replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
+replace github.com/TommyLeng/bun/dialect/pgdialect => ../../dialect/pgdialect
 
-replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
+replace github.com/TommyLeng/bun/driver/pgdriver => ../../driver/pgdriver
 
-replace github.com/uptrace/bun/dialect/mysqldialect => ../../dialect/mysqldialect
+replace github.com/TommyLeng/bun/dialect/mysqldialect => ../../dialect/mysqldialect
 
-replace github.com/uptrace/bun/dialect/mssqldialect => ../../dialect/mssqldialect
+replace github.com/TommyLeng/bun/dialect/mssqldialect => ../../dialect/mssqldialect
 
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/go-sql-driver/mysql v1.7.0
-	github.com/uptrace/bun v1.1.12
-	github.com/uptrace/bun/dialect/mssqldialect v1.1.12
-	github.com/uptrace/bun/dialect/mysqldialect v1.1.12
-	github.com/uptrace/bun/dialect/pgdialect v1.1.12
-	github.com/uptrace/bun/dialect/sqlitedialect v1.1.12
-	github.com/uptrace/bun/driver/pgdriver v1.1.12
-	github.com/uptrace/bun/driver/sqliteshim v1.1.12
-	github.com/uptrace/bun/extra/bundebug v1.1.12
+	github.com/TommyLeng/bun v1.1.12
+	github.com/TommyLeng/bun/dialect/mssqldialect v1.1.12
+	github.com/TommyLeng/bun/dialect/mysqldialect v1.1.12
+	github.com/TommyLeng/bun/dialect/pgdialect v1.1.12
+	github.com/TommyLeng/bun/dialect/sqlitedialect v1.1.12
+	github.com/TommyLeng/bun/driver/pgdriver v1.1.12
+	github.com/TommyLeng/bun/driver/sqliteshim v1.1.12
+	github.com/TommyLeng/bun/extra/bundebug v1.1.12
 )
 
 require (
