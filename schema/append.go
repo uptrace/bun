@@ -79,6 +79,11 @@ func (in *inValues) AppendQuery(fmter Formatter, b []byte) (_ []byte, err error)
 
 func appendIn(fmter Formatter, b []byte, slice reflect.Value) []byte {
 	sliceLen := slice.Len()
+
+	if sliceLen == 0 {
+		return append(b, "NULL"...)
+	}
+
 	for i := 0; i < sliceLen; i++ {
 		if i > 0 {
 			b = append(b, ", "...)
