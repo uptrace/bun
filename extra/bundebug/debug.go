@@ -131,7 +131,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		)
 	}
 
-	fmt.Fprintln(h.writer, args...)
+	go fmt.Fprintln(h.writer, args...)
 }
 
 func formatOperation(event *bun.QueryEvent) string {
