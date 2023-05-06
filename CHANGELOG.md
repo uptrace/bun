@@ -1,3 +1,24 @@
+## [1.1.13](https://github.com/uptrace/bun/compare/v1.1.12...v1.1.13) (2023-05-06)
+
+
+### Bug Fixes
+
+* bunbig.Int.Scan typo ([7ddabb8](https://github.com/uptrace/bun/commit/7ddabb8c667f50032bc0bb2523a287efbe0851e7))
+* compare full MySQL version ([096fabe](https://github.com/uptrace/bun/commit/096fabefa114202d3601ad8e456f5e491a4e3787))
+* enable delete table alias for MySQL >= 8.0.16 ([77a600b](https://github.com/uptrace/bun/commit/77a600bc060154fb91aa68e68ba6a8875e5b10fb))
+* incorrect table relationship panic message [#791](https://github.com/uptrace/bun/issues/791) ([ad41888](https://github.com/uptrace/bun/commit/ad4188862eeaab30fc7c48d3224b5a786557aec5))
+* should rollback if migrate using transaction and got an err (thanks [@bayshark](https://github.com/bayshark)) ([e7a119b](https://github.com/uptrace/bun/commit/e7a119b1b8911d8bf059bb271c90ad4a5f5f02be))
+
+
+### Features
+
+* add option to customize Go migration template ([f31bf73](https://github.com/uptrace/bun/commit/f31bf739b9c7a0383411b9e67cba96c858795c68))
+* expose Exec(…) method for RawQuery ([11192c8](https://github.com/uptrace/bun/commit/11192c83f932eb7421ef09e06859a7f171de7803))
+* prefix migration files with 1 upto 14 digits ([b74b671](https://github.com/uptrace/bun/commit/b74b6714bb6a83e470e21801c97cc40e20acfb50))
+* rename option ([9353a3f](https://github.com/uptrace/bun/commit/9353a3f921c038fdf4a90665f1b0a9d0d03dc182))
+
+
+
 ## [1.1.12](https://github.com/uptrace/bun/compare/v1.1.11...v1.1.12) (2023-02-20)
 
 
