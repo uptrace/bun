@@ -97,10 +97,15 @@ func Exec(ctx context.Context, db *bun.DB, f io.Reader, isTx bool) error {
 	}
 
 	var retErr error
+	var execErr error
 
 	defer func() {
 		if tx, ok := idb.(bun.Tx); ok {
-			retErr = tx.Commit()
+			if execErr != nil {
+				retErr = tx.Rollback()
+			} else {
+				retErr = tx.Commit()
+			}
 			return
 		}
 
@@ -113,8 +118,9 @@ func Exec(ctx context.Context, db *bun.DB, f io.Reader, isTx bool) error {
 	}()
 
 	for _, q := range queries {
-		if _, err := idb.ExecContext(ctx, q); err != nil {
-			return err
+		_, execErr = idb.ExecContext(ctx, q)
+		if execErr != nil {
+			return execErr
 		}
 	}
 
