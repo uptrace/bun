@@ -12,6 +12,18 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
+type AppendStringOption func(*AppendStringOptions)
+
+type AppendStringOptions struct {
+	Unicode bool
+}
+
+func WithUnicode(unicode bool) AppendStringOption {
+	return func(opts *AppendStringOptions) {
+		opts.Unicode = unicode
+	}
+}
+
 type Dialect interface {
 	Init(db *sql.DB)
 
@@ -26,7 +38,7 @@ type Dialect interface {
 	AppendUint32(b []byte, n uint32) []byte
 	AppendUint64(b []byte, n uint64) []byte
 	AppendTime(b []byte, tm time.Time) []byte
-	AppendString(b []byte, s string) []byte
+	AppendString(b []byte, s string, opts ...AppendStringOption) []byte
 	AppendBytes(b []byte, bs []byte) []byte
 	AppendJSON(b, jsonb []byte) []byte
 	AppendBool(b []byte, v bool) []byte
@@ -56,7 +68,7 @@ func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
-func (BaseDialect) AppendString(b []byte, s string) []byte {
+func (BaseDialect) AppendString(b []byte, s string, opts ...AppendStringOption) []byte {
 	b = append(b, '\'')
 	for _, r := range s {
 		if r == '\000' {

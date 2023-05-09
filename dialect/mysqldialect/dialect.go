@@ -109,7 +109,7 @@ func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
-func (*Dialect) AppendString(b []byte, s string) []byte {
+func (*Dialect) AppendString(b []byte, s string, opts ...schema.AppendStringOption) []byte {
 	b = append(b, '\'')
 loop:
 	for _, r := range s {

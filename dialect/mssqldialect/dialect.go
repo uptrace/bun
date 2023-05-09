@@ -127,9 +127,16 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 	return strconv.AppendUint(b, uint64(num), 10)
 }
 
-func (d *Dialect) AppendString(b []byte, s string) []byte {
-	// 'N' prefix means the string uses unicode encoding.
-	b = append(b, 'N')
+func (d *Dialect) AppendString(b []byte, s string, opts ...schema.AppendStringOption) []byte {
+	var aso schema.AppendStringOptions
+	for _, opt := range opts {
+		opt(&aso)
+	}
+
+	if aso.Unicode {
+		// 'N' prefix means the string uses unicode encoding.
+		b = append(b, 'N')
+	}
 	return d.BaseDialect.AppendString(b, s)
 }
 
