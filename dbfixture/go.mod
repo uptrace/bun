@@ -5,7 +5,7 @@ go 1.19
 replace github.com/uptrace/bun => ../
 
 require (
-	github.com/uptrace/bun v1.1.13
+	github.com/uptrace/bun v1.1.14
 	gopkg.in/yaml.v3 v3.0.1
 )
 

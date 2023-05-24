@@ -1,3 +1,12 @@
+## [1.1.14](https://github.com/uptrace/bun/compare/v1.1.13...v1.1.14) (2023-05-24)
+
+
+### Bug Fixes
+
+* enable CompositeIn for MySQL ([9f377b5](https://github.com/uptrace/bun/commit/9f377b5e744cb38ef4aadd61213855c009e47354))
+
+
+
 ## [1.1.13](https://github.com/uptrace/bun/compare/v1.1.12...v1.1.13) (2023-05-06)
 
 
