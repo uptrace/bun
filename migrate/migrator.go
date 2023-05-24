@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -255,7 +255,7 @@ func (m *Migrator) CreateGoMigration(
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 	content := fmt.Sprintf(cfg.goTemplate, cfg.packageName)
 
-	if err := ioutil.WriteFile(fpath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(fpath, []byte(content), 0o644); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +290,7 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 func (m *Migrator) createSQL(ctx context.Context, fname string) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
-	if err := ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
+	if err := os.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
 		return nil, err
 	}
 
