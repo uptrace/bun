@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -312,7 +311,7 @@ func parseDSN(dsn string) ([]Option, error) {
 			return nil, fmt.Errorf("pgdriver: sslmode '%s' is not supported", sslMode)
 		}
 		if tlsConfig != nil && sslRootCert != "" {
-			rawCA, err := ioutil.ReadFile(sslRootCert)
+			rawCA, err := os.ReadFile(sslRootCert)
 			if err != nil {
 				return nil, fmt.Errorf("pgdriver: failed to read root CA: %w", err)
 			}
