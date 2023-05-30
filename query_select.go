@@ -813,7 +813,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	}
 
 	query := internal.String(queryBytes)
-	return q.conn.QueryContext(ctx, query)
+	return q.db.QueryContext(ctx, query)
 }
 
 func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
