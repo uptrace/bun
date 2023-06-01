@@ -923,6 +923,17 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 		return 0, q.err
 	}
 
+	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
+		j.applyTo(q)
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return q.count(ctx)
+}
+
+func (q *SelectQuery) count(ctx context.Context) (int, error) {
 	qq := countQuery{q}
 
 	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
@@ -942,6 +953,10 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 }
 
 func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
+	if q.err != nil {
+		return 0, q.err
+	}
+
 	if _, ok := q.conn.(*DB); ok {
 		return q.scanAndCountConc(ctx, dest...)
 	}
@@ -974,7 +989,7 @@ func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{})
 		defer wg.Done()
 
 		var err error
-		count, err = q.Count(ctx)
+		count, err = q.count(ctx)
 		if err != nil {
 			mu.Lock()
 			if firstErr == nil {
@@ -995,7 +1010,7 @@ func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) 
 		firstErr = q.Scan(ctx, dest...)
 	}
 
-	count, err := q.Count(ctx)
+	count, err := q.count(ctx)
 	if err != nil && firstErr == nil {
 		firstErr = err
 	}
