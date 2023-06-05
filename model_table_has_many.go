@@ -83,7 +83,7 @@ func (m *hasManyModel) Scan(src interface{}) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
-	field, err := m.table.Field(column)
+	field, err := m.Field(column)
 	if err != nil {
 		return err
 	}
@@ -100,6 +100,32 @@ func (m *hasManyModel) Scan(src interface{}) error {
 	}
 
 	return nil
+}
+
+func (m *hasManyModel) Field(name string) (_ *schema.Field, err error) {
+	if field, ok := m.table.FieldMap[name]; ok {
+		return field, nil
+	}
+
+	if joinName, column := splitColumn(name); joinName != "" {
+		if join := m.getJoin(joinName); join != nil {
+			var field *schema.Field
+			switch table := join.JoinModel.(type) {
+			case *hasManyModel:
+				field, err = table.Field(column)
+			default:
+				field, err = table.Table().Field(column)
+			}
+			if err != nil {
+				return nil, err
+			}
+
+			field.Index = schema.WithIndex(join.Relation.Field.Index, field.Index)
+			return field, err
+		}
+	}
+
+	return nil, fmt.Errorf("bun: %s does not have column=%s", m.table.TypeName, name)
 }
 
 func (m *hasManyModel) parkStruct() error {

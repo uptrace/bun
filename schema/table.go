@@ -229,7 +229,7 @@ func (t *Table) addFields(typ reflect.Type, prefix string, index []int) {
 			// If field is an embedded struct, add each field of the embedded struct.
 			fieldType := indirectType(f.Type)
 			if fieldType.Kind() == reflect.Struct {
-				t.addFields(fieldType, "", withIndex(index, f.Index))
+				t.addFields(fieldType, "", WithIndex(index, f.Index))
 
 				tag := tagparser.Parse(f.Tag.Get("bun"))
 				if tag.HasOption("inherit") || tag.HasOption("extend") {
@@ -297,7 +297,7 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 			panic(fmt.Errorf("bun: embed %s.%s: got %s, wanted reflect.Struct",
 				t.TypeName, f.Name, fieldType.Kind()))
 		}
-		t.addFields(fieldType, prefix+nextPrefix, withIndex(index, f.Index))
+		t.addFields(fieldType, prefix+nextPrefix, WithIndex(index, f.Index))
 		return nil
 	}
 
@@ -322,7 +322,7 @@ func (t *Table) newField(f reflect.StructField, prefix string, index []int) *Fie
 		}
 	}
 
-	index = withIndex(index, f.Index)
+	index = WithIndex(index, f.Index)
 	if field := t.fieldWithLock(sqlName); field != nil {
 		if indexEqual(field.Index, index) {
 			return field
@@ -822,7 +822,7 @@ func (t *Table) inlineFields(field *Field, seen map[reflect.Type]struct{}) {
 		f.GoName = field.GoName + "_" + f.GoName
 		f.Name = field.Name + "__" + f.Name
 		f.SQLName = t.quoteIdent(f.Name)
-		f.Index = withIndex(field.Index, f.Index)
+		f.Index = WithIndex(field.Index, f.Index)
 
 		t.fieldsMapMu.Lock()
 		if _, ok := t.FieldMap[f.Name]; !ok {
@@ -1027,7 +1027,7 @@ func softDeleteFieldUpdaterFallback(field *Field) func(fv reflect.Value, tm time
 	}
 }
 
-func withIndex(a, b []int) []int {
+func WithIndex(a, b []int) []int {
 	dest := make([]int, 0, len(a)+len(b))
 	dest = append(dest, a...)
 	dest = append(dest, b...)
