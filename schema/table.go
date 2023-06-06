@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -806,18 +807,38 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	return rel
 }
 
-func (t *Table) inlineFields(field *Field, seen map[reflect.Type]struct{}) {
-	if seen == nil {
-		seen = map[reflect.Type]struct{}{t.Type: {}}
-	}
+type seenKey struct {
+	Table      reflect.Type
+	FieldIndex string
+}
 
-	if _, ok := seen[field.IndirectType]; ok {
-		return
+type seenMap map[seenKey]struct{}
+
+func NewSeenKey(table reflect.Type, fieldIndex []int) (key seenKey) {
+	key.Table = table
+	for _, index := range fieldIndex {
+		key.FieldIndex += strconv.Itoa(index) + "-"
 	}
-	seen[field.IndirectType] = struct{}{}
+	return key
+}
+
+func (s seenMap) Clone() seenMap {
+	t := make(seenMap)
+	for k, v := range s {
+		t[k] = v
+	}
+	return t
+}
+
+func (t *Table) inlineFields(field *Field, seen seenMap) {
+	if seen == nil {
+		seen = make(seenMap)
+	}
 
 	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	for _, f := range joinTable.allFields {
+		key := NewSeenKey(joinTable.Type, f.Index)
+
 		f = f.Clone()
 		f.GoName = field.GoName + "_" + f.GoName
 		f.Name = field.Name + "__" + f.Name
@@ -834,7 +855,9 @@ func (t *Table) inlineFields(field *Field, seen map[reflect.Type]struct{}) {
 			continue
 		}
 
-		if _, ok := seen[f.IndirectType]; !ok {
+		if _, ok := seen[key]; !ok {
+			seen = seen.Clone()
+			seen[key] = struct{}{}
 			t.inlineFields(f, seen)
 		}
 	}
