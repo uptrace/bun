@@ -551,6 +551,11 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
+	b, err = q.appendIndexHints(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
 		b, err = j.appendHasOneJoin(fmter, b, q)
@@ -564,11 +569,6 @@ func (q *SelectQuery) appendQuery(
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	b, err = q.appendIndexHints(fmter, b)
-	if err != nil {
-		return nil, err
 	}
 
 	b, err = q.appendWhere(fmter, b, true)
