@@ -1,1 +1,1 @@
-INSERT INTO "models" ("id", "str") VALUES (42, 'hello')
+INSERT INTO "models" ("id", "str") VALUES (42, N'hello')

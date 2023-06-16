@@ -48,6 +48,11 @@ func (q *InsertQuery) Model(model interface{}) *InsertQuery {
 	return q
 }
 
+func (q *InsertQuery) Err(err error) *InsertQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
 	if fn != nil {
@@ -537,35 +542,54 @@ func (q *InsertQuery) appendSetValues(b []byte, fields []*schema.Field) []byte {
 
 //------------------------------------------------------------------------------
 
+func (q *InsertQuery) Scan(ctx context.Context, dest ...interface{}) error {
+	_, err := q.scanOrExec(ctx, dest, true)
+	return err
+}
+
 func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+	return q.scanOrExec(ctx, dest, len(dest) > 0)
+}
+
+func (q *InsertQuery) scanOrExec(
+	ctx context.Context, dest []interface{}, hasDest bool,
+) (sql.Result, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+
 	if q.table != nil {
 		if err := q.beforeInsertHook(ctx); err != nil {
 			return nil, err
 		}
 	}
 
-	if q.err != nil {
-		return nil, q.err
-	}
+	// Run append model hooks before generating the query.
 	if err := q.beforeAppendModel(ctx, q); err != nil {
 		return nil, err
 	}
 
+	// Generate the query before checking hasReturning.
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
 
-	query := internal.String(queryBytes)
-	var res sql.Result
+	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output))
+	var model Model
 
-	if hasDest := len(dest) > 0; hasDest ||
-		(q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output)) {
-		model, err := q.getModel(dest)
+	if useScan {
+		var err error
+		model, err = q.getModel(dest)
 		if err != nil {
 			return nil, err
 		}
+	}
 
+	query := internal.String(queryBytes)
+	var res sql.Result
+
+	if useScan {
 		res, err = q.scan(ctx, q, query, model, hasDest)
 		if err != nil {
 			return nil, err

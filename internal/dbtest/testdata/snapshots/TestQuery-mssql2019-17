@@ -1,1 +1,1 @@
-WITH "_data" AS (SELECT * FROM (VALUES (42, 'hello', 0), (43, 'world', 1)) AS t ("id", "str", _order)) SELECT "model"."id", "model"."str" FROM "models" AS "model" WHERE (model.id = _data.id) ORDER BY _data._order
+WITH "_data" AS (SELECT * FROM (VALUES (42, N'hello', 0), (43, N'world', 1)) AS t ("id", "str", _order)) SELECT "model"."id", "model"."str" FROM "models" AS "model" WHERE (model.id = _data.id) ORDER BY _data._order

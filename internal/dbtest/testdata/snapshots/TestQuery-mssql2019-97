@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES ('hello') ON DUPLICATE KEY UPDATE "str" = VALUES("str")
+INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES (N'hello') ON DUPLICATE KEY UPDATE "str" = VALUES("str")

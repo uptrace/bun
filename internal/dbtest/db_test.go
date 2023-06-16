@@ -277,6 +277,7 @@ func TestDB(t *testing.T) {
 		{testRunInTxAndSavepoint},
 		{testEmbedTypeField},
 		{testDriverValuerReturnsItself},
+		{testNoPanicWhenReturningNullColumns},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1646,16 +1647,14 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 
 type anotherString string
 
-var (
-	_ driver.Valuer = (*anotherString)(nil)
-)
+var _ driver.Valuer = (*anotherString)(nil)
 
 func (v anotherString) Value() (driver.Value, error) {
 	return v, nil
 }
 
 func testDriverValuerReturnsItself(t *testing.T, db *bun.DB) {
-	var expectedValue = anotherString("example value")
+	expectedValue := anotherString("example value")
 
 	type Model struct {
 		ID    int           `bun:",pk,autoincrement"`
@@ -1670,4 +1669,22 @@ func testDriverValuerReturnsItself(t *testing.T, db *bun.DB) {
 	model := &Model{Value: expectedValue}
 	_, err = db.NewInsert().Model(model).Exec(ctx)
 	require.Error(t, err)
+}
+
+func testNoPanicWhenReturningNullColumns(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Value     string  `bun:"value,notnull"`
+		NullValue *string `bun:"null_value"`
+	}
+
+	ctx := context.Background()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	modelSlice := []*Model{{Value: "boom"}}
+
+	require.NotPanics(t, func() {
+		db.NewInsert().Model(&modelSlice).Exec(ctx)
+	})
 }

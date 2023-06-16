@@ -10,9 +10,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/uptrace/bun"
@@ -23,12 +22,12 @@ import (
 
 var (
 	tracer = otel.Tracer("github.com/uptrace/bun")
-	meter  = global.Meter("github.com/uptrace/bun")
+	meter  = otel.Meter("github.com/uptrace/bun")
 
-	queryHistogram, _ = meter.SyncInt64().Histogram(
+	queryHistogram, _ = meter.Int64Histogram(
 		"go.sql.query_timing",
-		instrument.WithDescription("Timing of processed queries"),
-		instrument.WithUnit("milliseconds"),
+		metric.WithDescription("Timing of processed queries"),
+		metric.WithUnit("milliseconds"),
 	)
 )
 
@@ -75,7 +74,8 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		}
 	}
 
-	queryHistogram.Record(ctx, time.Since(event.StartTime).Milliseconds(), labels...)
+	dur := time.Since(event.StartTime)
+	queryHistogram.Record(ctx, dur.Milliseconds(), metric.WithAttributes(labels...))
 
 	span := trace.SpanFromContext(ctx)
 	if !span.IsRecording() {

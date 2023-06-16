@@ -22,6 +22,7 @@ import (
 )
 
 // https://www.postgresql.org/docs/current/protocol-message-formats.html
+//
 //nolint:deadcode,varcheck,unused
 const (
 	commandCompleteMsg  = 'C'

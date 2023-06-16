@@ -26,7 +26,7 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 		) context.Context {
 			require.Equal(t, "SELECT", event.Operation())
 			require.Equal(
-				t, "SELECT * FROM (SELECT 1 AS c) AS t WHERE ('foo' = 'bar')", string(event.Query))
+				t, "SELECT * FROM (SELECT 1 AS c) AS t WHERE (1 = 2)", string(event.Query))
 
 			b, err := event.IQuery.AppendQuery(schema.NewNopFormatter(), nil)
 			require.NoError(t, err)
@@ -37,7 +37,7 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 
 		_, err := db.NewSelect().
 			TableExpr("(SELECT 1 AS c) AS t").
-			Where("? = ?", "foo", "bar").
+			Where("? = ?", 1, 2).
 			Exec(ctx)
 		require.NoError(t, err)
 		hook.require(t)

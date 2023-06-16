@@ -534,7 +534,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
-					t.TypeName, field.GoName, t.TypeName, baseColumn,
+					t.TypeName, field.GoName, joinTable.TypeName, joinColumn,
 				))
 			}
 		}
@@ -588,7 +588,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
-					field.GoName, t.TypeName, joinTable.TypeName, baseColumn,
+					field.GoName, t.TypeName, t.TypeName, baseColumn,
 				))
 			}
 
@@ -598,7 +598,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
-					field.GoName, t.TypeName, joinTable.TypeName, baseColumn,
+					field.GoName, t.TypeName, joinTable.TypeName, joinColumn,
 				))
 			}
 		}
@@ -677,7 +677,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-many %s: %s must have column %s",
-					t.TypeName, field.GoName, t.TypeName, baseColumn,
+					t.TypeName, field.GoName, joinTable.TypeName, joinColumn,
 				))
 			}
 		}

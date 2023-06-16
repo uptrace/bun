@@ -1,1 +1,1 @@
-INSERT INTO "users" ("name") OUTPUT INSERTED."id" VALUES ('Hello') ON CONFLICT DO UPDATE SET name = 'Hello'
+INSERT INTO "users" ("name") OUTPUT INSERTED."id" VALUES (N'Hello') ON CONFLICT DO UPDATE SET name = N'Hello'

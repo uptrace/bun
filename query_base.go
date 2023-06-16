@@ -180,13 +180,13 @@ func (q *baseQuery) setErr(err error) {
 }
 
 func (q *baseQuery) getModel(dest []interface{}) (Model, error) {
-	if len(dest) == 0 {
-		if q.model != nil {
-			return q.model, nil
-		}
-		return nil, errNilModel
+	if len(dest) > 0 {
+		return newModel(q.db, dest)
 	}
-	return newModel(q.db, dest)
+	if q.model != nil {
+		return q.model, nil
+	}
+	return nil, errNilModel
 }
 
 func (q *baseQuery) beforeAppendModel(ctx context.Context, query Query) error {
@@ -1054,7 +1054,12 @@ type customValueQuery struct {
 func (q *customValueQuery) addValue(
 	table *schema.Table, column string, value string, args []interface{},
 ) {
-	if _, ok := table.FieldMap[column]; ok {
+	ok := false
+	if table != nil {
+		_, ok = table.FieldMap[column]
+	}
+
+	if ok {
 		if q.modelValues == nil {
 			q.modelValues = make(map[string]schema.QueryWithArgs)
 		}

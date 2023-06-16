@@ -276,6 +276,18 @@ func TestStatementTimeout(t *testing.T) {
 	require.True(t, pgerr.StatementTimeout())
 }
 
+func TestPartialScan(t *testing.T) {
+	db := sqlDB()
+	defer db.Close()
+
+	for i := 0; i < 10; i++ {
+		var num int
+		err := db.QueryRow("select generate_series(0, 10)").Scan(&num)
+		require.NoError(t, err)
+		require.Equal(t, 0, num)
+	}
+}
+
 func sqlDB() *sql.DB {
 	db, err := sql.Open("pg", dsn())
 	if err != nil {
@@ -287,7 +299,7 @@ func sqlDB() *sql.DB {
 func dsn() string {
 	dsn := os.Getenv("PG")
 	if dsn == "" {
-		dsn = "postgres://postgres:@localhost:5432/test?sslmode=disable"
+		dsn = "postgres://postgres:postgres@localhost:5432/test?sslmode=disable"
 	}
 	return dsn
 }

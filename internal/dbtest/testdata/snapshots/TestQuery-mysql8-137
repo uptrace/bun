@@ -1,1 +1,1 @@
-SELECT `story`.`id`, `story`.`name`, `story`.`user_id`, `user`.`id` AS `user__id`, `user`.`name` AS `user__name` FROM `stories` AS `story` LEFT JOIN `users` AS `user` ON (`user`.`id` = `story`.`user_id`) IGNORE INDEX FOR JOIN (`ix1`)
+SELECT `story`.`id`, `story`.`name`, `story`.`user_id`, `user`.`id` AS `user__id`, `user`.`name` AS `user__name` FROM `stories` AS `story` IGNORE INDEX FOR JOIN (`ix1`) LEFT JOIN `users` AS `user` ON (`user`.`id` = `story`.`user_id`)

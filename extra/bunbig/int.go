@@ -18,13 +18,29 @@ func newBigint(x *big.Int) *Int {
 	return (*Int)(x)
 }
 
-// same as NewBigint()
+// FromMathBig is same as NewBigint()
 func FromMathBig(x *big.Int) *Int {
 	return (*Int)(x)
 }
 
+func (i *Int) ToMathBig() *big.Int {
+	return (*big.Int)(i)
+}
+
 func FromInt64(x int64) *Int {
 	return FromMathBig(big.NewInt(x))
+}
+
+func (i *Int) ToUInt64() uint64 {
+	return i.ToMathBig().Uint64()
+}
+
+func FromUInt64(x uint64) *Int {
+	return FromMathBig(new(big.Int).SetUint64(x))
+}
+
+func (i *Int) ToInt64() int64 {
+	return i.ToMathBig().Int64()
 }
 
 func (i *Int) FromString(x string) (*Int, error) {
@@ -41,69 +57,73 @@ func (i *Int) FromString(x string) (*Int, error) {
 	return newBigint(b), nil
 }
 
-func (b *Int) Value() (driver.Value, error) {
-	return (*big.Int)(b).String(), nil
+func (i *Int) String() string {
+	return i.ToMathBig().String()
 }
 
-func (b *Int) Scan(value interface{}) error {
+func (i *Int) Value() (driver.Value, error) {
+	return (*big.Int)(i).String(), nil
+}
 
-	var i sql.NullString
+func (i *Int) Scan(value interface{}) error {
+	var x sql.NullString
 
-	if err := i.Scan(value); err != nil {
+	if err := x.Scan(value); err != nil {
 		return err
 	}
 
-	if _, ok := (*big.Int)(b).SetString(i.String, 10); ok {
+	if _, ok := (*big.Int)(i).SetString(x.String, 10); ok {
 		return nil
 	}
 
-	return fmt.Errorf("Error converting type %T into Bigint", value)
+	return fmt.Errorf("error converting type %T into Int", value)
 }
 
-func (b *Int) ToMathBig() *big.Int {
-	return (*big.Int)(b)
+func (i *Int) MarshalJSON() ([]byte, error) {
+	return []byte(i.String()), nil
 }
 
-func (b *Int) Sub(x *Int) *Int {
-	return (*Int)(big.NewInt(0).Sub(b.ToMathBig(), x.ToMathBig()))
+func (i *Int) UnmarshalJSON(p []byte) error {
+	if string(p) == "null" {
+		return nil
+	}
+	var z big.Int
+	_, ok := z.SetString(string(p), 10)
+	if !ok {
+		return fmt.Errorf("not a valid big integer: %s", p)
+	}
+	*i = (Int)(z)
+	return nil
 }
 
-func (b *Int) Add(x *Int) *Int {
-	return (*Int)(big.NewInt(0).Add(b.ToMathBig(), x.ToMathBig()))
+func (i *Int) Sub(x *Int) *Int {
+	return (*Int)(big.NewInt(0).Sub(i.ToMathBig(), x.ToMathBig()))
 }
 
-func (b *Int) Mul(x *Int) *Int {
-	return (*Int)(big.NewInt(0).Mul(b.ToMathBig(), x.ToMathBig()))
+func (i *Int) Add(x *Int) *Int {
+	return (*Int)(big.NewInt(0).Add(i.ToMathBig(), x.ToMathBig()))
 }
 
-func (b *Int) Div(x *Int) *Int {
-	return (*Int)(big.NewInt(0).Div(b.ToMathBig(), x.ToMathBig()))
+func (i *Int) Mul(x *Int) *Int {
+	return (*Int)(big.NewInt(0).Mul(i.ToMathBig(), x.ToMathBig()))
 }
 
-func (b *Int) Neg() *Int {
-	return (*Int)(big.NewInt(0).Neg(b.ToMathBig()))
+func (i *Int) Div(x *Int) *Int {
+	return (*Int)(big.NewInt(0).Div(i.ToMathBig(), x.ToMathBig()))
 }
 
-func (b *Int) ToUInt64() uint64 {
-	return b.ToMathBig().Uint64()
+func (i *Int) Neg() *Int {
+	return (*Int)(big.NewInt(0).Neg(i.ToMathBig()))
 }
 
-func (b *Int) ToInt64() int64 {
-	return b.ToMathBig().Int64()
-}
-
-func (b *Int) String() string {
-	return b.ToMathBig().String()
-}
-
-func (b *Int) Abs() *Int {
-	return (*Int)(new(big.Int).Abs(b.ToMathBig()))
+func (i *Int) Abs() *Int {
+	return (*Int)(new(big.Int).Abs(i.ToMathBig()))
 }
 
 var _ yaml.Unmarshaler = (*Int)(nil)
 
 // @todo , this part needs to be fixed
-func (b *Int) UnmarshalYAML(value *yaml.Node) error {
+func (i *Int) UnmarshalYAML(value *yaml.Node) error {
 	var str string
 	if err := value.Decode(&str); err != nil {
 		return err
@@ -115,8 +135,8 @@ func (b *Int) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (b *Int) Cmp(target *Int) Cmp {
-	return &cmpInt{r: b.ToMathBig().Cmp(target.ToMathBig())}
+func (i *Int) Cmp(target *Int) Cmp {
+	return &cmpInt{r: i.ToMathBig().Cmp(target.ToMathBig())}
 }
 
 func (c *cmpInt) Eq() bool {

@@ -37,6 +37,18 @@ func (q *AddColumnQuery) Model(model interface{}) *AddColumnQuery {
 	return q
 }
 
+func (q *AddColumnQuery) Err(err error) *AddColumnQuery {
+	q.setErr(err)
+	return q
+}
+
+func (q *AddColumnQuery) Apply(fn func(*AddColumnQuery) *AddColumnQuery) *AddColumnQuery {
+	if fn != nil {
+		return fn(q)
+	}
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *AddColumnQuery) Table(tables ...string) *AddColumnQuery {

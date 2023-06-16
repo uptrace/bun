@@ -61,6 +61,11 @@ func (q *SelectQuery) Model(model interface{}) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) Err(err error) *SelectQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	if fn != nil {
@@ -546,6 +551,11 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
+	b, err = q.appendIndexHints(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
 		b, err = j.appendHasOneJoin(fmter, b, q)
@@ -559,11 +569,6 @@ func (q *SelectQuery) appendQuery(
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	b, err = q.appendIndexHints(fmter, b)
-	if err != nil {
-		return nil, err
 	}
 
 	b, err = q.appendWhere(fmter, b, true)

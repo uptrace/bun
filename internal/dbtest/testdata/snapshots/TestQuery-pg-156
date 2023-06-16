@@ -1,0 +1,1 @@
+CREATE TABLE "models" ("id" VARCHAR(10), "name" varchar(50), "title" VARCHAR(10))

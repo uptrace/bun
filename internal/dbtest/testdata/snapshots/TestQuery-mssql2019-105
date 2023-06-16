@@ -1,1 +1,1 @@
-INSERT INTO "models" ("id") VALUES ('embed')
+INSERT INTO "models" ("id") VALUES (N'embed')

@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str") VALUES ('')
+INSERT INTO "models" ("str") VALUES (N'')

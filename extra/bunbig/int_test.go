@@ -6,8 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uptrace/bun/extra/bunbig"
 	"gopkg.in/yaml.v3"
+
+	"github.com/uptrace/bun/extra/bunbig"
 )
 
 func TestInt(t *testing.T) {
@@ -20,6 +21,7 @@ func TestInt(t *testing.T) {
 		// 100 * 200 = 20000
 		assert.Equal(t, bunbig.FromMathBig(big.NewInt(20000)), x.Mul(y))
 	})
+
 	t.Run("add", func(t *testing.T) {
 		x := bunbig.FromMathBig(a)
 		y := bunbig.FromMathBig(b)
@@ -55,25 +57,33 @@ func TestInt(t *testing.T) {
 		x := bunbig.FromMathBig(a)
 		assert.Equal(t, uint64(100), x.ToUInt64())
 	})
+
 	t.Run("toString", func(t *testing.T) {
 		x := bunbig.FromMathBig(a)
 		assert.Equal(t, "100", x.String())
 	})
+
 	t.Run("fromString", func(t *testing.T) {
 		x, err := bunbig.NewInt().FromString("100")
 		assert.Nil(t, err)
 		assert.Equal(t, "100", x.String())
 	})
+
 	t.Run("fromInt64", func(t *testing.T) {
 		x := bunbig.FromInt64(100000000)
 		assert.Equal(t, int64(100000000), x.ToInt64())
 	})
 
+	t.Run("fromUInt64", func(t *testing.T) {
+		x := bunbig.FromUInt64(100000000)
+		assert.Equal(t, int64(100000000), x.ToInt64())
+	})
+
 	t.Run("Abs", func(t *testing.T) {
 		x := bunbig.FromMathBig(a)
-
 		assert.Equal(t, x.Neg().Abs(), x)
 	})
+
 	t.Run("compare: ", func(t *testing.T) {
 		x := bunbig.FromMathBig(a) // 100
 		y := bunbig.FromMathBig(b) // 200
@@ -98,12 +108,23 @@ func TestInt(t *testing.T) {
 	})
 
 	t.Run("empty string ", func(t *testing.T) {
-
 		x, err := bunbig.NewInt().FromString("")
 		assert.Nil(t, err)
 		assert.Equal(t, x.ToInt64(), int64(0))
 	})
 
+	t.Run("json", func(t *testing.T) {
+		i := bunbig.FromInt64(1337)
+
+		r, err := i.MarshalJSON()
+		assert.Nil(t, err)
+		assert.Equal(t, "1337", string(r))
+
+		got := new(bunbig.Int)
+		err = got.UnmarshalJSON(r)
+		assert.Nil(t, err)
+		assert.Equal(t, uint64(1337), got.ToUInt64())
+	})
 }
 
 func TestFloat(t *testing.T) {
