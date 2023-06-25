@@ -48,14 +48,31 @@ func appendFloat(b []byte, v float64, bitSize int) []byte {
 
 //------------------------------------------------------------------------------
 
-func AppendIdent(b []byte, field string, quote byte) []byte {
-	return appendIdent(b, internal.Bytes(field), quote)
+func AppendName(b []byte, ident string, quote byte) []byte {
+	return appendName(b, internal.Bytes(ident), quote)
 }
 
-func appendIdent(b, src []byte, quote byte) []byte {
+func appendName(b, ident []byte, quote byte) []byte {
+	b = append(b, quote)
+	for _, c := range ident {
+		if c == quote {
+			b = append(b, quote, quote)
+		} else {
+			b = append(b, c)
+		}
+	}
+	b = append(b, quote)
+	return b
+}
+
+func AppendIdent(b []byte, name string, quote byte) []byte {
+	return appendIdent(b, internal.Bytes(name), quote)
+}
+
+func appendIdent(b, name []byte, quote byte) []byte {
 	var quoted bool
 loop:
-	for _, c := range src {
+	for _, c := range name {
 		switch c {
 		case '*':
 			if !quoted {

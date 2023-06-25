@@ -10,6 +10,7 @@ import (
 type (
 	Safe  = schema.Safe
 	Ident = schema.Ident
+	Name  = schema.Name
 
 	NullTime  = schema.NullTime
 	BaseModel = schema.BaseModel

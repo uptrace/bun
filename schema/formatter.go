@@ -42,6 +42,10 @@ func (f Formatter) IdentQuote() byte {
 	return f.dialect.IdentQuote()
 }
 
+func (f Formatter) AppendName(b []byte, name string) []byte {
+	return dialect.AppendName(b, name, f.IdentQuote())
+}
+
 func (f Formatter) AppendIdent(b []byte, ident string) []byte {
 	return dialect.AppendIdent(b, ident, f.IdentQuote())
 }
