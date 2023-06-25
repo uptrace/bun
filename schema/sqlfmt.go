@@ -27,7 +27,19 @@ func (s Safe) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
-// Ident represents a SQL identifier, for example, table or column name.
+// Name represents a single SQL name, for example, a column name.
+type Name string
+
+var _ QueryAppender = (*Name)(nil)
+
+func (s Name) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
+	return fmter.AppendName(b, string(s)), nil
+}
+
+//------------------------------------------------------------------------------
+
+// Ident represents a SQL identifier, for example,
+// a fully qualified column name such as `table_name.col_name`.
 type Ident string
 
 var _ QueryAppender = (*Ident)(nil)
