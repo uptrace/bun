@@ -11,6 +11,45 @@ type isZeroer interface {
 	IsZero() bool
 }
 
+func isZero(v interface{}) bool {
+	switch v := v.(type) {
+	case isZeroer:
+		return v.IsZero()
+	case string:
+		return v == ""
+	case []byte:
+		return v == nil
+	case int:
+		return v == 0
+	case int64:
+		return v == 0
+	case uint:
+		return v == 0
+	case uint64:
+		return v == 0
+	case float32:
+		return v == 0
+	case float64:
+		return v == 0
+	case int8:
+		return v == 0
+	case int16:
+		return v == 0
+	case int32:
+		return v == 0
+	case uint8:
+		return v == 0
+	case uint16:
+		return v == 0
+	case uint32:
+		return v == 0
+	default:
+		rv := reflect.ValueOf(v)
+		fn := zeroChecker(rv.Type())
+		return fn(rv)
+	}
+}
+
 type IsZeroerFunc func(reflect.Value) bool
 
 func zeroChecker(typ reflect.Type) IsZeroerFunc {

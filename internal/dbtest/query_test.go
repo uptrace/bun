@@ -986,6 +986,9 @@ func TestQuery(t *testing.T) {
 			// Non-positive VARCHAR length is illegal
 			return db.NewCreateTable().Model((*Model)(nil)).Varchar(-20)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().TableExpr("xxx").Set("foo = ?", bun.NullZero("")).Where("1")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
