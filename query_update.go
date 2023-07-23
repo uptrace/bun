@@ -271,9 +271,17 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
+		pos := len(b)
 		b, err = q.appendSetStruct(fmter, b, model)
 		if err != nil {
 			return nil, err
+		}
+
+		// Validate if no values were appended after SET clause.
+		// e.g. UPDATE users SET WHERE id = 1
+		// See issues858
+		if len(b) == pos {
+			return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
 		}
 	case *sliceTableModel:
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
