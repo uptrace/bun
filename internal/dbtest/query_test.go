@@ -989,6 +989,18 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().TableExpr("xxx").Set("foo = ?", bun.NullZero("")).Where("1")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(Model)).OmitZero().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{Str: ""}).OmitZero().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{Str: ""}).WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{42, ""}).OmitZero()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
