@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
@@ -181,7 +182,11 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if field.AutoIncrement {
 			switch {
 			case fmter.Dialect().Features().Has(feature.AutoIncrement):
-				b = append(b, " AUTO_INCREMENT"...)
+				if fmter.Dialect().Name() == dialect.SQLite {
+					b = append(b, " AUTOINCREMENT"...)
+				} else {
+					b = append(b, " AUTO_INCREMENT"...)
+				}
 			case fmter.Dialect().Features().Has(feature.Identity):
 				b = append(b, " IDENTITY"...)
 			}

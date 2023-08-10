@@ -29,7 +29,8 @@ type Dialect struct {
 func New() *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
-	d.features = feature.CTE |
+	d.features = feature.AutoIncrement |
+		feature.CTE |
 		feature.WithValues |
 		feature.Returning |
 		feature.InsertReturning |
