@@ -12,6 +12,8 @@ import (
 	"github.com/uptrace/bun"
 )
 
+var ErrThereAreNoMigrations = errors.New("migrate: there are no migrations")
+
 type MigratorOption func(m *Migrator)
 
 func WithTableName(table string) MigratorOption {
@@ -378,7 +380,7 @@ func (m *Migrator) formattedTableName(db *bun.DB) string {
 
 func (m *Migrator) validate() error {
 	if len(m.ms) == 0 {
-		return errors.New("migrate: there are no migrations")
+		return ErrThereAreNoMigrations
 	}
 	return nil
 }
