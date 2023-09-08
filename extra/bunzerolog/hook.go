@@ -6,7 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/uptrace/bun"
 )
 
@@ -21,19 +22,22 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, _ *bun.QueryEvent) context.
 
 // AfterQuery after query zerolog hook.
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
-	var logEvent *zerolog.Event
-
-	// do not log sql.ErrNoRows as real error
-	l := zerolog.Ctx(ctx)
-	if errors.Is(event.Err, sql.ErrNoRows) {
-		logEvent = l.Warn().Err(event.Err)
-	} else {
-		logEvent = l.Err(event.Err)
-	}
-
-	logEvent.
+	l := log.Ctx(ctx).With().
 		Str("query", event.Query).
 		Str("operation", event.Operation()).
 		Str("duration", time.Since(event.StartTime).String()).
-		Msg("query")
+		Logger()
+
+	if event.Err != nil {
+		// do not log sql.ErrNoRows as real error
+		if errors.Is(event.Err, sql.ErrNoRows) {
+			l.Warn().Err(event.Err).Send()
+			return
+		}
+
+		l.Err(event.Err).Send()
+		return
+	}
+
+	l.Debug().Send()
 }
