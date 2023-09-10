@@ -2,7 +2,7 @@ version: '3'
 
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:22.10
+    image: clickhouse/clickhouse-server:23.4
     restart: on-failure
     environment:
       CLICKHOUSE_DB: uptrace
@@ -26,7 +26,7 @@ services:
       POSTGRES_PASSWORD: uptrace
       POSTGRES_DB: uptrace
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready', '-U', 'uptrace', '-d', 'uptrace']
+      test: ['CMD-SHELL', 'pg_isready -U uptrace -d uptrace']
       interval: 1s
       timeout: 1s
       retries: 30
@@ -36,7 +36,7 @@ services:
       - '5432:5432'
 
   uptrace:
-    image: 'uptrace/uptrace:1.5.0'
+    image: 'uptrace/uptrace:1.5.6'
     #image: 'uptrace/uptrace-dev:latest'
     restart: on-failure
     volumes:
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
 
   otelcol:
-    image: otel/opentelemetry-collector-contrib:0.58.0
+    image: otel/opentelemetry-collector-contrib:0.70.0
     restart: on-failure
     volumes:
       - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml
