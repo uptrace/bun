@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
 )
 
@@ -50,7 +51,7 @@ func (f *Field) Clone() *Field {
 }
 
 func (f *Field) Value(strct reflect.Value) reflect.Value {
-	return fieldByIndexAlloc(strct, f.Index)
+	return internal.FieldByIndexAlloc(strct, f.Index)
 }
 
 func (f *Field) HasNilValue(v reflect.Value) bool {
@@ -117,7 +118,7 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 		return nil
 	}
 
-	fv := fieldByIndexAlloc(strct, f.Index)
+	fv := internal.FieldByIndexAlloc(strct, f.Index)
 	return f.ScanWithCheck(fv, src)
 }
 

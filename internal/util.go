@@ -55,3 +55,27 @@ func Unwrap(err error) error {
 	}
 	return u.Unwrap()
 }
+
+func FieldByIndexAlloc(v reflect.Value, index []int) reflect.Value {
+	if len(index) == 1 {
+		return v.Field(index[0])
+	}
+
+	for i, idx := range index {
+		if i > 0 {
+			v = indirectNil(v)
+		}
+		v = v.Field(idx)
+	}
+	return v
+}
+
+func indirectNil(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			v.Set(reflect.New(v.Type().Elem()))
+		}
+		v = v.Elem()
+	}
+	return v
+}
