@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -234,7 +235,7 @@ func (m *structTableModel) parentIndex() []int {
 }
 
 func (m *structTableModel) mount(host reflect.Value) {
-	m.strct = host.FieldByIndex(m.rel.Field.Index)
+	m.strct = internal.FieldByIndexAlloc(host, m.rel.Field.Index)
 	m.structInited = false
 }
 
