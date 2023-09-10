@@ -1,3 +1,23 @@
+## [1.1.15](https://github.com/uptrace/bun/compare/v1.1.14...v1.1.15) (2023-09-10)
+
+
+### Bug Fixes
+
+* "model does not have column" error ([#850](https://github.com/uptrace/bun/issues/850)) ([16367aa](https://github.com/uptrace/bun/commit/16367aabb34b98766d28e0678f9d47710f451fae))
+* alloc when mounting ([#891](https://github.com/uptrace/bun/issues/891)) ([f2256f1](https://github.com/uptrace/bun/commit/f2256f10a1d328fb924ca79cde76e77641398573))
+* index hints have to be specified following a table name ([4a2ae85](https://github.com/uptrace/bun/commit/4a2ae853a1509bb300bc2d96471505caee799e43))
+* make Rows.Close to drain messages ([5ceba07](https://github.com/uptrace/bun/commit/5ceba076668eb7aaddb1d8a56202256d5e6c1ead))
+* run hooks on Rows ([#892](https://github.com/uptrace/bun/issues/892)) ([f652b3d](https://github.com/uptrace/bun/commit/f652b3d399a3dc46c856eb8c0f10140a12ea4310))
+* scan error [#709](https://github.com/uptrace/bun/issues/709) ([#837](https://github.com/uptrace/bun/issues/837)) ([b82afa5](https://github.com/uptrace/bun/commit/b82afa52633b2a1b352db6de4ff0d369d5468a07))
+
+
+### Features
+
+* add bun.NullZero ([786bb6b](https://github.com/uptrace/bun/commit/786bb6bfeba3c12f8b28579d61e4794d9fb3e373))
+* **bunotel:** add options for set otel providers ([#836](https://github.com/uptrace/bun/issues/836)) ([806e632](https://github.com/uptrace/bun/commit/806e6323f60b4703b03a71c113c263d0afc95b35))
+
+
+
 ## [1.1.14](https://github.com/uptrace/bun/compare/v1.1.13...v1.1.14) (2023-05-24)
 
 
