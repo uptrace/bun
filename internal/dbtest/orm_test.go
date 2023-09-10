@@ -58,7 +58,9 @@ func testBookRelations(t *testing.T, db *bun.DB) {
 		Relation("Author.Avatar").
 		Relation("Editor").
 		Relation("Editor.Avatar").
-		Relation("Genres").
+		Relation("Genres", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.Column("id", "name", "genre__rating")
+		}).
 		Relation("Comments").
 		Relation("Translations", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("id")
