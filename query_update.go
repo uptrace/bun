@@ -459,15 +459,15 @@ func (q *UpdateQuery) scanOrExec(
 		return nil, q.err
 	}
 
+	// Run append model hooks before generating the query.
+	if err := q.beforeAppendModel(ctx, q); err != nil {
+		return nil, err
+	}
+
 	if q.table != nil {
 		if err := q.beforeUpdateHook(ctx); err != nil {
 			return nil, err
 		}
-	}
-
-	// Run append model hooks before generating the query.
-	if err := q.beforeAppendModel(ctx, q); err != nil {
-		return nil, err
 	}
 
 	// Generate the query before checking hasReturning.
