@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -807,20 +806,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	return rel
 }
 
-type seenKey struct {
-	Table      reflect.Type
-	FieldIndex string
-}
-
-type seenMap map[seenKey]struct{}
-
-func NewSeenKey(table reflect.Type, fieldIndex []int) (key seenKey) {
-	key.Table = table
-	for _, index := range fieldIndex {
-		key.FieldIndex += strconv.Itoa(index) + "-"
-	}
-	return key
-}
+type seenMap map[string]struct{}
 
 func (s seenMap) Clone() seenMap {
 	t := make(seenMap)
@@ -833,11 +819,12 @@ func (s seenMap) Clone() seenMap {
 func (t *Table) inlineFields(field *Field, seen seenMap) {
 	if seen == nil {
 		seen = make(seenMap)
+		seen[field.GoName] = struct{}{}
 	}
 
 	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	for _, f := range joinTable.allFields {
-		key := NewSeenKey(joinTable.Type, f.Index)
+		key := f.GoName
 
 		f = f.Clone()
 		f.GoName = field.GoName + "_" + f.GoName
