@@ -1,3 +1,12 @@
+## [1.1.16](https://github.com/uptrace/bun/compare/v1.1.15...v1.1.16) (2023-09-16)
+
+
+### Reverts
+
+* Revert "fix: "model does not have column" error (#850)" ([387228e](https://github.com/uptrace/bun/commit/387228e85d22dfcf3659f4631dfa87106d7ef45f)), closes [#850](https://github.com/uptrace/bun/issues/850)
+
+
+
 ## [1.1.15](https://github.com/uptrace/bun/compare/v1.1.14...v1.1.15) (2023-09-10)
 
 
