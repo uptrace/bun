@@ -6,7 +6,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.1.15
+	github.com/uptrace/bun v1.1.16
 	mellium.im/sasl v0.3.1
 )
 
