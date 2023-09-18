@@ -15,11 +15,11 @@ type fixtureRows struct {
 }
 
 type Encoder struct {
-	db  *bun.DB
+	db  bun.IDB
 	enc *yaml.Encoder
 }
 
-func NewEncoder(db *bun.DB, w io.Writer) *Encoder {
+func NewEncoder(db bun.IDB, w io.Writer) *Encoder {
 	return &Encoder{
 		db:  db,
 		enc: yaml.NewEncoder(w),

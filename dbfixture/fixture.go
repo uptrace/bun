@@ -69,7 +69,7 @@ func WithBeforeInsert(fn BeforeInsertFunc) FixtureOption {
 }
 
 type Fixture struct {
-	db *bun.DB
+	db bun.IDB
 
 	recreateTables bool
 	truncateTables bool
@@ -81,7 +81,7 @@ type Fixture struct {
 	modelRows map[string]map[string]interface{}
 }
 
-func New(db *bun.DB, opts ...FixtureOption) *Fixture {
+func New(db bun.IDB, opts ...FixtureOption) *Fixture {
 	f := &Fixture{
 		db: db,
 
