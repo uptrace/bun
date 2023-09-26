@@ -57,7 +57,7 @@ If a `*slog.Logger` instance is not set, the global logger will be used.
 To customize the log format, you can use the WithLogFormat option:
 
 ```go
-customFormat := func(event *bun.QueryEvent) []any {
+customFormat := func(event *bun.QueryEvent) []slog.Attr {
 	// your custom formatting logic here
 }
 

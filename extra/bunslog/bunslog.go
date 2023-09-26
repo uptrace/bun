@@ -111,13 +111,13 @@ func (h *QueryHook) BeforeQuery(ctx context.Context, event *bun.QueryEvent) cont
 // It logs the query based on its duration and whether it resulted in an error.
 func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	level := h.queryLogLevel
-	if event.Err != nil && !errors.Is(event.Err, sql.ErrNoRows) {
-		level = h.errorLogLevel
-	}
-
 	duration := h.now().Sub(event.StartTime)
 	if h.slowQueryThreshold > 0 && h.slowQueryThreshold <= duration {
 		level = h.slowQueryLogLevel
+	}
+
+	if event.Err != nil && !errors.Is(event.Err, sql.ErrNoRows) {
+		level = h.errorLogLevel
 	}
 
 	attrs := h.logFormat(event)
