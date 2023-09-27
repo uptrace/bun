@@ -1,0 +1,1 @@
+UPDATE "stories" AS "story" SET name = 'new-name' JOIN user ON user.id = story.user_id WHERE (user.id = 1)
