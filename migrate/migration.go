@@ -158,6 +158,11 @@ SELECT 1
 SELECT 2
 `
 
+const transactionalSQLTemplate = `SET statement_timeout = 0;
+
+SELECT 1;
+`
+
 //------------------------------------------------------------------------------
 
 type MigrationSlice []Migration
