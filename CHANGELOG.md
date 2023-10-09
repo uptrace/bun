@@ -1,3 +1,102 @@
+## [1.1.16](https://github.com/uptrace/bun/compare/v1.1.15...v1.1.16) (2023-09-16)
+
+
+### Reverts
+
+* Revert "fix: "model does not have column" error (#850)" ([387228e](https://github.com/uptrace/bun/commit/387228e85d22dfcf3659f4631dfa87106d7ef45f)), closes [#850](https://github.com/uptrace/bun/issues/850)
+
+
+
+## [1.1.15](https://github.com/uptrace/bun/compare/v1.1.14...v1.1.15) (2023-09-10)
+
+
+### Bug Fixes
+
+* "model does not have column" error ([#850](https://github.com/uptrace/bun/issues/850)) ([16367aa](https://github.com/uptrace/bun/commit/16367aabb34b98766d28e0678f9d47710f451fae))
+* alloc when mounting ([#891](https://github.com/uptrace/bun/issues/891)) ([f2256f1](https://github.com/uptrace/bun/commit/f2256f10a1d328fb924ca79cde76e77641398573))
+* index hints have to be specified following a table name ([4a2ae85](https://github.com/uptrace/bun/commit/4a2ae853a1509bb300bc2d96471505caee799e43))
+* make Rows.Close to drain messages ([5ceba07](https://github.com/uptrace/bun/commit/5ceba076668eb7aaddb1d8a56202256d5e6c1ead))
+* run hooks on Rows ([#892](https://github.com/uptrace/bun/issues/892)) ([f652b3d](https://github.com/uptrace/bun/commit/f652b3d399a3dc46c856eb8c0f10140a12ea4310))
+* scan error [#709](https://github.com/uptrace/bun/issues/709) ([#837](https://github.com/uptrace/bun/issues/837)) ([b82afa5](https://github.com/uptrace/bun/commit/b82afa52633b2a1b352db6de4ff0d369d5468a07))
+
+
+### Features
+
+* add bun.NullZero ([786bb6b](https://github.com/uptrace/bun/commit/786bb6bfeba3c12f8b28579d61e4794d9fb3e373))
+* **bunotel:** add options for set otel providers ([#836](https://github.com/uptrace/bun/issues/836)) ([806e632](https://github.com/uptrace/bun/commit/806e6323f60b4703b03a71c113c263d0afc95b35))
+
+
+
+## [1.1.14](https://github.com/uptrace/bun/compare/v1.1.13...v1.1.14) (2023-05-24)
+
+
+### Bug Fixes
+
+* enable CompositeIn for MySQL ([9f377b5](https://github.com/uptrace/bun/commit/9f377b5e744cb38ef4aadd61213855c009e47354))
+
+
+
+## [1.1.13](https://github.com/uptrace/bun/compare/v1.1.12...v1.1.13) (2023-05-06)
+
+
+### Bug Fixes
+
+* bunbig.Int.Scan typo ([7ddabb8](https://github.com/uptrace/bun/commit/7ddabb8c667f50032bc0bb2523a287efbe0851e7))
+* compare full MySQL version ([096fabe](https://github.com/uptrace/bun/commit/096fabefa114202d3601ad8e456f5e491a4e3787))
+* enable delete table alias for MySQL >= 8.0.16 ([77a600b](https://github.com/uptrace/bun/commit/77a600bc060154fb91aa68e68ba6a8875e5b10fb))
+* incorrect table relationship panic message [#791](https://github.com/uptrace/bun/issues/791) ([ad41888](https://github.com/uptrace/bun/commit/ad4188862eeaab30fc7c48d3224b5a786557aec5))
+* should rollback if migrate using transaction and got an err (thanks [@bayshark](https://github.com/bayshark)) ([e7a119b](https://github.com/uptrace/bun/commit/e7a119b1b8911d8bf059bb271c90ad4a5f5f02be))
+
+
+### Features
+
+* add option to customize Go migration template ([f31bf73](https://github.com/uptrace/bun/commit/f31bf739b9c7a0383411b9e67cba96c858795c68))
+* expose Exec(…) method for RawQuery ([11192c8](https://github.com/uptrace/bun/commit/11192c83f932eb7421ef09e06859a7f171de7803))
+* prefix migration files with 1 upto 14 digits ([b74b671](https://github.com/uptrace/bun/commit/b74b6714bb6a83e470e21801c97cc40e20acfb50))
+* rename option ([9353a3f](https://github.com/uptrace/bun/commit/9353a3f921c038fdf4a90665f1b0a9d0d03dc182))
+
+
+
+## [1.1.12](https://github.com/uptrace/bun/compare/v1.1.11...v1.1.12) (2023-02-20)
+
+
+
+## [1.1.11](https://github.com/uptrace/bun/compare/v1.1.10...v1.1.11) (2023-02-01)
+
+
+### Bug Fixes
+
+* add support for inserting values with unicode encoding for mssql dialect ([e98c6c0](https://github.com/uptrace/bun/commit/e98c6c0f033b553bea3bbc783aa56c2eaa17718f))
+* fix relation tag ([a3eedff](https://github.com/uptrace/bun/commit/a3eedff49700490d4998dcdcdc04f554d8f17166))
+
+
+
+## [1.1.10](https://github.com/uptrace/bun/compare/v1.1.9...v1.1.10) (2023-01-16)
+
+
+### Bug Fixes
+
+* allow QueryEvent to better detect operations in raw queries ([8e44735](https://github.com/uptrace/bun/commit/8e4473538364bae6562055d35e94c3e9c0b77691))
+* append default VARCHAR length instead of hardcoding it in the type definition ([e5079c7](https://github.com/uptrace/bun/commit/e5079c70343ba8c8b410aed23ac1d1ae5a2c9ff6))
+* prevent panic when use pg array with custom database type ([67e4412](https://github.com/uptrace/bun/commit/67e4412a972a9ed5f3a1d07c66957beedbc8a8a3))
+* properly return sql.ErrNoRows when scanning []byte ([996fead](https://github.com/uptrace/bun/commit/996fead2595fbcaff4878b77befe6709a54b3a4d))
+
+
+### Features
+
+*  mssql output support for update or delete query ([#718](https://github.com/uptrace/bun/issues/718)) ([08876b4](https://github.com/uptrace/bun/commit/08876b4d420e761cbfa658aa6bb89b3f7c62c240))
+* add Err method to query builder ([c722c90](https://github.com/uptrace/bun/commit/c722c90f3dce2642ca4f4c2ab3f9a35cd496b557))
+* add support for time.Time array in Postgres ([3dd6f3b](https://github.com/uptrace/bun/commit/3dd6f3b2ac1bfbcda08240dc1676647b61715a9c))
+* mssql and pg merge query ([#723](https://github.com/uptrace/bun/issues/723)) ([deea764](https://github.com/uptrace/bun/commit/deea764d9380b16aad34228aa32717d10f2a4bab))
+* setError on attempt to set non-positive .Varchar() ([3335e0b](https://github.com/uptrace/bun/commit/3335e0b9d6d3f424145e1f715223a0fffe773d9a))
+
+
+### Reverts
+
+* go 1.18 ([67a4488](https://github.com/uptrace/bun/commit/67a448897eaaf1ebc54d629dfd3b2509b35da352))
+
+
+
 ## [1.1.9](https://github.com/uptrace/bun/compare/v1.1.8...v1.1.9) (2022-11-23)
 
 

@@ -1,1 +1,1 @@
-WITH "src" AS (SELECT * FROM (VALUES (42, 'hello'), (43, 'world')) AS t ("id", "str")) UPDATE "dest" SET dest.str = src.str FROM "src" WHERE (dest.id = src.id)
+WITH "src" AS (SELECT * FROM (VALUES (42, N'hello'), (43, N'world')) AS t ("id", "str")) UPDATE "dest" SET dest.str = src.str FROM "src" WHERE (dest.id = src.id)

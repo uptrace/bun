@@ -61,6 +61,11 @@ func (q *SelectQuery) Model(model interface{}) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) Err(err error) *SelectQuery {
+	q.setErr(err)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	if fn != nil {
@@ -546,6 +551,11 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
+	b, err = q.appendIndexHints(fmter, b)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
 		b, err = j.appendHasOneJoin(fmter, b, q)
@@ -559,11 +569,6 @@ func (q *SelectQuery) appendQuery(
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	b, err = q.appendIndexHints(fmter, b)
-	if err != nil {
-		return nil, err
 	}
 
 	b, err = q.appendWhere(fmter, b, true)
@@ -808,7 +813,11 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	}
 
 	query := internal.String(queryBytes)
-	return q.conn.QueryContext(ctx, query)
+
+	ctx, event := q.db.beforeQuery(ctx, q, query, nil, query, q.model)
+	rows, err := q.conn.QueryContext(ctx, query)
+	q.db.afterQuery(ctx, event, nil, err)
+	return rows, err
 }
 
 func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {

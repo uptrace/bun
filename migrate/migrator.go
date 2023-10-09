@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -217,6 +217,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 
 type goMigrationConfig struct {
 	packageName string
+	goTemplate  string
 }
 
 type GoMigrationOption func(cfg *goMigrationConfig)
@@ -227,12 +228,19 @@ func WithPackageName(name string) GoMigrationOption {
 	}
 }
 
+func WithGoTemplate(template string) GoMigrationOption {
+	return func(cfg *goMigrationConfig) {
+		cfg.goTemplate = template
+	}
+}
+
 // CreateGoMigration creates a Go migration file.
 func (m *Migrator) CreateGoMigration(
 	ctx context.Context, name string, opts ...GoMigrationOption,
 ) (*MigrationFile, error) {
 	cfg := &goMigrationConfig{
 		packageName: "migrations",
+		goTemplate:  goTemplate,
 	}
 	for _, opt := range opts {
 		opt(cfg)
@@ -245,9 +253,9 @@ func (m *Migrator) CreateGoMigration(
 
 	fname := name + ".go"
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
-	content := fmt.Sprintf(goTemplate, cfg.packageName)
+	content := fmt.Sprintf(cfg.goTemplate, cfg.packageName)
 
-	if err := ioutil.WriteFile(fpath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(fpath, []byte(content), 0o644); err != nil {
 		return nil, err
 	}
 
@@ -282,7 +290,7 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 func (m *Migrator) createSQL(ctx context.Context, fname string) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
-	if err := ioutil.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
+	if err := os.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
 		return nil, err
 	}
 

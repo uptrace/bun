@@ -79,6 +79,11 @@ func (in *inValues) AppendQuery(fmter Formatter, b []byte) (_ []byte, err error)
 
 func appendIn(fmter Formatter, b []byte, slice reflect.Value) []byte {
 	sliceLen := slice.Len()
+
+	if sliceLen == 0 {
+		return dialect.AppendNull(b)
+	}
+
 	for i := 0; i < sliceLen; i++ {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -98,4 +103,23 @@ func appendIn(fmter Formatter, b []byte, slice reflect.Value) []byte {
 		}
 	}
 	return b
+}
+
+//------------------------------------------------------------------------------
+
+func NullZero(value interface{}) QueryAppender {
+	return nullZero{
+		value: value,
+	}
+}
+
+type nullZero struct {
+	value interface{}
+}
+
+func (nz nullZero) AppendQuery(fmter Formatter, b []byte) (_ []byte, err error) {
+	if isZero(nz.value) {
+		return dialect.AppendNull(b), nil
+	}
+	return fmter.AppendValue(b, reflect.ValueOf(nz.value)), nil
 }

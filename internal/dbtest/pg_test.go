@@ -463,6 +463,59 @@ func TestPostgresTimetz(t *testing.T) {
 	require.NotZero(t, tm)
 }
 
+func TestPostgresTimeArray(t *testing.T) {
+	type Model struct {
+		ID     int64        `bun:",pk,autoincrement"`
+		Array1 []time.Time  `bun:",array"`
+		Array2 *[]time.Time `bun:",array"`
+		Array3 *[]time.Time `bun:",array"`
+	}
+	db := pg(t)
+	defer db.Close()
+
+	_, err := db.NewDropTable().Model((*Model)(nil)).IfExists().Exec(ctx)
+	require.NoError(t, err)
+
+	_, err = db.NewCreateTable().Model((*Model)(nil)).Exec(ctx)
+	require.NoError(t, err)
+
+	time1 := time.Now()
+	time2 := time.Now().Add(time.Hour)
+	time3 := time.Now().AddDate(0, 0, 1)
+
+	model1 := &Model{
+		ID:     123,
+		Array1: []time.Time{time1, time2, time3},
+		Array2: &[]time.Time{time1, time2, time3},
+	}
+	_, err = db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, len(model1.Array1), len(model2.Array1))
+
+	var times []time.Time
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array1").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, len(times), len(model1.Array1))
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array2").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(*model1.Array2))
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array3").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Nil(t, times)
+}
+
 func TestPostgresOnConflictDoUpdate(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
@@ -764,4 +817,49 @@ func TestPostgresSkipupdateField(t *testing.T) {
 	require.Equal(t, createdAt.UTC(), model_.CreatedAt.UTC())
 
 	require.NotEqual(t, model.CreatedAt.UTC(), model_.CreatedAt.UTC())
+}
+
+type Issue722 struct {
+	V []byte
+}
+
+func (t *Issue722) Value() (driver.Value, error) {
+	return t.V, nil
+}
+
+func (t *Issue722) Scan(src any) error {
+	if src == nil {
+		return nil
+	}
+
+	bytes, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("unsupported data type: %T", src)
+	}
+
+	t.V = bytes
+	return nil
+}
+
+func TestPostgresCustomTypeBytes(t *testing.T) {
+	type Model struct {
+		ID   int64       `bun:",pk,autoincrement"`
+		Data []*Issue722 `bun:",array,type:bytea[]"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	defer db.Close()
+
+	err := db.ResetModel(ctx, (*Model)(nil))
+	require.NoError(t, err)
+
+	in := &Model{Data: []*Issue722{{V: []byte("hello")}}}
+	_, err = db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
 }

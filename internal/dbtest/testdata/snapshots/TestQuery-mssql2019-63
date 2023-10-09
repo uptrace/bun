@@ -1,1 +1,1 @@
-UPDATE "models" SET "str" = '', foo = 'bar' WHERE ("id" = NULL)
+UPDATE "models" SET "str" = N'', foo = N'bar' WHERE ("id" = NULL)

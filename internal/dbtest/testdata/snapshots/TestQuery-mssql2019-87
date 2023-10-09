@@ -1,1 +1,1 @@
-UPDATE "models" SET  WHERE ("id" = 42)
+bun: empty SET clause is not allowed in the UPDATE query

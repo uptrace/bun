@@ -10,6 +10,7 @@ import (
 type (
 	Safe  = schema.Safe
 	Ident = schema.Ident
+	Name  = schema.Name
 
 	NullTime  = schema.NullTime
 	BaseModel = schema.BaseModel
@@ -81,4 +82,8 @@ func SetLogger(logger internal.Logging) {
 
 func In(slice interface{}) schema.QueryAppender {
 	return schema.In(slice)
+}
+
+func NullZero(value interface{}) schema.QueryAppender {
+	return schema.NullZero(value)
 }

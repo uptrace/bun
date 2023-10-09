@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -33,7 +34,7 @@ func newSliceTableModel(
 
 		slice:    slice,
 		sliceLen: slice.Len(),
-		nextElem: makeSliceNextElemFunc(slice),
+		nextElem: internal.MakeSliceNextElemFunc(slice),
 	}
 	m.init(slice.Type())
 	return m
@@ -67,6 +68,9 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 
 	for rows.Next() {
 		m.strct = m.nextElem()
+		if m.sliceOfPtr {
+			m.strct = m.strct.Elem()
+		}
 		m.structInited = false
 
 		if err := m.scanRow(ctx, rows, dest); err != nil {

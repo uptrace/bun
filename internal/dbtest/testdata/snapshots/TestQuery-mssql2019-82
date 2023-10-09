@@ -1,1 +1,1 @@
-INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES ('hello') ON CONFLICT (id) DO UPDATE SET "str" = EXCLUDED."str"
+INSERT INTO "models" ("str") OUTPUT INSERTED."id" VALUES (N'hello') ON CONFLICT (id) DO UPDATE SET "str" = EXCLUDED."str"

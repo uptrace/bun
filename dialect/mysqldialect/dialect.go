@@ -45,7 +45,8 @@ func New() *Dialect {
 		feature.TableNotExists |
 		feature.InsertIgnore |
 		feature.InsertOnDuplicateKey |
-		feature.SelectExists
+		feature.SelectExists |
+		feature.CompositeIn
 	return d
 }
 
@@ -64,9 +65,12 @@ func (d *Dialect) Init(db *sql.DB) {
 		return
 	}
 
-	version = semver.MajorMinor("v" + cleanupVersion(version))
+	version = "v" + cleanupVersion(version)
 	if semver.Compare(version, "v8.0") >= 0 {
-		d.features |= feature.CTE | feature.WithValues | feature.DeleteTableAlias
+		d.features |= feature.CTE | feature.WithValues
+	}
+	if semver.Compare(version, "v8.0.16") >= 0 {
+		d.features |= feature.DeleteTableAlias
 	}
 }
 
@@ -172,11 +176,12 @@ func (*Dialect) AppendJSON(b, jsonb []byte) []byte {
 	return b
 }
 
+func (d *Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
 func sqlType(field *schema.Field) string {
-	switch field.DiscoveredSQLType {
-	case sqltype.VarChar:
-		return field.DiscoveredSQLType + "(255)"
-	case sqltype.Timestamp:
+	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType
 	}
 	return field.DiscoveredSQLType

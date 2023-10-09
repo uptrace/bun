@@ -25,12 +25,12 @@ func MakeSliceNextElemFunc(v reflect.Value) func() reflect.Value {
 				if elem.IsNil() {
 					elem.Set(reflect.New(elemType))
 				}
-				return elem.Elem()
+				return elem
 			}
 
 			elem := reflect.New(elemType)
 			v.Set(reflect.Append(v, elem))
-			return elem.Elem()
+			return elem
 		}
 	}
 
@@ -54,4 +54,28 @@ func Unwrap(err error) error {
 		return nil
 	}
 	return u.Unwrap()
+}
+
+func FieldByIndexAlloc(v reflect.Value, index []int) reflect.Value {
+	if len(index) == 1 {
+		return v.Field(index[0])
+	}
+
+	for i, idx := range index {
+		if i > 0 {
+			v = indirectNil(v)
+		}
+		v = v.Field(idx)
+	}
+	return v
+}
+
+func indirectNil(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			v.Set(reflect.New(v.Type().Elem()))
+		}
+		v = v.Elem()
+	}
+	return v
 }

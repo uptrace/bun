@@ -1,1 +1,1 @@
-VALUES (42, 'hello')
+VALUES (42, N'hello')

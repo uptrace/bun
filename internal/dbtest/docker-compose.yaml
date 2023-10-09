@@ -30,7 +30,7 @@ services:
       interval: 10s
       retries: 3
   postgres:
-    image: postgres
+    image: postgres:15
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

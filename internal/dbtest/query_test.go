@@ -927,6 +927,84 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewSelect().Model(new(Model)).Relation("SoftDelete")
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID    int64 `bun:",pk,autoincrement"`
+				Name  string
+				Value string
+			}
+
+			newModels := []*Model{
+				{Name: "A", Value: "world"},
+				{Name: "B", Value: "test"},
+			}
+
+			return db.NewMerge().
+				Model(new(Model)).
+				With("_data", db.NewValues(&newModels)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+					return q.Set("value = _data.value")
+				}).
+				WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+					return q.Value("name", "_data.name").Value("value", "_data.value")
+				}).
+				Returning("$action")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Model struct {
+				ID    int64 `bun:",pk,autoincrement"`
+				Name  string
+				Value string
+			}
+
+			newModels := []*Model{
+				{Name: "A", Value: "world"},
+				{Name: "B", Value: "test"},
+			}
+
+			return db.NewMerge().
+				Model(new(Model)).
+				With("_data", db.NewValues(&newModels)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenDelete("MATCHED").
+				When("NOT MATCHED THEN INSERT (name, value) VALUES (_data.name, _data.value)").
+				Returning("$action")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Note: not all dialects require specifying VARCHAR length
+			type Model struct {
+				// ID has the reflection-based type (DiscoveredSQLType) with default length
+				ID string
+				// Name has specific type and length defined (UserSQLType)
+				Name string `bun:",type:varchar(50)"`
+				// Title has user-defined type (UserSQLType) with default length
+				Title string `bun:",type:varchar"`
+			}
+			// Set default VARCHAR length to 10
+			return db.NewCreateTable().Model((*Model)(nil)).Varchar(10)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// Non-positive VARCHAR length is illegal
+			return db.NewCreateTable().Model((*Model)(nil)).Varchar(-20)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().TableExpr("xxx").Set("foo = ?", bun.NullZero("")).Where("1")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(new(Model)).OmitZero().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{Str: ""}).OmitZero().WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{Str: ""}).WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&Model{42, ""}).OmitZero()
+		},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {

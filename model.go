@@ -13,7 +13,10 @@ import (
 
 var errNilModel = errors.New("bun: Model(nil)")
 
-var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
+var (
+	timeType  = reflect.TypeOf((*time.Time)(nil)).Elem()
+	bytesType = reflect.TypeOf((*[]byte)(nil)).Elem()
+)
 
 type Model = schema.Model
 
@@ -98,23 +101,26 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 		if typ.Kind() == reflect.Struct {
 			return newStructTableModel(db, dest, db.Table(typ)), nil
 		}
-		return nil, fmt.Errorf("bun: Model(nil %T)", dest)
+		return nil, fmt.Errorf("bun: Model(nil %s %T)", typ.Kind(), dest)
 	}
 
 	v = v.Elem()
+	typ := v.Type()
+
+	switch typ {
+	case timeType, bytesType:
+		return newScanModel(db, []interface{}{dest}), nil
+	}
 
 	switch v.Kind() {
 	case reflect.Map:
-		typ := v.Type()
 		if err := validMap(typ); err != nil {
 			return nil, err
 		}
 		mapPtr := v.Addr().Interface().(*map[string]interface{})
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
-		if v.Type() != timeType {
-			return newStructTableModelValue(db, dest, v), nil
-		}
+		return newStructTableModelValue(db, dest, v), nil
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:

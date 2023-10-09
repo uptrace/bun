@@ -385,7 +385,9 @@ func (r *rows) Close() error {
 
 	for {
 		switch err := r.Next(nil); err {
-		case nil, io.EOF:
+		case nil:
+			// keep going
+		case io.EOF:
 			return nil
 		default: // unexpected error
 			_ = r.cn.Close()
@@ -473,7 +475,7 @@ func (r *rows) readDataRow(rd *reader, dest []driver.Value) error {
 		return err
 	}
 
-	if len(dest) != int(numCol) {
+	if dest != nil && len(dest) != int(numCol) {
 		return fmt.Errorf("pgdriver: query returned %d columns, but Scan dest has %d items",
 			numCol, len(dest))
 	}

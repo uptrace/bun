@@ -46,6 +46,11 @@ func (q *CreateIndexQuery) Model(model interface{}) *CreateIndexQuery {
 	return q
 }
 
+func (q *CreateIndexQuery) Err(err error) *CreateIndexQuery {
+	q.setErr(err)
+	return q
+}
+
 func (q *CreateIndexQuery) Unique() *CreateIndexQuery {
 	q.unique = true
 	return q
