@@ -234,6 +234,7 @@ func TestDB(t *testing.T) {
 		{testNilModel},
 		{testSelectScan},
 		{testSelectCount},
+		{testSelectLimit},
 		{testSelectMap},
 		{testSelectMapSlice},
 		{testSelectStruct},
@@ -346,6 +347,37 @@ func testSelectCount(t *testing.T, db *bun.DB) {
 	count, err := q.Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 3, count)
+}
+
+func testSelectLimit(t *testing.T, db *bun.DB) {
+	if !db.Dialect().Features().Has(feature.CTE) {
+		t.Skip()
+		return
+	}
+
+	values := db.NewValues(&[]map[string]interface{}{
+		{"num": 1},
+		{"num": 2},
+		{"num": 3},
+	})
+
+	q := db.NewSelect().
+		With("t", values).
+		Column("t.num").
+		TableExpr("t")
+
+	var nums []int
+	err := q.Limit(5).Scan(ctx, &nums)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(nums))
+
+	err = q.Limit(2).Scan(ctx, &nums)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(nums))
+
+	err = q.Limit(0).Scan(ctx, &nums)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(nums))
 }
 
 func testSelectMap(t *testing.T, db *bun.DB) {
@@ -1344,6 +1376,9 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 	})
 
 	t.Run("no limit", func(t *testing.T) {
+		err := db.ResetModel(ctx, (*Model)(nil))
+		require.NoError(t, err)
+
 		src := []Model{
 			{Str: "str1"},
 			{Str: "str2"},
@@ -1356,6 +1391,24 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 		require.Equal(t, 2, count)
 		require.Equal(t, 2, len(dest))
+	})
+
+	t.Run("limit 0", func(t *testing.T) {
+		err := db.ResetModel(ctx, (*Model)(nil))
+		require.NoError(t, err)
+
+		src := []Model{
+			{Str: "str1"},
+			{Str: "str2"},
+		}
+		_, err = db.NewInsert().Model(&src).Exec(ctx)
+		require.NoError(t, err)
+
+		var dest []Model
+		count, err := db.NewSelect().Model(&dest).Limit(0).ScanAndCount(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 2, count)
+		require.Equal(t, 0, len(dest))
 	})
 }
 
