@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/schema"
+	"github.com/uptrace/bun/schema/inspector"
 )
 
 var pgDialect = New()
@@ -28,6 +29,9 @@ type Dialect struct {
 	tables   *schema.Tables
 	features feature.Feature
 }
+
+var _ schema.Dialect = (*Dialect)(nil)
+var _ inspector.Dialect = (*Dialect)(nil)
 
 func New() *Dialect {
 	d := new(Dialect)

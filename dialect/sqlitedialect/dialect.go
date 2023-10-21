@@ -91,6 +91,13 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 0
 }
 
+// DefaultSchemaName is the "schema-name" of the main database.
+// The details might differ from other dialects, but for all means and purposes
+// "main" is the default schema in an SQLite database.
+func (d *Dialect) DefaultSchema() string {
+	return "main"
+}
+
 func fieldSQLType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
 	case sqltype.SmallInt, sqltype.BigInt:

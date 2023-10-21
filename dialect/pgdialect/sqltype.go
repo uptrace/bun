@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"strings"
 
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/schema"
@@ -28,8 +29,10 @@ const (
 	pgTypeBigSerial   = "BIGSERIAL"   // 8 byte autoincrementing integer
 
 	// Character Types
-	pgTypeChar = "CHAR" // fixed length string (blank padded)
-	pgTypeText = "TEXT" // variable length string without limit
+	pgTypeChar             = "CHAR"              // fixed length string (blank padded)
+	pgTypeText             = "TEXT"              // variable length string without limit
+	pgTypeVarchar          = "VARCHAR"           // variable length string with optional limit
+	pgTypeCharacterVarying = "CHARACTER VARYING" // alias for VARCHAR
 
 	// JSON Types
 	pgTypeJSON  = "JSON"  // text representation of json data
@@ -47,6 +50,10 @@ var (
 
 func (d *Dialect) DefaultVarcharLen() int {
 	return 0
+}
+
+func (d *Dialect) DefaultSchema() string {
+	return "public"
 }
 
 func fieldSQLType(field *schema.Field) string {
@@ -106,4 +113,13 @@ func sqlType(typ reflect.Type) string {
 	}
 
 	return sqlType
+}
+
+// fromDatabaseType converts Postgres-specific type to a more generic `sqltype`.
+func fromDatabaseType(dbType string) string {
+	switch strings.ToUpper(dbType) {
+	case pgTypeChar, pgTypeVarchar, pgTypeCharacterVarying, pgTypeText:
+		return sqltype.VarChar
+	}
+	return dbType
 }
