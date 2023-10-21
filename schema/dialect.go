@@ -180,3 +180,7 @@ func (d *nopDialect) IdentQuote() byte {
 func (d *nopDialect) DefaultVarcharLen() int {
 	return 0
 }
+
+func (d *nopDialect) DefaultSchema() string {
+	return "nop"
+}
