@@ -188,3 +188,7 @@ func (d *nopDialect) DefaultVarcharLen() int {
 func (d *nopDialect) AppendSequence(b []byte, _ *Table, _ *Field) []byte {
 	return b
 }
+
+func (d *nopDialect) DefaultSchema() string {
+	return "nop"
+}
