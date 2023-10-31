@@ -20,7 +20,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		Title  string `bun:",notnull,unique:title_author"`
 		Locale string `bun:",type:varchar(5),default:'en-GB'"`
 		Pages  int8   `bun:"page_count,notnull,default:1"`
-		Count  int32    `bun:"book_count,autoincrement"`
+		Count  int32  `bun:"book_count,autoincrement"`
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -34,7 +34,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		createTableOrSkip(t, ctx, db, (*Book)(nil))
+		mustResetModel(t, ctx, db, (*Book)(nil))
 
 		dbInspector := dialect.Inspector(db)
 		want := schema.State{
@@ -105,7 +105,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 func getDatabaseInspectorOrSkip(tb testing.TB, db *bun.DB) schema.Inspector {
 	dialect := db.Dialect()
 	if id, ok := dialect.(inspector.Dialect); ok {
-		return id.Inspector(db)
+		return id.Inspector(db, migrationsTable, migrationLocksTable)
 	}
 	tb.Skipf("%q dialect does not implement inspector.Dialect", dialect.Name())
 	return nil

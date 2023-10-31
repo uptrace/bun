@@ -7,5 +7,5 @@ import (
 
 type Dialect interface {
 	schema.Dialect
-	Inspector(db *bun.DB) schema.Inspector
+	Inspector(db *bun.DB, excludeTables ...string) schema.Inspector
 }
