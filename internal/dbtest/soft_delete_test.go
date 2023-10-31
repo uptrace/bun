@@ -39,11 +39,9 @@ type Video struct {
 
 func testSoftDeleteNilModel(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*Video)(nil))
 
-	err := db.ResetModel(ctx, (*Video)(nil))
-	require.NoError(t, err)
-
-	_, err = db.NewDelete().Model((*Video)(nil)).Where("1 = 1").Exec(ctx)
+	_, err := db.NewDelete().Model((*Video)(nil)).Where("1 = 1").Exec(ctx)
 	require.NoError(t, err)
 
 	_, err = db.NewDelete().Model((*Video)(nil)).Where("1 = 1").ForceDelete().Exec(ctx)
@@ -52,14 +50,12 @@ func testSoftDeleteNilModel(t *testing.T, db *bun.DB) {
 
 func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Video)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Video)(nil))
 
 	video1 := &Video{
 		ID: 1,
 	}
-	_, err = db.NewInsert().Model(video1).Exec(ctx)
+	_, err := db.NewInsert().Model(video1).Exec(ctx)
 	require.NoError(t, err)
 
 	// Count visible videos.
@@ -107,9 +103,7 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 
 func testSoftDeleteForce(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Video)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Video)(nil))
 
 	videos := []Video{
 		{Name: "video1"},
@@ -117,7 +111,7 @@ func testSoftDeleteForce(t *testing.T, db *bun.DB) {
 		{Name: "video3"},
 	}
 
-	_, err = db.NewInsert().Model(&videos).Exec(ctx)
+	_, err := db.NewInsert().Model(&videos).Exec(ctx)
 	require.NoError(t, err)
 
 	// Force delete video1.
@@ -160,15 +154,13 @@ func testSoftDeleteForce(t *testing.T, db *bun.DB) {
 
 func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Video)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Video)(nil))
 
 	videos := []Video{
 		{Name: "video1"},
 		{Name: "video2"},
 	}
-	_, err = db.NewInsert().Model(&videos).Exec(ctx)
+	_, err := db.NewInsert().Model(&videos).Exec(ctx)
 	require.NoError(t, err)
 
 	if db.Dialect().Features().Has(feature.CTE) {

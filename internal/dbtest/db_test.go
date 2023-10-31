@@ -697,10 +697,9 @@ func testRunInTx(t *testing.T, db *bun.DB) {
 		Count int64
 	}
 
-	err := db.ResetModel(ctx, (*Counter)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Counter)(nil))
 
-	_, err = db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
+	_, err := db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
 	require.NoError(t, err)
 
 	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
@@ -741,15 +740,14 @@ func testJSONSpecialChars(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := &Model{
 		Attrs: map[string]interface{}{
 			"hello": "\000world\nworld\u0000",
 		},
 	}
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 
 	model = new(Model)
@@ -775,11 +773,10 @@ func testJSONInterface(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := new(Model)
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 
 	model = &Model{
@@ -819,11 +816,10 @@ func testJSONValuer(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := new(Model)
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 
 	model2 := new(Model)
@@ -886,18 +882,14 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 	}
 
+	mustResetModel(t, ctx, db, (*User)(nil))
 	_, err := db.NewCreateTable().
-		Model((*User)(nil)).
-		IfNotExists().
-		Exec(ctx)
-	require.NoError(t, err)
-
-	_, err = db.NewCreateTable().
 		Model((*Deck)(nil)).
 		IfNotExists().
 		ForeignKey("(user_id) REFERENCES users (id) ON DELETE CASCADE").
 		Exec(ctx)
 	require.NoError(t, err)
+	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
 
 	// Empty deck should violate FK constraint.
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
@@ -941,18 +933,14 @@ func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 	}
 
+	mustResetModel(t, ctx, db, (*User)(nil))
 	_, err := db.NewCreateTable().
-		Model((*User)(nil)).
-		IfNotExists().
-		Exec(ctx)
-	require.NoError(t, err)
-
-	_, err = db.NewCreateTable().
 		Model((*Deck)(nil)).
 		IfNotExists().
 		WithForeignKeys().
 		Exec(ctx)
 	require.NoError(t, err)
+	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
 
 	// Empty deck should violate FK constraint.
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
@@ -1029,18 +1017,15 @@ func testWithForeignKeys(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 	}
 
-	_, err := db.NewCreateTable().
-		Model((*User)(nil)).
-		IfNotExists().
-		Exec(ctx)
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*User)(nil))
 
-	_, err = db.NewCreateTable().
+	_, err := db.NewCreateTable().
 		Model((*Deck)(nil)).
 		IfNotExists().
 		WithForeignKeys().
 		Exec(ctx)
 	require.NoError(t, err)
+	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
 
 	// Empty deck should violate FK constraint.
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
@@ -1127,14 +1112,13 @@ func testScanRawMessage(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	models := []Model{
 		{Value: json.RawMessage(`"hello"`)},
 		{Value: json.RawMessage(`"world"`)},
 	}
-	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	_, err := db.NewInsert().Model(&models).Exec(ctx)
 	require.NoError(t, err)
 
 	var models1 []Model
@@ -1157,8 +1141,7 @@ func testPointers(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 
 	for _, id := range []int64{-1, 0, 1} {
-		err := db.ResetModel(ctx, (*Model)(nil))
-		require.NoError(t, err)
+		mustResetModel(t, ctx, db, (*Model)(nil))
 
 		var model Model
 		if id >= 0 {
@@ -1168,7 +1151,7 @@ func testPointers(t *testing.T, db *bun.DB) {
 
 		}
 
-		_, err = db.NewInsert().Model(&model).Exec(ctx)
+		_, err := db.NewInsert().Model(&model).Exec(ctx)
 		require.NoError(t, err)
 
 		var model2 Model
@@ -1213,11 +1196,9 @@ func testBinaryData(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
-
-	_, err = db.NewInsert().Model(&Model{Data: []byte("hello")}).Exec(ctx)
+	_, err := db.NewInsert().Model(&Model{Data: []byte("hello")}).Exec(ctx)
 	require.NoError(t, err)
 
 	var model Model
@@ -1237,13 +1218,11 @@ func testUpsert(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := &Model{ID: 1, Str: "hello"}
 
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 
 	model.Str = "world"
@@ -1274,13 +1253,11 @@ func testMultiUpdate(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := &Model{ID: 1, Str: "hello"}
 
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 
 	selq := db.NewSelect().Model(new(Model))
@@ -1303,15 +1280,13 @@ func testUpdateWithSkipupdateTag(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	createdAt := time.Now().Truncate(time.Minute).UTC()
 
 	model := &Model{ID: 1, Name: "foo", CreatedAt: createdAt}
 
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.NoError(t, err)
 	require.NotZero(t, model.CreatedAt)
 
@@ -1344,9 +1319,7 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	t.Run("tx", func(t *testing.T) {
 		for i := 0; i < 100; i++ {
@@ -1366,7 +1339,7 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 			{Str: "str1"},
 			{Str: "str2"},
 		}
-		_, err = db.NewInsert().Model(&src).Exec(ctx)
+		_, err := db.NewInsert().Model(&src).Exec(ctx)
 		require.NoError(t, err)
 
 		var dest []Model
@@ -1394,9 +1367,7 @@ func testEmbedModelValue(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	m1 := &Model{
 		X: Embed{
@@ -1424,7 +1395,7 @@ func testEmbedModelValue(t *testing.T, db *bun.DB) {
 			},
 		},
 	}
-	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
 
 	var m2 Model
@@ -1450,9 +1421,7 @@ func testEmbedModelPointer(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	m1 := &Model{
 		X: &Embed{
@@ -1480,7 +1449,7 @@ func testEmbedModelPointer(t *testing.T, db *bun.DB) {
 			},
 		},
 	}
-	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
 
 	var m2 Model
@@ -1496,14 +1465,12 @@ func testEmbedTypeField(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	m1 := &Model{
 		Embed: Embed("foo"),
 	}
-	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
 
 	var m2 Model
@@ -1526,12 +1493,10 @@ func testJSONMarshaler(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	m1 := &Model{Field: new(JSONField)}
-	_, err = db.NewInsert().Model(m1).Exec(ctx)
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
 	require.NoError(t, err)
 
 	var m2 Model
@@ -1556,11 +1521,9 @@ func testNilDriverValue(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
-
-	_, err = db.NewInsert().Model(&Model{}).Exec(ctx)
+	_, err := db.NewInsert().Model(&Model{}).Exec(ctx)
 	require.NoError(t, err)
 
 	_, err = db.NewInsert().Model(&Model{Value: &DriverValue{s: "hello"}}).Exec(ctx)
@@ -1572,10 +1535,9 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 		Count int64
 	}
 
-	err := db.ResetModel(ctx, (*Counter)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Counter)(nil))
 
-	_, err = db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
+	_, err := db.NewInsert().Model(&Counter{Count: 0}).Exec(ctx)
 	require.NoError(t, err)
 
 	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
@@ -1680,12 +1642,10 @@ func testDriverValuerReturnsItself(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	model := &Model{Value: expectedValue}
-	_, err = db.NewInsert().Model(model).Exec(ctx)
+	_, err := db.NewInsert().Model(model).Exec(ctx)
 	require.Error(t, err)
 }
 
@@ -1696,13 +1656,27 @@ func testNoPanicWhenReturningNullColumns(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	modelSlice := []*Model{{Value: "boom"}}
 
 	require.NotPanics(t, func() {
 		db.NewInsert().Model(&modelSlice).Exec(ctx)
+	})
+}
+
+func mustResetModel(tb testing.TB, ctx context.Context, db *bun.DB, models ...interface{}) {
+	err := db.ResetModel(ctx, models...)
+	require.NoError(tb, err, "must reset model")
+	mustDropTableOnCleanup(tb, ctx, db, models...)
+}
+
+func mustDropTableOnCleanup(tb testing.TB, ctx context.Context, db *bun.DB, models ...interface{}) {
+	tb.Cleanup(func() {
+		for _, model := range models {
+			drop := db.NewDropTable().IfExists().Model(model)
+			_, err := drop.Exec(ctx)
+			require.NoError(tb, err, "must drop table: %q", drop.GetTableName())
+		}
 	})
 }
