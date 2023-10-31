@@ -160,7 +160,8 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	require.Equal(t, []string{"down2", "down1"}, history)
 }
 
-func TestAutoMigrator_Migrate(t *testing.T) {
+func TestAutoMigrator_Run(t *testing.T) {
+
 	tests := []struct {
 		fn func(t *testing.T, db *bun.DB)
 	}{
@@ -190,14 +191,17 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	// Arrange
 	ctx := context.Background()
 	di := getDatabaseInspectorOrSkip(t, db)
-	createTableOrSkip(t, ctx, db, (*initial)(nil))
+	mustResetModel(t, ctx, db, (*initial)(nil))
+	mustDropTableOnCleanup(t, ctx, db, (*changed)(nil))
 
-	m, err := migrate.NewAutoMigrator(db)
+	m, err := migrate.NewAutoMigrator(db,
+		migrate.WithTableNameAuto(migrationsTable),
+		migrate.WithLocksTableNameAuto(migrationLocksTable),
+		migrate.WithModel((*changed)(nil)))
 	require.NoError(t, err)
-	m.SetModels((*changed)(nil))
 
 	// Act
-	err = m.Migrate(ctx)
+	err = m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
@@ -209,27 +213,13 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	require.Equal(t, "changed", tables[0].Name)
 }
 
-func createTableOrSkip(tb testing.TB, ctx context.Context, db *bun.DB, model interface{}) {
-	tb.Helper()
-	if _, err := db.NewCreateTable().IfNotExists().Model(model).Exec(ctx); err != nil {
-		tb.Skip("setup failed:", err)
-	}
-	tb.Cleanup(func() {
-		if _, err := db.NewDropTable().IfExists().Model(model).Exec(ctx); err != nil {
-			tb.Log("cleanup:", err)
-		}
-	})
-}
-
 func TestDetector_Diff(t *testing.T) {
 	tests := []struct {
-		name       string
-		states     func(testing.TB, context.Context, func() schema.Dialect) (stateDb schema.State, stateModel schema.State)
+		states     func(testing.TB, context.Context, schema.Dialect) (stateDb schema.State, stateModel schema.State)
 		operations []migrate.Operation
 	}{
 		{
-			name:   "find a renamed table",
-			states: renamedTableStates,
+			states: testDetectRenamedTable,
 			operations: []migrate.Operation{
 				&migrate.RenameTable{
 					From: "books",
@@ -239,13 +229,9 @@ func TestDetector_Diff(t *testing.T) {
 		},
 	}
 
-	testEachDialect(t, func(t *testing.T, dialectName string, dialect func() schema.Dialect) {
-		if dialectName != "pg" {
-			t.Skip()
-		}
-
+	testEachDialect(t, func(t *testing.T, dialectName string, dialect schema.Dialect) {
 		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
+			t.Run(funcName(tt.states), func(t *testing.T) {
 				ctx := context.Background()
 				var d migrate.Detector
 				stateDb, stateModel := tt.states(t, ctx, dialect)
@@ -258,7 +244,7 @@ func TestDetector_Diff(t *testing.T) {
 	})
 }
 
-func renamedTableStates(tb testing.TB, ctx context.Context, dialect func() schema.Dialect) (s1, s2 schema.State) {
+func testDetectRenamedTable(tb testing.TB, ctx context.Context, dialect schema.Dialect) (s1, s2 schema.State) {
 	type Book struct {
 		bun.BaseModel
 
@@ -279,17 +265,20 @@ func renamedTableStates(tb testing.TB, ctx context.Context, dialect func() schem
 		Title string `bun:"title,notnull"`
 		Pages int    `bun:"page_count,notnull,default:0"`
 	}
-	return getState(tb, ctx, dialect(),
+	return getState(tb, ctx, dialect,
 			(*Author)(nil),
 			(*Book)(nil),
-		), getState(tb, ctx, dialect(),
+		), getState(tb, ctx, dialect,
 			(*Author)(nil),
 			(*BookRenamed)(nil),
 		)
 }
 
 func getState(tb testing.TB, ctx context.Context, dialect schema.Dialect, models ...interface{}) schema.State {
-	inspector := schema.NewInspector(dialect, models...)
+	tables := schema.NewTables(dialect)
+	tables.Register(models...)
+
+	inspector := schema.NewInspector(tables)
 	state, err := inspector.Inspect(ctx)
 	if err != nil {
 		tb.Skip("get state: %w", err)

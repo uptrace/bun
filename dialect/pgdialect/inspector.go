@@ -10,30 +10,38 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func (d *Dialect) Inspector(db *bun.DB) schema.Inspector {
-	return newDatabaseInspector(db)
+func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) schema.Inspector {
+	return newInspector(db, excludeTables...)
 }
 
-type DatabaseInspector struct {
-	db *bun.DB
+type Inspector struct {
+	db            *bun.DB
+	excludeTables []string
 }
 
-var _ schema.Inspector = (*DatabaseInspector)(nil)
+var _ schema.Inspector = (*Inspector)(nil)
 
-func newDatabaseInspector(db *bun.DB) *DatabaseInspector {
-	return &DatabaseInspector{db: db}
+func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
+	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (di *DatabaseInspector) Inspect(ctx context.Context) (schema.State, error) {
+func (in *Inspector) Inspect(ctx context.Context) (schema.State, error) {
 	var state schema.State
+
+	exclude := in.excludeTables
+	if len(exclude) == 0 {
+		// Avoid getting NOT IN (NULL) if bun.In() is called with an empty slice.
+		exclude = []string{""}
+	}
+
 	var tables []*InformationSchemaTable
-	if err := di.db.NewRaw(sqlInspectTables).Scan(ctx, &tables); err != nil {
+	if err := in.db.NewRaw(sqlInspectTables, bun.In(exclude)).Scan(ctx, &tables); err != nil {
 		return state, err
 	}
 
 	for _, table := range tables {
 		var columns []*InformationSchemaColumn
-		if err := di.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
+		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
 			return state, err
 		}
 		colDefs := make(map[string]schema.ColumnDef)
@@ -105,6 +113,7 @@ FROM information_schema.tables
 WHERE table_type = 'BASE TABLE'
 	AND table_schema <> 'information_schema'
 	AND table_schema NOT LIKE 'pg_%'
+	AND table_name NOT IN (?)
 	`
 
 	// sqlInspectColumnsQuery retrieves column definitions for the specified table.
