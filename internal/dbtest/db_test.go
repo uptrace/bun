@@ -1567,6 +1567,27 @@ func testEmbedModelPointer(t *testing.T, db *bun.DB) {
 	require.Equal(t, *m1, m2)
 }
 
+func testEmbedTypeField(t *testing.T, db *bun.DB) {
+	type Embed string
+	type Model struct {
+		Embed
+	}
+
+	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	m1 := &Model{
+		Embed: Embed("foo"),
+	}
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
+	require.NoError(t, err)
+
+	var m2 Model
+	err = db.NewSelect().Model(&m2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *m1, m2)
+}
+
 type JSONField struct {
 	Foo string `json:"foo"`
 }
