@@ -364,3 +364,12 @@ func (q *CreateTableQuery) afterCreateTableHook(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (q *CreateTableQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
