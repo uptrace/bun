@@ -14,8 +14,8 @@ type State struct {
 }
 
 type TableDef struct {
-	Schema string
-	Name string
+	Schema  string
+	Name    string
 	Columns map[string]ColumnDef
 }
 
@@ -29,48 +29,39 @@ type ColumnDef struct {
 }
 
 type SchemaInspector struct {
-	dialect Dialect
+	tables *Tables
 }
 
 var _ Inspector = (*SchemaInspector)(nil)
 
-func NewInspector(dialect Dialect, models ...interface{}) *SchemaInspector {
-	dialect.Tables().Register(models...)
+func NewInspector(tables *Tables) *SchemaInspector {
 	return &SchemaInspector{
-		dialect: dialect,
+		tables: tables,
 	}
 }
 
+// Inspect creates the current project state from the passed bun.Models.
+// Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
 func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 	var state State
-	for _, t := range si.dialect.Tables().All() {
+	for _, t := range si.tables.All() {
 		columns := make(map[string]ColumnDef)
 		for _, f := range t.Fields {
 			columns[f.Name] = ColumnDef{
-				SQLType: f.CreateTableSQLType,
-				DefaultValue: f.SQLDefault,
-				IsPK: f.IsPK,
-				IsNullable: !f.NotNull,
+				SQLType:         strings.ToLower(f.CreateTableSQLType),
+				DefaultValue:    f.SQLDefault,
+				IsPK:            f.IsPK,
+				IsNullable:      !f.NotNull,
 				IsAutoIncrement: f.AutoIncrement,
-				IsIdentity: f.Identity,
+				IsIdentity:      f.Identity,
 			}
 		}
 
-		schema, table := splitTableNameTag(si.dialect, t.Name)
 		state.Tables = append(state.Tables, TableDef{
-			Schema: schema,
-			Name: table,
+			Schema:  t.Schema,
+			Name:    t.Name,
 			Columns: columns,
 		})
 	}
 	return state, nil
-}
-
-// splitTableNameTag
-func splitTableNameTag(d Dialect, nameTag string) (string, string) {
-	schema, table := d.DefaultSchema(), nameTag
-	if schemaTable := strings.Split(nameTag, "."); len(schemaTable) == 2 {
-		schema, table = schemaTable[0], schemaTable[1]
-	}
-	return schema, table
 }
