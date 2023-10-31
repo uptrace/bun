@@ -355,14 +355,13 @@ func testRelationBelongsToSelf(t *testing.T, db *bun.DB) {
 		Model   *Model `bun:"rel:belongs-to"`
 	}
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	models := []Model{
 		{ID: 1},
 		{ID: 2, ModelID: 1},
 	}
-	_, err = db.NewInsert().Model(&models).Exec(ctx)
+	_, err := db.NewInsert().Model(&models).Exec(ctx)
 	require.NoError(t, err)
 
 	models = nil
@@ -396,15 +395,13 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 	}
 
 	db.RegisterModel((*OrderToItem)(nil))
-
-	err := db.ResetModel(ctx, (*Order)(nil), (*Item)(nil), (*OrderToItem)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Order)(nil), (*Item)(nil), (*OrderToItem)(nil))
 
 	items := []Item{
 		{ID: 1, CreatedAt: time.Unix(1, 0), UpdatedAt: time.Unix(1, 0)},
 		{ID: 2, CreatedAt: time.Unix(2, 0), UpdatedAt: time.Unix(1, 0)},
 	}
-	_, err = db.NewInsert().Model(&items).Exec(ctx)
+	_, err := db.NewInsert().Model(&items).Exec(ctx)
 	require.NoError(t, err)
 
 	orders := []Order{
@@ -574,11 +571,7 @@ func createTestSchema(t *testing.T, db *bun.DB) {
 		(*Employee)(nil),
 	}
 	for _, model := range models {
-		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
-		require.NoError(t, err)
-
-		_, err = db.NewCreateTable().Model(model).Exec(ctx)
-		require.NoError(t, err)
+		mustResetModel(t, ctx, db, model)
 	}
 }
 
