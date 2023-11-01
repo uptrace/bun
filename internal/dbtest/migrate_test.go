@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -190,7 +191,10 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 
 	// Arrange
 	ctx := context.Background()
-	di := getDatabaseInspectorOrSkip(t, db)
+	dbInspector, err := sqlschema.NewInspector(db)
+	if err != nil {
+		t.Skip(err)
+	}
 	mustResetModel(t, ctx, db, (*initial)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*changed)(nil))
 
@@ -205,7 +209,7 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	// Assert
-	state, err := di.Inspect(ctx)
+	state, err := dbInspector.Inspect(ctx)
 	require.NoError(t, err)
 
 	tables := state.Tables
@@ -215,7 +219,7 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 
 func TestDetector_Diff(t *testing.T) {
 	tests := []struct {
-		states     func(testing.TB, context.Context, schema.Dialect) (stateDb schema.State, stateModel schema.State)
+		states     func(testing.TB, context.Context, schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State)
 		operations []migrate.Operation
 	}{
 		{
@@ -244,7 +248,7 @@ func TestDetector_Diff(t *testing.T) {
 	})
 }
 
-func testDetectRenamedTable(tb testing.TB, ctx context.Context, dialect schema.Dialect) (s1, s2 schema.State) {
+func testDetectRenamedTable(tb testing.TB, ctx context.Context, dialect schema.Dialect) (s1, s2 sqlschema.State) {
 	type Book struct {
 		bun.BaseModel
 
@@ -274,11 +278,11 @@ func testDetectRenamedTable(tb testing.TB, ctx context.Context, dialect schema.D
 		)
 }
 
-func getState(tb testing.TB, ctx context.Context, dialect schema.Dialect, models ...interface{}) schema.State {
+func getState(tb testing.TB, ctx context.Context, dialect schema.Dialect, models ...interface{}) sqlschema.State {
 	tables := schema.NewTables(dialect)
 	tables.Register(models...)
 
-	inspector := schema.NewInspector(tables)
+	inspector := sqlschema.NewSchemaInspector(tables)
 	state, err := inspector.Inspect(ctx)
 	if err != nil {
 		tb.Skip("get state: %w", err)

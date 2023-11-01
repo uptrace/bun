@@ -12,7 +12,6 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/schema/inspector"
 )
 
 var pgDialect = New()
@@ -32,7 +31,7 @@ type Dialect struct {
 }
 
 var _ schema.Dialect = (*Dialect)(nil)
-var _ inspector.Dialect = (*Dialect)(nil)
+var _ sqlschema.InspectorDialect = (*Dialect)(nil)
 var _ sqlschema.MigratorDialect = (*Dialect)(nil)
 
 func New() *Dialect {
