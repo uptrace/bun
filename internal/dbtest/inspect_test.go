@@ -6,8 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/schema/inspector"
+	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
 func TestDatabaseInspector_Inspect(t *testing.T) {
@@ -24,25 +23,20 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		var dialect inspector.Dialect
-		dbDialect := db.Dialect()
-
-		if id, ok := dbDialect.(inspector.Dialect); ok {
-			dialect = id
-		} else {
-			t.Skipf("%q dialect does not implement inspector.Dialect", dbDialect.Name())
+		dbInspector, err := sqlschema.NewInspector(db)
+		if err != nil {
+			t.Skip(err)
 		}
 
 		ctx := context.Background()
 		mustResetModel(t, ctx, db, (*Book)(nil))
 
-		dbInspector := dialect.Inspector(db)
-		want := schema.State{
-			Tables: []schema.TableDef{
+		want := sqlschema.State{
+			Tables: []sqlschema.Table{
 				{
 					Schema: "public",
 					Name:   "books",
-					Columns: map[string]schema.ColumnDef{
+					Columns: map[string]sqlschema.Column{
 						"isbn": {
 							SQLType:         "bigint",
 							IsPK:            true,
@@ -100,13 +94,4 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, want, got)
 	})
-}
-
-func getDatabaseInspectorOrSkip(tb testing.TB, db *bun.DB) schema.Inspector {
-	dialect := db.Dialect()
-	if id, ok := dialect.(inspector.Dialect); ok {
-		return id.Inspector(db, migrationsTable, migrationLocksTable)
-	}
-	tb.Skipf("%q dialect does not implement inspector.Dialect", dialect.Name())
-	return nil
 }

@@ -7,10 +7,10 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqltype"
-	"github.com/uptrace/bun/schema"
+	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
-func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) schema.Inspector {
+func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) sqlschema.Inspector {
 	return newInspector(db, excludeTables...)
 }
 
@@ -19,14 +19,14 @@ type Inspector struct {
 	excludeTables []string
 }
 
-var _ schema.Inspector = (*Inspector)(nil)
+var _ sqlschema.Inspector = (*Inspector)(nil)
 
 func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (in *Inspector) Inspect(ctx context.Context) (schema.State, error) {
-	var state schema.State
+func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
+	var state sqlschema.State
 
 	exclude := in.excludeTables
 	if len(exclude) == 0 {
@@ -44,7 +44,7 @@ func (in *Inspector) Inspect(ctx context.Context) (schema.State, error) {
 		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
 			return state, err
 		}
-		colDefs := make(map[string]schema.ColumnDef)
+		colDefs := make(map[string]sqlschema.Column)
 		for _, c := range columns {
 			dataType := fromDatabaseType(c.DataType)
 			if strings.EqualFold(dataType, sqltype.VarChar) && c.VarcharLen > 0 {
@@ -56,7 +56,7 @@ func (in *Inspector) Inspect(ctx context.Context) (schema.State, error) {
 				def = ""
 			}
 
-			colDefs[c.Name] = schema.ColumnDef{
+			colDefs[c.Name] = sqlschema.Column{
 				SQLType:         strings.ToLower(dataType),
 				IsPK:            c.IsPK,
 				IsNullable:      c.IsNullable,
@@ -66,7 +66,7 @@ func (in *Inspector) Inspect(ctx context.Context) (schema.State, error) {
 			}
 		}
 
-		state.Tables = append(state.Tables, schema.TableDef{
+		state.Tables = append(state.Tables, sqlschema.Table{
 			Schema:  table.Schema,
 			Name:    table.Name,
 			Columns: colDefs,
