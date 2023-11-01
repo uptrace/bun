@@ -8,7 +8,6 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
-	"github.com/uptrace/bun/schema/inspector"
 )
 
 type AutoMigratorOption func(m *AutoMigrator)
@@ -55,13 +54,13 @@ type AutoMigrator struct {
 	db *bun.DB
 
 	// dbInspector creates the current state for the target database.
-	dbInspector schema.Inspector
+	dbInspector sqlschema.Inspector
 
 	// modelInspector creates the desired state based on the model definitions.
-	modelInspector schema.Inspector
+	modelInspector sqlschema.Inspector
 
-	// schemaMigrator executes ALTER TABLE queries.
-	schemaMigrator sqlschema.Migrator
+	// dbMigrator executes ALTER TABLE queries.
+	dbMigrator sqlschema.Migrator
 
 	table      string
 	locksTable string
@@ -88,22 +87,21 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 	}
 	am.excludeTables = append(am.excludeTables, am.table, am.locksTable)
 
-	schemaMigrator, err := sqlschema.NewMigrator(db)
+	dbInspector, err := sqlschema.NewInspector(db, am.excludeTables...)
 	if err != nil {
 		return nil, err
 	}
-	am.schemaMigrator = schemaMigrator
+	am.dbInspector = dbInspector
+
+	dbMigrator, err := sqlschema.NewMigrator(db)
+	if err != nil {
+		return nil, err
+	}
+	am.dbMigrator = dbMigrator
 
 	tables := schema.NewTables(db.Dialect())
 	tables.Register(am.includeModels...)
-	am.modelInspector = schema.NewInspector(tables)
-
-	dialect := db.Dialect()
-	inspectorDialect, ok := dialect.(inspector.Dialect)
-	if !ok {
-		return nil, fmt.Errorf("%q dialect does not implement inspector.Dialect", dialect.Name())
-	}
-	am.dbInspector = inspectorDialect.Inspector(db, am.excludeTables...)
+	am.modelInspector = sqlschema.NewSchemaInspector(tables)
 
 	return am, nil
 }
@@ -138,8 +136,8 @@ func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) er
 	name, _ := genMigrationName("auto")
 	migrations.Add(Migration{
 		Name:    name,
-		Up:      changeset.Up(am.schemaMigrator),
-		Down:    changeset.Down(am.schemaMigrator),
+		Up:      changeset.Up(am.dbMigrator),
+		Down:    changeset.Down(am.dbMigrator),
 		Comment: "Changes detected by bun.migrate.AutoMigrator",
 	})
 
@@ -160,7 +158,7 @@ func (am *AutoMigrator) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("run auto migrate: %w", err)
 	}
-	up := changeset.Up(am.schemaMigrator)
+	up := changeset.Up(am.dbMigrator)
 	if err := up(ctx, am.db); err != nil {
 		return fmt.Errorf("run auto migrate: %w", err)
 	}
@@ -243,7 +241,7 @@ func (c *Changeset) Down(m sqlschema.Migrator) MigrationFunc {
 
 type Detector struct{}
 
-func (d *Detector) Diff(got, want schema.State) Changeset {
+func (d *Detector) Diff(got, want sqlschema.State) Changeset {
 	var changes Changeset
 
 	// Detect renamed models
@@ -254,7 +252,7 @@ func (d *Detector) Diff(got, want schema.State) Changeset {
 	for _, added := range addedModels.Values() {
 		removedModels := oldModels.Sub(newModels)
 		for _, removed := range removedModels.Values() {
-			if !haveSameSignature(added, removed) {
+			if !sqlschema.EqualSignatures(added, removed) {
 				continue
 			}
 			changes.Add(&RenameTable{
@@ -267,21 +265,14 @@ func (d *Detector) Diff(got, want schema.State) Changeset {
 	return changes
 }
 
-// haveSameSignature determines if two tables have the same "signature".
-func haveSameSignature(t1, t2 schema.TableDef) bool {
-	sig1 := newSignature(t1)
-	sig2 := newSignature(t2)
-	return sig1.Equals(sig2)
-}
-
 // tableSet stores unique table definitions.
 type tableSet struct {
-	underlying map[string]schema.TableDef
+	underlying map[string]sqlschema.Table
 }
 
-func newTableSet(initial ...schema.TableDef) tableSet {
+func newTableSet(initial ...sqlschema.Table) tableSet {
 	set := tableSet{
-		underlying: make(map[string]schema.TableDef),
+		underlying: make(map[string]sqlschema.Table),
 	}
 	for _, t := range initial {
 		set.Add(t)
@@ -289,7 +280,7 @@ func newTableSet(initial ...schema.TableDef) tableSet {
 	return set
 }
 
-func (set tableSet) Add(t schema.TableDef) {
+func (set tableSet) Add(t sqlschema.Table) {
 	set.underlying[t.Name] = t
 }
 
@@ -297,7 +288,7 @@ func (set tableSet) Remove(s string) {
 	delete(set.underlying, s)
 }
 
-func (set tableSet) Values() (tables []schema.TableDef) {
+func (set tableSet) Values() (tables []sqlschema.Table) {
 	for _, t := range set.underlying {
 		tables = append(tables, t)
 	}
@@ -331,38 +322,4 @@ func (set tableSet) String() string {
 		s.WriteString(k)
 	}
 	return s.String()
-}
-
-// signature is a set of column definitions, which allows "relation/name-agnostic" comparison between them;
-// meaning that two columns are considered equal if their types are the same.
-type signature struct {
-
-	// underlying stores the number of occurences for each unique column type.
-	// It helps to account for the fact that a table might have multiple columns that have the same type.
-	underlying map[schema.ColumnDef]int
-}
-
-func newSignature(t schema.TableDef) signature {
-	s := signature{
-		underlying: make(map[schema.ColumnDef]int),
-	}
-	s.scan(t)
-	return s
-}
-
-// scan iterates over table's field and counts occurrences of each unique column definition.
-func (s *signature) scan(t schema.TableDef) {
-	for _, c := range t.Columns {
-		s.underlying[c]++
-	}
-}
-
-// Equals returns true if 2 signatures share an identical set of columns.
-func (s *signature) Equals(other signature) bool {
-	for k, count := range s.underlying {
-		if countOther, ok := other.underlying[k]; !ok || countOther != count {
-			return false
-		}
-	}
-	return true
 }
