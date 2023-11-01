@@ -2,7 +2,6 @@ package sqlschema
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/uptrace/bun"
@@ -11,7 +10,7 @@ import (
 
 type MigratorDialect interface {
 	schema.Dialect
-	Migrator(*sql.DB) Migrator
+	Migrator(*bun.DB) Migrator
 }
 
 type Migrator interface {
@@ -28,6 +27,6 @@ func NewMigrator(db *bun.DB) (Migrator, error) {
 		return nil, fmt.Errorf("%q dialect does not implement sqlschema.Migrator", db.Dialect().Name())
 	}
 	return &migrator{
-		Migrator: md.Migrator(db.DB),
+		Migrator: md.Migrator(db),
 	}, nil
 }

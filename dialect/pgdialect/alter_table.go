@@ -2,23 +2,23 @@ package pgdialect
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
-func (d *Dialect) Migrator(sqldb *sql.DB) sqlschema.Migrator {
-	return &Migrator{sqldb: sqldb}
+func (d *Dialect) Migrator(db *bun.DB) sqlschema.Migrator {
+	return &Migrator{db: db}
 }
 
 type Migrator struct {
-	sqldb *sql.DB
+	db *bun.DB
 }
 
 func (m *Migrator) RenameTable(ctx context.Context, oldName, newName string) error {
 	query := fmt.Sprintf("ALTER TABLE %s RENAME TO %s", oldName, newName)
-	_, err := m.sqldb.ExecContext(ctx, query)
+	_, err := m.db.ExecContext(ctx, query)
 	if err != nil {
 		return err
 	}
