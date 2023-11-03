@@ -86,6 +86,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 	table.setName(tableName)
 	table.Alias = table.ModelName
 	table.SQLAlias = table.quoteIdent(table.ModelName)
+	table.Schema = dialect.DefaultSchema()
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
@@ -382,7 +383,7 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if s, ok := tag.Option("table"); ok {
-		schema, _ := t.schemaFromTagName(tag.Name)
+		schema, _ := t.schemaFromTagName(s)
 		t.Schema = schema
 		t.setName(s)
 	}

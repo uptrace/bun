@@ -167,31 +167,56 @@ func (am *AutoMigrator) Run(ctx context.Context) error {
 
 // INTERNAL -------------------------------------------------------------------
 
-// Operation is an abstraction a level above a MigrationFunc.
-// Apart from storing the function to execute the change,
-// it knows how to *write* the corresponding code, and what the reverse operation is.
-type Operation interface {
-	Func(sqlschema.Migrator) MigrationFunc
-	// GetReverse returns an operation that can revert the current one.
-	GetReverse() Operation
-}
+type Detector struct{}
 
-type RenameTable struct {
-	From string
-	To   string
-}
+func (d *Detector) Diff(got, want sqlschema.State) Changeset {
+	var changes Changeset
 
-func (rt *RenameTable) Func(m sqlschema.Migrator) MigrationFunc {
-	return func(ctx context.Context, db *bun.DB) error {
-		return m.RenameTable(ctx, rt.From, rt.To)
+	oldModels := newTableSet(got.Tables...)
+	newModels := newTableSet(want.Tables...)
+
+	addedModels := newModels.Sub(oldModels)
+
+AddedLoop:
+	for _, added := range addedModels.Values() {
+		removedModels := oldModels.Sub(newModels)
+		for _, removed := range removedModels.Values() {
+			if d.canRename(added, removed) {
+				changes.Add(&RenameTable{
+					Schema: removed.Schema,
+					From:   removed.Name,
+					To:     added.Name,
+				})
+
+				// TODO: check for altered columns.
+
+				// Do not check this model further, we know it was renamed.
+				oldModels.Remove(removed.Name)
+				continue AddedLoop
+			}
+		}
+		// If a new table did not appear because of the rename operation, then it must've been created.
+		changes.Add(&CreateTable{
+			Schema: added.Schema,
+			Name:   added.Name,
+			Model:  added.Model,
+		})
 	}
+
+	// Tables that aren't present anymore and weren't renamed were deleted.
+	for _, t := range oldModels.Sub(newModels).Values() {
+		changes.Add(&DropTable{
+			Schema: t.Schema,
+			Name:   t.Name,
+		})
+	}
+
+	return changes
 }
 
-func (rt *RenameTable) GetReverse() Operation {
-	return &RenameTable{
-		From: rt.To,
-		To:   rt.From,
-	}
+// canRename checks if t1 can be renamed to t2.
+func (d Detector) canRename(t1, t2 sqlschema.Table) bool {
+	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2)
 }
 
 // Changeset is a set of changes that alter database state.
@@ -201,14 +226,24 @@ type Changeset struct {
 
 var _ Operation = (*Changeset)(nil)
 
+func (c Changeset) String() string {
+	var ops []string
+	for _, op := range c.operations {
+		ops = append(ops, op.String())
+	}
+	return strings.Join(ops, "\n")
+}
+
 func (c Changeset) Operations() []Operation {
 	return c.operations
 }
 
-func (c *Changeset) Add(op Operation) {
-	c.operations = append(c.operations, op)
+// Add new operations to the changeset.
+func (c *Changeset) Add(op ...Operation) {
+	c.operations = append(c.operations, op...)
 }
 
+// Func chains all underlying operations in a single MigrationFunc.
 func (c *Changeset) Func(m sqlschema.Migrator) MigrationFunc {
 	return func(ctx context.Context, db *bun.DB) error {
 		for _, op := range c.operations {
@@ -239,31 +274,117 @@ func (c *Changeset) Down(m sqlschema.Migrator) MigrationFunc {
 	return c.GetReverse().Func(m)
 }
 
-type Detector struct{}
+// Operation is an abstraction a level above a MigrationFunc.
+// Apart from storing the function to execute the change,
+// it knows how to *write* the corresponding code, and what the reverse operation is.
+type Operation interface {
+	fmt.Stringer
 
-func (d *Detector) Diff(got, want sqlschema.State) Changeset {
-	var changes Changeset
-
-	// Detect renamed models
-	oldModels := newTableSet(got.Tables...)
-	newModels := newTableSet(want.Tables...)
-
-	addedModels := newModels.Sub(oldModels)
-	for _, added := range addedModels.Values() {
-		removedModels := oldModels.Sub(newModels)
-		for _, removed := range removedModels.Values() {
-			if !sqlschema.EqualSignatures(added, removed) {
-				continue
-			}
-			changes.Add(&RenameTable{
-				From: removed.Name,
-				To:   added.Name,
-			})
-		}
-	}
-
-	return changes
+	Func(sqlschema.Migrator) MigrationFunc
+	// GetReverse returns an operation that can revert the current one.
+	GetReverse() Operation
 }
+
+// noop is a migration that doesn't change the schema.
+type noop struct{}
+
+var _ Operation = (*noop)(nil)
+
+func (*noop) String() string { return "noop" }
+func (*noop) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error { return nil }
+}
+func (*noop) GetReverse() Operation { return &noop{} }
+
+type RenameTable struct {
+	Schema string
+	From   string
+	To     string
+}
+
+var _ Operation = (*RenameTable)(nil)
+
+func (op RenameTable) String() string {
+	return fmt.Sprintf(
+		"Rename table %q.%q to %q.%q",
+		op.Schema, trimSchema(op.From), op.Schema, trimSchema(op.To),
+	)
+}
+
+func (op *RenameTable) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.RenameTable(ctx, op.From, op.To)
+	}
+}
+
+func (op *RenameTable) GetReverse() Operation {
+	return &RenameTable{
+		From: op.To,
+		To:   op.From,
+	}
+}
+
+type CreateTable struct {
+	Schema string
+	Name   string
+	Model  interface{}
+}
+
+var _ Operation = (*CreateTable)(nil)
+
+func (op CreateTable) String() string {
+	return fmt.Sprintf("CreateTable %T", op.Model)
+}
+
+func (op *CreateTable) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.CreateTable(ctx, op.Model)
+	}
+}
+
+func (op *CreateTable) GetReverse() Operation {
+	return &DropTable{
+		Schema: op.Schema,
+		Name:   op.Name,
+	}
+}
+
+type DropTable struct {
+	Schema string
+	Name   string
+}
+
+var _ Operation = (*DropTable)(nil)
+
+func (op DropTable) String() string {
+	return fmt.Sprintf("DropTable %q.%q", op.Schema, trimSchema(op.Name))
+}
+
+func (op *DropTable) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.DropTable(ctx, op.Schema, op.Name)
+	}
+}
+
+// GetReverse for a DropTable returns a no-op migration. Logically, CreateTable is the reverse,
+// but DropTable does not have the table's definition to create one.
+//
+// TODO: we can fetch table definitions for deleted tables
+// from the database engine and execute them as a raw query.
+func (op *DropTable) GetReverse() Operation {
+	return &noop{}
+}
+
+// trimSchema drops schema name from the table name.
+// This is a workaroud until schema.Table.Schema is fully integrated with other bun packages.
+func trimSchema(name string) string {
+	if strings.Contains(name, ".") {
+		return strings.Split(name, ".")[1]
+	}
+	return name
+}
+
+// sqlschema utils ------------------------------------------------------------
 
 // tableSet stores unique table definitions.
 type tableSet struct {

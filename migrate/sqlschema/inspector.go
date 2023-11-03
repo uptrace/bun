@@ -32,6 +32,8 @@ func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
 	}, nil
 }
 
+// SchemaInspector creates the current project state from the passed bun.Models.
+// Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
 type SchemaInspector struct {
 	tables *schema.Tables
 }
@@ -44,8 +46,6 @@ func NewSchemaInspector(tables *schema.Tables) *SchemaInspector {
 	}
 }
 
-// Inspect creates the current project state from the passed bun.Models.
-// Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
 func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 	var state State
 	for _, t := range si.tables.All() {
@@ -64,6 +64,7 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 		state.Tables = append(state.Tables, Table{
 			Schema:  t.Schema,
 			Name:    t.Name,
+			Model:   t.ZeroIface,
 			Columns: columns,
 		})
 	}

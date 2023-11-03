@@ -7,6 +7,7 @@ type State struct {
 type Table struct {
 	Schema  string
 	Name    string
+	Model   interface{}
 	Columns map[string]Column
 }
 

@@ -9,10 +9,12 @@ import (
 )
 
 func (d *Dialect) Migrator(db *bun.DB) sqlschema.Migrator {
-	return &Migrator{db: db}
+	return &Migrator{db: db, BaseMigrator: sqlschema.NewBaseMigrator(db)}
 }
 
 type Migrator struct {
+	*sqlschema.BaseMigrator
+
 	db *bun.DB
 }
 
