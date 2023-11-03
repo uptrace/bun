@@ -83,6 +83,7 @@ func newTable(dialect Dialect, typ reflect.Type) *Table {
 	t.setName(tableName)
 	t.Alias = t.ModelName
 	t.SQLAlias = t.quoteIdent(t.ModelName)
+	t.Schema = t.dialect.DefaultSchema()
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -281,7 +282,7 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if s, ok := tag.Option("table"); ok {
-		schema, _ := t.schemaFromTagName(tag.Name)
+		schema, _ := t.schemaFromTagName(s)
 		t.Schema = schema
 		t.setName(s)
 	}

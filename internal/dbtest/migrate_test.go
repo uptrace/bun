@@ -3,7 +3,9 @@ package dbtest_test
 import (
 	"context"
 	"errors"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -167,6 +169,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		fn func(t *testing.T, db *bun.DB)
 	}{
 		{testRenameTable},
+		{testCreateDropTable},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -217,68 +220,181 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	require.Equal(t, "changed", tables[0].Name)
 }
 
-func TestDetector_Diff(t *testing.T) {
-	tests := []struct {
-		states     func(testing.TB, context.Context, schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State)
-		operations []migrate.Operation
-	}{
-		{
-			states: testDetectRenamedTable,
-			operations: []migrate.Operation{
-				&migrate.RenameTable{
-					From: "books",
-					To:   "books_renamed",
-				},
-			},
-		},
+func testCreateDropTable(t *testing.T, db *bun.DB) {
+	type DropMe struct {
+		bun.BaseModel `bun:"table:dropme"`
+		Foo           int `bun:"foo,identity"`
 	}
 
+	type CreateMe struct {
+		bun.BaseModel `bun:"table:createme"`
+		Bar           string `bun:",pk,default:gen_random_uuid()"`
+		Baz           time.Time
+	}
+
+	// Arrange
+	ctx := context.Background()
+	dbInspector, err := sqlschema.NewInspector(db)
+	if err != nil {
+		t.Skip(err)
+	}
+	mustResetModel(t, ctx, db, (*DropMe)(nil))
+	mustDropTableOnCleanup(t, ctx, db, (*CreateMe)(nil))
+
+	m, err := migrate.NewAutoMigrator(db,
+		migrate.WithTableNameAuto(migrationsTable),
+		migrate.WithLocksTableNameAuto(migrationLocksTable),
+		migrate.WithModel((*CreateMe)(nil)))
+	require.NoError(t, err)
+
+	// Act
+	err = m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state, err := dbInspector.Inspect(ctx)
+	require.NoError(t, err)
+
+	tables := state.Tables
+	require.Len(t, tables, 1)
+	require.Equal(t, "createme", tables[0].Name)
+}
+
+type Journal struct {
+	ISBN  string `bun:"isbn,pk"`
+	Title string `bun:"title,notnull"`
+	Pages int    `bun:"page_count,notnull,default:0"`
+}
+
+type Reader struct {
+	Username string `bun:",pk,default:gen_random_uuid()"`
+}
+
+type ExternalUsers struct {
+	bun.BaseModel `bun:"external.users"`
+	Name          string `bun:",pk"`
+}
+
+func TestDetector_Diff(t *testing.T) {
 	testEachDialect(t, func(t *testing.T, dialectName string, dialect schema.Dialect) {
-		for _, tt := range tests {
+		for _, tt := range []struct {
+			name   string
+			states func(testing.TB, context.Context, schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State)
+			want   []migrate.Operation
+		}{
+			{
+				name: "1 table renamed, 1 added, 2 dropped",
+				states: func(tb testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
+					// Database state -------------
+					type Subscription struct {
+						bun.BaseModel `bun:"table:billing.subscriptions"`
+					}
+					type Review struct{}
+
+					type Author struct {
+						Name string `bun:"name"`
+					}
+
+					// Model state -------------
+					type JournalRenamed struct {
+						bun.BaseModel `bun:"table:journals_renamed"`
+
+						ISBN  string `bun:"isbn,pk"`
+						Title string `bun:"title,notnull"`
+						Pages int    `bun:"page_count,notnull,default:0"`
+					}
+
+					return getState(tb, ctx, d,
+							(*Author)(nil),
+							(*Journal)(nil),
+							(*Review)(nil),
+							(*Subscription)(nil),
+						), getState(tb, ctx, d,
+							(*Author)(nil),
+							(*JournalRenamed)(nil),
+							(*Reader)(nil),
+						)
+				},
+				want: []migrate.Operation{
+					&migrate.RenameTable{
+						Schema: dialect.DefaultSchema(),
+						From:   "journals",
+						To:     "journals_renamed",
+					},
+					&migrate.CreateTable{
+						Model: &Reader{}, // (*Reader)(nil) would be more idiomatic, but schema.Tables
+					},
+					&migrate.DropTable{
+						Schema: "billing",
+						Name:   "billing.subscriptions", // TODO: fix once schema is used correctly
+					},
+					&migrate.DropTable{
+						Schema: dialect.DefaultSchema(),
+						Name:   "reviews",
+					},
+				},
+			},
+			{
+				name: "renaming does not work across schemas",
+				states: func(tb testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
+					// Users have the same columns as the "added" ExternalUsers.
+					// However, we should not recognize it as a RENAME, because only models in the same schema can be renamed.
+					// Instead, this is a DROP + CREATE case.
+					type Users struct {
+						bun.BaseModel `bun:"external_users"`
+						Name          string `bun:",pk"`
+					}
+
+					return getState(tb, ctx, d,
+							(*Users)(nil),
+						), getState(t, ctx, d,
+							(*ExternalUsers)(nil),
+						)
+				},
+				want: []migrate.Operation{
+					&migrate.DropTable{
+						Schema: dialect.DefaultSchema(),
+						Name:   "external_users",
+					},
+					&migrate.CreateTable{
+						Model: &ExternalUsers{},
+					},
+				},
+			},
+		} {
 			t.Run(funcName(tt.states), func(t *testing.T) {
 				ctx := context.Background()
 				var d migrate.Detector
 				stateDb, stateModel := tt.states(t, ctx, dialect)
 
-				diff := d.Diff(stateDb, stateModel)
-
-				require.Equal(t, tt.operations, diff.Operations())
+				got := d.Diff(stateDb, stateModel).Operations()
+				checkEqualChangeset(t, got, tt.want)
 			})
 		}
 	})
 }
 
-func testDetectRenamedTable(tb testing.TB, ctx context.Context, dialect schema.Dialect) (s1, s2 sqlschema.State) {
-	type Book struct {
-		bun.BaseModel
+func checkEqualChangeset(tb testing.TB, got, want []migrate.Operation) {
+	tb.Helper()
 
-		ISBN  string `bun:"isbn,pk"`
-		Title string `bun:"title,notnull"`
-		Pages int    `bun:"page_count,notnull,default:0"`
-	}
+	// Sort alphabetically to ensure we don't fail because of the wrong order
+	sort.Slice(got, func(i, j int) bool {
+		return got[i].String() < got[j].String()
+	})
+	sort.Slice(want, func(i, j int) bool {
+		return want[i].String() < want[j].String()
+	})
 
-	type Author struct {
-		bun.BaseModel
-		Name string `bun:"name"`
-	}
+	var cgot, cwant migrate.Changeset
+	cgot.Add(got...)
+	cwant.Add(want...)
 
-	type BookRenamed struct {
-		bun.BaseModel `bun:"table:books_renamed"`
-
-		ISBN  string `bun:"isbn,pk"`
-		Title string `bun:"title,notnull"`
-		Pages int    `bun:"page_count,notnull,default:0"`
-	}
-	return getState(tb, ctx, dialect,
-			(*Author)(nil),
-			(*Book)(nil),
-		), getState(tb, ctx, dialect,
-			(*Author)(nil),
-			(*BookRenamed)(nil),
-		)
+	require.Equal(tb, cwant.String(), cgot.String())
 }
 
 func getState(tb testing.TB, ctx context.Context, dialect schema.Dialect, models ...interface{}) sqlschema.State {
+	tb.Helper()
+
 	tables := schema.NewTables(dialect)
 	tables.Register(models...)
 
