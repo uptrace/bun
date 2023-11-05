@@ -47,7 +47,9 @@ func NewSchemaInspector(tables *schema.Tables) *SchemaInspector {
 }
 
 func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
-	var state State
+	state := State{
+		FKs: make(map[FK]string),
+	}
 	for _, t := range si.tables.All() {
 		columns := make(map[string]Column)
 		for _, f := range t.Fields {
@@ -67,6 +69,22 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			Model:   t.ZeroIface,
 			Columns: columns,
 		})
+
+		for _, rel := range t.Relations {
+			var fromCols, toCols []string
+			for _, f := range rel.BaseFields {
+				fromCols = append(fromCols, f.Name)
+			}
+			for _, f := range rel.JoinFields {
+				toCols = append(toCols, f.Name)
+			}
+
+			target := rel.JoinTable
+			state.FKs[FK{
+				From: C(t.Schema, t.Name, fromCols...),
+				To:   C(target.Schema, target.Name, toCols...),
+			}] = ""
+		}
 	}
 	return state, nil
 }

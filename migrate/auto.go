@@ -107,7 +107,6 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 }
 
 func (am *AutoMigrator) diff(ctx context.Context) (Changeset, error) {
-	var detector Detector
 	var changes Changeset
 	var err error
 
@@ -120,7 +119,7 @@ func (am *AutoMigrator) diff(ctx context.Context) (Changeset, error) {
 	if err != nil {
 		return changes, err
 	}
-	return detector.Diff(got, want), nil
+	return Diff(got, want), nil
 }
 
 // Migrate writes required changes to a new migration file and runs the migration.
@@ -167,12 +166,23 @@ func (am *AutoMigrator) Run(ctx context.Context) error {
 
 // INTERNAL -------------------------------------------------------------------
 
-type Detector struct{}
+func Diff(got, want sqlschema.State) Changeset {
+	detector := newDetector()
+	return detector.DetectChanges(got, want)
+}
 
-func (d *Detector) Diff(got, want sqlschema.State) Changeset {
-	var changes Changeset
+type detector struct {
+	changes    Changeset
+}
 
-	oldModels := newTableSet(got.Tables...)
+func newDetector() *detector {
+	return &detector{}
+}
+
+func (d *detector) DetectChanges(got, want sqlschema.State) Changeset {
+
+	// TableSets for discovering CREATE/RENAME/DROP TABLE
+	oldModels := newTableSet(got.Tables...) //
 	newModels := newTableSet(want.Tables...)
 
 	addedModels := newModels.Sub(oldModels)
@@ -182,7 +192,7 @@ AddedLoop:
 		removedModels := oldModels.Sub(newModels)
 		for _, removed := range removedModels.Values() {
 			if d.canRename(added, removed) {
-				changes.Add(&RenameTable{
+				d.changes.Add(&RenameTable{
 					Schema: removed.Schema,
 					From:   removed.Name,
 					To:     added.Name,
@@ -196,7 +206,7 @@ AddedLoop:
 			}
 		}
 		// If a new table did not appear because of the rename operation, then it must've been created.
-		changes.Add(&CreateTable{
+		d.changes.Add(&CreateTable{
 			Schema: added.Schema,
 			Name:   added.Name,
 			Model:  added.Model,
@@ -205,17 +215,39 @@ AddedLoop:
 
 	// Tables that aren't present anymore and weren't renamed were deleted.
 	for _, t := range oldModels.Sub(newModels).Values() {
-		changes.Add(&DropTable{
+		d.changes.Add(&DropTable{
 			Schema: t.Schema,
 			Name:   t.Name,
 		})
 	}
 
-	return changes
+	// Compare FKs
+	for fk /*, fkName */ := range want.FKs {
+		if _, ok := got.FKs[fk]; !ok {
+			d.changes.Add(&AddForeignKey{
+				SourceTable:   fk.From.Table,
+				SourceColumns: fk.From.Column.Split(),
+				TargetTable:   fk.To.Table,
+				TargetColums:  fk.To.Column.Split(),
+			})
+		}
+	}
+
+	for fk, fkName := range got.FKs {
+		if _, ok := want.FKs[fk]; !ok {
+			d.changes.Add(&DropForeignKey{
+				Schema:         fk.From.Schema,
+				Table:          fk.From.Table,
+				ConstraintName: fkName,
+			})
+		}
+	}
+
+	return d.changes
 }
 
 // canRename checks if t1 can be renamed to t2.
-func (d Detector) canRename(t1, t2 sqlschema.Table) bool {
+func (d detector) canRename(t1, t2 sqlschema.Table) bool {
 	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2)
 }
 
@@ -230,6 +262,9 @@ func (c Changeset) String() string {
 	var ops []string
 	for _, op := range c.operations {
 		ops = append(ops, op.String())
+	}
+	if len(ops) == 0 {
+		return ""
 	}
 	return strings.Join(ops, "\n")
 }
@@ -382,6 +417,50 @@ func trimSchema(name string) string {
 		return strings.Split(name, ".")[1]
 	}
 	return name
+}
+
+type AddForeignKey struct {
+	SourceTable   string
+	SourceColumns []string
+	TargetTable   string
+	TargetColums  []string
+}
+
+var _ Operation = (*AddForeignKey)(nil)
+
+func (op AddForeignKey) String() string {
+	return fmt.Sprintf("AddForeignKey %s(%s) references %s(%s)",
+		op.SourceTable, strings.Join(op.SourceColumns, ","),
+		op.TargetTable, strings.Join(op.TargetColums, ","),
+	)
+}
+
+func (op *AddForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
+	return nil
+}
+
+func (op *AddForeignKey) GetReverse() Operation {
+	return nil
+}
+
+type DropForeignKey struct {
+	Schema         string
+	Table          string
+	ConstraintName string
+}
+
+var _ Operation = (*DropForeignKey)(nil)
+
+func (op *DropForeignKey) String() string {
+	return fmt.Sprintf("DropFK %q on table %q.%q", op.ConstraintName, op.Schema, op.Table)
+}
+
+func (op *DropForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
+	return nil
+}
+
+func (op *DropForeignKey) GetReverse() Operation {
+	return nil
 }
 
 // sqlschema utils ------------------------------------------------------------
