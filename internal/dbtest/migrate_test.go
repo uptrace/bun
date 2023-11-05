@@ -260,22 +260,41 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 	require.Equal(t, "createme", tables[0].Name)
 }
 
-type Journal struct {
-	ISBN  string `bun:"isbn,pk"`
-	Title string `bun:"title,notnull"`
-	Pages int    `bun:"page_count,notnull,default:0"`
-}
-
-type Reader struct {
-	Username string `bun:",pk,default:gen_random_uuid()"`
-}
-
-type ExternalUsers struct {
-	bun.BaseModel `bun:"external.users"`
-	Name          string `bun:",pk"`
-}
-
 func TestDetector_Diff(t *testing.T) {
+	type Journal struct {
+		ISBN  string `bun:"isbn,pk"`
+		Title string `bun:"title,notnull"`
+		Pages int    `bun:"page_count,notnull,default:0"`
+	}
+
+	type Reader struct {
+		Username string `bun:",pk,default:gen_random_uuid()"`
+	}
+
+	type ExternalUsers struct {
+		bun.BaseModel `bun:"external.users"`
+		Name          string `bun:",pk"`
+	}
+
+	// ------------------------------------------------------------------------
+	type ThingNoOwner struct {
+		bun.BaseModel `bun:"things"`
+		ID            int64 `bun:"thing_id,pk"`
+		OwnerID       int64 `bun:",notnull"`
+	}
+
+	type Owner struct {
+		ID int64 `bun:",pk"`
+	}
+
+	type Thing struct {
+		bun.BaseModel `bun:"things"`
+		ID            int64 `bun:"thing_id,pk"`
+		OwnerID       int64 `bun:",notnull"`
+
+		Owner *Owner `bun:"rel:belongs-to,join:owner_id=id"`
+	}
+
 	testEachDialect(t, func(t *testing.T, dialectName string, dialect schema.Dialect) {
 		for _, tt := range []struct {
 			name   string
@@ -283,7 +302,7 @@ func TestDetector_Diff(t *testing.T) {
 			want   []migrate.Operation
 		}{
 			{
-				name: "1 table renamed, 1 added, 2 dropped",
+				name: "1 table renamed, 1 created, 2 dropped",
 				states: func(tb testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
 					// Database state -------------
 					type Subscription struct {
@@ -361,13 +380,111 @@ func TestDetector_Diff(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "detect new FKs on existing columns",
+				states: func(t testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
+					// database state
+					type LonelyUser struct {
+						bun.BaseModel   `bun:"table:users"`
+						Username        string `bun:",pk"`
+						DreamPetKind    string `bun:"pet_kind,notnull"`
+						DreamPetName    string `bun:"pet_name,notnull"`
+						ImaginaryFriend string `bun:"friend"`
+					}
+
+					type Pet struct {
+						Nickname string `bun:",pk"`
+						Kind     string `bun:",pk"`
+					}
+
+					// model state
+					type HappyUser struct {
+						bun.BaseModel `bun:"table:users"`
+						Username      string `bun:",pk"`
+						PetKind       string `bun:"pet_kind,notnull"`
+						PetName       string `bun:"pet_name,notnull"`
+						Friend        string `bun:"friend"`
+
+						Pet        *Pet       `bun:"rel:has-one,join:pet_kind=kind,join:pet_name=nickname"`
+						BestFriend *HappyUser `bun:"rel:has-one,join:friend=username"`
+					}
+
+					return getState(t, ctx, d,
+							(*LonelyUser)(nil),
+							(*Pet)(nil),
+						), getState(t, ctx, d,
+							(*HappyUser)(nil),
+							(*Pet)(nil),
+						)
+				},
+				want: []migrate.Operation{
+					&migrate.AddForeignKey{
+						SourceTable:   "users",
+						SourceColumns: []string{"pet_kind", "pet_name"},
+						TargetTable:   "pets",
+						TargetColums:  []string{"kind", "nickname"},
+					},
+					&migrate.AddForeignKey{
+						SourceTable:   "users",
+						SourceColumns: []string{"friend"},
+						TargetTable:   "users",
+						TargetColums:  []string{"username"},
+					},
+				},
+			},
+			{
+				name: "create FKs for new tables", // TODO: update test case to detect an added column too
+				states: func(t testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
+					return getState(t, ctx, d,
+							(*ThingNoOwner)(nil),
+						), getState(t, ctx, d,
+							(*Owner)(nil),
+							(*Thing)(nil),
+						)
+				},
+				want: []migrate.Operation{
+					&migrate.CreateTable{
+						Model: &Owner{},
+					},
+					&migrate.AddForeignKey{
+						SourceTable:   "things",
+						SourceColumns: []string{"owner_id"},
+						TargetTable:   "owners",
+						TargetColums:  []string{"id"},
+					},
+				},
+			},
+			{
+				name: "drop FKs for dropped tables", // TODO: update test case to detect dropped columns too
+				states: func(t testing.TB, ctx context.Context, d schema.Dialect) (sqlschema.State, sqlschema.State) {
+					stateDb := getState(t, ctx, d, (*Owner)(nil), (*Thing)(nil))
+					stateModel := getState(t, ctx, d, (*ThingNoOwner)(nil))
+
+					// Normally a database state will have the names of the constraints filled in, but we need to mimic that for the test.
+					stateDb.FKs[sqlschema.FK{
+						From: sqlschema.C(d.DefaultSchema(), "things", "owner_id"),
+						To:   sqlschema.C(d.DefaultSchema(), "owners", "id"),
+					}] = "test_fkey"
+					return stateDb, stateModel
+				},
+				want: []migrate.Operation{
+					&migrate.DropTable{
+						Schema: dialect.DefaultSchema(),
+						Name:   "owners",
+					},
+					&migrate.DropForeignKey{
+						Schema:         dialect.DefaultSchema(),
+						Table:          "things",
+						ConstraintName: "test_fkey",
+					},
+				},
+			},
 		} {
-			t.Run(funcName(tt.states), func(t *testing.T) {
+			t.Run(tt.name, func(t *testing.T) {
 				ctx := context.Background()
-				var d migrate.Detector
 				stateDb, stateModel := tt.states(t, ctx, dialect)
 
-				got := d.Diff(stateDb, stateModel).Operations()
+				got := migrate.Diff(stateDb, stateModel).Operations()
 				checkEqualChangeset(t, got, tt.want)
 			})
 		}
