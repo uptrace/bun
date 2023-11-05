@@ -39,6 +39,12 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 		return state, err
 	}
 
+	var fks []*ForeignKey
+	if err := in.db.NewRaw(sqlInspectForeignKeys, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
+		return state, err
+	}
+	state.FKs = make(map[sqlschema.FK]string, len(fks))
+
 	for _, table := range tables {
 		var columns []*InformationSchemaColumn
 		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
@@ -72,12 +78,17 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 			Columns: colDefs,
 		})
 	}
+
+	for _, fk := range fks {
+		state.FKs[sqlschema.FK{
+			From: sqlschema.C(fk.SourceSchema, fk.SourceTable, fk.SourceColumns...),
+			To:   sqlschema.C(fk.TargetSchema, fk.TargetTable, fk.TargetColumns...),
+		}] = fk.ConstraintName
+	}
 	return state, nil
 }
 
 type InformationSchemaTable struct {
-	bun.BaseModel
-
 	Schema string `bun:"table_schema,pk"`
 	Name   string `bun:"table_name,pk"`
 
@@ -85,8 +96,6 @@ type InformationSchemaTable struct {
 }
 
 type InformationSchemaColumn struct {
-	bun.BaseModel
-
 	Schema        string   `bun:"table_schema"`
 	Table         string   `bun:"table_name"`
 	Name          string   `bun:"column_name"`
@@ -104,17 +113,29 @@ type InformationSchemaColumn struct {
 	UniqueGroup   []string `bun:"unique_group,array"`
 }
 
+type ForeignKey struct {
+	ConstraintName string   `bun:"constraint_name"`
+	SourceSchema   string   `bun:"schema_name"`
+	SourceTable    string   `bun:"table_name"`
+	SourceColumns  []string `bun:"columns,array"`
+	TargetSchema   string   `bun:"target_schema"`
+	TargetTable    string   `bun:"target_table"`
+	TargetColumns  []string `bun:"target_columns,array"`
+}
+
 const (
 	// sqlInspectTables retrieves all user-defined tables across all schemas.
 	// It excludes relations from Postgres's reserved "pg_" schemas and views from the "information_schema".
+	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
 	sqlInspectTables = `
-SELECT table_schema, table_name
+SELECT "table_schema", "table_name"
 FROM information_schema.tables
 WHERE table_type = 'BASE TABLE'
-	AND table_schema <> 'information_schema'
-	AND table_schema NOT LIKE 'pg_%'
-	AND table_name NOT IN (?)
-	`
+	AND "table_schema" <> 'information_schema'
+	AND "table_schema" NOT LIKE 'pg_%'
+	AND "table_name" NOT IN (?)
+ORDER BY "table_schema", "table_name"
+`
 
 	// sqlInspectColumnsQuery retrieves column definitions for the specified table.
 	// Unlike sqlInspectTables and sqlInspectSchema, it should be passed to bun.NewRaw
@@ -180,10 +201,13 @@ FROM (
 		) att USING ("table_schema", "table_name", "column_name")
 	) "c"
 WHERE "table_schema" = ? AND "table_name" = ?
-	`
+ORDER BY "table_schema", "table_name", "column_name"
+`
 
 	// sqlInspectSchema retrieves column type definitions for all user-defined tables.
 	// Other relations, such as views and indices, as well as Posgres's internal relations are excluded.
+	//
+	// TODO: implement scanning ORM relations for RawQuery too, so that one could scan this query directly to InformationSchemaTable.
 	sqlInspectSchema = `
 SELECT
 	"t"."table_schema",
@@ -247,5 +271,45 @@ FROM information_schema.tables "t"
 WHERE table_type = 'BASE TABLE'
 	AND table_schema <> 'information_schema'
 	AND table_schema NOT LIKE 'pg_%'
-	`
+ORDER BY table_schema, table_name
+`
+
+	// sqlInspectForeignKeys get FK definitions for user-defined tables.
+	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
+	sqlInspectForeignKeys = `
+WITH
+	"schemas" AS (
+		SELECT oid, nspname
+		FROM pg_namespace
+	),
+	"tables" AS (
+		SELECT oid, relnamespace, relname, relkind
+		FROM pg_class
+	),
+	"columns" AS (
+		SELECT attrelid, attname, attnum
+		FROM pg_attribute
+		WHERE attisdropped = false
+	)
+SELECT DISTINCT
+	co.conname AS "constraint_name",
+	ss.nspname AS schema_name,
+	s.relname AS "table_name",
+	ARRAY_AGG(sc.attname) AS "columns",
+	ts.nspname AS target_schema,
+	"t".relname AS target_table,
+	ARRAY_AGG(tc.attname) AS target_columns
+FROM pg_constraint co
+	LEFT JOIN "tables" s ON s.oid = co.conrelid
+	LEFT JOIN "schemas" ss ON ss.oid = s.relnamespace
+	LEFT JOIN "columns" sc ON sc.attrelid = s.oid AND sc.attnum = ANY(co.conkey)
+	LEFT JOIN "tables" t ON t.oid = co.confrelid
+	LEFT JOIN "schemas" ts ON ts.oid = "t".relnamespace
+	LEFT JOIN "columns" tc ON tc.attrelid = "t".oid AND tc.attnum = ANY(co.confkey)
+WHERE co.contype = 'f'
+	AND co.conrelid IN (SELECT oid FROM pg_class WHERE relkind = 'r')
+	AND ARRAY_POSITION(co.conkey, sc.attnum) = ARRAY_POSITION(co.confkey, tc.attnum)
+	AND s.relname NOT IN (?) AND "t".relname NOT IN (?)
+GROUP BY "constraint_name", "schema_name", "table_name", target_schema, target_table
+`
 )
