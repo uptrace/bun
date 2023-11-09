@@ -17,6 +17,8 @@ type Migrator interface {
 	RenameTable(ctx context.Context, oldName, newName string) error
 	CreateTable(ctx context.Context, model interface{}) error
 	DropTable(ctx context.Context, schema, table string) error
+	AddContraint(ctx context.Context, fk FK, name string) error
+	DropContraint(ctx context.Context, schema, table, name string) error
 }
 
 // Migrator is a dialect-agnostic wrapper for sqlschema.Dialect

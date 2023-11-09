@@ -170,6 +170,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 	}{
 		{testRenameTable},
 		{testCreateDropTable},
+		{testAlterForeignKeys},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -258,6 +259,87 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 	tables := state.Tables
 	require.Len(t, tables, 1)
 	require.Equal(t, "createme", tables[0].Name)
+}
+
+func testAlterForeignKeys(t *testing.T, db *bun.DB) {
+	// Initial state -- each thing has one owner
+	type OwnerExclusive struct {
+		bun.BaseModel `bun:"owners"`
+		ID            int64 `bun:",pk"`
+	}
+
+	type ThingExclusive struct {
+		bun.BaseModel `bun:"things"`
+		ID            int64 `bun:",pk"`
+		OwnerID       int64 `bun:",notnull"`
+
+		Owner *OwnerExclusive `bun:"rel:belongs-to,join:owner_id=id"`
+	}
+
+	// Change -- each thing has multiple owners
+
+	type ThingCommon struct {
+		bun.BaseModel `bun:"things"`
+		ID            int64 `bun:",pk"`
+	}
+
+	type OwnerCommon struct {
+		bun.BaseModel `bun:"owners"`
+		ID            int64          `bun:",pk"`
+		Things        []*ThingCommon `bun:"m2m:things_to_owners,join:Owner=Thing"`
+	}
+
+	type ThingsToOwner struct {
+		OwnerID int64        `bun:",notnull"`
+		Owner   *OwnerCommon `bun:"rel:belongs-to,join:owner_id=id"`
+		ThingID int64        `bun:",notnull"`
+		Thing   *ThingCommon `bun:"rel:belongs-to,join:thing_id=id"`
+	}
+
+	// Arrange
+	ctx := context.Background()
+	dbInspector, err := sqlschema.NewInspector(db)
+	if err != nil {
+		t.Skip(err)
+	}
+	db.RegisterModel((*ThingsToOwner)(nil))
+
+	mustCreateTableWithFKs(t, ctx, db,
+		(*OwnerExclusive)(nil),
+		(*ThingExclusive)(nil),
+	)
+	mustDropTableOnCleanup(t, ctx, db, (*ThingsToOwner)(nil))
+
+	m, err := migrate.NewAutoMigrator(db,
+		migrate.WithTableNameAuto(migrationsTable),
+		migrate.WithLocksTableNameAuto(migrationLocksTable),
+		migrate.WithModel((*ThingCommon)(nil)),
+		migrate.WithModel((*OwnerCommon)(nil)),
+		migrate.WithModel((*ThingsToOwner)(nil)),
+	)
+	require.NoError(t, err)
+
+	// Act
+	err = m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state, err := dbInspector.Inspect(ctx)
+	require.NoError(t, err)
+
+	defaultSchema := db.Dialect().DefaultSchema()
+	require.Contains(t, state.FKs, sqlschema.FK{
+		From: sqlschema.C(defaultSchema, "things_to_owners", "owner_id"),
+		To:   sqlschema.C(defaultSchema, "owners", "id"),
+	})
+	require.Contains(t, state.FKs, sqlschema.FK{
+		From: sqlschema.C(defaultSchema, "things_to_owners", "thing_id"),
+		To:   sqlschema.C(defaultSchema, "things", "id"),
+	})
+	require.NotContains(t, state.FKs, sqlschema.FK{
+		From: sqlschema.C(defaultSchema, "things", "owner_id"),
+		To:   sqlschema.C(defaultSchema, "owners", "id"),
+	})
 }
 
 func TestDetector_Diff(t *testing.T) {
@@ -419,16 +501,20 @@ func TestDetector_Diff(t *testing.T) {
 				},
 				want: []migrate.Operation{
 					&migrate.AddForeignKey{
+						SourceSchema:  dialect.DefaultSchema(),
 						SourceTable:   "users",
 						SourceColumns: []string{"pet_kind", "pet_name"},
+						TargetSchema:  dialect.DefaultSchema(),
 						TargetTable:   "pets",
-						TargetColums:  []string{"kind", "nickname"},
+						TargetColumns: []string{"kind", "nickname"},
 					},
 					&migrate.AddForeignKey{
+						SourceSchema:  dialect.DefaultSchema(),
 						SourceTable:   "users",
 						SourceColumns: []string{"friend"},
+						TargetSchema:  dialect.DefaultSchema(),
 						TargetTable:   "users",
-						TargetColums:  []string{"username"},
+						TargetColumns: []string{"username"},
 					},
 				},
 			},
@@ -447,10 +533,12 @@ func TestDetector_Diff(t *testing.T) {
 						Model: &Owner{},
 					},
 					&migrate.AddForeignKey{
+						SourceSchema:  dialect.DefaultSchema(),
 						SourceTable:   "things",
 						SourceColumns: []string{"owner_id"},
+						TargetSchema:  dialect.DefaultSchema(),
 						TargetTable:   "owners",
-						TargetColums:  []string{"id"},
+						TargetColumns: []string{"id"},
 					},
 				},
 			},

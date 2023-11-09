@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
@@ -172,7 +173,7 @@ func Diff(got, want sqlschema.State) Changeset {
 }
 
 type detector struct {
-	changes    Changeset
+	changes Changeset
 }
 
 func newDetector() *detector {
@@ -225,10 +226,12 @@ AddedLoop:
 	for fk /*, fkName */ := range want.FKs {
 		if _, ok := got.FKs[fk]; !ok {
 			d.changes.Add(&AddForeignKey{
+				SourceSchema:  fk.From.Schema,
 				SourceTable:   fk.From.Table,
 				SourceColumns: fk.From.Column.Split(),
+				TargetSchema:  fk.To.Schema,
 				TargetTable:   fk.To.Table,
-				TargetColums:  fk.To.Column.Split(),
+				TargetColumns: fk.To.Column.Split(),
 			})
 		}
 	}
@@ -420,27 +423,34 @@ func trimSchema(name string) string {
 }
 
 type AddForeignKey struct {
+	SourceSchema  string
 	SourceTable   string
 	SourceColumns []string
+	TargetSchema  string
 	TargetTable   string
-	TargetColums  []string
+	TargetColumns []string
 }
 
 var _ Operation = (*AddForeignKey)(nil)
 
 func (op AddForeignKey) String() string {
-	return fmt.Sprintf("AddForeignKey %s(%s) references %s(%s)",
-		op.SourceTable, strings.Join(op.SourceColumns, ","),
-		op.TargetTable, strings.Join(op.TargetColums, ","),
+	return fmt.Sprintf("AddForeignKey %s.%s(%s) references %s.%s(%s)",
+		op.SourceSchema, op.SourceTable, strings.Join(op.SourceColumns, ","),
+		op.SourceTable, op.TargetTable, strings.Join(op.TargetColumns, ","),
 	)
 }
 
 func (op *AddForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
-	return nil
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.AddContraint(ctx, sqlschema.FK{
+			From: sqlschema.C(op.SourceSchema, op.SourceTable, op.SourceColumns...),
+			To:   sqlschema.C(op.TargetSchema, op.TargetTable, op.TargetColumns...),
+		}, "dummy_name_"+fmt.Sprint(time.Now().UnixNano()))
+	}
 }
 
 func (op *AddForeignKey) GetReverse() Operation {
-	return nil
+	return &noop{} // TODO: unless the WithFKNameFunc is specified, we cannot know what the constraint is called
 }
 
 type DropForeignKey struct {
@@ -456,11 +466,13 @@ func (op *DropForeignKey) String() string {
 }
 
 func (op *DropForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
-	return nil
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.DropContraint(ctx, op.Schema, op.Table, op.ConstraintName)
+	}
 }
 
 func (op *DropForeignKey) GetReverse() Operation {
-	return nil
+	return &noop{} // TODO: store "OldFK" to recreate it
 }
 
 // sqlschema utils ------------------------------------------------------------

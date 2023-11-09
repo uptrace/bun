@@ -92,9 +92,13 @@ func newComposite(columns ...string) composite {
 	return composite(strings.Join(columns, ","))
 }
 
+func (c composite) String() string {
+	return string(c)
+}
+
 // Split returns a slice of column names that make up the composite.
 func (c composite) Split() []string {
-	return strings.Split(string(c), ",")
+	return strings.Split(c.String(), ",")
 }
 
 // Contains checks that a composite column contains every part of another composite.
@@ -146,12 +150,6 @@ func (c cFQN) T() tFQN {
 //	- depends on C{"A", "B", "C"}
 //	- depends on C{"X", "Y", "Z"}
 //	- depends on T{"A", "B"} and T{"X", "Y"}
-//
-// FIXME: current design does not allow for one column referencing multiple columns. Or does it? Think again.
-// Consider:
-//
-//	CONSTRAINT fk_customers FOREIGN KEY (customer_id) REFERENCES customers(id)
-//	CONSTRAINT fk_orders FOREIGN KEY (customer_id) REFERENCES orders(customer_id)
 type FK struct {
 	From cFQN // From is the referencing column.
 	To   cFQN // To is the referenced column.
@@ -188,6 +186,11 @@ func (fk *FK) DependsC(c cFQN) (bool, *cFQN) {
 // RefMap helps detecting modified FK relations.
 // It starts with an initial state and provides methods to update and delete
 // foreign key relations based on the column or table they depend on.
+//
+// Note: this is only important/necessary if we want to rename FKs instead of re-creating them.
+// Most of the time it wouldn't make a difference, but there may be cases in which re-creating FKs could be costly
+// and renaming them would be preferred. For that we could provided an options like WithRenameFKs(true) and
+// WithRenameFKFunc(func(sqlschema.FK) string) to allow customizing the FK naming convention.
 type RefMap map[FK]*FK
 
 // deleted is a special value that RefMap uses to denote a deleted FK constraint.

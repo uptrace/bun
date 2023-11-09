@@ -1784,7 +1784,7 @@ func mustResetModel(tb testing.TB, ctx context.Context, db *bun.DB, models ...in
 func mustDropTableOnCleanup(tb testing.TB, ctx context.Context, db *bun.DB, models ...interface{}) {
 	tb.Cleanup(func() {
 		for _, model := range models {
-			drop := db.NewDropTable().IfExists().Model(model)
+			drop := db.NewDropTable().IfExists().Cascade().Model(model)
 			_, err := drop.Exec(ctx)
 			require.NoError(tb, err, "must drop table: %q", drop.GetTableName())
 		}
