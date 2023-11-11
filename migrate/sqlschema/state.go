@@ -14,6 +14,10 @@ type Table struct {
 	Columns map[string]Column
 }
 
+func (t *Table) T() tFQN {
+	return T(t.Schema, t.Name)
+}
+
 // Column stores attributes of a database column.
 type Column struct {
 	SQLType         string
@@ -57,6 +61,9 @@ func (s *signature) scan(t Table) {
 
 // Equals returns true if 2 signatures share an identical set of columns.
 func (s *signature) Equals(other signature) bool {
+	if len(s.underlying) != len(other.underlying) {
+		return false
+	}
 	for k, count := range s.underlying {
 		if countOther, ok := other.underlying[k]; !ok || countOther != count {
 			return false
@@ -81,6 +88,11 @@ type cFQN struct {
 
 func C(schema, table string, columns ...string) cFQN {
 	return cFQN{tFQN: T(schema, table), Column: newComposite(columns...)}
+}
+
+// T returns the FQN of the column's parent table.
+func (c cFQN) T() tFQN {
+	return c.tFQN
 }
 
 // composite is a hashable representation of []string used to define FKs that depend on multiple columns.
@@ -133,23 +145,14 @@ func (c composite) Replace(oldColumn, newColumn string) composite {
 	return c
 }
 
-// T returns the FQN of the column's parent table.
-func (c cFQN) T() tFQN {
-	return tFQN{Schema: c.Schema, Table: c.Table}
-}
-
 // FK defines a foreign key constraint.
-// FK depends on a column/table if their FQN is included in its definition.
 //
 // Example:
 //
-//	FK{
-//		From: C{"A", "B", "C"},
-//		To:	  C{"X", "Y", "Z"},
+//	fk := FK{
+//		From: C("a", "b", "c_1", "c_2"), // supports multicolumn FKs
+//		To: C("w", "x", "y_1", "y_2")
 //	}
-//	- depends on C{"A", "B", "C"}
-//	- depends on C{"X", "Y", "Z"}
-//	- depends on T{"A", "B"} and T{"X", "Y"}
 type FK struct {
 	From cFQN // From is the referencing column.
 	To   cFQN // To is the referenced column.
@@ -157,6 +160,14 @@ type FK struct {
 
 // DependsT checks if either part of the FK's definition mentions T
 // and returns the columns that belong to T. Notice that *C allows modifying the column's FQN.
+//
+// Example:
+//
+//	FK{
+//		From: C("a", "b", "c"),
+//		To:	  C("x", "y", "z"),
+//	}
+//	depends on T("a", "b") and T("x", "y")
 func (fk *FK) DependsT(t tFQN) (ok bool, cols []*cFQN) {
 	if c := &fk.From; c.T() == t {
 		ok = true
@@ -173,6 +184,14 @@ func (fk *FK) DependsT(t tFQN) (ok bool, cols []*cFQN) {
 }
 
 // DependsC checks if the FK definition mentions C and returns a modifiable FQN of the matching column.
+//
+// Example:
+//
+//	FK{
+//		From: C("a", "b", "c_1", "c_2"),
+//		To:	  C("w", "x", "y_1", "y_2"),
+//	}
+//	depends on C("a", "b", "c_1"), C("a", "b", "c_2"), C("w", "x", "y_1"), and C("w", "x", "y_2")
 func (fk *FK) DependsC(c cFQN) (bool, *cFQN) {
 	switch {
 	case fk.From.Column.Contains(c.Column):
