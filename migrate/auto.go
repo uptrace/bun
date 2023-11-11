@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
@@ -24,6 +23,29 @@ func WithModel(models ...interface{}) AutoMigratorOption {
 func WithExcludeTable(tables ...string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.excludeTables = append(m.excludeTables, tables...)
+	}
+}
+
+// WithFKNameFunc sets the function to build a new name for created or renamed FK constraints.
+//
+// Notice: this option is not supported in SQLite dialect and will have no effect.
+// SQLite does not implement ADD CONSTRAINT, so adding or renaming a constraint will require re-creating the table.
+// We need to support custom FKNameFunc in CreateTable to control how FKs are named.
+//
+// More generally, this option will have no effect whenever FKs are included in the CREATE TABLE definition,
+// which is the default strategy. Perhaps it would make sense to allow disabling this and switching to separate (CreateTable + AddFK)
+func WithFKNameFunc(f func(sqlschema.FK) string) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.diffOpts = append(m.diffOpts, FKNameFunc(f))
+	}
+}
+
+// WithRenameFK prevents AutoMigrator from recreating foreign keys when their dependent relations are renamed,
+// and forces it to run a RENAME CONSTRAINT query instead. Creating an index on a large table can take a very long time,
+// and in those cases simply renaming the FK makes a lot more sense.
+func WithRenameFK(enabled bool) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.diffOpts = append(m.diffOpts, DetectRenamedFKs(enabled))
 	}
 }
 
@@ -63,14 +85,17 @@ type AutoMigrator struct {
 	// dbMigrator executes ALTER TABLE queries.
 	dbMigrator sqlschema.Migrator
 
-	table      string
-	locksTable string
+	table      string // Migrations table (excluded from database inspection)
+	locksTable string // Migration locks table (excluded from database inspection)
 
 	// includeModels define the migration scope.
 	includeModels []interface{}
 
 	// excludeTables are excluded from database inspection.
 	excludeTables []string
+
+	// diffOpts are passed to Diff.
+	diffOpts []DiffOption
 
 	// migratorOpts are passed to Migrator constructor.
 	migratorOpts []MigratorOption
@@ -120,7 +145,7 @@ func (am *AutoMigrator) diff(ctx context.Context) (Changeset, error) {
 	if err != nil {
 		return changes, err
 	}
-	return Diff(got, want), nil
+	return Diff(got, want, am.diffOpts...), nil
 }
 
 // Migrate writes required changes to a new migration file and runs the migration.
@@ -166,33 +191,85 @@ func (am *AutoMigrator) Run(ctx context.Context) error {
 }
 
 // INTERNAL -------------------------------------------------------------------
+// TODO: move to migrate/internal
 
-func Diff(got, want sqlschema.State) Changeset {
-	detector := newDetector()
-	return detector.DetectChanges(got, want)
+type DiffOption func(*detectorConfig)
+
+func FKNameFunc(f func(sqlschema.FK) string) DiffOption {
+	return func(cfg *detectorConfig) {
+		cfg.FKNameFunc = f
+	}
+}
+
+func DetectRenamedFKs(enabled bool) DiffOption {
+	return func(cfg *detectorConfig) {
+		cfg.DetectRenamedFKs = enabled
+	}
+}
+
+func Diff(got, want sqlschema.State, opts ...DiffOption) Changeset {
+	detector := newDetector(got, want, opts...)
+	return detector.DetectChanges()
+}
+
+// detectorConfig controls how differences in the model states are resolved.
+type detectorConfig struct {
+	FKNameFunc       func(sqlschema.FK) string
+	DetectRenamedFKs bool
 }
 
 type detector struct {
+	// current state represents the existing database schema.
+	current sqlschema.State
+
+	// target state represents the database schema defined in bun models.
+	target sqlschema.State
+
 	changes Changeset
+	refMap  sqlschema.RefMap
+
+	// fkNameFunc builds the name for created/renamed FK contraints.
+	fkNameFunc func(sqlschema.FK) string
+
+	// detectRenemedFKS controls how FKs are treated when their references (table/column) are renamed.
+	detectRenamedFKs bool
 }
 
-func newDetector() *detector {
-	return &detector{}
+func newDetector(got, want sqlschema.State, opts ...DiffOption) *detector {
+	cfg := &detectorConfig{
+		FKNameFunc:       defaultFKName,
+		DetectRenamedFKs: false,
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	var existingFKs []sqlschema.FK
+	for fk := range got.FKs {
+		existingFKs = append(existingFKs, fk)
+	}
+
+	return &detector{
+		current:          got,
+		target:           want,
+		refMap:           sqlschema.NewRefMap(existingFKs...),
+		fkNameFunc:       cfg.FKNameFunc,
+		detectRenamedFKs: cfg.DetectRenamedFKs,
+	}
 }
 
-func (d *detector) DetectChanges(got, want sqlschema.State) Changeset {
+func (d *detector) DetectChanges() Changeset {
 
-	// TableSets for discovering CREATE/RENAME/DROP TABLE
-	oldModels := newTableSet(got.Tables...) //
-	newModels := newTableSet(want.Tables...)
+	// Discover CREATE/RENAME/DROP TABLE
+	targetTables := newTableSet(d.target.Tables...)
+	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
 
-	addedModels := newModels.Sub(oldModels)
-
+	addedTables := targetTables.Sub(currentTables)
 AddedLoop:
-	for _, added := range addedModels.Values() {
-		removedModels := oldModels.Sub(newModels)
-		for _, removed := range removedModels.Values() {
-			if d.canRename(added, removed) {
+	for _, added := range addedTables.Values() {
+		removedTables := currentTables.Sub(targetTables)
+		for _, removed := range removedTables.Values() {
+			if d.canRename(removed, added) {
 				d.changes.Add(&RenameTable{
 					Schema: removed.Schema,
 					From:   removed.Name,
@@ -201,8 +278,13 @@ AddedLoop:
 
 				// TODO: check for altered columns.
 
+				// Update referenced table in all related FKs
+				if d.detectRenamedFKs {
+					d.refMap.UpdateT(removed.T(), added.T())
+				}
+
 				// Do not check this model further, we know it was renamed.
-				oldModels.Remove(removed.Name)
+				currentTables.Remove(removed.Name)
 				continue AddedLoop
 			}
 		}
@@ -214,33 +296,52 @@ AddedLoop:
 		})
 	}
 
-	// Tables that aren't present anymore and weren't renamed were deleted.
-	for _, t := range oldModels.Sub(newModels).Values() {
+	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
+	for _, t := range currentTables.Sub(targetTables).Values() {
 		d.changes.Add(&DropTable{
 			Schema: t.Schema,
 			Name:   t.Name,
 		})
 	}
 
-	// Compare FKs
-	for fk /*, fkName */ := range want.FKs {
-		if _, ok := got.FKs[fk]; !ok {
-			d.changes.Add(&AddForeignKey{
-				SourceSchema:  fk.From.Schema,
-				SourceTable:   fk.From.Table,
-				SourceColumns: fk.From.Column.Split(),
-				TargetSchema:  fk.To.Schema,
-				TargetTable:   fk.To.Table,
-				TargetColumns: fk.To.Column.Split(),
+	// Compare and update FKs
+
+	currentFKs := make(map[sqlschema.FK]string)
+	for k, v := range d.current.FKs {
+		currentFKs[k] = v
+	}
+
+	if d.detectRenamedFKs {
+		// Add RenameFK migrations for updated FKs.
+		for old, renamed := range d.refMap.Updated() {
+			newName := d.fkNameFunc(renamed)
+			d.changes.Add(&RenameFK{
+				FK:   renamed, // TODO: make sure this is applied after the table/columns are renamed
+				From: d.current.FKs[old],
+				To:   d.fkNameFunc(renamed),
+			})
+
+			// Here we can add this fk to "current.FKs" to prevent it from firing in the next 2 for-loops.
+			currentFKs[renamed] = newName
+			delete(currentFKs, old)
+		}
+	}
+
+	// Add AddFK migrations for newly added FKs.
+	for fk := range d.target.FKs {
+		if _, ok := currentFKs[fk]; !ok {
+			d.changes.Add(&AddFK{
+				FK:             fk,
+				ConstraintName: d.fkNameFunc(fk),
 			})
 		}
 	}
 
-	for fk, fkName := range got.FKs {
-		if _, ok := want.FKs[fk]; !ok {
-			d.changes.Add(&DropForeignKey{
-				Schema:         fk.From.Schema,
-				Table:          fk.From.Table,
+	// Add DropFK migrations for removed FKs.
+	for fk, fkName := range currentFKs {
+		if _, ok := d.target.FKs[fk]; !ok {
+			d.changes.Add(&DropFK{
+				FK:             fk,
 				ConstraintName: fkName,
 			})
 		}
@@ -422,57 +523,91 @@ func trimSchema(name string) string {
 	return name
 }
 
-type AddForeignKey struct {
-	SourceSchema  string
-	SourceTable   string
-	SourceColumns []string
-	TargetSchema  string
-	TargetTable   string
-	TargetColumns []string
+// defaultFKName returns a name for the FK constraint in the format {tablename}_{columnname(s)}_fkey, following the Postgres convention.
+func defaultFKName(fk sqlschema.FK) string {
+	columnnames := strings.Join(fk.From.Column.Split(), "_")
+	return fmt.Sprintf("%s_%s_fkey", fk.From.Table, columnnames)
 }
 
-var _ Operation = (*AddForeignKey)(nil)
-
-func (op AddForeignKey) String() string {
-	return fmt.Sprintf("AddForeignKey %s.%s(%s) references %s.%s(%s)",
-		op.SourceSchema, op.SourceTable, strings.Join(op.SourceColumns, ","),
-		op.SourceTable, op.TargetTable, strings.Join(op.TargetColumns, ","),
-	)
-}
-
-func (op *AddForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
-	return func(ctx context.Context, db *bun.DB) error {
-		return m.AddContraint(ctx, sqlschema.FK{
-			From: sqlschema.C(op.SourceSchema, op.SourceTable, op.SourceColumns...),
-			To:   sqlschema.C(op.TargetSchema, op.TargetTable, op.TargetColumns...),
-		}, "dummy_name_"+fmt.Sprint(time.Now().UnixNano()))
-	}
-}
-
-func (op *AddForeignKey) GetReverse() Operation {
-	return &noop{} // TODO: unless the WithFKNameFunc is specified, we cannot know what the constraint is called
-}
-
-type DropForeignKey struct {
-	Schema         string
-	Table          string
+type AddFK struct {
+	FK             sqlschema.FK
 	ConstraintName string
 }
 
-var _ Operation = (*DropForeignKey)(nil)
+var _ Operation = (*AddFK)(nil)
 
-func (op *DropForeignKey) String() string {
-	return fmt.Sprintf("DropFK %q on table %q.%q", op.ConstraintName, op.Schema, op.Table)
+func (op AddFK) String() string {
+	source, target := op.FK.From, op.FK.To
+	return fmt.Sprintf("AddForeignKey %q %s.%s(%s) references %s.%s(%s)", op.ConstraintName,
+		source.Schema, source.Table, strings.Join(source.Column.Split(), ","),
+		target.Schema, target.Table, strings.Join(target.Column.Split(), ","),
+	)
 }
 
-func (op *DropForeignKey) Func(m sqlschema.Migrator) MigrationFunc {
+func (op *AddFK) Func(m sqlschema.Migrator) MigrationFunc {
 	return func(ctx context.Context, db *bun.DB) error {
-		return m.DropContraint(ctx, op.Schema, op.Table, op.ConstraintName)
+		return m.AddContraint(ctx, op.FK, op.ConstraintName)
 	}
 }
 
-func (op *DropForeignKey) GetReverse() Operation {
-	return &noop{} // TODO: store "OldFK" to recreate it
+func (op *AddFK) GetReverse() Operation {
+	return &DropFK{
+		FK:             op.FK,
+		ConstraintName: op.ConstraintName,
+	}
+}
+
+type DropFK struct {
+	FK             sqlschema.FK
+	ConstraintName string
+}
+
+var _ Operation = (*DropFK)(nil)
+
+func (op *DropFK) String() string {
+	source := op.FK.From.T()
+	return fmt.Sprintf("DropFK %q on table %q.%q", op.ConstraintName, source.Schema, source.Table)
+}
+
+func (op *DropFK) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		source := op.FK.From.T()
+		return m.DropContraint(ctx, source.Schema, source.Table, op.ConstraintName)
+	}
+}
+
+func (op *DropFK) GetReverse() Operation {
+	return &AddFK{
+		FK:             op.FK,
+		ConstraintName: op.ConstraintName,
+	}
+}
+
+type RenameFK struct {
+	FK   sqlschema.FK
+	From string
+	To   string
+}
+
+var _ Operation = (*RenameFK)(nil)
+
+func (op *RenameFK) String() string {
+	return "RenameFK"
+}
+
+func (op *RenameFK) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		table := op.FK.From
+		return m.RenameConstraint(ctx, table.Schema, table.Table, op.From, op.To)
+	}
+}
+
+func (op *RenameFK) GetReverse() Operation {
+	return &RenameFK{
+		FK:   op.FK,
+		From: op.From,
+		To:   op.To,
+	}
 }
 
 // sqlschema utils ------------------------------------------------------------
