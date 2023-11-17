@@ -164,6 +164,37 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	require.Equal(t, []string{"down2", "down1"}, history)
 }
 
+// newAutoMigrator creates an AutoMigrator configured to use test migratins/locks tables.
+// If the dialect doesn't support schema inspections or migrations, the test will fail with the corresponding error.
+func newAutoMigrator(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigratorOption) *migrate.AutoMigrator {
+	tb.Helper()
+
+	opts = append(opts,
+		migrate.WithTableNameAuto(migrationsTable),
+		migrate.WithLocksTableNameAuto(migrationLocksTable),
+	)
+
+	m, err := migrate.NewAutoMigrator(db, opts...)
+	require.NoError(tb, err)
+	return m
+}
+
+// inspectDbOrSkip returns a function to inspect the current state of the database.
+// It calls tb.Skip() if the current dialect doesn't support database inpection and
+// fails the test if the inspector cannot successfully retrieve database state.
+func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.State {
+	tb.Helper()
+	inspector, err := sqlschema.NewInspector(db)
+	if err != nil {
+		tb.Skip(err)
+	}
+	return func(ctx context.Context) sqlschema.State {
+		state, err := inspector.Inspect(ctx)
+		require.NoError(tb, err)
+		return state
+	}
+}
+
 func TestAutoMigrator_Run(t *testing.T) {
 
 	tests := []struct {
@@ -174,6 +205,8 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testAlterForeignKeys},
 		{testCustomFKNameFunc},
 		{testForceRenameFK},
+		{testRenamedColumns},
+		{testRenameColumnRenamesFK},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -198,28 +231,19 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 
 	// Arrange
 	ctx := context.Background()
-	dbInspector, err := sqlschema.NewInspector(db)
-	if err != nil {
-		t.Skip(err)
-	}
+	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*initial)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*changed)(nil))
-
-	m, err := migrate.NewAutoMigrator(db,
-		migrate.WithTableNameAuto(migrationsTable),
-		migrate.WithLocksTableNameAuto(migrationLocksTable),
-		migrate.WithModel((*changed)(nil)))
-	require.NoError(t, err)
+	m := newAutoMigrator(t, db, migrate.WithModel((*changed)(nil)))
 
 	// Act
-	err = m.Run(ctx)
+	err := m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
-	state, err := dbInspector.Inspect(ctx)
-	require.NoError(t, err)
-
+	state := inspect(ctx)
 	tables := state.Tables
+
 	require.Len(t, tables, 1)
 	require.Equal(t, "changed", tables[0].Name)
 }
@@ -238,28 +262,19 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 
 	// Arrange
 	ctx := context.Background()
-	dbInspector, err := sqlschema.NewInspector(db)
-	if err != nil {
-		t.Skip(err)
-	}
+	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*DropMe)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*CreateMe)(nil))
-
-	m, err := migrate.NewAutoMigrator(db,
-		migrate.WithTableNameAuto(migrationsTable),
-		migrate.WithLocksTableNameAuto(migrationLocksTable),
-		migrate.WithModel((*CreateMe)(nil)))
-	require.NoError(t, err)
+	m := newAutoMigrator(t, db, migrate.WithModel((*CreateMe)(nil)))
 
 	// Act
-	err = m.Run(ctx)
+	err := m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
-	state, err := dbInspector.Inspect(ctx)
-	require.NoError(t, err)
-
+	state := inspect(ctx)
 	tables := state.Tables
+
 	require.Len(t, tables, 1)
 	require.Equal(t, "createme", tables[0].Name)
 }
@@ -301,10 +316,7 @@ func testAlterForeignKeys(t *testing.T, db *bun.DB) {
 
 	// Arrange
 	ctx := context.Background()
-	dbInspector, err := sqlschema.NewInspector(db)
-	if err != nil {
-		t.Skip(err)
-	}
+	inspect := inspectDbOrSkip(t, db)
 	db.RegisterModel((*ThingsToOwner)(nil))
 
 	mustCreateTableWithFKs(t, ctx, db,
@@ -313,23 +325,18 @@ func testAlterForeignKeys(t *testing.T, db *bun.DB) {
 	)
 	mustDropTableOnCleanup(t, ctx, db, (*ThingsToOwner)(nil))
 
-	m, err := migrate.NewAutoMigrator(db,
-		migrate.WithTableNameAuto(migrationsTable),
-		migrate.WithLocksTableNameAuto(migrationLocksTable),
-		migrate.WithModel((*ThingCommon)(nil)),
-		migrate.WithModel((*OwnerCommon)(nil)),
-		migrate.WithModel((*ThingsToOwner)(nil)),
-	)
-	require.NoError(t, err)
+	m := newAutoMigrator(t, db, migrate.WithModel(
+		(*ThingCommon)(nil),
+		(*OwnerCommon)(nil),
+		(*ThingsToOwner)(nil),
+	))
 
 	// Act
-	err = m.Run(ctx)
+	err := m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
-	state, err := dbInspector.Inspect(ctx)
-	require.NoError(t, err)
-
+	state := inspect(ctx)
 	defaultSchema := db.Dialect().DefaultSchema()
 
 	// Crated 2 new constraints
@@ -377,10 +384,7 @@ func testForceRenameFK(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-	dbInspector, err := sqlschema.NewInspector(db)
-	if err != nil {
-		t.Skip(err)
-	}
+	inspect := inspectDbOrSkip(t, db)
 
 	mustCreateTableWithFKs(t, ctx, db,
 		(*Owner)(nil),
@@ -388,31 +392,27 @@ func testForceRenameFK(t *testing.T, db *bun.DB) {
 	)
 	mustDropTableOnCleanup(t, ctx, db, (*Person)(nil))
 
-	m, err := migrate.NewAutoMigrator(db,
-		migrate.WithTableNameAuto(migrationsTable),
-		migrate.WithLocksTableNameAuto(migrationLocksTable),
+	m := newAutoMigrator(t, db,
 		migrate.WithModel(
 			(*Person)(nil),
 			(*PersonalThing)(nil),
 		),
+		migrate.WithRenameFK(true),
 		migrate.WithFKNameFunc(func(fk sqlschema.FK) string {
 			return strings.Join([]string{
 				fk.From.Table, fk.To.Table, "fkey",
 			}, "_")
 		}),
-		migrate.WithRenameFK(true),
 	)
-	require.NoError(t, err)
 
 	// Act
-	err = m.Run(ctx)
+	err := m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
-	state, err := dbInspector.Inspect(ctx)
-	require.NoError(t, err)
-
+	state := inspect(ctx)
 	schema := db.Dialect().DefaultSchema()
+
 	wantName, ok := state.FKs[sqlschema.FK{
 		From: sqlschema.C(schema, "things", "owner_id"),
 		To:   sqlschema.C(schema, "people", "id"),
@@ -445,38 +445,135 @@ func testCustomFKNameFunc(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-	dbInspector, err := sqlschema.NewInspector(db)
-	if err != nil {
-		t.Skip(err)
-	}
+	inspect := inspectDbOrSkip(t, db)
 
 	mustCreateTableWithFKs(t, ctx, db,
 		(*Table)(nil),
 		(*Column)(nil),
 	)
 
-	m, err := migrate.NewAutoMigrator(db,
-		migrate.WithTableNameAuto(migrationsTable),
-		migrate.WithLocksTableNameAuto(migrationLocksTable),
+	m := newAutoMigrator(t, db,
 		migrate.WithFKNameFunc(func(sqlschema.FK) string { return "test_fkey" }),
-		migrate.WithModel((*TableM)(nil)),
-		migrate.WithModel((*ColumnM)(nil)),
+		migrate.WithModel(
+			(*TableM)(nil),
+			(*ColumnM)(nil),
+		),
 	)
-	require.NoError(t, err)
 
 	// Act
-	err = m.Run(ctx)
+	err := m.Run(ctx)
 	require.NoError(t, err)
 
 	// Assert
-	state, err := dbInspector.Inspect(ctx)
-	require.NoError(t, err)
-
+	state := inspect(ctx)
 	fkName := state.FKs[sqlschema.FK{
 		From: sqlschema.C(db.Dialect().DefaultSchema(), "columns", "attrelid"),
 		To:   sqlschema.C(db.Dialect().DefaultSchema(), "tables", "oid"),
 	}]
 	require.Equal(t, fkName, "test_fkey")
+}
+
+func testRenamedColumns(t *testing.T, db *bun.DB) {
+	// Database state
+	type Original struct {
+		ID int64 `bun:",pk"`
+	}
+
+	type Model1 struct {
+		bun.BaseModel `bun:"models"`
+		ID            string `bun:",pk"`
+		DoNotRename   string `bun:",default:2"`
+		ColumnTwo     int    `bun:",default:2"`
+	}
+
+	// Model state
+	type Renamed struct {
+		bun.BaseModel `bun:"renamed"`
+		Count         int64 `bun:",pk"` // renamed column in renamed model
+	}
+
+	type Model2 struct {
+		bun.BaseModel `bun:"models"`
+		ID            string `bun:",pk"`
+		DoNotRename   string `bun:",default:2"`
+		SecondColumn  int    `bun:",default:2"` // renamed column
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db,
+		(*Original)(nil),
+		(*Model1)(nil),
+	)
+	mustDropTableOnCleanup(t, ctx, db, (*Renamed)(nil))
+	m := newAutoMigrator(t, db, migrate.WithModel(
+		(*Renamed)(nil),
+		(*Model2)(nil),
+	))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+
+	require.Len(t, state.Tables, 2)
+
+	var renamed, model2 sqlschema.Table
+	for _, tbl := range state.Tables {
+		switch tbl.Name {
+		case "renamed":
+			renamed = tbl
+		case "models":
+			model2 = tbl
+		}
+	}
+
+	require.Contains(t, renamed.Columns, "count")
+	require.Contains(t, model2.Columns, "second_column")
+	require.Contains(t, model2.Columns, "do_not_rename")
+}
+
+func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
+	type TennantBefore struct {
+		bun.BaseModel `bun:"table:tennants"`
+		ID            int64 `bun:",pk,identity"`
+		Apartment     int8
+		NeighbourID   int64
+
+		Neighbour *TennantBefore `bun:"rel:has-one,join:neighbour_id=id"`
+	}
+
+	type TennantAfter struct {
+		bun.BaseModel `bun:"table:tennants"`
+		TennantID     int64 `bun:",pk,identity"`
+		Apartment     int8
+		NeighbourID   int64 `bun:"my_neighbour"`
+
+		Neighbour *TennantAfter `bun:"rel:has-one,join:my_neighbour=tennant_id"`
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustCreateTableWithFKs(t, ctx, db, (*TennantBefore)(nil))
+	m := newAutoMigrator(t, db,
+		migrate.WithRenameFK(true),
+		migrate.WithModel((*TennantAfter)(nil)),
+	)
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+
+	fkName := state.FKs[sqlschema.FK{
+		From: sqlschema.C(db.Dialect().DefaultSchema(), "tennants", "my_neighbour"),
+		To:   sqlschema.C(db.Dialect().DefaultSchema(), "tennants", "tennant_id"),
+	}]
+	require.Equal(t, "tennants_my_neighbour_fkey", fkName)
 }
 
 // TODO: rewrite these tests into AutoMigrator tests, Diff should be moved to migrate/internal package

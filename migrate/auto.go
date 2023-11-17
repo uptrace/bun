@@ -259,10 +259,13 @@ func newDetector(got, want sqlschema.State, opts ...DiffOption) *detector {
 }
 
 func (d *detector) DetectChanges() Changeset {
-
 	// Discover CREATE/RENAME/DROP TABLE
 	targetTables := newTableSet(d.target.Tables...)
 	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
+
+	// These table sets record "updates" to the targetTables set.
+	created := newTableSet()
+	renamed := newTableSet()
 
 	addedTables := targetTables.Sub(currentTables)
 AddedLoop:
@@ -276,12 +279,14 @@ AddedLoop:
 					To:     added.Name,
 				})
 
-				// TODO: check for altered columns.
+				d.detectRenamedColumns(removed, added)
 
 				// Update referenced table in all related FKs
 				if d.detectRenamedFKs {
 					d.refMap.UpdateT(removed.T(), added.T())
 				}
+
+				renamed.Add(added)
 
 				// Do not check this model further, we know it was renamed.
 				currentTables.Remove(removed.Name)
@@ -294,18 +299,36 @@ AddedLoop:
 			Name:   added.Name,
 			Model:  added.Model,
 		})
+		created.Add(added)
 	}
 
 	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
-	for _, t := range currentTables.Sub(targetTables).Values() {
+	dropped := currentTables.Sub(targetTables)
+	for _, t := range dropped.Values() {
 		d.changes.Add(&DropTable{
 			Schema: t.Schema,
 			Name:   t.Name,
 		})
 	}
 
-	// Compare and update FKs
+	// Detect changes in existing tables that weren't renamed
+	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
+	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
+	curEx := currentTables.Sub(dropped)
+	tarEx := targetTables.Sub(created).Sub(renamed)
+	for _, target := range tarEx.Values() {
+		// This step is redundant if we have map[string]Table
+		var current sqlschema.Table
+		for _, cur := range curEx.Values() {
+			if cur.Name == target.Name {
+				current = cur
+				break
+			}
+		}
+		d.detectRenamedColumns(current, target)
+	}
 
+	// Compare and update FKs ----------------
 	currentFKs := make(map[sqlschema.FK]string)
 	for k, v := range d.current.FKs {
 		currentFKs[k] = v
@@ -353,6 +376,28 @@ AddedLoop:
 // canRename checks if t1 can be renamed to t2.
 func (d detector) canRename(t1, t2 sqlschema.Table) bool {
 	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2)
+}
+
+func (d *detector) detectRenamedColumns(removed, added sqlschema.Table) {
+	for aName, aCol := range added.Columns {
+		// This column exists in the database, so it wasn't renamed
+		if _, ok := removed.Columns[aName]; ok {
+			continue
+		}
+		for rName, rCol := range removed.Columns {
+			if aCol != rCol {
+				continue
+			}
+			d.changes.Add(&RenameColumn{
+				Schema: added.Schema,
+				Table:  added.Name,
+				From:   rName,
+				To:     aName,
+			})
+			delete(removed.Columns, rName) // no need to check this column again
+			d.refMap.UpdateC(sqlschema.C(added.Schema, added.Name, rName), aName)
+		}
+	}
 }
 
 // Changeset is a set of changes that alter database state.
@@ -458,8 +503,9 @@ func (op *RenameTable) Func(m sqlschema.Migrator) MigrationFunc {
 
 func (op *RenameTable) GetReverse() Operation {
 	return &RenameTable{
-		From: op.To,
-		To:   op.From,
+		Schema: op.Schema,
+		From:   op.To,
+		To:     op.From,
 	}
 }
 
@@ -583,6 +629,7 @@ func (op *DropFK) GetReverse() Operation {
 	}
 }
 
+// RenameFK
 type RenameFK struct {
 	FK   sqlschema.FK
 	From string
@@ -607,6 +654,35 @@ func (op *RenameFK) GetReverse() Operation {
 		FK:   op.FK,
 		From: op.From,
 		To:   op.To,
+	}
+}
+
+// RenameColumn
+type RenameColumn struct {
+	Schema string
+	Table  string
+	From   string
+	To     string
+}
+
+var _ Operation = (*RenameColumn)(nil)
+
+func (op RenameColumn) String() string {
+	return ""
+}
+
+func (op *RenameColumn) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		return m.RenameColumn(ctx, op.Schema, op.Table, op.From, op.To)
+	}
+}
+
+func (op *RenameColumn) GetReverse() Operation {
+	return &RenameColumn{
+		Schema: op.Schema,
+		Table:  op.Table,
+		From:   op.To,
+		To:     op.From,
 	}
 }
 
