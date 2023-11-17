@@ -20,6 +20,7 @@ type Migrator interface {
 	AddContraint(ctx context.Context, fk FK, name string) error
 	DropContraint(ctx context.Context, schema, table, name string) error
 	RenameConstraint(ctx context.Context, schema, table, oldName, newName string) error
+	RenameColumn(ctx context.Context, schema, table, oldName, newName string) error
 }
 
 // Migrator is a dialect-agnostic wrapper for sqlschema.Dialect

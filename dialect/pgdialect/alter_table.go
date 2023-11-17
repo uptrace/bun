@@ -57,3 +57,11 @@ func (m *Migrator) RenameConstraint(ctx context.Context, schema, table, oldName,
 	)
 	return m.exec(ctx, q)
 }
+
+func (m *Migrator) RenameColumn(ctx context.Context, schema, table, oldName, newName string) error {
+	q := m.db.NewRaw(
+		"ALTER TABLE ?.? RENAME COLUMN ? TO ?",
+		bun.Ident(schema), bun.Ident(table), bun.Ident(oldName), bun.Ident(newName),
+	)
+	return m.exec(ctx, q)
+}
