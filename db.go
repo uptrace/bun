@@ -32,6 +32,31 @@ func WithDiscardUnknownColumns() DBOption {
 	}
 }
 
+// *DB & Tx implemenet the same interface
+type QueryExecuter interface {
+	NewValues(interface{}) *ValuesQuery
+	NewMerge() *MergeQuery
+	NewSelect() *SelectQuery
+	NewInsert() *InsertQuery
+	NewUpdate() *UpdateQuery
+	NewDelete() *DeleteQuery
+	NewRaw(string, ...interface{}) *RawQuery
+	NewCreateTable() *CreateTableQuery
+	NewDropTable() *DropTableQuery
+	NewCreateIndex() *CreateIndexQuery
+	NewDropIndex() *DropIndexQuery
+	NewTruncateTable() *TruncateTableQuery
+	NewAddColumn() *AddColumnQuery
+	NewDropColumn() *DropColumnQuery
+	Dialect() schema.Dialect
+	Query(string, ...interface{}) (*sql.Rows, error)
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	QueryRow(string, ...interface{}) *sql.Row
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+	Exec(string, ...interface{}) (sql.Result, error)
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+}
+
 type DB struct {
 	*sql.DB
 
