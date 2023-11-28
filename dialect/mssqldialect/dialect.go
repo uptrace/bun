@@ -137,6 +137,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
 
+func (d *Dialect) AppendSequence(b []byte) []byte {
+	return append(b, " IDENTITY"...)
+}
+
 func sqlType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
 	case sqltype.Timestamp:

@@ -91,6 +91,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 0
 }
 
+func (d *Dialect) AppendSequence(b []byte) []byte {
+	return b
+}
+
 func fieldSQLType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
 	case sqltype.SmallInt, sqltype.BigInt:
