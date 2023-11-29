@@ -181,7 +181,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 		if (field.Identity && q.db.HasFeature(feature.GeneratedIdentity)) ||
 			(field.AutoIncrement && (q.db.HasFeature(feature.AutoIncrement) || q.db.HasFeature(feature.Identity))) {
-			b = q.db.dialect.AppendSequence(b)
+			b = q.db.dialect.AppendSequence(b, q.table, field)
 		}
 
 		if field.SQLDefault != "" {
@@ -302,7 +302,8 @@ func (q *CreateTableQuery) appendFKConstraints(
 }
 
 func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []byte {
-	if len(pks) == 0 {
+	// Primary key constraint might've already been created together with AUTOINCREMENT directives.
+	if len(pks) == 0 || bytes.Contains(b, []byte("PRIMARY KEY")) {
 		return b
 	}
 
