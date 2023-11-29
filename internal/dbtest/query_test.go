@@ -1016,6 +1016,16 @@ func TestQuery(t *testing.T) {
 			_ = q.String()
 			return q
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&struct {
+				bun.BaseModel `bun:"table:accounts"`
+				ID            int  `bun:"id,pk,autoincrement"`
+				IsActive      bool `bun:"is_active,notnull,default:true"`
+			}{
+				ID:       1,
+				IsActive: false,
+			}).Column("is_active").WherePK()
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
