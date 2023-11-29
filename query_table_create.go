@@ -1,6 +1,7 @@
 package bun
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -157,7 +158,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, "TEMP "...)
 	}
 	b = append(b, "TABLE "...)
-	if q.ifNotExists && fmter.Dialect().Features().Has(feature.TableNotExists) {
+	if q.ifNotExists && fmter.HasFeature(feature.TableNotExists) {
 		b = append(b, "IF NOT EXISTS "...)
 	}
 	b, err = q.appendFirstTable(fmter, b)
@@ -179,8 +180,8 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 			b = append(b, " NOT NULL"...)
 		}
 
-		if (field.Identity && q.db.HasFeature(feature.GeneratedIdentity)) ||
-			(field.AutoIncrement && (q.db.HasFeature(feature.AutoIncrement) || q.db.HasFeature(feature.Identity))) {
+		if (field.Identity && fmter.HasFeature(feature.GeneratedIdentity)) ||
+			(field.AutoIncrement && (fmter.HasFeature(feature.AutoIncrement) || fmter.HasFeature(feature.Identity))) {
 			b = q.db.dialect.AppendSequence(b, q.table, field)
 		}
 
