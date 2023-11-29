@@ -331,8 +331,8 @@ func TestQuery(t *testing.T) {
 				Where("model.id = _data.id")
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			// "nullzero" marshalls zero values as DEFAULT or NULL (if DEFAULT placeholder is not supported)
-			// DB drivers that support DEFAULT placeholder resolve it to NULL for columns that do not have a DEFAULT value.
+			// "nullzero" marshals zero values as DEFAULT or NULL (if DEFAULT placeholder is not supported)
+			// DB drivers which support DEFAULT placeholder resolve it to NULL for columns that do not have a DEFAULT value.
 			type Model struct {
 				Int  int64     `bun:",nullzero"`
 				Uint uint64    `bun:",nullzero"`
@@ -1034,7 +1034,7 @@ func TestQuery(t *testing.T) {
 			}).Column("is_active").WherePK()
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			// "default" marshalls zero values as DEFAULT or specified default value
+			// "default" marshals zero values as DEFAULT or the specified default value
 			type Model struct {
 				Int      int64     `bun:",default:42"`
 				Uint     uint64    `bun:",default:42"`
