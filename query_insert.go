@@ -332,8 +332,8 @@ func (q *InsertQuery) appendStructValues(
 		switch {
 		case isTemplate:
 			b = append(b, '?')
-		case (f.IsPtr && f.HasNilValue(strct)) || (f.NullZero && f.HasZeroValue(strct)):
-			if q.db.features.Has(feature.DefaultPlaceholder) {
+		case f.IsPtr && f.HasNilValue(strct), f.HasZeroValue(strct) && (f.NullZero || f.SQLDefault != ""):
+			if q.db.HasFeature(feature.DefaultPlaceholder) {
 				b = append(b, "DEFAULT"...)
 			} else if f.SQLDefault != "" {
 				b = append(b, f.SQLDefault...)

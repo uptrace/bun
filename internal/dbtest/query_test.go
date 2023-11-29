@@ -339,12 +339,12 @@ func TestQuery(t *testing.T) {
 				Str  string    `bun:",nullzero"`
 				Time time.Time `bun:",nullzero"`
 				Bool bool      `bun:",nullzero"`
-				// EmptyStr string    `bun:",nullzero,default:''"` -- same as Str
+				// EmptyStr string    `bun:",nullzero"` -- same as Str
 			}
 			return db.NewInsert().Model(new(Model))
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			// "nullzero,default" is equivalent to "default", marshalling zero values to DEFAULT 
+			// "nullzero,default" is equivalent to "default", marshalling zero values to DEFAULT
 			type Model struct {
 				Int      int64     `bun:",nullzero,default:42"`
 				Uint     uint64    `bun:",nullzero,default:42"`
