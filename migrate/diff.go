@@ -1,0 +1,390 @@
+package migrate
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/migrate/alt"
+	"github.com/uptrace/bun/migrate/sqlschema"
+)
+
+// changeset is a set of changes to the database definition.
+type changeset struct {
+	operations []alt.Operation
+}
+
+// Add new operations to the changeset.
+func (c *changeset) Add(op ...alt.Operation) {
+	c.operations = append(c.operations, op...)
+}
+
+// Func creates a MigrationFunc that applies all operations all the changeset.
+func (c *changeset) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		var operations []sqlschema.Operation
+		for _, op := range c.operations {
+			operations = append(operations, op.(sqlschema.Operation))
+		}
+		return m.Apply(ctx, operations...)
+	}
+}
+
+// Up is syntactic sugar.
+func (c *changeset) Up(m sqlschema.Migrator) MigrationFunc {
+	return c.Func(m)
+}
+
+// Down is syntactic sugar.
+func (c *changeset) Down(m sqlschema.Migrator) MigrationFunc {
+	var reverse changeset
+	for i := len(c.operations) - 1; i >= 0; i-- {
+		reverse.Add(c.operations[i].GetReverse())
+	}
+	return reverse.Func(m)
+}
+
+func (c *changeset) ResolveDependencies() error {
+	if len(c.operations) <= 1 {
+		return nil
+	}
+
+	const (
+		unvisited = iota
+		current
+		visited
+	)
+
+	var resolved []alt.Operation
+	var visit func(op alt.Operation) error
+
+	var nextOp alt.Operation
+	var next func() bool
+
+	status := make(map[alt.Operation]int, len(c.operations))
+	for _, op := range c.operations {
+		status[op] = unvisited
+	}
+	
+	next = func() bool {
+		for op, s := range status {
+			if s == unvisited {
+				nextOp = op
+				return true
+			}
+		}
+		return false
+	}
+
+	// visit iterates over c.operations until it finds all operations that depend on the current one
+	// or runs into cirtular dependency, in which case it will return an error.
+	visit = func(op alt.Operation) error {
+		switch status[op] {
+		case visited:
+			return nil
+		case current:
+			// TODO: add details (circle) to the error message
+			return errors.New("detected circular dependency")
+		}
+
+		status[op] = current
+
+		for _, another := range c.operations {
+			if dop, hasDeps := another.(interface {
+				DependsOn(alt.Operation) bool
+			}); another == op || !hasDeps || !dop.DependsOn(op) {
+				continue
+			}
+			if err := visit(another); err != nil {
+				return err
+			}
+		}
+
+		status[op] = visited
+
+		// Any dependent nodes would've already been added to the list by now, so we prepend.
+		resolved = append([]alt.Operation{op}, resolved...)
+		return nil
+	}
+
+	for next() {
+		if err := visit(nextOp); err != nil {
+			return err
+		}
+	}
+
+	c.operations = resolved
+	return nil
+}
+
+type diffOption func(*detectorConfig)
+
+func fKNameFunc(f func(sqlschema.FK) string) diffOption {
+	return func(cfg *detectorConfig) {
+		cfg.FKNameFunc = f
+	}
+}
+
+func detectRenamedFKs(enabled bool) diffOption {
+	return func(cfg *detectorConfig) {
+		cfg.DetectRenamedFKs = enabled
+	}
+}
+
+// detectorConfig controls how differences in the model states are resolved.
+type detectorConfig struct {
+	FKNameFunc       func(sqlschema.FK) string
+	DetectRenamedFKs bool
+}
+
+type detector struct {
+	// current state represents the existing database schema.
+	current sqlschema.State
+
+	// target state represents the database schema defined in bun models.
+	target sqlschema.State
+
+	changes changeset
+	refMap  sqlschema.RefMap
+
+	// fkNameFunc builds the name for created/renamed FK contraints.
+	fkNameFunc func(sqlschema.FK) string
+
+	// detectRenemedFKS controls how FKs are treated when their references (table/column) are renamed.
+	detectRenamedFKs bool
+}
+
+func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
+	cfg := &detectorConfig{
+		FKNameFunc:       defaultFKName,
+		DetectRenamedFKs: false,
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	var existingFKs []sqlschema.FK
+	for fk := range got.FKs {
+		existingFKs = append(existingFKs, fk)
+	}
+
+	return &detector{
+		current:          got,
+		target:           want,
+		refMap:           sqlschema.NewRefMap(existingFKs...),
+		fkNameFunc:       cfg.FKNameFunc,
+		detectRenamedFKs: cfg.DetectRenamedFKs,
+	}
+}
+
+func (d *detector) Diff() *changeset {
+	// Discover CREATE/RENAME/DROP TABLE
+	targetTables := newTableSet(d.target.Tables...)
+	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
+
+	// These table sets record "updates" to the targetTables set.
+	created := newTableSet()
+	renamed := newTableSet()
+
+	addedTables := targetTables.Sub(currentTables)
+AddedLoop:
+	for _, added := range addedTables.Values() {
+		removedTables := currentTables.Sub(targetTables)
+		for _, removed := range removedTables.Values() {
+			if d.canRename(removed, added) {
+				d.changes.Add(&alt.RenameTable{
+					Schema:  removed.Schema,
+					OldName: removed.Name,
+					NewName: added.Name,
+				})
+
+				d.detectRenamedColumns(removed, added)
+
+				// Update referenced table in all related FKs
+				if d.detectRenamedFKs {
+					d.refMap.UpdateT(removed.T(), added.T())
+				}
+
+				renamed.Add(added)
+
+				// Do not check this model further, we know it was renamed.
+				currentTables.Remove(removed.Name)
+				continue AddedLoop
+			}
+		}
+		// If a new table did not appear because of the rename operation, then it must've been created.
+		d.changes.Add(&alt.CreateTable{
+			Schema: added.Schema,
+			Name:   added.Name,
+			Model:  added.Model,
+		})
+		created.Add(added)
+	}
+
+	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
+	dropped := currentTables.Sub(targetTables)
+	for _, t := range dropped.Values() {
+		d.changes.Add(&alt.DropTable{
+			Schema: t.Schema,
+			Name:   t.Name,
+		})
+	}
+
+	// Detect changes in existing tables that weren't renamed
+	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
+	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
+	curEx := currentTables.Sub(dropped)
+	tarEx := targetTables.Sub(created).Sub(renamed)
+	for _, target := range tarEx.Values() {
+		// This step is redundant if we have map[string]Table
+		var current sqlschema.Table
+		for _, cur := range curEx.Values() {
+			if cur.Name == target.Name {
+				current = cur
+				break
+			}
+		}
+		d.detectRenamedColumns(current, target)
+	}
+
+	// Compare and update FKs ----------------
+	currentFKs := make(map[sqlschema.FK]string)
+	for k, v := range d.current.FKs {
+		currentFKs[k] = v
+	}
+
+	if d.detectRenamedFKs {
+		// Add RenameFK migrations for updated FKs.
+		for old, renamed := range d.refMap.Updated() {
+			newName := d.fkNameFunc(renamed)
+			d.changes.Add(&alt.RenameConstraint{
+				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
+				OldName: d.current.FKs[old],
+				NewName: d.fkNameFunc(renamed),
+			})
+
+			// Here we can add this fk to "current.FKs" to prevent it from firing in the next 2 for-loops.
+			currentFKs[renamed] = newName
+			delete(currentFKs, old)
+		}
+	}
+
+	// Add AddFK migrations for newly added FKs.
+	for fk := range d.target.FKs {
+		if _, ok := currentFKs[fk]; !ok {
+			d.changes.Add(&alt.AddForeignKey{
+				FK:             fk,
+				ConstraintName: d.fkNameFunc(fk),
+			})
+		}
+	}
+
+	// Add DropFK migrations for removed FKs.
+	for fk, fkName := range currentFKs {
+		if _, ok := d.target.FKs[fk]; !ok {
+			d.changes.Add(&alt.DropConstraint{
+				FK:             fk,
+				ConstraintName: fkName,
+			})
+		}
+	}
+
+	return &d.changes
+}
+
+// canRename checks if t1 can be renamed to t2.
+func (d detector) canRename(t1, t2 sqlschema.Table) bool {
+	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2)
+}
+
+func (d *detector) detectRenamedColumns(current, added sqlschema.Table) {
+	for aName, aCol := range added.Columns {
+		// This column exists in the database, so it wasn't renamed
+		if _, ok := current.Columns[aName]; ok {
+			continue
+		}
+		for cName, cCol := range current.Columns {
+			if aCol != cCol {
+				continue
+			}
+			d.changes.Add(&alt.RenameColumn{
+				Schema:  added.Schema,
+				Table:   added.Name,
+				OldName: cName,
+				NewName: aName,
+			})
+			delete(current.Columns, cName) // no need to check this column again
+			d.refMap.UpdateC(sqlschema.C(added.Schema, added.Name, cName), aName)
+			break
+		}
+	}
+}
+
+// sqlschema utils ------------------------------------------------------------
+
+// tableSet stores unique table definitions.
+type tableSet struct {
+	underlying map[string]sqlschema.Table
+}
+
+func newTableSet(initial ...sqlschema.Table) tableSet {
+	set := tableSet{
+		underlying: make(map[string]sqlschema.Table),
+	}
+	for _, t := range initial {
+		set.Add(t)
+	}
+	return set
+}
+
+func (set tableSet) Add(t sqlschema.Table) {
+	set.underlying[t.Name] = t
+}
+
+func (set tableSet) Remove(s string) {
+	delete(set.underlying, s)
+}
+
+func (set tableSet) Values() (tables []sqlschema.Table) {
+	for _, t := range set.underlying {
+		tables = append(tables, t)
+	}
+	return
+}
+
+func (set tableSet) Sub(other tableSet) tableSet {
+	res := set.clone()
+	for v := range other.underlying {
+		if _, ok := set.underlying[v]; ok {
+			res.Remove(v)
+		}
+	}
+	return res
+}
+
+func (set tableSet) clone() tableSet {
+	res := newTableSet()
+	for _, t := range set.underlying {
+		res.Add(t)
+	}
+	return res
+}
+
+func (set tableSet) String() string {
+	var s strings.Builder
+	for k := range set.underlying {
+		if s.Len() > 0 {
+			s.WriteString(", ")
+		}
+		s.WriteString(k)
+	}
+	return s.String()
+}
+
+// defaultFKName returns a name for the FK constraint in the format {tablename}_{columnname(s)}_fkey, following the Postgres convention.
+func defaultFKName(fk sqlschema.FK) string {
+	columnnames := strings.Join(fk.From.Column.Split(), "_")
+	return fmt.Sprintf("%s_%s_fkey", fk.From.Table, columnnames)
+}

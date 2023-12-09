@@ -13,7 +13,14 @@ type MigratorDialect interface {
 	Migrator(*bun.DB) Migrator
 }
 
+type Operation interface {
+	schema.QueryAppender
+	FQN() schema.FQN
+}
+
 type Migrator interface {
+	Apply(ctx context.Context, changes ...Operation) error
+
 	RenameTable(ctx context.Context, oldName, newName string) error
 	CreateTable(ctx context.Context, model interface{}) error
 	DropTable(ctx context.Context, schema, table string) error
