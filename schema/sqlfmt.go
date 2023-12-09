@@ -38,6 +38,20 @@ func (s Name) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
+// FQN represents a fully qualified table name.
+type FQN struct {
+	Schema string
+	Table  string
+}
+
+var _ QueryAppender = (*FQN)(nil)
+
+func (fqn *FQN) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
+	return fmter.AppendQuery(b, "?.?", Ident(fqn.Schema), Ident(fqn.Table)), nil
+}
+
+//------------------------------------------------------------------------------
+
 // Ident represents a SQL identifier, for example,
 // a fully qualified column name such as `table_name.col_name`.
 type Ident string
