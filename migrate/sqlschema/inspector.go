@@ -71,6 +71,13 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 		})
 
 		for _, rel := range t.Relations {
+			// These relations are nominal and do not need a foreign key to be declared in the current table.
+			// They will be either expressed as N:1 relations in an m2m mapping table, or will be referenced by the other table if it's a 1:N.
+			if rel.Type == schema.ManyToManyRelation ||
+				rel.Type == schema.HasManyRelation {
+				continue
+			}
+
 			var fromCols, toCols []string
 			for _, f := range rel.BaseFields {
 				fromCols = append(fromCols, f.Name)

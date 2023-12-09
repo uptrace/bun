@@ -276,7 +276,7 @@ func (m *Migrator) CreateGoMigration(
 
 // CreateTxSQLMigration creates transactional up and down SQL migration files.
 func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := m.genMigrationName(name)
+	name, err := genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*M
 
 // CreateSQLMigrations creates up and down SQL migration files.
 func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := m.genMigrationName(name)
+	name, err := genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}

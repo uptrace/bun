@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/uptrace/bun/internal"
@@ -34,6 +35,24 @@ var _ QueryAppender = (*Name)(nil)
 
 func (s Name) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.AppendName(b, string(s)), nil
+}
+
+//------------------------------------------------------------------------------
+
+// FQN represents a fully qualified table name.
+type FQN struct {
+	Schema string
+	Table  string
+}
+
+var _ QueryAppender = (*FQN)(nil)
+
+func (fqn *FQN) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
+	return fmter.AppendQuery(b, "?.?", Ident(fqn.Schema), Ident(fqn.Table)), nil
+}
+
+func (fqn *FQN) String() string {
+	return fmt.Sprintf("%s.%s", fqn.Schema, fqn.Table)
 }
 
 //------------------------------------------------------------------------------
