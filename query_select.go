@@ -781,11 +781,22 @@ func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, e
 	if len(q.order) > 0 {
 		b = append(b, " ORDER BY "...)
 
-		for i, f := range q.order {
+		for i, ord := range q.order {
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = f.AppendQuery(fmter, b)
+
+			// Auto add alias for order column added via Column() method if the column in the table FieldMap
+			if ord.Args == nil && q.table != nil {
+				if field, ok := q.table.FieldMap[ord.Query]; ok {
+					b = append(b, q.table.SQLAlias...)
+					b = append(b, '.')
+					b = append(b, field.SQLName...)
+					continue
+				}
+			}
+
+			b, err = ord.AppendQuery(fmter, b)
 			if err != nil {
 				return nil, err
 			}
