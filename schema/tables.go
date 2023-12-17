@@ -124,6 +124,7 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 	return table
 }
 
+// ByModel gets the table by its Go name.
 func (t *Tables) ByModel(name string) *Table {
 	var found *Table
 	t.tables.Range(func(key, value interface{}) bool {
@@ -137,6 +138,7 @@ func (t *Tables) ByModel(name string) *Table {
 	return found
 }
 
+// ByName gets the table by its SQL name.
 func (t *Tables) ByName(name string) *Table {
 	var found *Table
 	t.tables.Range(func(key, value interface{}) bool {
@@ -145,6 +147,16 @@ func (t *Tables) ByName(name string) *Table {
 			found = t
 			return false
 		}
+		return true
+	})
+	return found
+}
+
+// All returns all registered tables.
+func (t *Tables) All() []*Table {
+	var found []*Table
+	t.tables.Range(func(key, value any) bool {
+		found = append(found, value.(*Table))
 		return true
 	})
 	return found

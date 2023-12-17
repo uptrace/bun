@@ -137,6 +137,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
 
+func (d *Dialect) DefaultSchema() string {
+	return "dbo"
+}
+
 func sqlType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
 	case sqltype.Timestamp:

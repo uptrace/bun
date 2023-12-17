@@ -180,6 +180,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
 
+func (d *Dialect) DefaultSchema() string {
+	return "mydb"
+}
+
 func sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType

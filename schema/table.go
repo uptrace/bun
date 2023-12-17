@@ -46,6 +46,7 @@ type Table struct {
 	TypeName  string
 	ModelName string
 
+	Schema            string
 	Name              string
 	SQLName           Safe
 	SQLNameForSelects Safe
@@ -82,6 +83,7 @@ func newTable(dialect Dialect, typ reflect.Type) *Table {
 	t.setName(tableName)
 	t.Alias = t.ModelName
 	t.SQLAlias = t.quoteIdent(t.ModelName)
+	t.Schema = t.dialect.DefaultSchema()
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -270,10 +272,18 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if tag.Name != "" {
+		schema, _ := t.schemaFromTagName(tag.Name)
+		t.Schema = schema
+
+		// Eventually, we should only assign the "table" portion as the table name,
+		// which will also require a change in how the table name is appended to queries.
+		// Until that is done, set table name to tag.Name.
 		t.setName(tag.Name)
 	}
 
 	if s, ok := tag.Option("table"); ok {
+		schema, _ := t.schemaFromTagName(s)
+		t.Schema = schema
 		t.setName(s)
 	}
 
@@ -285,6 +295,17 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.Alias = s
 		t.SQLAlias = t.quoteIdent(s)
 	}
+}
+
+// schemaFromTagName splits the bun.BaseModel tag name into schema and table name
+// in case it is specified in the "schema"."table" format.
+// Assume default schema if one isn't explicitly specified.
+func (t *Table) schemaFromTagName(name string) (string, string) {
+	schema, table := t.dialect.DefaultSchema(), name
+	if schemaTable := strings.Split(name, "."); len(schemaTable) == 2 {
+		schema, table = schemaTable[0], schemaTable[1]
+	}
+	return schema, table
 }
 
 // nolint
@@ -477,7 +498,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 	}
 
 	rel := &Relation{
-		Type:      HasOneRelation,
+		Type:      BelongsToRelation,
 		Field:     field,
 		JoinTable: joinTable,
 	}
@@ -571,7 +592,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 
 	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	rel := &Relation{
-		Type:      BelongsToRelation,
+		Type:      HasOneRelation,
 		Field:     field,
 		JoinTable: joinTable,
 	}
@@ -1033,3 +1054,5 @@ func withIndex(a, b []int) []int {
 	dest = append(dest, b...)
 	return dest
 }
+
+

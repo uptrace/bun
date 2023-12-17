@@ -35,6 +35,9 @@ type Dialect interface {
 	// is mandatory in queries that modify the schema (CREATE TABLE / ADD COLUMN, etc).
 	// Dialects that do not have such requirement may return 0, which should be interpreted so by the caller.
 	DefaultVarcharLen() int
+
+	// DefaultSchema should returns the name of the default database schema.
+	DefaultSchema() string
 }
 
 // ------------------------------------------------------------------------------
@@ -176,4 +179,8 @@ func (d *nopDialect) IdentQuote() byte {
 
 func (d *nopDialect) DefaultVarcharLen() int {
 	return 0
+}
+
+func (d *nopDialect) DefaultSchema() string {
+	return "nop"
 }

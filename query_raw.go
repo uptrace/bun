@@ -96,3 +96,12 @@ func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error)
 func (q *RawQuery) Operation() string {
 	return "SELECT"
 }
+
+func (q *RawQuery) String() string {
+	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(buf)
+}
