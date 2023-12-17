@@ -477,7 +477,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 	}
 
 	rel := &Relation{
-		Type:      HasOneRelation,
+		Type:      BelongsToRelation,
 		Field:     field,
 		JoinTable: joinTable,
 	}
@@ -571,7 +571,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 
 	joinTable := t.dialect.Tables().Ref(field.IndirectType)
 	rel := &Relation{
-		Type:      BelongsToRelation,
+		Type:      HasOneRelation,
 		Field:     field,
 		JoinTable: joinTable,
 	}
