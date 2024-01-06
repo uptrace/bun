@@ -77,7 +77,7 @@ func benchEachDB(b *testing.B, f func(b *testing.B, db *bun.DB)) {
 			db.SetMaxOpenConns(64)
 			db.SetMaxIdleConns(64)
 
-			err := resetBenchSchema(db)
+			err := resetBenchSchema(b, db)
 			require.NoError(b, err)
 
 			b.ResetTimer()
@@ -86,10 +86,8 @@ func benchEachDB(b *testing.B, f func(b *testing.B, db *bun.DB)) {
 	}
 }
 
-func resetBenchSchema(db *bun.DB) error {
-	if err := db.ResetModel(ctx, (*Bench)(nil)); err != nil {
-		return err
-	}
+func resetBenchSchema(tb testing.TB, db *bun.DB) error {
+	mustResetModel(tb, ctx, db, (*Bench)(nil))
 
 	for i := 0; i < 1000; i++ {
 		bench := &Bench{

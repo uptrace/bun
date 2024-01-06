@@ -39,8 +39,7 @@ func TestModelHook(t *testing.T) {
 }
 
 func testModelHook(t *testing.T, dbName string, db *bun.DB) {
-	err := db.ResetModel(ctx, (*ModelHookTest)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*ModelHookTest)(nil))
 
 	{
 		hook := &ModelHookTest{ID: 1}
