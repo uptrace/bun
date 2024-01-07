@@ -204,7 +204,12 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		}
 	}
 
-	b = q.appendPKConstraint(b, q.table.PKs)
+	// In SQLite AUTOINCREMENT is only valid for INTEGER PRIMARY KEY columns, so it might be that
+	// a primary key constraint has already been created in dialect.AppendSequence() call above.
+	// See sqldialect.Dialect.AppendSequence() for more details.
+	if len(q.table.PKs) > 0 && !bytes.Contains(b, []byte("PRIMARY KEY")) {
+		b = q.appendPKConstraint(b, q.table.PKs)
+	}
 	b = q.appendUniqueConstraints(fmter, b)
 	b, err = q.appendFKConstraints(fmter, b)
 	if err != nil {
@@ -303,11 +308,6 @@ func (q *CreateTableQuery) appendFKConstraints(
 }
 
 func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []byte {
-	// Primary key constraint might've already been created together with AUTOINCREMENT directives.
-	if len(pks) == 0 || bytes.Contains(b, []byte("PRIMARY KEY")) {
-		return b
-	}
-
 	b = append(b, ", PRIMARY KEY ("...)
 	b = appendColumns(b, "", pks)
 	b = append(b, ")"...)
