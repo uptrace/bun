@@ -1,1 +1,1 @@
-INSERT INTO `models` (`int`, `uint`, `str`, `time`, `bool`) VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT) RETURNING `int`, `uint`, `str`, `time`, `bool`
+INSERT INTO `models` (`int`, `uint`, `str`, `time`, `bool`, `empty_str`) VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT) RETURNING `int`, `uint`, `str`, `time`, `bool`, `empty_str`

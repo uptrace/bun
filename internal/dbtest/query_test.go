@@ -334,12 +334,12 @@ func TestQuery(t *testing.T) {
 			// "nullzero" marshals zero values as DEFAULT or NULL (if DEFAULT placeholder is not supported)
 			// DB drivers which support DEFAULT placeholder resolve it to NULL for columns that do not have a DEFAULT value.
 			type Model struct {
-				Int  int64     `bun:",nullzero"`
-				Uint uint64    `bun:",nullzero"`
-				Str  string    `bun:",nullzero"`
-				Time time.Time `bun:",nullzero"`
-				Bool bool      `bun:",nullzero"`
-				// EmptyStr string    `bun:",nullzero"` -- same as Str
+				Int      int64     `bun:",nullzero"`
+				Uint     uint64    `bun:",nullzero"`
+				Str      string    `bun:",nullzero"`
+				Time     time.Time `bun:",nullzero"`
+				Bool     bool      `bun:",nullzero"`
+				EmptyStr string    `bun:",nullzero"` // same as Str
 			}
 			return db.NewInsert().Model(new(Model))
 		},
