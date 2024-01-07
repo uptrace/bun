@@ -19,7 +19,7 @@ type CreateTableQuery struct {
 
 	temp        bool
 	ifNotExists bool
-	autoFKs     bool // Create foreign keys captured in table's relations.
+	fksFromRel  bool // Create foreign keys captured in table's relations.
 
 	// varchar changes the default length for VARCHAR columns.
 	// Because some dialects require that length is always specified for VARCHAR type,
@@ -123,7 +123,7 @@ func (q *CreateTableQuery) TableSpace(tablespace string) *CreateTableQuery {
 
 // WithForeignKeys adds a FOREIGN KEY clause for each of the model's existing relations.
 func (q *CreateTableQuery) WithForeignKeys() *CreateTableQuery {
-	q.autoFKs = true
+	q.fksFromRel = true
 	return q
 }
 
@@ -202,8 +202,11 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 	b = q.appendPKConstraint(b, q.table.PKs)
 	b = q.appendUniqueConstraints(fmter, b)
 
-	if q.autoFKs {
-		q.createRelationFKs()
+	if q.fksFromRel {
+		b, err = q.appendFKConstraintsRel(fmter, b)
+		if err != nil {
+			return nil, err
+		}
 	}
 	b, err = q.appendFKConstraints(fmter, b)
 	if err != nil {
@@ -288,28 +291,38 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 	return b
 }
 
-// createRelationFKs adds a FOREIGN KEY clause for each of the model's existing relations.
-func (q *CreateTableQuery) createRelationFKs() {
-	for _, relation := range q.tableModel.Table().Relations {
-		if relation.References() {
-			q.ForeignKey("(?) REFERENCES ? (?) ? ?",
-				Safe(appendColumns(nil, "", relation.BaseFields)),
-				relation.JoinTable.SQLName,
-				Safe(appendColumns(nil, "", relation.JoinFields)),
-				Safe(relation.OnUpdate),
-				Safe(relation.OnDelete),
-			)
+// appendFKConstraintsRel appends a FOREIGN KEY clause for each of the model's existing relations.
+func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	for _, rel := range q.tableModel.Table().Relations {
+		if rel.References() {
+			b, err = q.appendFK(fmter, b, schema.QueryWithArgs{
+				Query: "(?) REFERENCES ? (?) ? ?",
+				Args: []interface{}{
+					Safe(appendColumns(nil, "", rel.BaseFields)),
+					rel.JoinTable.SQLName,
+					Safe(appendColumns(nil, "", rel.JoinFields)),
+					Safe(rel.OnUpdate),
+					Safe(rel.OnDelete),
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+	return b, nil
+}
+
+func (q *CreateTableQuery) appendFK(fmter schema.Formatter, b []byte, fk schema.QueryWithArgs) (_ []byte, err error) {
+	b = append(b, ", FOREIGN KEY "...)
+	return fk.AppendQuery(fmter, b)
 }
 
 func (q *CreateTableQuery) appendFKConstraints(
 	fmter schema.Formatter, b []byte,
 ) (_ []byte, err error) {
 	for _, fk := range q.fks {
-		b = append(b, ", FOREIGN KEY "...)
-		b, err = fk.AppendQuery(fmter, b)
-		if err != nil {
+		if b, err = q.appendFK(fmter, b, fk); err != nil {
 			return nil, err
 		}
 	}
