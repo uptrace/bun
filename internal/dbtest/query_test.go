@@ -1008,6 +1008,14 @@ func TestQuery(t *testing.T) {
 				Join("JOIN user ON user.id = story.user_id").
 				Where("user.id = ?", 1)
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			q := db.NewCreateTable().Model(new(Story)).WithForeignKeys()
+
+			// Check that building the query with .AppendQuery() multiple times does not add redundant FK constraints:
+			// https://github.com/uptrace/bun/pull/941#discussion_r1443647857
+			_ = q.String()
+			return q
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
