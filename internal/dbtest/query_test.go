@@ -1001,6 +1001,46 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			return db.NewUpdate().Model(&Model{42, ""}).OmitZero()
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Teacher struct {
+				bun.BaseModel `bun:"table:teacher,alias:t"`
+				Id            int64 `bun:",pk"`
+				Name          string
+			}
+			type Student struct {
+				bun.BaseModel `bun:"table:student,alias:s"`
+				Id            int64 `bun:",pk"`
+				Name          string
+				TeacherId     int64
+			}
+
+			return db.NewSelect().Model(new(Student)).
+				Column("id", "name").
+				ColumnExpr("@TableAlias.name AS teacher_name").
+				Join("LEFT JOIN teacher AS t").
+				JoinOn("t.id = @TableAlias.teacher_id").
+				Order("id") // If I need to sort according to the ID of the main table (student)
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			type Teacher struct {
+				bun.BaseModel `bun:"table:teacher,alias:t"`
+				Id            int64 `bun:",pk"`
+				Name          string
+			}
+			type Student struct {
+				bun.BaseModel `bun:"table:student,alias:s"`
+				Id            int64 `bun:",pk"`
+				Name          string
+				TeacherId     int64
+			}
+
+			return db.NewSelect().Model(new(Student)).
+				Column("id", "name").
+				ColumnExpr("@TableAlias.name AS teacher_name").
+				Join("LEFT JOIN teacher AS t").
+				JoinOn("t.id = @TableAlias.teacher_id").
+				Order("t.id") // If I need to sort by the ID of the associated table (teacher)
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
