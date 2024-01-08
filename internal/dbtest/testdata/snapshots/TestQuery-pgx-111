@@ -1,0 +1,1 @@
+SELECT * WHERE (x IN ('\x666f6f', '\x626172'))

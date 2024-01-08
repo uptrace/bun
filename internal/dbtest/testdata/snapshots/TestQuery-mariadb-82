@@ -1,0 +1,1 @@
+INSERT INTO `models` (`id`, `str`) VALUES (42, 'hello') ON CONFLICT (id) DO UPDATE SET `str` = EXCLUDED.`str`

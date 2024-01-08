@@ -1,0 +1,1 @@
+WITH `_data` (`id`, `str1`, `str2`) AS (VALUES ROW(42, 'hello', 'world'), ROW(43, 'foo', 'bar')) UPDATE `models` AS `model`, _data SET `model`.`str2` = _data.`str2` WHERE (`model`.`id` = _data.`id`)

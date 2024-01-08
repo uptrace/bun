@@ -1,0 +1,1 @@
+WITH "_data" ("id", "str1", "str2") AS (VALUES (42::BIGINT, 'hello'::VARCHAR, 'skip'::VARCHAR), (43::BIGINT, 'world'::VARCHAR, 'skip'::VARCHAR)) UPDATE "models" AS "model" SET "str1" = _data."str1" FROM _data WHERE ("model"."id" = _data."id")

@@ -1,0 +1,1 @@
+VALUES (42::BIGINT, 'hello'::VARCHAR)

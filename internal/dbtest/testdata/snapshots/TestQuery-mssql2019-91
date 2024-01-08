@@ -1,0 +1,1 @@
+DELETE FROM "soft_deletes" WHERE ("id" = NULL)

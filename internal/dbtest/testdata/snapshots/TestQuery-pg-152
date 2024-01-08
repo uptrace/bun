@@ -1,0 +1,1 @@
+SELECT "model"."id", "model"."soft_delete_id", "soft_delete"."id" AS "soft_delete__id", "soft_delete"."deleted_at" AS "soft_delete__deleted_at" FROM "models" AS "model" LEFT JOIN "soft_deletes" AS "soft_delete" ON ("soft_delete"."id" = "model"."soft_delete_id") AND "soft_delete"."deleted_at" IS NULL

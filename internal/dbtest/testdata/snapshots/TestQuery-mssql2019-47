@@ -1,0 +1,1 @@
+SELECT "story"."id", "story"."name", "story"."user_id" FROM "stories" AS "story" LEFT JOIN "users" AS "user" ON ("user"."id" = "story"."user_id")

@@ -1009,44 +1009,20 @@ func TestQuery(t *testing.T) {
 				Where("user.id = ?", 1)
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			type Teacher struct {
-				bun.BaseModel `bun:"table:teacher,alias:t"`
-				Id            int64 `bun:",pk"`
-				Name          string
-			}
-			type Student struct {
-				bun.BaseModel `bun:"table:student,alias:s"`
-				Id            int64 `bun:",pk"`
-				Name          string
-				TeacherId     int64
-			}
-
-			return db.NewSelect().Model(new(Student)).
+			return db.NewSelect().Model(new(Story)).
 				Column("id", "name").
-				ColumnExpr("@TableAlias.name AS teacher_name").
-				Join("LEFT JOIN teacher AS t").
-				JoinOn("t.id = @TableAlias.teacher_id").
+				ColumnExpr("@TableAlias.name AS user_name").
+				Join("LEFT JOIN user AS u").
+				JoinOn("u.id = @TableAlias.user_id").
 				Order("id") // If I need to sort according to the ID of the main table (student)
 		},
 		func(db *bun.DB) schema.QueryAppender {
-			type Teacher struct {
-				bun.BaseModel `bun:"table:teacher,alias:t"`
-				Id            int64 `bun:",pk"`
-				Name          string
-			}
-			type Student struct {
-				bun.BaseModel `bun:"table:student,alias:s"`
-				Id            int64 `bun:",pk"`
-				Name          string
-				TeacherId     int64
-			}
-
-			return db.NewSelect().Model(new(Student)).
+			return db.NewSelect().Model(new(Story)).
 				Column("id", "name").
-				ColumnExpr("@TableAlias.name AS teacher_name").
-				Join("LEFT JOIN teacher AS t").
-				JoinOn("t.id = @TableAlias.teacher_id").
-				Order("t.id") // If I need to sort by the ID of the associated table (teacher)
+				ColumnExpr("@TableAlias.name AS user_name").
+				Join("LEFT JOIN user AS u").
+				JoinOn("u.id = @TableAlias.user_id").
+				Order("u.id") // If I need to sort by the ID of the associated table (user)
 		},
 	}
 

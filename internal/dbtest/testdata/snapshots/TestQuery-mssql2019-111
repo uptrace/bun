@@ -1,0 +1,1 @@
+SELECT * WHERE (x IN (0x666f6f, 0x626172))

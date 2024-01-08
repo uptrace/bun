@@ -1,0 +1,1 @@
+INSERT INTO "soft_deletes" AS "soft_delete" ("deleted_at") VALUES ('0001-01-01 00:00:00+00:00') ON CONFLICT DO NOTHING RETURNING "id"

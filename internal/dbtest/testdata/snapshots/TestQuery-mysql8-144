@@ -1,0 +1,1 @@
+SELECT SUM(model.id) AS total_ids, `model`.`str` FROM `models` AS `model` FORCE INDEX FOR GROUP BY (`ix1`) GROUP BY `model`.`str`

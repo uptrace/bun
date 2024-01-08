@@ -1,0 +1,1 @@
+CREATE TABLE "models" ("id" BIGINT NOT NULL IDENTITY, "struct" VARCHAR(255), "map" VARCHAR(255), "slice" VARCHAR(255), "array" VARCHAR(255), PRIMARY KEY ("id"))

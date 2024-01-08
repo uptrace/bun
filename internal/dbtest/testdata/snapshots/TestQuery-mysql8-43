@@ -1,0 +1,1 @@
+ALTER TABLE `models` ADD column_name VARCHAR(123)

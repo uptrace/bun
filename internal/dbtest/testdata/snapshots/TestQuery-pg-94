@@ -1,0 +1,1 @@
+SELECT "soft_delete"."id", "soft_delete"."deleted_at" FROM "soft_deletes" AS "soft_delete"

@@ -1,0 +1,1 @@
+UPDATE "models" SET "str" = N'' WHERE ("id" = NULL)

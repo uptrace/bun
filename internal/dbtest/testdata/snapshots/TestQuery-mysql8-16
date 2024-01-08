@@ -1,0 +1,1 @@
+(SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` WHERE (1)) UNION (SELECT `model`.`id`, `model`.`str` FROM `models` AS `model`)

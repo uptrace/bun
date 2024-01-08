@@ -1,0 +1,1 @@
+SELECT * WHERE ((a = 1) AND (b = 1)) OR ((a = 2) AND (b = 2))
