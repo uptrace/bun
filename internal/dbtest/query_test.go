@@ -1002,6 +1002,13 @@ func TestQuery(t *testing.T) {
 			return db.NewUpdate().Model(&Model{42, ""}).OmitZero()
 		},
 		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().
+				Model((*Story)(nil)).
+				Set("name = ?", "new-name").
+				Join("JOIN user ON user.id = story.user_id").
+				Where("user.id = ?", 1)
+		},
+		func(db *bun.DB) schema.QueryAppender {
 			type Teacher struct {
 				bun.BaseModel `bun:"table:teacher,alias:t"`
 				Id            int64 `bun:",pk"`

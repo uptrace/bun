@@ -8,7 +8,7 @@ import (
 
 func TestMssqlMerge(t *testing.T) {
 	db := mssql2019(t)
-	defer db.Close()
+	t.Cleanup(func() { db.Close() })
 
 	type Model struct {
 		ID int64 `bun:",pk,autoincrement"`
@@ -17,10 +17,9 @@ func TestMssqlMerge(t *testing.T) {
 		Value string
 	}
 
-	err := db.ResetModel(ctx, (*Model)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*Model)(nil))
 
-	_, err = db.NewInsert().Model(&Model{Name: "A", Value: "hello"}).Exec(ctx)
+	_, err := db.NewInsert().Model(&Model{Name: "A", Value: "hello"}).Exec(ctx)
 	require.NoError(t, err)
 
 	newModels := []*Model{
