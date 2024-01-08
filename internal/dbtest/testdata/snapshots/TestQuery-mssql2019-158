@@ -1,1 +1,0 @@
-UPDATE xxx SET foo = NULL WHERE (1)

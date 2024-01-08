@@ -1,1 +1,0 @@
-UPDATE "soft_deletes" SET "deleted_at" = [TIME] WHERE "soft_deletes"."deleted_at" IS NOT NULL AND ("id" = NULL)

@@ -1,1 +1,0 @@
-CREATE TABLE "models" ("id" INTEGER NOT NULL, PRIMARY KEY ("id"))

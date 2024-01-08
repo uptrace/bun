@@ -1,1 +1,0 @@
-SELECT SUM(model.id) AS total_ids, "model"."str" FROM "models" AS "model" GROUP BY "model"."str"

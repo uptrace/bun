@@ -1,1 +1,0 @@
-UPDATE "models" AS "model" SET "updated_at" = NOW() WHERE ("model"."id" = 0) RETURNING *

@@ -1,1 +1,0 @@
-UPDATE "models" AS "model" SET "str" = '' WHERE (id = 42)

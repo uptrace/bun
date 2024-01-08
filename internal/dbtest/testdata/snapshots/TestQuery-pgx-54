@@ -1,1 +1,0 @@
-INSERT INTO "models" AS "model" ("id", "str") VALUES (DEFAULT, '') ON CONFLICT DO NOTHING RETURNING "id"

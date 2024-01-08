@@ -1,1 +1,0 @@
-CREATE TABLE "models" ("foo" VARCHAR, "bar" VARCHAR, "hello" VARCHAR, "world" VARCHAR, UNIQUE ("foo"), UNIQUE ("bar"), CONSTRAINT "group" UNIQUE ("hello", "world"))

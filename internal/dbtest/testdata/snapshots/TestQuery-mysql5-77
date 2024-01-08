@@ -1,1 +1,0 @@
-INSERT INTO `users` (`id`, `name`) VALUES (DEFAULT, 'Hello') ON CONFLICT DO UPDATE name = 'Hello'

@@ -1,1 +1,0 @@
-INSERT INTO "models" AS "model" ("str") VALUES ('hello') ON DUPLICATE KEY UPDATE "str" = VALUES("str") RETURNING "id"

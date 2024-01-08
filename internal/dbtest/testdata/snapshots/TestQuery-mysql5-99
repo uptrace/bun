@@ -1,1 +1,0 @@
-SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` WHERE `model`.`id` IN (1, 2)

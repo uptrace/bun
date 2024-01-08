@@ -1,1 +1,0 @@
-INSERT INTO "soft_deletes" AS "soft_delete" ("deleted_at") VALUES (NULL) ON CONFLICT DO NOTHING RETURNING "id", "deleted_at"

@@ -1,1 +1,0 @@
-CREATE TABLE "users" ("name" VARCHAR(255) NOT NULL DEFAULT \'unknown\')

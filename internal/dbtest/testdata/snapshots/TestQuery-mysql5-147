@@ -1,1 +1,0 @@
-SELECT `model`.`id`, `model`.`str` FROM `models` AS `model` ORDER BY `id` DESC LIMIT 20 OFFSET 20

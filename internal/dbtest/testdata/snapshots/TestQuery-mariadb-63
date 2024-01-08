@@ -1,1 +1,0 @@
-UPDATE `models` AS `model` SET `str` = '', foo = 'bar' WHERE (`model`.`id` = NULL)

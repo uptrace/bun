@@ -1,1 +1,0 @@
-INSERT INTO "models" ("id", "str", "extra") VALUES (42, 'hello', 'custom'), (43, 'foo', 'custom')

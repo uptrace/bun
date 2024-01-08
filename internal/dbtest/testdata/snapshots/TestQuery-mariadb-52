@@ -1,1 +1,0 @@
-INSERT INTO `models` (`int`, `uint`, `str`, `time`) VALUES (DEFAULT, DEFAULT, DEFAULT, DEFAULT) RETURNING `int`, `uint`, `str`, `time`
