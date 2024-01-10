@@ -39,6 +39,7 @@ func New() *Dialect {
 		feature.InsertOnConflict |
 		feature.TableNotExists |
 		feature.SelectExists |
+		feature.AutoIncrement |
 		feature.CompositeIn
 	return d
 }
@@ -89,6 +90,25 @@ func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
 
 func (d *Dialect) DefaultVarcharLen() int {
 	return 0
+}
+
+// AppendSequence adds AUTOINCREMENT keyword to the column definition. As per [documentation],
+// AUTOINCREMENT is only valid for INTEGER PRIMARY KEY, and this method will be a noop for other columns.
+//
+// Because this is a valid construct:
+//	CREATE TABLE ("id" INTEGER PRIMARY KEY AUTOINCREMENT);
+// and this is not:
+//	CREATE TABLE ("id" INTEGER AUTOINCREMENT, PRIMARY KEY ("id"));
+// AppendSequence adds a primary key constraint as a *side-effect*. Callers should expect it to avoid building invalid SQL.
+// SQLite also [does not support] AUTOINCREMENT column in composite primary keys.
+//
+// [documentation]: https://www.sqlite.org/autoinc.html
+// [does not support]: https://stackoverflow.com/a/6793274/14726116
+func (d *Dialect) AppendSequence(b []byte, table *schema.Table, field *schema.Field) []byte {
+	if field.IsPK && len(table.PKs) == 1 && field.CreateTableSQLType == sqltype.Integer {
+		b = append(b, " PRIMARY KEY AUTOINCREMENT"...)
+	}
+	return b
 }
 
 func fieldSQLType(field *schema.Field) string {
