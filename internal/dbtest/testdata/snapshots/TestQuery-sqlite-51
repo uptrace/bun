@@ -1,1 +1,1 @@
-INSERT INTO "models" ("int", "uint", "str", "time") VALUES (NULL, NULL, NULL, NULL) RETURNING "int", "uint", "str", "time"
+INSERT INTO "models" ("int", "uint", "str", "time", "bool", "empty_str") VALUES (NULL, NULL, NULL, NULL, NULL, NULL) RETURNING "int", "uint", "str", "time", "bool", "empty_str"

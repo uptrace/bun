@@ -331,20 +331,27 @@ func TestQuery(t *testing.T) {
 				Where("model.id = _data.id")
 		},
 		func(db *bun.DB) schema.QueryAppender {
+			// "nullzero" marshals zero values as DEFAULT or NULL (if DEFAULT placeholder is not supported)
+			// DB drivers which support DEFAULT placeholder resolve it to NULL for columns that do not have a DEFAULT value.
 			type Model struct {
-				Int  int64     `bun:",nullzero"`
-				Uint uint64    `bun:",nullzero"`
-				Str  string    `bun:",nullzero"`
-				Time time.Time `bun:",nullzero"`
+				Int      int64     `bun:",nullzero"`
+				Uint     uint64    `bun:",nullzero"`
+				Str      string    `bun:",nullzero"`
+				Time     time.Time `bun:",nullzero"`
+				Bool     bool      `bun:",nullzero"`
+				EmptyStr string    `bun:",nullzero"` // same as Str
 			}
 			return db.NewInsert().Model(new(Model))
 		},
 		func(db *bun.DB) schema.QueryAppender {
+			// "nullzero,default" is equivalent to "default", marshalling zero values to DEFAULT
 			type Model struct {
-				Int  int64     `bun:",nullzero,default:42"`
-				Uint uint64    `bun:",nullzero,default:42"`
-				Str  string    `bun:",nullzero,default:'hello'"`
-				Time time.Time `bun:",nullzero,default:now()"`
+				Int      int64     `bun:",nullzero,default:42"`
+				Uint     uint64    `bun:",nullzero,default:42"`
+				Str      string    `bun:",nullzero,default:'hello'"`
+				Time     time.Time `bun:",nullzero,default:now()"`
+				Bool     bool      `bun:",nullzero,default:true"`
+				EmptyStr string    `bun:",nullzero,default:''"`
 			}
 			return db.NewInsert().Model(new(Model))
 		},
@@ -1015,6 +1022,28 @@ func TestQuery(t *testing.T) {
 			// https://github.com/uptrace/bun/pull/941#discussion_r1443647857
 			_ = q.String()
 			return q
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewUpdate().Model(&struct {
+				bun.BaseModel `bun:"table:accounts"`
+				ID            int  `bun:"id,pk,autoincrement"`
+				IsActive      bool `bun:"is_active,notnull,default:true"`
+			}{
+				ID:       1,
+				IsActive: false,
+			}).Column("is_active").WherePK()
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			// "default" marshals zero values as DEFAULT or the specified default value
+			type Model struct {
+				Int      int64     `bun:",default:42"`
+				Uint     uint64    `bun:",default:42"`
+				Str      string    `bun:",default:'hello'"`
+				Time     time.Time `bun:",default:now()"`
+				Bool     bool      `bun:",default:true"`
+				EmptyStr string    `bun:",default:''"`
+			}
+			return db.NewInsert().Model(new(Model))
 		},
 	}
 
