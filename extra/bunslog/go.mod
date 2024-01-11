@@ -2,6 +2,8 @@ module github.com/uptrace/bun/extra/bunslog
 
 go 1.19
 
+replace github.com/uptrace/bun => ../..
+
 require github.com/uptrace/bun v1.1.16
 
 require (
