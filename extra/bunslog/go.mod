@@ -2,7 +2,7 @@ module github.com/uptrace/bun/extra/bunslog
 
 go 1.19
 
-require github.com/uptrace/bun v1.1.16
+require github.com/uptrace/bun v1.1.17
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect

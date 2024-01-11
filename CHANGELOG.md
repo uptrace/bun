@@ -1,3 +1,15 @@
+## [1.1.17](https://github.com/uptrace/bun/compare/v1.1.16...v1.1.17) (2024-01-11)
+
+
+### Features
+
+* add CreateTxSQLMigrations function ([#916](https://github.com/uptrace/bun/issues/916)) ([c68ec7c](https://github.com/uptrace/bun/commit/c68ec7cfc418959eb7c79028be7ac91f97d462ef))
+* add Join to UpdateQuery ([#908](https://github.com/uptrace/bun/issues/908)) ([8c4d8be](https://github.com/uptrace/bun/commit/8c4d8be3aa4e64582698b37fd21434b8960dddc0))
+* bunslog.QueryHook for Bun logging using `log/slog` ([#904](https://github.com/uptrace/bun/issues/904)) ([4953367](https://github.com/uptrace/bun/commit/495336731da0a995aa28c7bc84345c7825408e48))
+* dbfixture.New to accept IDB interface ([#900](https://github.com/uptrace/bun/issues/900)) ([2dee174](https://github.com/uptrace/bun/commit/2dee174bc4d09a45caeeede2885306e5fd10002d))
+
+
+
 ## [1.1.16](https://github.com/uptrace/bun/compare/v1.1.15...v1.1.16) (2023-09-16)
 
 
