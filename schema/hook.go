@@ -28,22 +28,6 @@ var beforeAppendModelHookType = reflect.TypeOf((*BeforeAppendModelHook)(nil)).El
 
 //------------------------------------------------------------------------------
 
-type BeforeScanHook interface {
-	BeforeScan(context.Context) error
-}
-
-var beforeScanHookType = reflect.TypeOf((*BeforeScanHook)(nil)).Elem()
-
-//------------------------------------------------------------------------------
-
-type AfterScanHook interface {
-	AfterScan(context.Context) error
-}
-
-var afterScanHookType = reflect.TypeOf((*AfterScanHook)(nil)).Elem()
-
-//------------------------------------------------------------------------------
-
 type BeforeScanRowHook interface {
 	BeforeScanRow(context.Context) error
 }
