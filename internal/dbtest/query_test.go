@@ -664,7 +664,7 @@ func TestQuery(t *testing.T) {
 		func(db *bun.DB) schema.QueryAppender {
 			type ID string
 			type Model struct {
-				ID
+				ID ID
 			}
 			return db.NewInsert().Model(&Model{ID: ID("embed")})
 		},
