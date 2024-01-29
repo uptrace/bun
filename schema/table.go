@@ -163,18 +163,18 @@ func (t *Table) processFields(
 				continue
 			}
 
-			typ := sf.Type
-			if sf.Type.Kind() == reflect.Ptr {
-				typ = sf.Type.Elem()
+			sfType := sf.Type
+			if sfType.Kind() == reflect.Ptr {
+				sfType = sfType.Elem()
 			}
 
-			if typ.Kind() != reflect.Struct { // ignore unexported non-struct types
+			if sfType.Kind() != reflect.Struct { // ignore unexported non-struct types
 				continue
 			}
 
-			subtable := newTable(t.dialect, typ, seen, canAddr)
+			subtable := newTable(t.dialect, sfType, seen, canAddr)
 
-			for _, subfield := range subtable.Fields {
+			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
 					index:      sf.Index,
 					unexported: unexported,
@@ -253,7 +253,7 @@ func (t *Table) processFields(
 	}
 
 	for _, embfield := range embedded {
-		subfield := *embfield.subfield
+		subfield := embfield.subfield.Clone()
 
 		if ambiguousNames[subfield.Name] > 1 &&
 			!(!subfield.Tag.IsZero() && ambiguousTags[subfield.Name] == 1) {
@@ -265,7 +265,7 @@ func (t *Table) processFields(
 			subfield.Name = embfield.prefix + subfield.Name
 			subfield.SQLName = t.quoteIdent(subfield.Name)
 		}
-		t.addField(&subfield)
+		t.addField(subfield)
 	}
 }
 
@@ -306,8 +306,8 @@ func (t *Table) addField(field *Field) {
 	}
 
 	t.FieldMap[field.Name] = field
-	if v, ok := field.Tag.Option("alt"); ok {
-		t.FieldMap[v] = field
+	if altName, ok := field.Tag.Option("alt"); ok {
+		t.FieldMap[altName] = field
 	}
 
 	if field.Tag.HasOption("scanonly") {

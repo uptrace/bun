@@ -112,6 +112,28 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{1, 0}, barView.Index)
 	})
 
+	t.Run("embed scanonly", func(t *testing.T) {
+		type Model1 struct {
+			Foo string
+			Bar string `bun:",scanonly"`
+		}
+
+		type Model2 struct {
+			Model1
+		}
+
+		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		require.Len(t, table.FieldMap, 2)
+
+		foo, ok := table.FieldMap["foo"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 0}, foo.Index)
+
+		bar, ok := table.FieldMap["bar"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 1}, bar.Index)
+	})
+
 	t.Run("scanonly", func(t *testing.T) {
 		type Model1 struct {
 			Foo string
@@ -120,17 +142,25 @@ func TestTable(t *testing.T) {
 
 		type Model2 struct {
 			XXX Model1 `bun:",scanonly"`
+			Baz string `bun:",scanonly"`
 		}
 
 		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+
+		require.Len(t, table.StructMap, 1)
 		require.NotNil(t, table.StructMap["xxx"])
+
+		require.Len(t, table.FieldMap, 2)
+		baz := table.FieldMap["baz"]
+		require.NotNil(t, baz)
+		require.Equal(t, []int{1}, baz.Index)
 
 		foo := table.LookupField("xxx__foo")
 		require.NotNil(t, foo)
 		require.Equal(t, []int{0, 0}, foo.Index)
 
 		bar := table.LookupField("xxx__bar")
-		require.NotNil(t, foo)
+		require.NotNil(t, bar)
 		require.Equal(t, []int{0, 1}, bar.Index)
 	})
 
