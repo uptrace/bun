@@ -269,6 +269,10 @@ func parseDSN(dsn string) ([]Option, error) {
 		case "require":
 			if sslRootCert == "" {
 				tlsConfig.InsecureSkipVerify = true
+				tlsConfig.ServerName = u.Host
+				if host, _, err := net.SplitHostPort(u.Host); err == nil {
+					tlsConfig.ServerName = host
+				}
 				break
 			}
 			// For backwards compatibility reasons, in the presence of `sslrootcert`,
@@ -283,6 +287,10 @@ func parseDSN(dsn string) ([]Option, error) {
 			// (verify chain, but skip server name).
 			// See https://github.com/golang/go/issues/21971 .
 			tlsConfig.InsecureSkipVerify = true
+			tlsConfig.ServerName = u.Host
+			if host, _, err := net.SplitHostPort(u.Host); err == nil {
+				tlsConfig.ServerName = host
+			}
 			tlsConfig.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 				certs := make([]*x509.Certificate, 0, len(rawCerts))
 				for _, rawCert := range rawCerts {
