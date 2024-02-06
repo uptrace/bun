@@ -204,4 +204,23 @@ func TestTable(t *testing.T) {
 			require.Equal(t, []int{2, 0}, id.Index)
 		}
 	})
+
+	t.Run("alternative name", func(t *testing.T) {
+		type ModelTest struct {
+			Model
+			Foo string `bun:"alt:alt_name"`
+		}
+
+		table := tables.Get(reflect.TypeOf((*ModelTest)(nil)))
+
+		foo, ok := table.FieldMap["foo"]
+		require.True(t, ok)
+		require.Equal(t, []int{1}, foo.Index)
+
+		foo2, ok := table.FieldMap["alt_name"]
+		require.True(t, ok)
+		require.Equal(t, []int{1}, foo2.Index)
+
+		require.Equal(t, table.FieldMap["foo"].SQLName, table.FieldMap["alt_name"].SQLName)
+	})
 }
