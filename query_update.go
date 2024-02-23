@@ -20,6 +20,7 @@ type UpdateQuery struct {
 	setQuery
 	idxHintsQuery
 
+	joins    []joinQuery
 	omitZero bool
 }
 
@@ -133,6 +134,33 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
+func (q *UpdateQuery) Join(join string, args ...interface{}) *UpdateQuery {
+	q.joins = append(q.joins, joinQuery{
+		join: schema.SafeQuery(join, args),
+	})
+	return q
+}
+
+func (q *UpdateQuery) JoinOn(cond string, args ...interface{}) *UpdateQuery {
+	return q.joinOn(cond, args, " AND ")
+}
+
+func (q *UpdateQuery) JoinOnOr(cond string, args ...interface{}) *UpdateQuery {
+	return q.joinOn(cond, args, " OR ")
+}
+
+func (q *UpdateQuery) joinOn(cond string, args []interface{}, sep string) *UpdateQuery {
+	if len(q.joins) == 0 {
+		q.err = errors.New("bun: query has no joins")
+		return q
+	}
+	j := &q.joins[len(q.joins)-1]
+	j.on = append(j.on, schema.SafeQueryWithSep(cond, args, sep))
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *UpdateQuery) WherePK(cols ...string) *UpdateQuery {
 	q.addWhereCols(cols)
 	return q
@@ -230,6 +258,13 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		}
 	}
 
+	for _, j := range q.joins {
+		b, err = j.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if q.hasFeature(feature.Output) && q.hasReturning() {
 		b = append(b, " OUTPUT "...)
 		b, err = q.appendOutput(fmter, b)
@@ -271,9 +306,17 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
+		pos := len(b)
 		b, err = q.appendSetStruct(fmter, b, model)
 		if err != nil {
 			return nil, err
+		}
+
+		// Validate if no values were appended after SET clause.
+		// e.g. UPDATE users SET WHERE id = 1
+		// See issues858
+		if len(b) == pos {
+			return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
 		}
 	case *sliceTableModel:
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")

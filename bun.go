@@ -10,6 +10,7 @@ import (
 type (
 	Safe  = schema.Safe
 	Ident = schema.Ident
+	Name  = schema.Name
 
 	NullTime  = schema.NullTime
 	BaseModel = schema.BaseModel
@@ -19,11 +20,6 @@ type (
 
 	BeforeScanRowHook = schema.BeforeScanRowHook
 	AfterScanRowHook  = schema.AfterScanRowHook
-
-	// DEPRECATED. Use BeforeScanRowHook instead.
-	BeforeScanHook = schema.BeforeScanHook
-	// DEPRECATED. Use AfterScanRowHook instead.
-	AfterScanHook = schema.AfterScanHook
 )
 
 type BeforeSelectHook interface {
@@ -81,4 +77,8 @@ func SetLogger(logger internal.Logging) {
 
 func In(slice interface{}) schema.QueryAppender {
 	return schema.In(slice)
+}
+
+func NullZero(value interface{}) schema.QueryAppender {
+	return schema.NullZero(value)
 }

@@ -141,6 +141,23 @@ func newDBCommand(migrator *migrate.Migrator) *cli.Command {
 				},
 			},
 			{
+				Name:  "create_tx_sql",
+				Usage: "create up and down transactional SQL migrations",
+				Action: func(c *cli.Context) error {
+					name := strings.Join(c.Args().Slice(), "_")
+					files, err := migrator.CreateTxSQLMigrations(c.Context, name)
+					if err != nil {
+						return err
+					}
+
+					for _, mf := range files {
+						fmt.Printf("created transaction migration %s (%s)\n", mf.Name, mf.Path)
+					}
+
+					return nil
+				},
+			},
+			{
 				Name:  "status",
 				Usage: "print migrations status",
 				Action: func(c *cli.Context) error {

@@ -31,6 +31,10 @@ type Dialect interface {
 	AppendJSON(b, jsonb []byte) []byte
 	AppendBool(b []byte, v bool) []byte
 
+	// AppendSequence adds the appropriate instruction for the driver to create a sequence
+	// from which (autoincremented) values for the column will be generated.
+	AppendSequence(b []byte, t *Table, f *Field) []byte
+
 	// DefaultVarcharLen should be returned for dialects in which specifying VARCHAR length
 	// is mandatory in queries that modify the schema (CREATE TABLE / ADD COLUMN, etc).
 	// Dialects that do not have such requirement may return 0, which should be interpreted so by the caller.
@@ -176,4 +180,8 @@ func (d *nopDialect) IdentQuote() byte {
 
 func (d *nopDialect) DefaultVarcharLen() int {
 	return 0
+}
+
+func (d *nopDialect) AppendSequence(b []byte, _ *Table, _ *Field) []byte {
+	return b
 }

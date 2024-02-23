@@ -10,6 +10,22 @@ import (
 	"github.com/uptrace/bun/migrate"
 )
 
+const (
+	migrationsTable     = "test_migrations"
+	migrationLocksTable = "test_migration_locks"
+)
+
+func cleanupMigrations(tb testing.TB, ctx context.Context, db *bun.DB) {
+	tb.Cleanup(func() {
+		var err error
+		_, err = db.NewDropTable().ModelTableExpr(migrationsTable).Exec(ctx)
+		require.NoError(tb, err, "drop %q table", migrationsTable)
+
+		_, err = db.NewDropTable().ModelTableExpr(migrationLocksTable).Exec(ctx)
+		require.NoError(tb, err, "drop %q table", migrationLocksTable)
+	})
+}
+
 func TestMigrate(t *testing.T) {
 	type Test struct {
 		run func(t *testing.T, db *bun.DB)
@@ -21,6 +37,8 @@ func TestMigrate(t *testing.T) {
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		cleanupMigrations(t, ctx, db)
+
 		for _, test := range tests {
 			t.Run(funcName(test.run), func(t *testing.T) {
 				test.run(t, db)
@@ -58,7 +76,10 @@ func testMigrateUpAndDown(t *testing.T, db *bun.DB) {
 		},
 	})
 
-	m := migrate.NewMigrator(db, migrations)
+	m := migrate.NewMigrator(db, migrations,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationLocksTable),
+	)
 	err := m.Reset(ctx)
 	require.NoError(t, err)
 
@@ -116,7 +137,10 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 		},
 	})
 
-	m := migrate.NewMigrator(db, migrations)
+	m := migrate.NewMigrator(db, migrations,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationLocksTable),
+	)
 	err := m.Reset(ctx)
 	require.NoError(t, err)
 

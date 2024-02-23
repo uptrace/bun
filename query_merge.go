@@ -29,7 +29,7 @@ func NewMergeQuery(db *DB) *MergeQuery {
 			conn: db.DB,
 		},
 	}
-	if !(q.db.dialect.Name() == dialect.MSSQL || q.db.dialect.Name() == dialect.PG) {
+	if q.db.dialect.Name() != dialect.MSSQL && q.db.dialect.Name() != dialect.PG {
 		q.err = errors.New("bun: merge not supported for current dialect")
 	}
 	return q

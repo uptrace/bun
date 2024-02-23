@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -115,9 +116,6 @@ func (m *structTableModel) BeforeScanRow(ctx context.Context) error {
 	if m.table.HasBeforeScanRowHook() {
 		return m.strct.Addr().Interface().(schema.BeforeScanRowHook).BeforeScanRow(ctx)
 	}
-	if m.table.HasBeforeScanHook() {
-		return m.strct.Addr().Interface().(schema.BeforeScanHook).BeforeScan(ctx)
-	}
 	return nil
 }
 
@@ -130,21 +128,6 @@ func (m *structTableModel) AfterScanRow(ctx context.Context) error {
 
 	if m.table.HasAfterScanRowHook() {
 		firstErr := m.strct.Addr().Interface().(schema.AfterScanRowHook).AfterScanRow(ctx)
-
-		for _, j := range m.joins {
-			switch j.Relation.Type {
-			case schema.HasOneRelation, schema.BelongsToRelation:
-				if err := j.JoinModel.AfterScanRow(ctx); err != nil && firstErr == nil {
-					firstErr = err
-				}
-			}
-		}
-
-		return firstErr
-	}
-
-	if m.table.HasAfterScanHook() {
-		firstErr := m.strct.Addr().Interface().(schema.AfterScanHook).AfterScan(ctx)
 
 		for _, j := range m.joins {
 			switch j.Relation.Type {
@@ -234,7 +217,7 @@ func (m *structTableModel) parentIndex() []int {
 }
 
 func (m *structTableModel) mount(host reflect.Value) {
-	m.strct = host.FieldByIndex(m.rel.Field.Index)
+	m.strct = internal.FieldByIndexAlloc(host, m.rel.Field.Index)
 	m.structInited = false
 }
 
@@ -324,7 +307,7 @@ func (m *structTableModel) scanColumn(column string, src interface{}) (bool, err
 		}
 	}
 
-	if field, ok := m.table.FieldMap[column]; ok {
+	if field := m.table.LookupField(column); field != nil {
 		if src == nil && m.isNil() {
 			return true, nil
 		}

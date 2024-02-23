@@ -178,7 +178,12 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	baseTable := j.BaseModel.Table()
 
 	if j.Relation.M2MTable != nil {
-		q = q.ColumnExpr(string(j.Relation.M2MTable.SQLAlias) + ".*")
+		fields := append(j.Relation.M2MBaseFields, j.Relation.M2MJoinFields...)
+
+		b := make([]byte, 0, len(fields))
+		b = appendColumns(b, j.Relation.M2MTable.SQLAlias, fields)
+
+		q = q.ColumnExpr(internal.String(b))
 	}
 
 	//nolint
@@ -257,7 +262,9 @@ func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte 
 	return append(b, j.BaseModel.Table().SQLAlias...)
 }
 
-func (j *relationJoin) appendSoftDelete(fmter schema.Formatter, b []byte, flags internal.Flag) []byte {
+func (j *relationJoin) appendSoftDelete(
+	fmter schema.Formatter, b []byte, flags internal.Flag,
+) []byte {
 	b = append(b, '.')
 
 	field := j.JoinModel.Table().SoftDeleteField
