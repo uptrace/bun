@@ -31,7 +31,7 @@ type SelectQuery struct {
 	group      []schema.QueryWithArgs
 	having     []schema.QueryWithArgs
 	order      []schema.QueryWithArgs
-	limit      int32
+	limit      *int32
 	offset     int32
 	selFor     schema.QueryWithArgs
 
@@ -313,7 +313,11 @@ func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery 
 }
 
 func (q *SelectQuery) Limit(n int) *SelectQuery {
-	q.limit = int32(n)
+	if n >= 0 {
+		l := int32(n)
+		q.limit = &l
+	}
+
 	return q
 }
 
@@ -611,19 +615,19 @@ func (q *SelectQuery) appendQuery(
 		}
 
 		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.limit > 0 && q.offset > 0 {
+			if q.limit != nil && q.offset > 0 {
 				b = append(b, " OFFSET "...)
 				b = strconv.AppendInt(b, int64(q.offset), 10)
 				b = append(b, " ROWS"...)
 
 				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
+				b = strconv.AppendInt(b, int64(*q.limit), 10)
 				b = append(b, " ROWS ONLY"...)
-			} else if q.limit > 0 {
+			} else if q.limit != nil {
 				b = append(b, " OFFSET 0 ROWS"...)
 
 				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
+				b = strconv.AppendInt(b, int64(*q.limit), 10)
 				b = append(b, " ROWS ONLY"...)
 			} else if q.offset > 0 {
 				b = append(b, " OFFSET "...)
@@ -631,9 +635,9 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " ROWS"...)
 			}
 		} else {
-			if q.limit > 0 {
+			if q.limit != nil {
 				b = append(b, " LIMIT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
+				b = strconv.AppendInt(b, int64(*q.limit), 10)
 			}
 			if q.offset > 0 {
 				b = append(b, " OFFSET "...)
@@ -958,20 +962,18 @@ func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{})
 	var mu sync.Mutex
 	var firstErr error
 
-	if q.limit >= 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			if err := q.Scan(ctx, dest...); err != nil {
-				mu.Lock()
-				if firstErr == nil {
-					firstErr = err
-				}
-				mu.Unlock()
+		if err := q.Scan(ctx, dest...); err != nil {
+			mu.Lock()
+			if firstErr == nil {
+				firstErr = err
 			}
-		}()
-	}
+			mu.Unlock()
+		}
+	}()
 
 	wg.Add(1)
 	go func() {
@@ -995,9 +997,7 @@ func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{})
 func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) (int, error) {
 	var firstErr error
 
-	if q.limit >= 0 {
-		firstErr = q.Scan(ctx, dest...)
-	}
+	firstErr = q.Scan(ctx, dest...)
 
 	count, err := q.Count(ctx)
 	if err != nil && firstErr == nil {
