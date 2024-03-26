@@ -51,6 +51,7 @@ type IDB interface {
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery
 	NewDelete() *DeleteQuery
+	NewMerge() *MergeQuery
 	NewRaw(query string, args ...interface{}) *RawQuery
 	NewCreateTable() *CreateTableQuery
 	NewDropTable() *DropTableQuery
