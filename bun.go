@@ -72,7 +72,7 @@ type AfterDropTableHook interface {
 
 // SetLogger overwriters default Bun logger.
 func SetLogger(logger internal.Logging) {
-	internal.Logger = logger
+	internal.SetLogger(logger)
 }
 
 func In(slice interface{}) schema.QueryAppender {
