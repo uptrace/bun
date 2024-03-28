@@ -14,7 +14,7 @@ type ColumnsAppender interface {
 	AppendColumns(fmter Formatter, b []byte) ([]byte, error)
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // Safe represents a safe SQL query.
 type Safe string
@@ -25,7 +25,7 @@ func (s Safe) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return append(b, s...), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // Name represents a single SQL name, for example, a column name.
 type Name string
@@ -48,7 +48,7 @@ func (s Ident) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.AppendIdent(b, string(s)), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type QueryWithArgs struct {
 	Query string
@@ -84,7 +84,7 @@ func (q QueryWithArgs) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.AppendQuery(b, q.Query, q.Args...), nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 type QueryWithSep struct {
 	QueryWithArgs
