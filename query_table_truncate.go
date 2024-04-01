@@ -57,6 +57,11 @@ func (q *TruncateTableQuery) TableExpr(query string, args ...interface{}) *Trunc
 	return q
 }
 
+func (q *TruncateTableQuery) ModelTableExpr(query string, args ...interface{}) *TruncateTableQuery {
+	q.modelTableName = schema.SafeQuery(query, args)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *TruncateTableQuery) ContinueIdentity() *TruncateTableQuery {
