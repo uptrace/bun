@@ -2,7 +2,7 @@ version: '3'
 
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:23.7
+    image: clickhouse/clickhouse-server:23.11
     restart: on-failure
     environment:
       CLICKHOUSE_DB: uptrace
@@ -36,7 +36,7 @@ services:
       - '5432:5432'
 
   uptrace:
-    image: 'uptrace/uptrace:1.6.0'
+    image: 'uptrace/uptrace:1.7.0'
     #image: 'uptrace/uptrace-dev:latest'
     restart: on-failure
     volumes:
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
 
   otelcol:
-    image: otel/opentelemetry-collector-contrib:0.91.0
+    image: otel/opentelemetry-collector-contrib:0.95.0
     restart: on-failure
     volumes:
       - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml
@@ -64,12 +64,21 @@ services:
     volumes:
       - ./config/vector.toml:/etc/vector/vector.toml:ro
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    restart: on-failure
+  mailpit:
+    image: axllent/mailpit
+    restart: always
     ports:
-      - '8025:8025'
+      - 1025:1025
+      - 8025:8025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit_data:/data
 
 volumes:
   ch_data2:
   pg_data5:
+  mailpit_data:
