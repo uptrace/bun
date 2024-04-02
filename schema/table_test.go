@@ -134,6 +134,28 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{0, 1}, bar.Index)
 	})
 
+	t.Run("embed scanonly prefix", func(t *testing.T) {
+		type Model1 struct {
+			Foo string `bun:",scanonly"`
+			Bar string `bun:",scanonly"`
+		}
+
+		type Model2 struct {
+			Baz Model1 `bun:"embed:baz_"`
+		}
+
+		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		require.Len(t, table.FieldMap, 2)
+
+		foo, ok := table.FieldMap["baz_foo"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 0}, foo.Index)
+
+		bar, ok := table.FieldMap["baz_bar"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 1}, bar.Index)
+	})
+
 	t.Run("scanonly", func(t *testing.T) {
 		type Model1 struct {
 			Foo string
