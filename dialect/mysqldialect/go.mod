@@ -7,7 +7,7 @@ toolchain go1.22.1
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/uptrace/bun v1.2.0
+	github.com/uptrace/bun v1.2.1
 	golang.org/x/mod v0.16.0
 )
 
