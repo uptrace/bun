@@ -207,7 +207,7 @@ func (t *Table) processFields(
 			}
 
 			subtable := newTable(t.dialect, fieldType, seen, canAddr)
-			for _, subfield := range subtable.Fields {
+			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
 					prefix:     prefix,
 					index:      sf.Index,
