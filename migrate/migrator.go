@@ -362,7 +362,10 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 }
 
 func (m *Migrator) TruncateTable(ctx context.Context) error {
-	_, err := m.db.NewTruncateTable().TableExpr(m.table).Exec(ctx)
+	_, err := m.db.NewTruncateTable().
+		Model((*Migration)(nil)).
+		ModelTableExpr(m.table).
+		Exec(ctx)
 	return err
 }
 
