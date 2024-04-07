@@ -75,7 +75,7 @@ func (q *DeleteQuery) TableExpr(query string, args ...interface{}) *DeleteQuery 
 }
 
 func (q *DeleteQuery) ModelTableExpr(query string, args ...interface{}) *DeleteQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 

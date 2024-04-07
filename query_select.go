@@ -109,7 +109,7 @@ func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery 
 }
 
 func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 
@@ -681,18 +681,29 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 				b = append(b, ", "...)
 			}
 
-			if col.Args == nil && q.table != nil {
+			if col.Args != nil || (q.table == nil && q.modelTable.IsZero()) {
+				b, err = col.AppendQuery(fmter, b)
+				if err != nil {
+					return nil, err
+				}
+				continue
+			}
+
+			// table name specified ModelTableExpr method has priority
+			if !q.modelTable.IsZero() {
+				if field, ok := q.table.FieldMap[col.Query]; ok {
+					b = append(b, q.modelTable.GetTableName(fmter)...)
+					b = append(b, '.')
+					b = append(b, field.SQLName...)
+				}
+				continue
+			}
+			if q.table != nil {
 				if field, ok := q.table.FieldMap[col.Query]; ok {
 					b = append(b, q.table.SQLAlias...)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
-					continue
 				}
-			}
-
-			b, err = col.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
 			}
 		}
 	case q.table != nil:
@@ -700,6 +711,8 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
 			b = fmter.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
+		} else if !q.modelTable.IsZero() {
+			b = appendColumns(b, schema.Safe(q.modelTable.GetTableName(fmter)), q.table.Fields)
 		} else {
 			b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		}

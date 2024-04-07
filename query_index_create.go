@@ -93,7 +93,7 @@ func (q *CreateIndexQuery) TableExpr(query string, args ...interface{}) *CreateI
 }
 
 func (q *CreateIndexQuery) ModelTableExpr(query string, args ...interface{}) *CreateIndexQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 
