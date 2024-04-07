@@ -1,0 +1,1 @@
+SELECT r.`id`, r.`str` FROM renamed AS r

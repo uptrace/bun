@@ -1,0 +1,1 @@
+SELECT renamed."id", renamed."str" FROM renamed
