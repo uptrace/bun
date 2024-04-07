@@ -1045,6 +1045,12 @@ func TestQuery(t *testing.T) {
 			}
 			return db.NewInsert().Model(new(Model))
 		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed")
+		},
+		func(db *bun.DB) schema.QueryAppender {
+			return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed AS r")
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
