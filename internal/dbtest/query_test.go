@@ -1545,11 +1545,17 @@ func TestQuery(t *testing.T) {
 				return db.NewInsert().Model(new(Model))
 			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed")
+		{
+			id: 167,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed")
+			},
 		},
-		func(db *bun.DB) schema.QueryAppender {
-			return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed AS r")
+		{
+			id: 168,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(Model)).ModelTableExpr("renamed AS r")
+			},
 		},
 	}
 
