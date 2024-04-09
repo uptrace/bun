@@ -491,6 +491,10 @@ func Test_isNum(t *testing.T) {
 	for i := 0; i < len(alphabet); i++ {
 		require.False(t, isNum(alphabet[i]))
 	}
+	symbols := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	for i := 0; i < len(symbols); i++ {
+		require.False(t, isNum(symbols[i]))
+	}
 }
 
 func Test_isAlpha(t *testing.T) {
@@ -501,5 +505,9 @@ func Test_isAlpha(t *testing.T) {
 	alphabet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	for i := 0; i < len(alphabet); i++ {
 		require.True(t, isAlpha(alphabet[i]))
+	}
+	symbols := "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	for i := 0; i < len(symbols); i++ {
+		require.False(t, isNum(symbols[i]))
 	}
 }
