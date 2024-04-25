@@ -44,6 +44,13 @@ func (q *DeleteQuery) Err(err error) *DeleteQuery {
 	return q
 }
 
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *DeleteQuery) Comment(c string) *DeleteQuery {
+	q.setComment(c)
+	return q
+}
+
 // Apply calls the fn passing the DeleteQuery as an argument.
 func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
 	if fn != nil {
@@ -260,7 +267,7 @@ func (q *DeleteQuery) scanOrExec(
 	}
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -340,6 +347,13 @@ func (q *DeleteQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *Del
 
 type deleteQueryBuilder struct {
 	*DeleteQuery
+}
+
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *deleteQueryBuilder) Comment(c string) QueryBuilder {
+	q.setComment(c)
+	return q
 }
 
 func (q *deleteQueryBuilder) WhereGroup(

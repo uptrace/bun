@@ -74,6 +74,7 @@ var (
 // QueryBuilder is used for common query methods
 type QueryBuilder interface {
 	Query
+	Comment(c string) QueryBuilder
 	Where(query string, args ...interface{}) QueryBuilder
 	WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder
 	WhereOr(query string, args ...interface{}) QueryBuilder
@@ -103,6 +104,8 @@ type baseQuery struct {
 	modelTableName schema.QueryWithArgs
 	tables         []schema.QueryWithArgs
 	columns        []schema.QueryWithArgs
+
+	comment string
 
 	flags internal.Flag
 }
@@ -144,6 +147,38 @@ func (q *baseQuery) GetTableName() string {
 	}
 
 	return ""
+}
+
+func (q *baseQuery) setComment(c string) {
+	q.comment = c
+}
+
+func (q *baseQuery) appendComment(ctx context.Context, b []byte) []byte {
+	// check if a comment was explicitly set on the query using the .Comment("...") api
+	if q.comment == "" {
+		// if not, check if one exists on the incoming context
+		if c, _ := ctx.Value(queryCommentCtxKey{}).(string); c == "" {
+			return b
+		} else {
+			q.comment = c
+		}
+	}
+
+	lastIdx := len(q.comment) - 1
+	b = append(b, "/*"...)
+	for i := range q.comment {
+		// if the comment contains the closing sequence, escape it
+		if q.comment[i] == '*' && i < lastIdx && q.comment[i+1] == '/' {
+			b = append(b, '\\')
+			b = append(b, q.comment[i])
+			b = append(b, '\\')
+		} else {
+			b = append(b, q.comment[i])
+		}
+	}
+	b = append(b, "*/ "...)
+
+	return b
 }
 
 func (q *baseQuery) setConn(db IConn) {
@@ -1346,4 +1381,13 @@ func (ih *idxHintsQuery) bufIndexHint(
 	}
 	b = append(b, ")"...)
 	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+type queryCommentCtxKey struct{}
+
+// CtxWithComment returns a context that includes a comment that may be included in a query for debugging
+func ContextWithComment(ctx context.Context, comment string) context.Context {
+	return context.WithValue(ctx, queryCommentCtxKey{}, comment)
 }

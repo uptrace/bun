@@ -53,6 +53,13 @@ func (q *UpdateQuery) Err(err error) *UpdateQuery {
 	return q
 }
 
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *UpdateQuery) Comment(c string) *UpdateQuery {
+	q.setComment(c)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
 	if fn != nil {
@@ -506,7 +513,7 @@ func (q *UpdateQuery) scanOrExec(
 	}
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -602,6 +609,13 @@ func (q *UpdateQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *Upd
 
 type updateQueryBuilder struct {
 	*UpdateQuery
+}
+
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *updateQueryBuilder) Comment(c string) QueryBuilder {
+	q.setComment(c)
+	return q
 }
 
 func (q *updateQueryBuilder) WhereGroup(

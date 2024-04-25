@@ -50,6 +50,13 @@ func (q *MergeQuery) Err(err error) *MergeQuery {
 	return q
 }
 
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *MergeQuery) Comment(c string) *MergeQuery {
+	q.setComment(c)
+	return q
+}
+
 // Apply calls the fn passing the MergeQuery as an argument.
 func (q *MergeQuery) Apply(fn func(*MergeQuery) *MergeQuery) *MergeQuery {
 	if fn != nil {
@@ -232,7 +239,7 @@ func (q *MergeQuery) scanOrExec(
 	}
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
