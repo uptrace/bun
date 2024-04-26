@@ -274,12 +274,12 @@ func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*M
 		return nil, err
 	}
 
-	up, err := m.createSQL(ctx, name+".up.tx.sql", true)
+	up, err := m.createSQL(ctx, name+".tx.up.sql", true)
 	if err != nil {
 		return nil, err
 	}
 
-	down, err := m.createSQL(ctx, name+".down.tx.sql", true)
+	down, err := m.createSQL(ctx, name+".tx.down.sql", true)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,10 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 }
 
 func (m *Migrator) TruncateTable(ctx context.Context) error {
-	_, err := m.db.NewTruncateTable().TableExpr(m.table).Exec(ctx)
+	_, err := m.db.NewTruncateTable().
+		Model((*Migration)(nil)).
+		ModelTableExpr(m.table).
+		Exec(ctx)
 	return err
 }
 

@@ -134,6 +134,28 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{0, 1}, bar.Index)
 	})
 
+	t.Run("embed scanonly prefix", func(t *testing.T) {
+		type Model1 struct {
+			Foo string `bun:",scanonly"`
+			Bar string `bun:",scanonly"`
+		}
+
+		type Model2 struct {
+			Baz Model1 `bun:"embed:baz_"`
+		}
+
+		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		require.Len(t, table.FieldMap, 2)
+
+		foo, ok := table.FieldMap["baz_foo"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 0}, foo.Index)
+
+		bar, ok := table.FieldMap["baz_bar"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 1}, bar.Index)
+	})
+
 	t.Run("scanonly", func(t *testing.T) {
 		type Model1 struct {
 			Foo string
@@ -203,5 +225,24 @@ func TestTable(t *testing.T) {
 			require.NotNil(t, id)
 			require.Equal(t, []int{2, 0}, id.Index)
 		}
+	})
+
+	t.Run("alternative name", func(t *testing.T) {
+		type ModelTest struct {
+			Model
+			Foo string `bun:"alt:alt_name"`
+		}
+
+		table := tables.Get(reflect.TypeOf((*ModelTest)(nil)))
+
+		foo, ok := table.FieldMap["foo"]
+		require.True(t, ok)
+		require.Equal(t, []int{1}, foo.Index)
+
+		foo2, ok := table.FieldMap["alt_name"]
+		require.True(t, ok)
+		require.Equal(t, []int{1}, foo2.Index)
+
+		require.Equal(t, table.FieldMap["foo"].SQLName, table.FieldMap["alt_name"].SQLName)
 	})
 }

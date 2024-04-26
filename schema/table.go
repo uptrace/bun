@@ -207,7 +207,7 @@ func (t *Table) processFields(
 			}
 
 			subtable := newTable(t.dialect, fieldType, seen, canAddr)
-			for _, subfield := range subtable.Fields {
+			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
 					prefix:     prefix,
 					index:      sf.Index,
@@ -913,7 +913,7 @@ func isKnownTableOption(name string) bool {
 func isKnownFieldOption(name string) bool {
 	switch name {
 	case "column",
-		"alias",
+		"alt",
 		"type",
 		"array",
 		"hstore",

@@ -76,39 +76,6 @@ projects:
     group_funcs_by_service: false
 
 ##
-## Create metrics from spans and events.
-##
-metrics_from_spans:
-  - name: uptrace.tracing.spans
-    description: Spans duration (excluding events)
-    instrument: histogram
-    unit: microseconds
-    value: _duration / 1000
-    attrs:
-      - _system
-      - _group_id
-      - service_name
-      - host_name
-      - _status_code
-    annotations:
-      - display_name
-    where: _event_name = ''
-
-  - name: uptrace.tracing.events
-    description: Events count (excluding spans)
-    instrument: counter
-    unit: 1
-    value: _count
-    attrs:
-      - _system
-      - _group_id
-      - _name
-      - host_name
-    annotations:
-      - display_name
-    where: _is_event = 1
-
-##
 ## To require authentication, uncomment one of the following sections.
 ##
 auth:
@@ -152,7 +119,7 @@ auth:
 ##
 ch_schema:
   # Compression codec, for example, LZ4, ZSTD(3), or Default.
-  compression: ZSTD(3)
+  compression: ZSTD(1)
 
   # Whether to use ReplicatedMergeTree instead of MergeTree.
   replicated: false
@@ -224,6 +191,26 @@ metrics:
   #batch_size: 10000
 
 ##
+## SMTP settings to send emails.
+## https://uptrace.dev/get/alerting.html
+##
+smtp_mailer:
+  # Whether to use this mailer for sending emails.
+  enabled: false
+  # SMTP server host.
+  host: localhost
+  # SMTP server port.
+  port: 1025
+  # Username for authentication.
+  username: mailhog
+  # Password for authentication.
+  password: mailhog
+  # Uncomment to disable opportunistic TLS.
+  #tls: { disabled: true }
+  # Emails will be send from this address.
+  from: 'uptrace@localhost'
+
+##
 ## uptrace-go client configuration.
 ## Uptrace sends internal telemetry here. Defaults to listen.grpc.addr.
 ##
@@ -233,18 +220,6 @@ uptrace_go:
   #   cert_file: config/tls/uptrace.crt
   #   key_file: config/tls/uptrace.key
   #   insecure_skip_verify: true
-
-##
-## SMTP settings to send emails.
-## https://uptrace.dev/get/alerting.html
-##
-smtp_mailer:
-  enabled: true
-  host: mailhog
-  port: 1025
-  username: mailhog
-  password: mailhog
-  from: 'uptrace@localhost'
 
 ##
 ## Logging configuration.

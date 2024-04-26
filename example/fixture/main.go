@@ -27,7 +27,7 @@ type User struct {
 type Org struct {
 	ID      int64 `bun:",pk,autoincrement"`
 	Name    string
-	OwnerID int64
+	OwnerID int64 `yaml:"owner_id"`
 	Owner   *User `bun:"rel:belongs-to"`
 }
 
