@@ -22,6 +22,10 @@ type (
 	AfterScanRowHook  = schema.AfterScanRowHook
 )
 
+func SafeQuery(query string, args ...interface{}) schema.QueryWithArgs {
+	return schema.SafeQuery(query, args)
+}
+
 type BeforeSelectHook interface {
 	BeforeSelect(ctx context.Context, query *SelectQuery) error
 }
