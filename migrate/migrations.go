@@ -96,10 +96,6 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 		}
 
 		migration := m.getOrCreateMigration(name)
-		if err != nil {
-			return err
-		}
-
 		migration.Comment = comment
 		migrationFunc := NewSQLMigrationFunc(fsys, path)
 
