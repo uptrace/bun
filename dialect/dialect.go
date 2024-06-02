@@ -12,6 +12,8 @@ func (n Name) String() string {
 		return "mysql"
 	case MSSQL:
 		return "mssql"
+	case Oracle:
+		return "oracle"
 	default:
 		return "invalid"
 	}
@@ -23,4 +25,5 @@ const (
 	SQLite
 	MySQL
 	MSSQL
+	Oracle
 )
