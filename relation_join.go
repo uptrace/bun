@@ -178,7 +178,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	baseTable := j.BaseModel.Table()
 
 	if j.Relation.M2MTable != nil {
-		fields := append(j.Relation.M2MBaseFields, j.Relation.M2MJoinFields...)
+		fields := j.Relation.M2MBaseFields
 
 		b := make([]byte, 0, len(fields))
 		b = appendColumns(b, j.Relation.M2MTable.SQLAlias, fields)
