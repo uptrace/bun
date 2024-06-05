@@ -92,13 +92,6 @@ func (m *m2mModel) Scan(src interface{}) error {
 		return err
 	}
 
-	for _, fk := range m.rel.M2MBaseFields {
-		if fk.Name == field.Name {
-			m.structKey = append(m.structKey, field.Value(m.strct).Interface())
-			break
-		}
-	}
-
 	return nil
 }
 
