@@ -24,7 +24,7 @@ var _ TableModel = (*m2mModel)(nil)
 func newM2MModel(j *relationJoin) *m2mModel {
 	baseTable := j.BaseModel.Table()
 	joinModel := j.JoinModel.(*sliceTableModel)
-	baseValues := baseValues(joinModel, baseTable.PKs)
+	baseValues := baseValues(joinModel, j.basePKs())
 	if len(baseValues) == 0 {
 		return nil
 	}
