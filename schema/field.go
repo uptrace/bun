@@ -44,6 +44,15 @@ func (f *Field) String() string {
 	return f.Name
 }
 
+func (f *Field) WithIndex(path []int) *Field {
+	if len(path) == 0 {
+		return f
+	}
+	clone := *f
+	clone.Index = makeIndex(path, f.Index)
+	return &clone
+}
+
 func (f *Field) Clone() *Field {
 	cp := *f
 	cp.Index = cp.Index[:len(f.Index):len(f.Index)]
@@ -103,13 +112,6 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 	return f.Append(fmter, b, fv)
 }
 
-func (f *Field) ScanWithCheck(fv reflect.Value, src interface{}) error {
-	if f.Scan == nil {
-		return fmt.Errorf("bun: Scan(unsupported %s)", f.IndirectType)
-	}
-	return f.Scan(fv, src)
-}
-
 func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 	if src == nil {
 		if fv, ok := fieldByIndex(strct, f.Index); ok {
@@ -122,18 +124,13 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 	return f.ScanWithCheck(fv, src)
 }
 
-func (f *Field) SkipUpdate() bool {
-	return f.Tag.HasOption("skipupdate")
+func (f *Field) ScanWithCheck(fv reflect.Value, src interface{}) error {
+	if f.Scan == nil {
+		return fmt.Errorf("bun: Scan(unsupported %s)", f.IndirectType)
+	}
+	return f.Scan(fv, src)
 }
 
-func indexEqual(ind1, ind2 []int) bool {
-	if len(ind1) != len(ind2) {
-		return false
-	}
-	for i, ind := range ind1 {
-		if ind != ind2[i] {
-			return false
-		}
-	}
-	return true
+func (f *Field) SkipUpdate() bool {
+	return f.Tag.HasOption("skipupdate")
 }

@@ -29,9 +29,6 @@ receivers:
       - uptrace
     tls:
       insecure: true
-  jaeger:
-    protocols:
-      grpc:
 
 processors:
   resourcedetection:
@@ -41,13 +38,12 @@ processors:
     timeout: 10s
 
 exporters:
-  logging:
-    logLevel: debug
-  otlp:
-    endpoint: uptrace:14317
+  debug:
+  otlp/uptrace:
+    endpoint: http://uptrace:14317
     tls:
       insecure: true
-    headers: { 'uptrace-dsn': 'http://project2_secret_token@localhost:14317/2' }
+    headers: { 'uptrace-dsn': 'http://project2_secret_token@localhost:14318?grpc=14317' }
 
 service:
   # telemetry:
@@ -55,20 +51,20 @@ service:
   #     level: DEBUG
   pipelines:
     traces:
-      receivers: [otlp, jaeger]
+      receivers: [otlp]
       processors: [batch]
-      exporters: [otlp, logging]
+      exporters: [otlp/uptrace, debug]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlp/uptrace]
     metrics/hostmetrics:
       receivers: [hostmetrics, postgresql]
       processors: [batch, resourcedetection]
-      exporters: [otlp]
+      exporters: [otlp/uptrace]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlp/uptrace]
 
   extensions: [health_check, pprof, zpages]

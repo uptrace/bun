@@ -1,1 +1,1 @@
-CREATE TABLE "models" ("id" INTEGER NOT NULL, "struct" VARCHAR, "map" VARCHAR, "slice" VARCHAR, "array" VARCHAR, PRIMARY KEY ("id"))
+CREATE TABLE "models" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "struct" VARCHAR, "map" VARCHAR, "slice" VARCHAR, "array" VARCHAR)

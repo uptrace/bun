@@ -53,9 +53,9 @@ projects:
     # Token grants write access to the project. Keep a secret.
     token: project1_secret_token
     pinned_attrs:
-      - service.name
-      - host.name
-      - deployment.environment
+      - service_name
+      - host_name
+      - deployment_environment
     # Group spans by deployment.environment attribute.
     group_by_env: false
     # Group funcs spans by service.name attribute.
@@ -67,46 +67,13 @@ projects:
     name: My project
     token: project2_secret_token
     pinned_attrs:
-      - service.name
-      - host.name
-      - deployment.environment
+      - service_name
+      - host_name
+      - deployment_environment
     # Group spans by deployment.environment attribute.
     group_by_env: false
     # Group funcs spans by service.name attribute.
     group_funcs_by_service: false
-
-##
-## Create metrics from spans and events.
-##
-metrics_from_spans:
-  - name: uptrace.tracing.spans
-    description: Spans duration (excluding events)
-    instrument: histogram
-    unit: microseconds
-    value: .duration / 1000
-    attrs:
-      - .system
-      - .group_id
-      - service.name
-      - host.name
-      - .status_code
-    annotations:
-      - display.name
-    where: .event_name = ''
-
-  - name: uptrace.tracing.events
-    description: Events count (excluding spans)
-    instrument: counter
-    unit: 1
-    value: .count
-    attrs:
-      - .system
-      - .group_id
-      - .name
-      - host.name
-    annotations:
-      - display.name
-    where: .is_event = 1
 
 ##
 ## To require authentication, uncomment one of the following sections.
@@ -152,7 +119,7 @@ auth:
 ##
 ch_schema:
   # Compression codec, for example, LZ4, ZSTD(3), or Default.
-  compression: ZSTD(3)
+  compression: ZSTD(1)
 
   # Whether to use ReplicatedMergeTree instead of MergeTree.
   replicated: false
@@ -162,12 +129,12 @@ ch_schema:
 
   spans:
     # Delete spans data after 30 days.
-    ttl_delete: 30 DAY
+    ttl_delete: 7 DAY
     storage_policy: 'default'
 
   metrics:
     # Delete metrics data after 90 days.
-    ttl_delete: 90 DAY
+    ttl_delete: 30 DAY
     storage_policy: 'default'
 
 ##
@@ -212,9 +179,9 @@ spans:
 metrics:
   # List of attributes to drop for being noisy.
   drop_attrs:
-    - telemetry.sdk.language
-    - telemetry.sdk.name
-    - telemetry.sdk.version
+    - telemetry_sdk_language
+    - telemetry_sdk_name
+    - telemetry_sdk_version
 
   # The size of the Go chan used to buffer incoming measures.
   # If the buffer is full, Uptrace starts to drop measures.
@@ -222,6 +189,26 @@ metrics:
 
   # The number of measures to insert in a single query.
   #batch_size: 10000
+
+##
+## SMTP settings to send emails.
+## https://uptrace.dev/get/alerting.html
+##
+smtp_mailer:
+  # Whether to use this mailer for sending emails.
+  enabled: false
+  # SMTP server host.
+  host: localhost
+  # SMTP server port.
+  port: 1025
+  # Username for authentication.
+  username: mailhog
+  # Password for authentication.
+  password: mailhog
+  # Uncomment to disable opportunistic TLS.
+  #tls: { disabled: true }
+  # Emails will be send from this address.
+  from: 'uptrace@localhost'
 
 ##
 ## uptrace-go client configuration.
@@ -233,18 +220,6 @@ uptrace_go:
   #   cert_file: config/tls/uptrace.crt
   #   key_file: config/tls/uptrace.key
   #   insecure_skip_verify: true
-
-##
-## SMTP settings to send emails.
-## https://uptrace.dev/get/alerting.html
-##
-smtp_mailer:
-  enabled: true
-  host: mailhog
-  port: 1025
-  username: mailhog
-  password: mailhog
-  from: 'uptrace@localhost'
 
 ##
 ## Logging configuration.

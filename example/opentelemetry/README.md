@@ -36,7 +36,7 @@ UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
 **Step 5**. Follow the link from the CLI to view the trace:
 
 ```shell
-UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
+UPTRACE_DSN=http://project2_secret_token@localhost:14318?grpc=14317 go run client.go
 trace: http://localhost:14318/traces/ee029d8782242c8ed38b16d961093b35
 ```
 

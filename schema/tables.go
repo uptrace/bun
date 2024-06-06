@@ -6,48 +6,19 @@ import (
 	"sync"
 )
 
-type tableInProgress struct {
-	table *Table
-
-	init1Once sync.Once
-	init2Once sync.Once
-}
-
-func newTableInProgress(table *Table) *tableInProgress {
-	return &tableInProgress{
-		table: table,
-	}
-}
-
-func (inp *tableInProgress) init1() bool {
-	var inited bool
-	inp.init1Once.Do(func() {
-		inp.table.init1()
-		inited = true
-	})
-	return inited
-}
-
-func (inp *tableInProgress) init2() bool {
-	var inited bool
-	inp.init2Once.Do(func() {
-		inp.table.init2()
-		inited = true
-	})
-	return inited
-}
-
 type Tables struct {
 	dialect Dialect
 	tables  sync.Map
 
 	mu         sync.RWMutex
+	seen       map[reflect.Type]*Table
 	inProgress map[reflect.Type]*tableInProgress
 }
 
 func NewTables(dialect Dialect) *Tables {
 	return &Tables{
 		dialect:    dialect,
+		seen:       make(map[reflect.Type]*Table),
 		inProgress: make(map[reflect.Type]*tableInProgress),
 	}
 }
@@ -62,7 +33,7 @@ func (t *Tables) Get(typ reflect.Type) *Table {
 	return t.table(typ, false)
 }
 
-func (t *Tables) Ref(typ reflect.Type) *Table {
+func (t *Tables) InProgress(typ reflect.Type) *Table {
 	return t.table(typ, true)
 }
 
@@ -87,7 +58,7 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 
 	inProgress := t.inProgress[typ]
 	if inProgress == nil {
-		table = newTable(t.dialect, typ)
+		table = newTable(t.dialect, typ, t.seen, false)
 		inProgress = newTableInProgress(table)
 		t.inProgress[typ] = inProgress
 	} else {
@@ -96,12 +67,11 @@ func (t *Tables) table(typ reflect.Type, allowInProgress bool) *Table {
 
 	t.mu.Unlock()
 
-	inProgress.init1()
 	if allowInProgress {
 		return table
 	}
 
-	if !inProgress.init2() {
+	if !inProgress.init() {
 		return table
 	}
 
@@ -148,4 +118,25 @@ func (t *Tables) ByName(name string) *Table {
 		return true
 	})
 	return found
+}
+
+type tableInProgress struct {
+	table *Table
+
+	initOnce sync.Once
+}
+
+func newTableInProgress(table *Table) *tableInProgress {
+	return &tableInProgress{
+		table: table,
+	}
+}
+
+func (inp *tableInProgress) init() bool {
+	var inited bool
+	inp.initOnce.Do(func() {
+		inp.table.init()
+		inited = true
+	})
+	return inited
 }

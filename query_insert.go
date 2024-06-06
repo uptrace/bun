@@ -332,8 +332,8 @@ func (q *InsertQuery) appendStructValues(
 		switch {
 		case isTemplate:
 			b = append(b, '?')
-		case (f.IsPtr && f.HasNilValue(strct)) || (f.NullZero && f.HasZeroValue(strct)):
-			if q.db.features.Has(feature.DefaultPlaceholder) {
+		case q.marshalsToDefault(f, strct):
+			if q.db.HasFeature(feature.DefaultPlaceholder) {
 				b = append(b, "DEFAULT"...)
 			} else if f.SQLDefault != "" {
 				b = append(b, f.SQLDefault...)
@@ -410,16 +410,21 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 			q.addReturningField(f)
 			continue
 		}
-		if f.NotNull && f.SQLDefault == "" {
-			if (f.IsPtr && f.HasNilValue(strct)) || (f.NullZero && f.HasZeroValue(strct)) {
-				q.addReturningField(f)
-				continue
-			}
+		if f.NotNull && q.marshalsToDefault(f, strct) {
+			q.addReturningField(f)
+			continue
 		}
 		fields = append(fields, f)
 	}
 
 	return fields, nil
+}
+
+// marshalsToDefault checks if the value will be marshaled as DEFAULT or NULL (if DEFAULT placeholder is not supported)
+// when appending it to the VALUES clause in place of the given field.
+func (q InsertQuery) marshalsToDefault(f *schema.Field, v reflect.Value) bool {
+	return (f.IsPtr && f.HasNilValue(v)) ||
+		(f.HasZeroValue(v) && (f.NullZero || f.SQLDefault != ""))
 }
 
 func (q *InsertQuery) appendFields(

@@ -83,9 +83,9 @@ func (m *hasManyModel) Scan(src interface{}) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
-	field, err := m.table.Field(column)
-	if err != nil {
-		return err
+	field := m.table.LookupField(column)
+	if field == nil {
+		return fmt.Errorf("bun: %s does not have column %q", m.table.TypeName, column)
 	}
 
 	if err := field.ScanValue(m.strct, src); err != nil {

@@ -180,6 +180,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 	return 255
 }
 
+func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
+	return append(b, " AUTO_INCREMENT"...)
+}
+
 func sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType

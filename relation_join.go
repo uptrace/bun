@@ -262,7 +262,9 @@ func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte 
 	return append(b, j.BaseModel.Table().SQLAlias...)
 }
 
-func (j *relationJoin) appendSoftDelete(fmter schema.Formatter, b []byte, flags internal.Flag) []byte {
+func (j *relationJoin) appendSoftDelete(
+	fmter schema.Formatter, b []byte, flags internal.Flag,
+) []byte {
 	b = append(b, '.')
 
 	field := j.JoinModel.Table().SoftDeleteField

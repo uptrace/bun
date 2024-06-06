@@ -20,12 +20,11 @@ type (
 
 	BeforeScanRowHook = schema.BeforeScanRowHook
 	AfterScanRowHook  = schema.AfterScanRowHook
-
-	// DEPRECATED. Use BeforeScanRowHook instead.
-	BeforeScanHook = schema.BeforeScanHook
-	// DEPRECATED. Use AfterScanRowHook instead.
-	AfterScanHook = schema.AfterScanHook
 )
+
+func SafeQuery(query string, args ...interface{}) schema.QueryWithArgs {
+	return schema.SafeQuery(query, args)
+}
 
 type BeforeSelectHook interface {
 	BeforeSelect(ctx context.Context, query *SelectQuery) error
@@ -77,7 +76,7 @@ type AfterDropTableHook interface {
 
 // SetLogger overwriters default Bun logger.
 func SetLogger(logger internal.Logging) {
-	internal.Logger = logger
+	internal.SetLogger(logger)
 }
 
 func In(slice interface{}) schema.QueryAppender {

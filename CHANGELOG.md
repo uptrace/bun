@@ -1,3 +1,37 @@
+## [1.2.1](https://github.com/uptrace/bun/compare/v1.2.0...v1.2.1) (2024-04-02)
+
+
+
+# [1.2.0](https://github.com/uptrace/bun/compare/v1.1.17...v1.2.0) (2024-04-02)
+
+
+### Bug Fixes
+
+* embedding of scanonly fields ([ed6ed74](https://github.com/uptrace/bun/commit/ed6ed74d5379ea6badb09cc37709211a51f5792b))
+* **table:** allow alt annotation ([#956](https://github.com/uptrace/bun/issues/956)) ([8a0397b](https://github.com/uptrace/bun/commit/8a0397b6e2219909d6b00d258eb7934170058edd))
+* transactional migration file extension ([#959](https://github.com/uptrace/bun/issues/959)) ([921b15b](https://github.com/uptrace/bun/commit/921b15b80110d28251a9210c77397d29924ffbc5))
+
+
+### Features
+
+* Allow overiding of Warn and Deprecated loggers ([#952](https://github.com/uptrace/bun/issues/952)) ([0e9d737](https://github.com/uptrace/bun/commit/0e9d737e4ca2deb86930237ee32a39cf3f7e8157))
+* enable SNI ([#953](https://github.com/uptrace/bun/issues/953)) ([4071ffb](https://github.com/uptrace/bun/commit/4071ffb5bcb1b233cda239c92504d8139dcf1d2f))
+* **idb:** add NewMerge method to IDB ([#966](https://github.com/uptrace/bun/issues/966)) ([664e2f1](https://github.com/uptrace/bun/commit/664e2f154f1153d2a80cd062a5074f1692edaee7))
+
+
+
+## [1.1.17](https://github.com/uptrace/bun/compare/v1.1.16...v1.1.17) (2024-01-11)
+
+
+### Features
+
+* add CreateTxSQLMigrations function ([#916](https://github.com/uptrace/bun/issues/916)) ([c68ec7c](https://github.com/uptrace/bun/commit/c68ec7cfc418959eb7c79028be7ac91f97d462ef))
+* add Join to UpdateQuery ([#908](https://github.com/uptrace/bun/issues/908)) ([8c4d8be](https://github.com/uptrace/bun/commit/8c4d8be3aa4e64582698b37fd21434b8960dddc0))
+* bunslog.QueryHook for Bun logging using `log/slog` ([#904](https://github.com/uptrace/bun/issues/904)) ([4953367](https://github.com/uptrace/bun/commit/495336731da0a995aa28c7bc84345c7825408e48))
+* dbfixture.New to accept IDB interface ([#900](https://github.com/uptrace/bun/issues/900)) ([2dee174](https://github.com/uptrace/bun/commit/2dee174bc4d09a45caeeede2885306e5fd10002d))
+
+
+
 ## [1.1.16](https://github.com/uptrace/bun/compare/v1.1.15...v1.1.16) (2023-09-16)
 
 

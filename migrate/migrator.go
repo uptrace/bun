@@ -267,19 +267,19 @@ func (m *Migrator) CreateGoMigration(
 	return mf, nil
 }
 
-// CreateSQLMigrations creates an up and down SQL migration files.
-func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
+// CreateTxSQLMigration creates transactional up and down SQL migration files.
+func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
 	name, err := m.genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
 
-	up, err := m.createSQL(ctx, name+".up.sql")
+	up, err := m.createSQL(ctx, name+".tx.up.sql", true)
 	if err != nil {
 		return nil, err
 	}
 
-	down, err := m.createSQL(ctx, name+".down.sql")
+	down, err := m.createSQL(ctx, name+".tx.down.sql", true)
 	if err != nil {
 		return nil, err
 	}
@@ -287,10 +287,35 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 	return []*MigrationFile{up, down}, nil
 }
 
-func (m *Migrator) createSQL(ctx context.Context, fname string) (*MigrationFile, error) {
+// CreateSQLMigrations creates up and down SQL migration files.
+func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
+	name, err := m.genMigrationName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	up, err := m.createSQL(ctx, name+".up.sql", false)
+	if err != nil {
+		return nil, err
+	}
+
+	down, err := m.createSQL(ctx, name+".down.sql", false)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*MigrationFile{up, down}, nil
+}
+
+func (m *Migrator) createSQL(ctx context.Context, fname string, transactional bool) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
-	if err := os.WriteFile(fpath, []byte(sqlTemplate), 0o644); err != nil {
+	template := sqlTemplate
+	if transactional {
+		template = transactionalSQLTemplate
+	}
+
+	if err := os.WriteFile(fpath, []byte(template), 0o644); err != nil {
 		return nil, err
 	}
 
@@ -337,7 +362,10 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 }
 
 func (m *Migrator) TruncateTable(ctx context.Context) error {
-	_, err := m.db.NewTruncateTable().TableExpr(m.table).Exec(ctx)
+	_, err := m.db.NewTruncateTable().
+		Model((*Migration)(nil)).
+		ModelTableExpr(m.table).
+		Exec(ctx)
 	return err
 }
 
