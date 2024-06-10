@@ -41,9 +41,9 @@ func WithWriter(w io.Writer) Option {
 
 // FromEnv configures the hook using the environment variable value.
 // For example, WithEnv("BUNDEBUG"):
-//    - BUNDEBUG=0 - disables the hook.
-//    - BUNDEBUG=1 - enables the hook.
-//    - BUNDEBUG=2 - enables the hook and verbose mode.
+//   - BUNDEBUG=0 - disables the hook.
+//   - BUNDEBUG=1 - enables the hook.
+//   - BUNDEBUG=2 - enables the hook and verbose mode.
 func FromEnv(keys ...string) Option {
 	if len(keys) == 0 {
 		keys = []string{"BUNDEBUG"}

@@ -118,7 +118,7 @@ func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
 		case '\000':
 			continue
 		case '\\':
-			if p.SkipBytes([]byte("u0000")) {
+			if p.CutPrefix([]byte("u0000")) {
 				b = append(b, `\\u0000`...)
 			} else {
 				b = append(b, '\\')

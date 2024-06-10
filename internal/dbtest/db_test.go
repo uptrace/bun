@@ -67,7 +67,7 @@ func pg(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, pgdialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=pg>", db.String())
@@ -90,7 +90,7 @@ func pgx(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, pgdialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=pg>", db.String())
@@ -113,7 +113,7 @@ func mysql8(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, mysqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
@@ -136,7 +136,7 @@ func mysql5(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, mysqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
@@ -159,7 +159,7 @@ func mariadb(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, mysqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=mysql>", db.String())
@@ -177,7 +177,7 @@ func sqlite(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=sqlite>", db.String())
@@ -200,7 +200,7 @@ func mssql2019(tb testing.TB) *bun.DB {
 	db := bun.NewDB(sqldb, mssqldialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
 	require.Equal(tb, "DB<dialect=mssql>", db.String())

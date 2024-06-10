@@ -32,8 +32,7 @@ const (
 	pgTypeText = "TEXT" // variable length string without limit
 
 	// JSON Types
-	pgTypeJSON  = "JSON"  // text representation of json data
-	pgTypeJSONB = "JSONB" // binary representation of json data
+	pgTypeJSON = "JSON" // text representation of json data
 
 	// Binary Data Types
 	pgTypeBytea = "BYTEA" // binary string
@@ -83,7 +82,7 @@ func sqlType(typ reflect.Type) string {
 	case ipNetType:
 		return pgTypeCidr
 	case jsonRawMessageType:
-		return pgTypeJSONB
+		return sqltype.JSONB
 	}
 
 	sqlType := schema.DiscoverSQLType(typ)
@@ -95,14 +94,14 @@ func sqlType(typ reflect.Type) string {
 	switch typ.Kind() {
 	case reflect.Map, reflect.Struct:
 		if sqlType == sqltype.VarChar {
-			return pgTypeJSONB
+			return sqltype.JSONB
 		}
 		return sqlType
 	case reflect.Array, reflect.Slice:
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return pgTypeBytea
 		}
-		return pgTypeJSONB
+		return sqltype.JSONB
 	}
 
 	return sqlType

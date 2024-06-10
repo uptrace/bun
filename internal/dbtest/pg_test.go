@@ -837,3 +837,27 @@ func TestPostgresCustomTypeBytes(t *testing.T) {
 	err = db.NewSelect().Model(out).Scan(ctx)
 	require.NoError(t, err)
 }
+
+func TestPostgresMultiRange(t *testing.T) {
+	type Model struct {
+		ID    int64                           `bun:",pk,autoincrement"`
+		Value pgdialect.MultiRange[time.Time] `bun:",multirange,type:tstzmultirange"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	r1 := pgdialect.NewRange(time.Unix(1000, 0), time.Unix(2000, 0))
+	r2 := pgdialect.NewRange(time.Unix(5000, 0), time.Unix(6000, 0))
+	in := &Model{Value: pgdialect.MultiRange[time.Time]{r1, r2}}
+	_, err := db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
+}
