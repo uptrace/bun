@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
@@ -165,7 +166,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, field.SQLName...)
 		b = append(b, " "...)
 		b = q.appendSQLType(b, field)
-		if field.NotNull {
+		if field.NotNull && q.db.dialect.Name() != dialect.Oracle {
 			b = append(b, " NOT NULL"...)
 		}
 
@@ -246,7 +247,11 @@ func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
 		return append(b, field.CreateTableSQLType...)
 	}
 
-	b = append(b, sqltype.VarChar...)
+	if q.db.dialect.Name() == dialect.Oracle {
+		b = append(b, "VARCHAR2"...)
+	} else {
+		b = append(b, sqltype.VarChar...)
+	}
 	b = append(b, "("...)
 	b = strconv.AppendInt(b, int64(q.varchar), 10)
 	b = append(b, ")"...)
