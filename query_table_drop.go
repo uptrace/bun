@@ -57,7 +57,7 @@ func (q *DropTableQuery) TableExpr(query string, args ...interface{}) *DropTable
 }
 
 func (q *DropTableQuery) ModelTableExpr(query string, args ...interface{}) *DropTableQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 

@@ -45,11 +45,11 @@ type Table struct {
 	TypeName  string
 	ModelName string
 
-	Name              string
-	SQLName           Safe
-	SQLNameForSelects Safe
-	Alias             string
-	SQLAlias          Safe
+	Name              string // table name e.g. users
+	SQLName           Safe   // quoted table name e.g. `users`
+	SQLNameForSelects Safe   // quoted table name for SELECT command e.g. `users`
+	Alias             string // table alias e.g. u
+	SQLAlias          Safe   // quoted table alias e.g. `u`
 
 	allFields  []*Field // all fields including scanonly
 	Fields     []*Field // PKs + DataFields

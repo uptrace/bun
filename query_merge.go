@@ -83,7 +83,7 @@ func (q *MergeQuery) TableExpr(query string, args ...interface{}) *MergeQuery {
 }
 
 func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 
