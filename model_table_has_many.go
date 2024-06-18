@@ -93,7 +93,7 @@ func (m *hasManyModel) Scan(src interface{}) error {
 	}
 
 	for _, f := range m.rel.JoinFields {
-		if f.Name == field.Name {
+		if f.Name == column {
 			m.structKey = append(m.structKey, field.Value(m.strct).Interface())
 			break
 		}
