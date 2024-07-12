@@ -342,7 +342,7 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.R
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, make([]byte, 0))
 	if err != nil {
 		return nil, err
 	}
