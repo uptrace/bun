@@ -1,4 +1,4 @@
-# SQL-first Golang ORM for PostgreSQL, MySQL, MSSQL, and SQLite
+# SQL-first Golang ORM for PostgreSQL, MySQL, MSSQL, SQLite and Oracle
 
 [![build workflow](https://github.com/uptrace/bun/actions/workflows/build.yml/badge.svg)](https://github.com/uptrace/bun/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
@@ -19,6 +19,7 @@
   [MySQL](https://bun.uptrace.dev/guide/drivers.html#mysql) (including MariaDB),
   [MSSQL](https://bun.uptrace.dev/guide/drivers.html#mssql),
   [SQLite](https://bun.uptrace.dev/guide/drivers.html#sqlite).
+  [Oracle](https://bun.uptrace.dev/guide/drivers.html#oracle).
 - [ORM-like](/example/basic/) experience using good old SQL. Bun supports structs, map, scalars, and
   slices of map/structs/scalars.
 - [Bulk inserts](https://bun.uptrace.dev/guide/query-insert.html).
