@@ -268,7 +268,8 @@ type MigrationFile struct {
 //------------------------------------------------------------------------------
 
 type migrationConfig struct {
-	nop bool
+	nop           bool
+	targetVersion string
 }
 
 func newMigrationConfig(opts []MigrationOption) *migrationConfig {
@@ -284,6 +285,12 @@ type MigrationOption func(cfg *migrationConfig)
 func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.nop = true
+	}
+}
+
+func WithTargetVersion(v string) MigrationOption {
+	return func(cfg *migrationConfig) {
+		cfg.targetVersion = v
 	}
 }
 
