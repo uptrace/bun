@@ -506,7 +506,7 @@ func (q *UpdateQuery) scanOrExec(
 	}
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, make([]byte, 0))
 	if err != nil {
 		return nil, err
 	}
