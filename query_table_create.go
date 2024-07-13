@@ -76,7 +76,7 @@ func (q *CreateTableQuery) TableExpr(query string, args ...interface{}) *CreateT
 }
 
 func (q *CreateTableQuery) ModelTableExpr(query string, args ...interface{}) *CreateTableQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 

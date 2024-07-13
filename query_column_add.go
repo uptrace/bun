@@ -64,7 +64,7 @@ func (q *AddColumnQuery) TableExpr(query string, args ...interface{}) *AddColumn
 }
 
 func (q *AddColumnQuery) ModelTableExpr(query string, args ...interface{}) *AddColumnQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 

@@ -58,7 +58,7 @@ func (q *TruncateTableQuery) TableExpr(query string, args ...interface{}) *Trunc
 }
 
 func (q *TruncateTableQuery) ModelTableExpr(query string, args ...interface{}) *TruncateTableQuery {
-	q.modelTableName = schema.SafeQuery(query, args)
+	q.modelTable = schema.NewModelTable(query, args...)
 	return q
 }
 
