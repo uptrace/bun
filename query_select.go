@@ -538,6 +538,11 @@ func (q *SelectQuery) appendQuery(
 	if count && !cteCount {
 		b = append(b, "count(*)"...)
 	} else {
+		// Allows Limit() without Order() with MSSQL as per https://stackoverflow.com/a/36156953
+		if q.limit > 0 && fmter.Dialect().Features().Has(feature.OffsetFetch) && len(q.order) == 0 {
+			b = append(b, "0 AS _temp_sort, "...)
+			q.order = []schema.QueryWithArgs{schema.UnsafeIdent("_temp_sort")}
+		}
 		b, err = q.appendColumns(fmter, b)
 		if err != nil {
 			return nil, err
