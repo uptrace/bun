@@ -3,6 +3,8 @@ package dbtest_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -18,6 +20,8 @@ func init() {
 	snapshotsDir := filepath.Join("testdata", "snapshots")
 	cupaloy.Global = cupaloy.Global.WithOptions(cupaloy.SnapshotSubdirectory(snapshotsDir))
 }
+
+var timeRE = regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
 
 func TestQuery(t *testing.T) {
 	type Model struct {
@@ -1547,8 +1551,6 @@ func TestQuery(t *testing.T) {
 		},
 	}
 
-	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
-
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%d", tt.id), func(t *testing.T) {
@@ -1564,4 +1566,129 @@ func TestQuery(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestAlterTable(t *testing.T) {
+	needsAlterTable := needs(feature.AlterTableQuery, "ALTER TABLE")
+	type Model struct {
+		ID     int64
+		Old    string
+		Active bool
+	}
+
+	cases := []TestCase{
+		{
+			"rename column", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).
+					RenameColumn().Column("old").To("new")
+			},
+		},
+		{
+			"invalid model", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model(1)
+			},
+		},
+		{
+			"rename table", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).
+					Rename().To("new_models")
+			},
+		},
+		{
+			"rename table if exists", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).IfExists().
+					Rename().To("new_models")
+			},
+		},
+		{
+			"change column type", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				// Change column type with common SQL data type
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AlterColumn().Column("old").Type(sqltype.Blob)
+			},
+		},
+		{
+			"change column type chained", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				// Alter 2 columns in a chained query
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AlterColumn().Column("old").Type(sqltype.Blob).
+					AlterColumn().Column("active").Type(sqltype.SmallInt)
+			},
+		},
+		{
+			"add column", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).AddColumn().
+					ColumnExpr("deadline ?", bun.Safe(sqltype.Timestamp))
+			},
+		},
+		{
+			"add several columns", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).
+					AddColumn().ColumnExpr("one INTEGER").
+					AddColumn().ColumnExpr("two BIGINT")
+			},
+		},
+		{
+			"drop column if exists", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).DropColumn().IfExists().Column("old")
+			},
+		},
+		{
+			"drop column expression", needsAlterTable,
+			func(db *bun.DB) schema.QueryAppender {
+				return db.NewAlterTable().Model((*Model)(nil)).DropColumn().ColumnExpr("old CASCADE")
+			},
+		},
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		for i, tt := range cases {
+			skipIfNotHasFeature(t, db, tt.req.Feature, tt.req.Name)
+
+			t.Run(fmt.Sprintf("%d-%s", i, tt.name), func(t *testing.T) {
+				checkQuerySnapshot(t, db, tt.fn(db))
+			})
+		}
+	})
+}
+
+func checkQuerySnapshot(t *testing.T, db *bun.DB, q schema.QueryAppender) {
+	t.Helper()
+	query, err := q.AppendQuery(db.Formatter(), nil)
+	if err != nil {
+		cupaloy.SnapshotT(t, err.Error())
+		return
+	}
+
+	query = timeRE.ReplaceAll(query, []byte("[TIME]"))
+	cupaloy.SnapshotT(t, string(query))
+}
+
+// Example:
+// tt := TestCase{
+// 	"common table expressions", needs(feature.CTE, "CTE"),
+// 	func(db *bun.DB) schema.QueryAppender {...},
+// }
+type TestCase struct {
+	name string
+	req  *requiredFeature
+	fn   func(db *bun.DB) schema.QueryAppender
+}
+
+type requiredFeature struct {
+	feature.Feature
+	Name string
+}
+
+func needs(feat feature.Feature, name string) *requiredFeature {
+	return &requiredFeature{feat, name}
 }
