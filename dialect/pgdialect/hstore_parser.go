@@ -16,7 +16,7 @@ type hstoreParser struct {
 
 func newHStoreParser(b []byte) *hstoreParser {
 	p := new(hstoreParser)
-	if len(b) < 6 || b[0] != '"' {
+	if len(b) != 0 && (len(b) < 6 || b[0] != '"') {
 		p.err = fmt.Errorf("pgdialect: can't parse hstore: %q", b)
 		return p
 	}
@@ -83,7 +83,7 @@ func (p *hstoreParser) readNext() error {
 	default:
 		value := p.p.ReadLiteral(ch)
 		if bytes.Equal(value, []byte("NULL")) {
-			value = nil
+			p.value = ""
 		}
 		p.skipComma()
 		return nil

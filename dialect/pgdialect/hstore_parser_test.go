@@ -12,6 +12,8 @@ func TestHStoreParser(t *testing.T) {
 		s string
 		m map[string]string
 	}{
+		{``, map[string]string{}},
+
 		{`""=>""`, map[string]string{"": ""}},
 		{`"\\"=>"\\"`, map[string]string{`\`: `\`}},
 		{`"'"=>"'"`, map[string]string{"'": "'"}},
