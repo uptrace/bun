@@ -3,6 +3,7 @@ package sqlschema
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/uptrace/bun"
@@ -12,6 +13,11 @@ import (
 type InspectorDialect interface {
 	schema.Dialect
 	Inspector(db *bun.DB, excludeTables ...string) Inspector
+
+	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
+	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
+	// or specify the same VARCHAR length differently (VARCHAR(255) ~ VARCHAR).
+	EquivalentType(Column, Column) bool
 }
 
 type Inspector interface {
@@ -53,9 +59,15 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 	for _, t := range si.tables.All() {
 		columns := make(map[string]Column)
 		for _, f := range t.Fields {
+
+			sqlType, length, err := parseLen(f.CreateTableSQLType)
+			if err != nil {
+				return state, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
+			}
 			columns[f.Name] = Column{
-				SQLType:         strings.ToLower(f.CreateTableSQLType),
-				DefaultValue:    f.SQLDefault,
+				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
+				VarcharLen:      length,
+				DefaultValue:    exprToLower(f.SQLDefault),
 				IsPK:            f.IsPK,
 				IsNullable:      !f.NotNull,
 				IsAutoIncrement: f.AutoIncrement,
@@ -94,4 +106,26 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 		}
 	}
 	return state, nil
+}
+
+func parseLen(typ string) (string, int, error) {
+	paren := strings.Index(typ, "(")
+	if paren == -1 {
+		return typ, 0, nil
+	}
+	length, err := strconv.Atoi(typ[paren+1 : len(typ)-1])
+	if err != nil {
+		return typ, 0, err
+	}
+	return typ[:paren], length, nil
+}
+
+// exprToLower converts string to lowercase, if it does not contain a string literal 'lit'.
+// Use it to ensure that user-defined default values in the models are always comparable
+// to those returned by the database inspector, regardless of the case convention in individual drivers.
+func exprToLower(s string) string {
+	if strings.HasPrefix(s, "'") && strings.HasSuffix(s, "'") {
+		return s
+	}
+	return strings.ToLower(s)
 }

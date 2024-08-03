@@ -2,11 +2,15 @@ package dbtest_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate/sqlschema"
+	"github.com/uptrace/bun/schema"
 )
 
 type Article struct {
@@ -36,8 +40,9 @@ type Office struct {
 }
 
 type Publisher struct {
-	ID   string `bun:"publisher_id,pk,default:gen_random_uuid(),unique:office_fk"`
-	Name string `bun:"publisher_name,unique,notnull,unique:office_fk"`
+	ID        string    `bun:"publisher_id,pk,default:gen_random_uuid(),unique:office_fk"`
+	Name      string    `bun:"publisher_name,unique,notnull,unique:office_fk"`
+	CreatedAt time.Time `bun:"created_at,default:current_timestamp"`
 
 	// Writers write articles for this publisher.
 	Writers []Journalist `bun:"m2m:publisher_to_journalists,join:Publisher=Author"`
@@ -65,7 +70,6 @@ type Journalist struct {
 }
 
 func TestDatabaseInspector_Inspect(t *testing.T) {
-
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		db.RegisterModel((*PublisherToJournalist)(nil))
 
@@ -93,15 +97,15 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Name:   "offices",
 				Columns: map[string]sqlschema.Column{
 					"office_name": {
-						SQLType: "varchar",
+						SQLType: sqltype.VarChar,
 						IsPK:    true,
 					},
 					"publisher_id": {
-						SQLType:    "varchar",
+						SQLType:    sqltype.VarChar,
 						IsNullable: true,
 					},
 					"publisher_name": {
-						SQLType:    "varchar",
+						SQLType:    sqltype.VarChar,
 						IsNullable: true,
 					},
 				},
@@ -119,7 +123,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						DefaultValue:    "",
 					},
 					"editor": {
-						SQLType:         "varchar",
+						SQLType:         sqltype.VarChar,
 						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: false,
@@ -127,7 +131,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						DefaultValue:    "john doe",
 					},
 					"title": {
-						SQLType:         "varchar",
+						SQLType:         sqltype.VarChar,
 						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: false,
@@ -135,7 +139,8 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						DefaultValue:    "",
 					},
 					"locale": {
-						SQLType:         "varchar(5)",
+						SQLType:         sqltype.VarChar,
+						VarcharLen:      5,
 						IsPK:            false,
 						IsNullable:      true,
 						IsAutoIncrement: false,
@@ -159,7 +164,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						DefaultValue:    "",
 					},
 					"publisher_id": {
-						SQLType: "varchar",
+						SQLType: sqltype.VarChar,
 					},
 					"author_id": {
 						SQLType: "bigint",
@@ -176,10 +181,10 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						IsIdentity: true,
 					},
 					"first_name": {
-						SQLType: "varchar",
+						SQLType: sqltype.VarChar,
 					},
 					"last_name": {
-						SQLType:    "varchar",
+						SQLType:    sqltype.VarChar,
 						IsNullable: true,
 					},
 				},
@@ -189,7 +194,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Name:   "publisher_to_journalists",
 				Columns: map[string]sqlschema.Column{
 					"publisher_id": {
-						SQLType: "varchar",
+						SQLType: sqltype.VarChar,
 						IsPK:    true,
 					},
 					"author_id": {
@@ -203,12 +208,17 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Name:   "publishers",
 				Columns: map[string]sqlschema.Column{
 					"publisher_id": {
-						SQLType:      "varchar",
+						SQLType:      sqltype.VarChar,
 						IsPK:         true,
 						DefaultValue: "gen_random_uuid()",
 					},
 					"publisher_name": {
-						SQLType: "varchar",
+						SQLType: sqltype.VarChar,
+					},
+					"created_at": {
+						SQLType:      "timestamp",
+						DefaultValue: "current_timestamp",
+						IsNullable:   true,
 					},
 				},
 			},
@@ -242,7 +252,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 
 		// State.FKs store their database names, which differ from dialect to dialect.
 		// Because of that we compare FKs and Tables separately.
-		require.Equal(t, wantTables, got.Tables)
+		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, got.Tables)
 
 		var fks []sqlschema.FK
 		for fk := range got.FKs {
@@ -269,5 +279,182 @@ func mustCreateSchema(tb testing.TB, ctx context.Context, db *bun.DB, schema str
 
 	tb.Cleanup(func() {
 		db.NewRaw("DROP SCHEMA IF EXISTS ?", bun.Ident(schema)).Exec(ctx)
+	})
+}
+
+// cmpTables compares table schemas using dialect-specific equivalence checks for column types
+// and reports the differences as t.Error().
+func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got []sqlschema.Table) {
+	tb.Helper()
+
+	require.Equal(tb, tableNames(want), tableNames(got), "different set of tables")
+
+	// Now we are guaranteed to have the same tables.
+	for _, wt := range want {
+		tableName := wt.Name
+		// TODO(dyma): this will be simplified by map[string]Table
+		var gt sqlschema.Table
+		for i := range got {
+			if got[i].Name == tableName {
+				gt = got[i]
+				break
+			}
+		}
+
+		var errs []string
+		for colName, wantCol := range wt.Columns {
+			errorf := func(format string, args ...interface{}) {
+				errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
+			}
+			gotCol, ok := gt.Columns[colName]
+			if !ok {
+				errorf("column is missing")
+				continue
+			}
+
+			if !d.EquivalentType(wantCol, gotCol) {
+				errorf("sql types are not equivalent:\n\t(+want)\t%s\n\t(-got)\t%s", formatType(wantCol), formatType(gotCol))
+			}
+
+			if wantCol.DefaultValue != gotCol.DefaultValue {
+				errorf("default values differ:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.DefaultValue, gotCol.DefaultValue)
+			}
+
+			if wantCol.IsNullable != gotCol.IsNullable {
+				errorf("isNullable:\n\t(+want)\t%v\n\t(-got)\t%v", wantCol.IsNullable, gotCol.IsNullable)
+			}
+
+			if wantCol.IsAutoIncrement != gotCol.IsAutoIncrement {
+				errorf("IsAutoIncrement:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsAutoIncrement, gotCol.IsAutoIncrement)
+			}
+
+			if wantCol.IsIdentity != gotCol.IsIdentity {
+				errorf("IsIdentity:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsIdentity, gotCol.IsIdentity)
+			}
+		}
+
+		for _, errMsg := range errs {
+			tb.Error(errMsg)
+		}
+	}
+}
+
+func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, want, got map[string]sqlschema.Column) {
+	var errs []string
+	for colName, wantCol := range want {
+		errorf := func(format string, args ...interface{}) {
+			errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
+		}
+		gotCol, ok := got[colName]
+		if !ok {
+			errorf("column is missing")
+			continue
+		}
+
+		if !d.EquivalentType(wantCol, gotCol) {
+			errorf("sql types are not equivalent:\n\t(+want)\t%s\n\t(-got)\t%s", formatType(wantCol), formatType(gotCol))
+		}
+
+		if wantCol.DefaultValue != gotCol.DefaultValue {
+			errorf("default values differ:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.DefaultValue, gotCol.DefaultValue)
+		}
+
+		if wantCol.IsNullable != gotCol.IsNullable {
+			errorf("isNullable:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsNullable, gotCol.IsNullable)
+		}
+
+		if wantCol.IsAutoIncrement != gotCol.IsAutoIncrement {
+			errorf("IsAutoIncrement:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsAutoIncrement, gotCol.IsAutoIncrement)
+		}
+
+		if wantCol.IsIdentity != gotCol.IsIdentity {
+			errorf("IsIdentity:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsIdentity, gotCol.IsIdentity)
+		}
+	}
+
+	for _, errMsg := range errs {
+		tb.Error(errMsg)
+	}
+}
+
+func tableNames(tables []sqlschema.Table) (names []string) {
+	for i := range tables {
+		names = append(names, tables[i].Name)
+	}
+	return
+}
+
+func formatType(c sqlschema.Column) string {
+	if c.VarcharLen == 0 {
+		return c.SQLType
+	}
+	return fmt.Sprintf("%s(%d)", c.SQLType, c.VarcharLen)
+}
+
+func TestSchemaInspector_Inspect(t *testing.T) {
+	testEachDialect(t, func(t *testing.T, dialectName string, dialect schema.Dialect) {
+		if _, ok := dialect.(sqlschema.InspectorDialect); !ok {
+			t.Skip(dialectName + " is not sqlschema.InspectorDialect")
+		}
+
+		t.Run("default expressions are canonicalized", func(t *testing.T) {
+			type Model struct {
+				ID   string `bun:",notnull,default:RANDOM()"`
+				Name string `bun:",notnull,default:'John Doe'"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Model)(nil))
+			inspector := sqlschema.NewSchemaInspector(tables)
+
+			want := map[string]sqlschema.Column{
+				"id": {
+					SQLType:      sqltype.VarChar,
+					DefaultValue: "random()",
+				},
+				"name": {
+					SQLType:      sqltype.VarChar,
+					DefaultValue: "'John Doe'",
+				},
+			}
+
+			got, err := inspector.Inspect(context.Background())
+			require.NoError(t, err)
+
+			require.Len(t, got.Tables, 1)
+			cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, got.Tables[0].Columns)
+		})
+
+		t.Run("parses custom varchar len", func(t *testing.T) {
+			type Model struct {
+				ID        string `bun:",notnull,type:text"`
+				FirstName string `bun:",notnull,type:character varying(60)"`
+				LastName  string `bun:",notnull,type:varchar(100)"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Model)(nil))
+			inspector := sqlschema.NewSchemaInspector(tables)
+
+			want := map[string]sqlschema.Column{
+				"id": {
+					SQLType: "text",
+				},
+				"first_name": {
+					SQLType:    "character varying",
+					VarcharLen: 60,
+				},
+				"last_name": {
+					SQLType:    "varchar",
+					VarcharLen: 100,
+				},
+			}
+
+			got, err := inspector.Inspect(context.Background())
+			require.NoError(t, err)
+
+			require.Len(t, got.Tables, 1)
+			cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, got.Tables[0].Columns)
+		})
 	})
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
@@ -206,7 +205,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testCustomFKNameFunc},
 		{testForceRenameFK},
 		{testRenameColumnRenamesFK},
-		// {testChangeColumnType},
+		{testChangeColumnType_AutoCast},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -577,31 +576,31 @@ func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
 	require.Equal(t, "tennants_my_neighbour_fkey", fkName)
 }
 
-func testChangeColumnType(t *testing.T, db *bun.DB) {
+// testChangeColumnType_AutoCast checks type changes which can be type-casted automatically,
+// i.e. do not require supplying a USING clause (pgdialect).
+func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 	type TableBefore struct {
 		bun.BaseModel `bun:"table:table"`
 
-		// NewPK         int64     `bun:"new_pk,notnull,unique"`
-		PK            int32     `bun:"old_pk,pk,identity"`
-		DefaultExpr   string    `bun:"default_expr,default:gen_random_uuid()"`
-		Timestamp     time.Time `bun:"ts"`
-		StillNullable string    `bun:"not_null"`
-		TypeOverride  string    `bun:"type:char(100)"`
-		Logical       bool      `bun:"default:false"`
+		SmallInt     int32     `bun:"bigger_int,pk,identity"`
+		Timestamp    time.Time `bun:"ts"`
+		DefaultExpr  string    `bun:"default_expr,default:gen_random_uuid()"`
+		EmptyDefault string    `bun:"empty_default"`
+		Nullable     string    `bun:"not_null"`
+		TypeOverride string    `bun:"type:varchar(100)"`
 		// ManyValues    []string  `bun:",array"`
 	}
 
 	type TableAfter struct {
 		bun.BaseModel `bun:"table:table"`
 
-		// NewPK        int64     `bun:",pk"`
-		PK           int64     `bun:"old_pk,identity"`                           // ~~no longer PK (not identity)~~ (wip)
-		DefaultExpr  string    `bun:"default_expr,type:uuid,default:uuid_nil()"` // different default + type UUID
-		Timestamp    time.Time `bun:"ts,default:current_timestamp"`              // has default value now
-		NotNullable  string    `bun:"not_null,notnull"`                          // added NOT NULL
-		TypeOverride string    `bun:"type:char(200)"`                            // new length
-		Logical      uint8     `bun:"default:1"`                                 // change type + different default
-		// ManyValues    []string  `bun:",array"`                                 // did not change
+		BigInt       int64     `bun:"bigger_int,pk,identity"`        // int64 maps to bigint
+		Timestamp    time.Time `bun:"ts,default:current_timestamp"`  // has default value now
+		DefaultExpr  string    `bun:"default_expr,default:random()"` // different default
+		EmptyDefault string    `bun:"empty_default,default:''"`      // '' empty string default
+		NotNullable  string    `bun:"not_null,notnull"`              // added NOT NULL
+		TypeOverride string    `bun:"type:varchar(200)"`             // new length
+		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
 	wantTables := []sqlschema.Table{
@@ -613,31 +612,34 @@ func testChangeColumnType(t *testing.T, db *bun.DB) {
 				// 	IsPK:    true,
 				// 	SQLType: "bigint",
 				// },
-				"old_pk": {
-					SQLType: "bigint",
-					IsPK:    true,
-				},
-				"default_expr": {
-					SQLType:      "uuid",
-					IsNullable:   true,
-					DefaultValue: "uuid_nil()",
+				"bigger_int": {
+					SQLType:    "bigint",
+					IsPK:       true,
+					IsIdentity: true,
 				},
 				"ts": {
-					SQLType:      sqltype.Timestamp,
-					DefaultValue: "current_timestamp",
+					SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
+					DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
 					IsNullable:   true,
+				},
+				"default_expr": {
+					SQLType:      "varchar",
+					IsNullable:   true,
+					DefaultValue: "random()",
+				},
+				"empty_default": {
+					SQLType:      "varchar",
+					IsNullable:   true,
+					DefaultValue: "", // NOT "''"
 				},
 				"not_null": {
-					SQLType: "varchar",
+					SQLType:    "varchar",
+					IsNullable: false,
 				},
 				"type_override": {
-					SQLType:    "char(200)",
+					SQLType:    "varchar",
 					IsNullable: true,
-				},
-				"logical": {
-					SQLType:      "smallint",
-					DefaultValue: "1",
-					IsNullable:   true,
+					VarcharLen: 200,
 				},
 				// "many_values": {
 				// 	SQLType: "array",
@@ -657,7 +659,8 @@ func testChangeColumnType(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	require.Equal(t, wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	// require.Equal(t, wantTables, state.Tables
 }
 
 // // TODO: rewrite these tests into AutoMigrator tests, Diff should be moved to migrate/internal package
@@ -748,7 +751,7 @@ func testChangeColumnType(t *testing.T, db *bun.DB) {
 // 					},
 // 					&migrate.DropTable{
 // 						Schema: "billing",
-// 						Name:   "billing.subscriptions", // TODO: fix once schema is used correctly
+// 						Name:   "billing.subscriptions",
 // 					},
 // 					&migrate.DropTable{
 // 						Schema: defaultSchema,
@@ -838,7 +841,7 @@ func testChangeColumnType(t *testing.T, db *bun.DB) {
 // 				},
 // 			},
 // 			{
-// 				name: "create FKs for new tables", // TODO: update test case to detect an added column too
+// 				name: "create FKs for new tables",
 // 				states: func(t testing.TB, ctx context.Context, d schema.Dialect) (stateDb sqlschema.State, stateModel sqlschema.State) {
 // 					return getState(t, ctx, d,
 // 							(*ThingNoOwner)(nil),
@@ -861,7 +864,7 @@ func testChangeColumnType(t *testing.T, db *bun.DB) {
 // 				},
 // 			},
 // 			{
-// 				name: "drop FKs for dropped tables", // TODO: update test case to detect dropped columns too
+// 				name: "drop FKs for dropped tables",
 // 				states: func(t testing.TB, ctx context.Context, d schema.Dialect) (sqlschema.State, sqlschema.State) {
 // 					stateDb := getState(t, ctx, d, (*Owner)(nil), (*Thing)(nil))
 // 					stateModel := getState(t, ctx, d, (*ThingNoOwner)(nil))

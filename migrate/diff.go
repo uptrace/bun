@@ -10,7 +10,128 @@ import (
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
-// changeset is a set of changes to the database definition.
+// Diff calculates the diff between the current database schema and the target state.
+// The result changeset is not sorted, i.e. the caller should resolve dependencies
+// before applying the changes.
+func (d *detector) Diff() *changeset {
+	targetTables := newTableSet(d.target.Tables...)
+	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
+
+	// These table-sets record changes to the targetTables set.
+	created := newTableSet()
+	renamed := newTableSet()
+
+	// Discover CREATE/RENAME/DROP TABLE
+	addedTables := targetTables.Sub(currentTables)
+AddedLoop:
+	for _, added := range addedTables.Values() {
+		removedTables := currentTables.Sub(targetTables)
+		for _, removed := range removedTables.Values() {
+			if d.canRename(removed, added) {
+				d.changes.Add(&RenameTable{
+					Schema:  removed.Schema,
+					OldName: removed.Name,
+					NewName: added.Name,
+				})
+
+				// Here we do not check for created / dropped columns, as well as column type changes,
+				// because it is only possible to detect a renamed table if its signature (see state.go) did not change.
+				d.detectColumnChanges(removed, added, false)
+
+				// Update referenced table in all related FKs.
+				if d.detectRenamedFKs {
+					d.refMap.UpdateT(removed.T(), added.T())
+				}
+
+				renamed.Add(added)
+
+				// Do not check this model further, we know it was renamed.
+				currentTables.Remove(removed.Name)
+				continue AddedLoop
+			}
+		}
+		// If a new table did not appear because of the rename operation, then it must've been created.
+		d.changes.Add(&CreateTable{
+			Schema: added.Schema,
+			Name:   added.Name,
+			Model:  added.Model,
+		})
+		created.Add(added)
+	}
+
+	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
+	dropped := currentTables.Sub(targetTables)
+	for _, t := range dropped.Values() {
+		d.changes.Add(&DropTable{
+			Schema: t.Schema,
+			Name:   t.Name,
+		})
+	}
+
+	// Detect changes in existing tables that weren't renamed.
+	//
+	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
+	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
+	curEx := currentTables.Sub(dropped)
+	tarEx := targetTables.Sub(created).Sub(renamed)
+	for _, target := range tarEx.Values() {
+		// TODO(dyma): step is redundant if we have map[string]Table
+		var current sqlschema.Table
+		for _, cur := range curEx.Values() {
+			if cur.Name == target.Name {
+				current = cur
+				break
+			}
+		}
+		d.detectColumnChanges(current, target, true)
+	}
+
+	// Compare and update FKs ----------------
+	currentFKs := make(map[sqlschema.FK]string)
+	for k, v := range d.current.FKs {
+		currentFKs[k] = v
+	}
+
+	if d.detectRenamedFKs {
+		// Add RenameFK migrations for updated FKs.
+		for old, renamed := range d.refMap.Updated() {
+			newName := d.fkNameFunc(renamed)
+			d.changes.Add(&RenameConstraint{
+				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
+				OldName: d.current.FKs[old],
+				NewName: newName,
+			})
+
+			// Add this FK to currentFKs to prevent it from firing in the two loops below.
+			currentFKs[renamed] = newName
+			delete(currentFKs, old)
+		}
+	}
+
+	// Add AddFK migrations for newly added FKs.
+	for fk := range d.target.FKs {
+		if _, ok := currentFKs[fk]; !ok {
+			d.changes.Add(&AddForeignKey{
+				FK:             fk,
+				ConstraintName: d.fkNameFunc(fk),
+			})
+		}
+	}
+
+	// Add DropFK migrations for removed FKs.
+	for fk, fkName := range currentFKs {
+		if _, ok := d.target.FKs[fk]; !ok {
+			d.changes.Add(&DropConstraint{
+				FK:             fk,
+				ConstraintName: fkName,
+			})
+		}
+	}
+
+	return &d.changes
+}
+
+// changeset is a set of changes to the database schema definition.
 type changeset struct {
 	operations []Operation
 }
@@ -120,15 +241,21 @@ func (c *changeset) ResolveDependencies() error {
 
 type diffOption func(*detectorConfig)
 
-func fKNameFunc(f func(sqlschema.FK) string) diffOption {
+func withFKNameFunc(f func(sqlschema.FK) string) diffOption {
 	return func(cfg *detectorConfig) {
 		cfg.FKNameFunc = f
 	}
 }
 
-func detectRenamedFKs(enabled bool) diffOption {
+func withDetectRenamedFKs(enabled bool) diffOption {
 	return func(cfg *detectorConfig) {
 		cfg.DetectRenamedFKs = enabled
+	}
+}
+
+func withTypeEquivalenceFunc(f sqlschema.TypeEquivalenceFunc) diffOption {
+	return func(cfg *detectorConfig) {
+		cfg.EqType = f
 	}
 }
 
@@ -136,6 +263,7 @@ func detectRenamedFKs(enabled bool) diffOption {
 type detectorConfig struct {
 	FKNameFunc       func(sqlschema.FK) string
 	DetectRenamedFKs bool
+	EqType           sqlschema.TypeEquivalenceFunc
 }
 
 type detector struct {
@@ -151,7 +279,13 @@ type detector struct {
 	// fkNameFunc builds the name for created/renamed FK contraints.
 	fkNameFunc func(sqlschema.FK) string
 
-	// detectRenemedFKS controls how FKs are treated when their references (table/column) are renamed.
+	// eqType determines column type equivalence.
+	// Default is direct comparison with '==' operator, which is inaccurate
+	// due to the existence of dialect-specific type aliases. The caller
+	// should pass a concrete InspectorDialect.EquuivalentType for robust comparison.
+	eqType sqlschema.TypeEquivalenceFunc
+
+	// detectRenemedFKs controls how FKs are treated when their references (table/column) are renamed.
 	detectRenamedFKs bool
 }
 
@@ -159,6 +293,9 @@ func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
 	cfg := &detectorConfig{
 		FKNameFunc:       defaultFKName,
 		DetectRenamedFKs: false,
+		EqType: func(c1, c2 sqlschema.Column) bool {
+			return c1.SQLType == c2.SQLType && c1.VarcharLen == c2.VarcharLen
+		},
 	}
 	for _, opt := range opts {
 		opt(cfg)
@@ -175,150 +312,63 @@ func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
 		refMap:           sqlschema.NewRefMap(existingFKs...),
 		fkNameFunc:       cfg.FKNameFunc,
 		detectRenamedFKs: cfg.DetectRenamedFKs,
+		eqType:           cfg.EqType,
 	}
-}
-
-func (d *detector) Diff() *changeset {
-	// Discover CREATE/RENAME/DROP TABLE
-	targetTables := newTableSet(d.target.Tables...)
-	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
-
-	// These table-sets record changes to the targetTables set.
-	created := newTableSet()
-	renamed := newTableSet()
-
-	addedTables := targetTables.Sub(currentTables)
-AddedLoop:
-	for _, added := range addedTables.Values() {
-		removedTables := currentTables.Sub(targetTables)
-		for _, removed := range removedTables.Values() {
-			if d.canRename(removed, added) {
-				d.changes.Add(&RenameTable{
-					Schema:  removed.Schema,
-					OldName: removed.Name,
-					NewName: added.Name,
-				})
-
-				// Here we do not check for created / dropped columns,as well as column type changes,
-				// because it is only possible to detect a renamed table if its signature (see state.go) did not change.
-				d.detectRenamedColumns(removed, added)
-
-				// Update referenced table in all related FKs.
-				if d.detectRenamedFKs {
-					d.refMap.UpdateT(removed.T(), added.T())
-				}
-
-				renamed.Add(added)
-
-				// Do not check this model further, we know it was renamed.
-				currentTables.Remove(removed.Name)
-				continue AddedLoop
-			}
-		}
-		// If a new table did not appear because of the rename operation, then it must've been created.
-		d.changes.Add(&CreateTable{
-			Schema: added.Schema,
-			Name:   added.Name,
-			Model:  added.Model,
-		})
-		created.Add(added)
-	}
-
-	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
-	dropped := currentTables.Sub(targetTables)
-	for _, t := range dropped.Values() {
-		d.changes.Add(&DropTable{
-			Schema: t.Schema,
-			Name:   t.Name,
-		})
-	}
-
-	// Detect changes in existing tables that weren't renamed.
-	//
-	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
-	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
-	curEx := currentTables.Sub(dropped)
-	tarEx := targetTables.Sub(created).Sub(renamed)
-	for _, target := range tarEx.Values() {
-		// TODO(dyma): step is redundant if we have map[string]Table
-		var current sqlschema.Table
-		for _, cur := range curEx.Values() {
-			if cur.Name == target.Name {
-				current = cur
-				break
-			}
-		}
-		d.detectRenamedColumns(current, target)
-	}
-
-	// Compare and update FKs ----------------
-	currentFKs := make(map[sqlschema.FK]string)
-	for k, v := range d.current.FKs {
-		currentFKs[k] = v
-	}
-
-	if d.detectRenamedFKs {
-		// Add RenameFK migrations for updated FKs.
-		for old, renamed := range d.refMap.Updated() {
-			newName := d.fkNameFunc(renamed)
-			d.changes.Add(&RenameConstraint{
-				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
-				OldName: d.current.FKs[old],
-				NewName: newName,
-			})
-
-			// Add this FK to currentFKs to prevent it from firing in the two loops below.
-			currentFKs[renamed] = newName
-			delete(currentFKs, old)
-		}
-	}
-
-	// Add AddFK migrations for newly added FKs.
-	for fk := range d.target.FKs {
-		if _, ok := currentFKs[fk]; !ok {
-			d.changes.Add(&AddForeignKey{
-				FK:             fk,
-				ConstraintName: d.fkNameFunc(fk),
-			})
-		}
-	}
-
-	// Add DropFK migrations for removed FKs.
-	for fk, fkName := range currentFKs {
-		if _, ok := d.target.FKs[fk]; !ok {
-			d.changes.Add(&DropConstraint{
-				FK:             fk,
-				ConstraintName: fkName,
-			})
-		}
-	}
-
-	return &d.changes
 }
 
 // canRename checks if t1 can be renamed to t2.
-func (d detector) canRename(t1, t2 sqlschema.Table) bool {
-	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2)
+func (d *detector) canRename(t1, t2 sqlschema.Table) bool {
+	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2, d.equalColumns)
 }
 
-func (d *detector) detectRenamedColumns(current, added sqlschema.Table) {
-	for aName, aCol := range added.Columns {
-		// This column exists in the database, so it wasn't renamed
-		if _, ok := current.Columns[aName]; ok {
+func (d *detector) equalColumns(col1, col2 sqlschema.Column) bool {
+	return d.eqType(col1, col2) &&
+		col1.DefaultValue == col2.DefaultValue &&
+		col1.IsNullable == col2.IsNullable &&
+		col1.IsAutoIncrement == col2.IsAutoIncrement &&
+		col1.IsIdentity == col2.IsIdentity
+}
+
+func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.Column {
+	// Avoid unneccessary type-change migrations if the types are equivalent.
+	if d.eqType(current, target) {
+		target.SQLType = current.SQLType
+		target.VarcharLen = current.VarcharLen
+	}
+	return target
+}
+
+// detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
+func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
+	for tName, tCol := range target.Columns {
+		// This column exists in the database, so it hasn't been renamed.
+		if cCol, ok := current.Columns[tName]; ok {
+			if checkType && !d.equalColumns(cCol, tCol) {
+				d.changes.Add(&ChangeColumnType{
+					Schema: target.Schema,
+					Table:  target.Name,
+					Column: tName,
+					From:   cCol,
+					To:     d.makeTargetColDef(cCol, tCol),
+				})
+				// TODO: Can I delete (current.Column, tName) then? Because if it's type has changed, it will never match in the line 343.
+			}
 			continue
 		}
+
+		// Find the column with the same type and the
 		for cName, cCol := range current.Columns {
-			if aCol != cCol {
+			if !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumn{
-				Schema:  added.Schema,
-				Table:   added.Name,
+				Schema:  target.Schema,
+				Table:   target.Name,
 				OldName: cName,
-				NewName: aName,
+				NewName: tName,
 			})
 			delete(current.Columns, cName) // no need to check this column again
-			d.refMap.UpdateC(sqlschema.C(added.Schema, added.Name, cName), aName)
+			d.refMap.UpdateC(sqlschema.C(target.Schema, target.Name, cName), tName)
 			break
 		}
 	}
