@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -28,6 +29,10 @@ type Dialect struct {
 	tables   *schema.Tables
 	features feature.Feature
 }
+
+var _ schema.Dialect = (*Dialect)(nil)
+var _ sqlschema.InspectorDialect = (*Dialect)(nil)
+var _ sqlschema.MigratorDialect = (*Dialect)(nil)
 
 func New() *Dialect {
 	d := new(Dialect)
