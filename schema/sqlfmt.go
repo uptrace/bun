@@ -39,7 +39,7 @@ func (s Name) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
-// FQN represents a fully qualified table name.
+// FQN appends a fully-qualified table name.
 type FQN struct {
 	Schema string
 	Table  string

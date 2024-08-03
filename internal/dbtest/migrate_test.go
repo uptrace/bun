@@ -201,9 +201,9 @@ func TestAutoMigrator_Run(t *testing.T) {
 	}{
 		{testRenameTable},
 		{testRenamedColumns},
-		// {testCreateDropTable},
-		// {testAlterForeignKeys},
-		// {testCustomFKNameFunc},
+		{testCreateDropTable},
+		{testAlterForeignKeys},
+		{testCustomFKNameFunc},
 		{testForceRenameFK},
 		{testRenameColumnRenamesFK},
 		// {testChangeColumnType},
@@ -470,7 +470,7 @@ func testCustomFKNameFunc(t *testing.T, db *bun.DB) {
 		From: sqlschema.C(db.Dialect().DefaultSchema(), "columns", "attrelid"),
 		To:   sqlschema.C(db.Dialect().DefaultSchema(), "tables", "oid"),
 	}]
-	require.Equal(t, fkName, "test_fkey")
+	require.Equal(t, "test_fkey", fkName)
 }
 
 func testRenamedColumns(t *testing.T, db *bun.DB) {

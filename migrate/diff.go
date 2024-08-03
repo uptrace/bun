@@ -7,17 +7,16 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/migrate/alt"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
 // changeset is a set of changes to the database definition.
 type changeset struct {
-	operations []alt.Operation
+	operations []Operation
 }
 
 // Add new operations to the changeset.
-func (c *changeset) Add(op ...alt.Operation) {
+func (c *changeset) Add(op ...Operation) {
 	c.operations = append(c.operations, op...)
 }
 
@@ -57,17 +56,17 @@ func (c *changeset) ResolveDependencies() error {
 		visited
 	)
 
-	var resolved []alt.Operation
-	var visit func(op alt.Operation) error
+	var resolved []Operation
+	var visit func(op Operation) error
 
-	var nextOp alt.Operation
+	var nextOp Operation
 	var next func() bool
 
-	status := make(map[alt.Operation]int, len(c.operations))
+	status := make(map[Operation]int, len(c.operations))
 	for _, op := range c.operations {
 		status[op] = unvisited
 	}
-	
+
 	next = func() bool {
 		for op, s := range status {
 			if s == unvisited {
@@ -80,7 +79,7 @@ func (c *changeset) ResolveDependencies() error {
 
 	// visit iterates over c.operations until it finds all operations that depend on the current one
 	// or runs into cirtular dependency, in which case it will return an error.
-	visit = func(op alt.Operation) error {
+	visit = func(op Operation) error {
 		switch status[op] {
 		case visited:
 			return nil
@@ -93,7 +92,7 @@ func (c *changeset) ResolveDependencies() error {
 
 		for _, another := range c.operations {
 			if dop, hasDeps := another.(interface {
-				DependsOn(alt.Operation) bool
+				DependsOn(Operation) bool
 			}); another == op || !hasDeps || !dop.DependsOn(op) {
 				continue
 			}
@@ -105,7 +104,7 @@ func (c *changeset) ResolveDependencies() error {
 		status[op] = visited
 
 		// Any dependent nodes would've already been added to the list by now, so we prepend.
-		resolved = append([]alt.Operation{op}, resolved...)
+		resolved = append([]Operation{op}, resolved...)
 		return nil
 	}
 
@@ -184,7 +183,7 @@ func (d *detector) Diff() *changeset {
 	targetTables := newTableSet(d.target.Tables...)
 	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
 
-	// These table sets record "updates" to the targetTables set.
+	// These table-sets record changes to the targetTables set.
 	created := newTableSet()
 	renamed := newTableSet()
 
@@ -194,15 +193,17 @@ AddedLoop:
 		removedTables := currentTables.Sub(targetTables)
 		for _, removed := range removedTables.Values() {
 			if d.canRename(removed, added) {
-				d.changes.Add(&alt.RenameTable{
+				d.changes.Add(&RenameTable{
 					Schema:  removed.Schema,
 					OldName: removed.Name,
 					NewName: added.Name,
 				})
 
+				// Here we do not check for created / dropped columns,as well as column type changes,
+				// because it is only possible to detect a renamed table if its signature (see state.go) did not change.
 				d.detectRenamedColumns(removed, added)
 
-				// Update referenced table in all related FKs
+				// Update referenced table in all related FKs.
 				if d.detectRenamedFKs {
 					d.refMap.UpdateT(removed.T(), added.T())
 				}
@@ -215,7 +216,7 @@ AddedLoop:
 			}
 		}
 		// If a new table did not appear because of the rename operation, then it must've been created.
-		d.changes.Add(&alt.CreateTable{
+		d.changes.Add(&CreateTable{
 			Schema: added.Schema,
 			Name:   added.Name,
 			Model:  added.Model,
@@ -226,19 +227,20 @@ AddedLoop:
 	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
 	dropped := currentTables.Sub(targetTables)
 	for _, t := range dropped.Values() {
-		d.changes.Add(&alt.DropTable{
+		d.changes.Add(&DropTable{
 			Schema: t.Schema,
 			Name:   t.Name,
 		})
 	}
 
-	// Detect changes in existing tables that weren't renamed
+	// Detect changes in existing tables that weren't renamed.
+	//
 	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
 	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
 	curEx := currentTables.Sub(dropped)
 	tarEx := targetTables.Sub(created).Sub(renamed)
 	for _, target := range tarEx.Values() {
-		// This step is redundant if we have map[string]Table
+		// TODO(dyma): step is redundant if we have map[string]Table
 		var current sqlschema.Table
 		for _, cur := range curEx.Values() {
 			if cur.Name == target.Name {
@@ -259,13 +261,13 @@ AddedLoop:
 		// Add RenameFK migrations for updated FKs.
 		for old, renamed := range d.refMap.Updated() {
 			newName := d.fkNameFunc(renamed)
-			d.changes.Add(&alt.RenameConstraint{
+			d.changes.Add(&RenameConstraint{
 				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
 				OldName: d.current.FKs[old],
-				NewName: d.fkNameFunc(renamed),
+				NewName: newName,
 			})
 
-			// Here we can add this fk to "current.FKs" to prevent it from firing in the next 2 for-loops.
+			// Add this FK to currentFKs to prevent it from firing in the two loops below.
 			currentFKs[renamed] = newName
 			delete(currentFKs, old)
 		}
@@ -274,7 +276,7 @@ AddedLoop:
 	// Add AddFK migrations for newly added FKs.
 	for fk := range d.target.FKs {
 		if _, ok := currentFKs[fk]; !ok {
-			d.changes.Add(&alt.AddForeignKey{
+			d.changes.Add(&AddForeignKey{
 				FK:             fk,
 				ConstraintName: d.fkNameFunc(fk),
 			})
@@ -284,7 +286,7 @@ AddedLoop:
 	// Add DropFK migrations for removed FKs.
 	for fk, fkName := range currentFKs {
 		if _, ok := d.target.FKs[fk]; !ok {
-			d.changes.Add(&alt.DropConstraint{
+			d.changes.Add(&DropConstraint{
 				FK:             fk,
 				ConstraintName: fkName,
 			})
@@ -309,7 +311,7 @@ func (d *detector) detectRenamedColumns(current, added sqlschema.Table) {
 			if aCol != cCol {
 				continue
 			}
-			d.changes.Add(&alt.RenameColumn{
+			d.changes.Add(&RenameColumn{
 				Schema:  added.Schema,
 				Table:   added.Name,
 				OldName: cName,
@@ -329,8 +331,8 @@ type tableSet struct {
 	underlying map[string]sqlschema.Table
 }
 
-func newTableSet(initial ...sqlschema.Table) tableSet {
-	set := tableSet{
+func newTableSet(initial ...sqlschema.Table) *tableSet {
+	set := &tableSet{
 		underlying: make(map[string]sqlschema.Table),
 	}
 	for _, t := range initial {
@@ -339,22 +341,22 @@ func newTableSet(initial ...sqlschema.Table) tableSet {
 	return set
 }
 
-func (set tableSet) Add(t sqlschema.Table) {
+func (set *tableSet) Add(t sqlschema.Table) {
 	set.underlying[t.Name] = t
 }
 
-func (set tableSet) Remove(s string) {
+func (set *tableSet) Remove(s string) {
 	delete(set.underlying, s)
 }
 
-func (set tableSet) Values() (tables []sqlschema.Table) {
+func (set *tableSet) Values() (tables []sqlschema.Table) {
 	for _, t := range set.underlying {
 		tables = append(tables, t)
 	}
 	return
 }
 
-func (set tableSet) Sub(other tableSet) tableSet {
+func (set *tableSet) Sub(other *tableSet) *tableSet {
 	res := set.clone()
 	for v := range other.underlying {
 		if _, ok := set.underlying[v]; ok {
@@ -364,7 +366,7 @@ func (set tableSet) Sub(other tableSet) tableSet {
 	return res
 }
 
-func (set tableSet) clone() tableSet {
+func (set *tableSet) clone() *tableSet {
 	res := newTableSet()
 	for _, t := range set.underlying {
 		res.Add(t)
@@ -372,7 +374,8 @@ func (set tableSet) clone() tableSet {
 	return res
 }
 
-func (set tableSet) String() string {
+// String is a debug helper to get a list of table names in the set.
+func (set *tableSet) String() string {
 	var s strings.Builder
 	for k := range set.underlying {
 		if s.Len() > 0 {
