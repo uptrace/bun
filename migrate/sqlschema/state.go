@@ -1,6 +1,10 @@
 package sqlschema
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/uptrace/bun/schema"
+)
 
 type State struct {
 	Tables []Table
@@ -14,6 +18,7 @@ type Table struct {
 	Columns map[string]Column
 }
 
+// T returns a fully-qualified name object for the table.
 func (t *Table) T() tFQN {
 	return T(t.Schema, t.Name)
 }
@@ -78,6 +83,7 @@ type tFQN struct {
 	Table  string
 }
 
+// T creates a fully-qualified table name object.
 func T(schema, table string) tFQN { return tFQN{Schema: schema, Table: table} }
 
 // cFQN is a fully-qualified column name.
@@ -86,6 +92,7 @@ type cFQN struct {
 	Column composite
 }
 
+// C creates a fully-qualified column name object.
 func C(schema, table string, columns ...string) cFQN {
 	return cFQN{tFQN: T(schema, table), Column: newComposite(columns...)}
 }
@@ -96,7 +103,7 @@ func (c cFQN) T() tFQN {
 }
 
 // composite is a hashable representation of []string used to define FKs that depend on multiple columns.
-// Although having duplicated column references in a FK is illegal, composite neither validate nor enforce this constraint on the caller.
+// Although having duplicated column references in a FK is illegal, composite neither validates nor enforces this constraint on the caller.
 type composite string
 
 // newComposite creates a composite column from a slice of column names.
@@ -106,6 +113,10 @@ func newComposite(columns ...string) composite {
 
 func (c composite) String() string {
 	return string(c)
+}
+
+func (c composite) Safe() schema.Safe {
+	return schema.Safe(c)
 }
 
 // Split returns a slice of column names that make up the composite.
@@ -151,14 +162,14 @@ func (c composite) Replace(oldColumn, newColumn string) composite {
 //
 //	fk := FK{
 //		From: C("a", "b", "c_1", "c_2"), // supports multicolumn FKs
-//		To: C("w", "x", "y_1", "y_2")
+//		To:	C("w", "x", "y_1", "y_2")
 //	}
 type FK struct {
 	From cFQN // From is the referencing column.
 	To   cFQN // To is the referenced column.
 }
 
-// DependsT checks if either part of the FK's definition mentions T
+// dependsT checks if either part of the FK's definition mentions T
 // and returns the columns that belong to T. Notice that *C allows modifying the column's FQN.
 //
 // Example:
@@ -168,7 +179,7 @@ type FK struct {
 //		To:	  C("x", "y", "z"),
 //	}
 //	depends on T("a", "b") and T("x", "y")
-func (fk *FK) DependsT(t tFQN) (ok bool, cols []*cFQN) {
+func (fk *FK) dependsT(t tFQN) (ok bool, cols []*cFQN) {
 	if c := &fk.From; c.T() == t {
 		ok = true
 		cols = append(cols, c)
@@ -183,7 +194,7 @@ func (fk *FK) DependsT(t tFQN) (ok bool, cols []*cFQN) {
 	return
 }
 
-// DependsC checks if the FK definition mentions C and returns a modifiable FQN of the matching column.
+// dependsC checks if the FK definition mentions C and returns a modifiable FQN of the matching column.
 //
 // Example:
 //
@@ -192,7 +203,7 @@ func (fk *FK) DependsT(t tFQN) (ok bool, cols []*cFQN) {
 //		To:	  C("w", "x", "y_1", "y_2"),
 //	}
 //	depends on C("a", "b", "c_1"), C("a", "b", "c_2"), C("w", "x", "y_1"), and C("w", "x", "y_2")
-func (fk *FK) DependsC(c cFQN) (bool, *cFQN) {
+func (fk *FK) dependsC(c cFQN) (bool, *cFQN) {
 	switch {
 	case fk.From.Column.Contains(c.Column):
 		return true, &fk.From
@@ -208,8 +219,7 @@ func (fk *FK) DependsC(c cFQN) (bool, *cFQN) {
 //
 // Note: this is only important/necessary if we want to rename FKs instead of re-creating them.
 // Most of the time it wouldn't make a difference, but there may be cases in which re-creating FKs could be costly
-// and renaming them would be preferred. For that we could provided an options like WithRenameFKs(true) and
-// WithRenameFKFunc(func(sqlschema.FK) string) to allow customizing the FK naming convention.
+// and renaming them would be preferred.
 type RefMap map[FK]*FK
 
 // deleted is a special value that RefMap uses to denote a deleted FK constraint.
@@ -229,7 +239,7 @@ func NewRefMap(fks ...FK) RefMap {
 // Returns the number of updated entries.
 func (r RefMap) UpdateT(oldT, newT tFQN) (n int) {
 	for _, fk := range r {
-		ok, cols := fk.DependsT(oldT)
+		ok, cols := fk.dependsT(oldT)
 		if !ok {
 			continue
 		}
@@ -246,9 +256,9 @@ func (r RefMap) UpdateT(oldT, newT tFQN) (n int) {
 // and so, only the column-name part of the FQN can be updated. Returns the number of updated entries.
 func (r RefMap) UpdateC(oldC cFQN, newColumn string) (n int) {
 	for _, fk := range r {
-		if ok, col := fk.DependsC(oldC); ok {
+		if ok, col := fk.dependsC(oldC); ok {
 			oldColumns := oldC.Column.Split()
-			// UpdateC can only update 1 column at a time.
+			// updateC will only update 1 column per invocation.
 			col.Column = col.Column.Replace(oldColumns[0], newColumn)
 			n++
 		}
@@ -260,7 +270,7 @@ func (r RefMap) UpdateC(oldC cFQN, newColumn string) (n int) {
 // Returns the number of deleted entries.
 func (r RefMap) DeleteT(t tFQN) (n int) {
 	for old, fk := range r {
-		if ok, _ := fk.DependsT(t); ok {
+		if ok, _ := fk.dependsT(t); ok {
 			r[old] = &deleted
 			n++
 		}
@@ -272,7 +282,7 @@ func (r RefMap) DeleteT(t tFQN) (n int) {
 // Returns the number of deleted entries.
 func (r RefMap) DeleteC(c cFQN) (n int) {
 	for old, fk := range r {
-		if ok, _ := fk.DependsC(c); ok {
+		if ok, _ := fk.dependsC(c); ok {
 			r[old] = &deleted
 			n++
 		}

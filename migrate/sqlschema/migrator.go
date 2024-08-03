@@ -13,24 +13,11 @@ type MigratorDialect interface {
 	Migrator(*bun.DB) Migrator
 }
 
-type Operation interface {
-	schema.QueryAppender
-	FQN() schema.FQN
-}
-
 type Migrator interface {
 	Apply(ctx context.Context, changes ...Operation) error
-
-	RenameTable(ctx context.Context, oldName, newName string) error
-	CreateTable(ctx context.Context, model interface{}) error
-	DropTable(ctx context.Context, schema, table string) error
-	AddContraint(ctx context.Context, fk FK, name string) error
-	DropContraint(ctx context.Context, schema, table, name string) error
-	RenameConstraint(ctx context.Context, schema, table, oldName, newName string) error
-	RenameColumn(ctx context.Context, schema, table, oldName, newName string) error
 }
 
-// Migrator is a dialect-agnostic wrapper for sqlschema.Dialect
+// migrator is a dialect-agnostic wrapper for sqlschema.MigratorDialect.
 type migrator struct {
 	Migrator
 }
@@ -68,4 +55,10 @@ func (m *BaseMigrator) DropTable(ctx context.Context, schema, name string) error
 		return err
 	}
 	return nil
+}
+
+// Operation is a helper interface each migrate.Operation must implement
+// so an not to handle this in every dialect separately.
+type Operation interface {
+	FQN() schema.FQN
 }

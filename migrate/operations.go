@@ -1,7 +1,6 @@
-package alt
+package migrate
 
 import (
-	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -51,6 +50,7 @@ func (op *DropTable) FQN() schema.FQN {
 
 func (op *DropTable) DependsOn(another Operation) bool {
 	d, ok := another.(*DropConstraint)
+	//
 	return ok && ((d.FK.From.Schema == op.Schema && d.FK.From.Table == op.Name) ||
 		(d.FK.To.Schema == op.Schema && d.FK.To.Table == op.Name))
 }
@@ -80,10 +80,6 @@ func (op *RenameTable) FQN() schema.FQN {
 	}
 }
 
-func (op *RenameTable) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, "RENAME TO ?", bun.Ident(op.NewName)), nil
-}
-
 func (op *RenameTable) GetReverse() Operation {
 	return &RenameTable{
 		Schema:  op.Schema,
@@ -108,10 +104,6 @@ func (op *RenameColumn) FQN() schema.FQN {
 		Schema: op.Schema,
 		Table:  op.Table,
 	}
-}
-
-func (op *RenameColumn) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, "RENAME COLUMN ? TO ?", bun.Ident(op.OldName), bun.Ident(op.NewName)), nil
 }
 
 func (op *RenameColumn) GetReverse() Operation {
@@ -150,10 +142,6 @@ func (op *RenameConstraint) DependsOn(another Operation) bool {
 	return ok && rt.Schema == op.FK.From.Schema && rt.NewName == op.FK.From.Table
 }
 
-func (op *RenameConstraint) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, "RENAME CONSTRAINT ? TO ?", bun.Ident(op.OldName), bun.Ident(op.NewName)), nil
-}
-
 func (op *RenameConstraint) GetReverse() Operation {
 	return &RenameConstraint{
 		FK:      op.FK,
@@ -188,19 +176,6 @@ func (op *AddForeignKey) DependsOn(another Operation) bool {
 	return false
 }
 
-func (op *AddForeignKey) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	fqn := schema.FQN{
-		Schema: op.FK.To.Schema,
-		Table:  op.FK.To.Table,
-	}
-	b = fmter.AppendQuery(b,
-		"ADD CONSTRAINT ? FOREIGN KEY (?) REFERENCES ",
-		bun.Ident(op.ConstraintName), bun.Safe(op.FK.From.Column),
-	)
-	b, _ = fqn.AppendQuery(fmter, b)
-	return fmter.AppendQuery(b, " (?)", bun.Ident(op.FK.To.Column)), nil
-}
-
 func (op *AddForeignKey) GetReverse() Operation {
 	return &DropConstraint{
 		FK:             op.FK,
@@ -222,10 +197,6 @@ func (op *DropConstraint) FQN() schema.FQN {
 		Schema: op.FK.From.Schema,
 		Table:  op.FK.From.Table,
 	}
-}
-
-func (op *DropConstraint) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, "DROP CONSTRAINT ?", bun.Ident(op.ConstraintName)), nil
 }
 
 func (op *DropConstraint) GetReverse() Operation {
