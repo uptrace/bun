@@ -3,6 +3,7 @@ package pgdialect
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/internal"
@@ -61,6 +62,8 @@ func (m *migrator) Apply(ctx context.Context, changes ...sqlschema.Operation) er
 			b, err = m.addForeignKey(fmter, b, change)
 		case *migrate.RenameConstraint:
 			b, err = m.renameConstraint(fmter, b, change)
+		case *migrate.ChangeColumnType:
+			b, err = m.changeColumnType(fmter, b, change)
 		default:
 			return fmt.Errorf("apply changes: unknown operation %T", change)
 		}
@@ -69,7 +72,7 @@ func (m *migrator) Apply(ctx context.Context, changes ...sqlschema.Operation) er
 		}
 
 		query := internal.String(b)
-		// log.Println("exec query: " + query)
+		log.Println("exec query: " + query)
 		if _, err = conn.ExecContext(ctx, query); err != nil {
 			return fmt.Errorf("apply changes: %w", err)
 		}
@@ -171,6 +174,61 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 		return b, err
 	}
 	b = append(b, ")"...)
+
+	return b, nil
+}
+
+func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *migrate.ChangeColumnType) (_ []byte, err error) {
+	b = append(b, "ALTER TABLE "...)
+	fqn := colDef.FQN()
+	if b, err = fqn.AppendQuery(fmter, b); err != nil {
+		return b, err
+	}
+
+	var i int
+	appendAlterColumn := func() {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+		b = append(b, " ALTER COLUMN "...)
+		b, err = bun.Ident(colDef.Column).AppendQuery(fmter, b)
+		i++
+	}
+
+	got, want := colDef.From, colDef.To
+
+	if want.SQLType != got.SQLType {
+		if appendAlterColumn(); err != nil {
+			return b, err
+		}
+		b = append(b, " SET DATA TYPE "...)
+		if b, err = want.AppendQuery(fmter, b); err != nil {
+			return b, err
+		}
+	}
+
+	if want.IsNullable != got.IsNullable {
+		if appendAlterColumn(); err != nil {
+			return b, err
+		}
+		if !want.IsNullable {
+			b = append(b, " SET NOT NULL"...)
+		} else {
+			b = append(b, " DROP NOT NULL"...)
+		}
+	}
+
+	if want.DefaultValue != got.DefaultValue {
+		if appendAlterColumn(); err != nil {
+			return b, err
+		}
+		if want.DefaultValue == "" {
+			b = append(b, " DROP DEFAULT"...)
+		} else {
+			b = append(b, " SET DEFAULT "...)
+			b = append(b, want.DefaultValue...)
+		}
+	}
 
 	return b, nil
 }

@@ -2,11 +2,9 @@ package pgdialect
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
@@ -52,23 +50,21 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 		}
 		colDefs := make(map[string]sqlschema.Column)
 		for _, c := range columns {
-			dataType := fromDatabaseType(c.DataType)
-			if strings.EqualFold(dataType, sqltype.VarChar) && c.VarcharLen > 0 {
-				dataType = fmt.Sprintf("%s(%d)", dataType, c.VarcharLen)
-			}
-
 			def := c.Default
 			if c.IsSerial || c.IsIdentity {
 				def = ""
+			} else if !c.IsDefaultLiteral {
+				def = strings.ToLower(def)
 			}
 
 			colDefs[c.Name] = sqlschema.Column{
-				SQLType:         strings.ToLower(dataType),
+				SQLType:         c.DataType,
+				VarcharLen:      c.VarcharLen,
+				DefaultValue:    def,
 				IsPK:            c.IsPK,
 				IsNullable:      c.IsNullable,
 				IsAutoIncrement: c.IsSerial,
 				IsIdentity:      c.IsIdentity,
-				DefaultValue:    def,
 			}
 		}
 
@@ -96,21 +92,22 @@ type InformationSchemaTable struct {
 }
 
 type InformationSchemaColumn struct {
-	Schema        string   `bun:"table_schema"`
-	Table         string   `bun:"table_name"`
-	Name          string   `bun:"column_name"`
-	DataType      string   `bun:"data_type"`
-	VarcharLen    int      `bun:"varchar_len"`
-	IsArray       bool     `bun:"is_array"`
-	ArrayDims     int      `bun:"array_dims"`
-	Default       string   `bun:"default"`
-	IsPK          bool     `bun:"is_pk"`
-	IsIdentity    bool     `bun:"is_identity"`
-	IndentityType string   `bun:"identity_type"`
-	IsSerial      bool     `bun:"is_serial"`
-	IsNullable    bool     `bun:"is_nullable"`
-	IsUnique      bool     `bun:"is_unique"`
-	UniqueGroup   []string `bun:"unique_group,array"`
+	Schema           string   `bun:"table_schema"`
+	Table            string   `bun:"table_name"`
+	Name             string   `bun:"column_name"`
+	DataType         string   `bun:"data_type"`
+	VarcharLen       int      `bun:"varchar_len"`
+	IsArray          bool     `bun:"is_array"`
+	ArrayDims        int      `bun:"array_dims"`
+	Default          string   `bun:"default"`
+	IsDefaultLiteral bool     `bun:"default_is_literal_expr"`
+	IsPK             bool     `bun:"is_pk"`
+	IsIdentity       bool     `bun:"is_identity"`
+	IndentityType    string   `bun:"identity_type"`
+	IsSerial         bool     `bun:"is_serial"`
+	IsNullable       bool     `bun:"is_nullable"`
+	IsUnique         bool     `bun:"is_unique"`
+	UniqueGroup      []string `bun:"unique_group,array"`
 }
 
 type ForeignKey struct {
@@ -153,6 +150,7 @@ SELECT
 		WHEN "c".column_default ~ '^''.*''::.*$' THEN substring("c".column_default FROM '^''(.*)''::.*$')
 		ELSE "c".column_default
 	END AS "default",
+	"c".column_default ~ '^''.*''::.*$' OR "c".column_default ~ '^[0-9\.]+$' AS default_is_literal_expr,
 	'p' = ANY("c".constraint_type) AS is_pk,
 	"c".is_identity = 'YES' AS is_identity,
 	"c".column_default = format('nextval(''%s_%s_seq''::regclass)', "c".table_name, "c".column_name) AS is_serial,

@@ -35,7 +35,7 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 // which is the default strategy. Perhaps it would make sense to allow disabling this and switching to separate (CreateTable + AddFK)
 func WithFKNameFunc(f func(sqlschema.FK) string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
-		m.diffOpts = append(m.diffOpts, fKNameFunc(f))
+		m.diffOpts = append(m.diffOpts, withFKNameFunc(f))
 	}
 }
 
@@ -44,7 +44,7 @@ func WithFKNameFunc(f func(sqlschema.FK) string) AutoMigratorOption {
 // and in those cases simply renaming the FK makes a lot more sense.
 func WithRenameFK(enabled bool) AutoMigratorOption {
 	return func(m *AutoMigrator) {
-		m.diffOpts = append(m.diffOpts, detectRenamedFKs(enabled))
+		m.diffOpts = append(m.diffOpts, withDetectRenamedFKs(enabled))
 	}
 }
 
@@ -117,6 +117,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 		return nil, err
 	}
 	am.dbInspector = dbInspector
+	am.diffOpts = append(am.diffOpts, withTypeEquivalenceFunc(db.Dialect().(sqlschema.InspectorDialect).EquivalentType))
 
 	dbMigrator, err := sqlschema.NewMigrator(db)
 	if err != nil {

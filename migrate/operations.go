@@ -215,6 +215,7 @@ type ChangeColumnType struct {
 }
 
 var _ Operation = (*ChangeColumnType)(nil)
+var _ sqlschema.Operation = (*ChangeColumnType)(nil)
 
 func (op *ChangeColumnType) GetReverse() Operation {
 	return &ChangeColumnType{
@@ -223,6 +224,13 @@ func (op *ChangeColumnType) GetReverse() Operation {
 		Column: op.Column,
 		From:   op.To,
 		To:     op.From,
+	}
+}
+
+func (op ChangeColumnType) FQN() schema.FQN {
+	return schema.FQN{
+		Schema: op.Schema,
+		Table:  op.Table,
 	}
 }
 

@@ -8,16 +8,19 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
 const (
 	// Date / Time
-	pgTypeTimestampTz = "TIMESTAMPTZ"         // Timestamp with a time zone
-	pgTypeDate        = "DATE"                // Date
-	pgTypeTime        = "TIME"                // Time without a time zone
-	pgTypeTimeTz      = "TIME WITH TIME ZONE" // Time with a time zone
-	pgTypeInterval    = "INTERVAL"            // Time Interval
+	pgTypeTimestamp       = "TIMESTAMP"                // Timestamp
+	pgTypeTimestampWithTz = "TIMESTAMP WITH TIME ZONE" // Timestamp with a time zone
+	pgTypeTimestampTz     = "TIMESTAMPTZ"              // Timestamp with a time zone (alias)
+	pgTypeDate            = "DATE"                     // Date
+	pgTypeTime            = "TIME"                     // Time without a time zone
+	pgTypeTimeTz          = "TIME WITH TIME ZONE"      // Time with a time zone
+	pgTypeInterval        = "INTERVAL"                 // Time interval
 
 	// Network Addresses
 	pgTypeInet    = "INET"    // IPv4 or IPv6 hosts and networks
@@ -31,6 +34,7 @@ const (
 
 	// Character Types
 	pgTypeChar             = "CHAR"              // fixed length string (blank padded)
+	pgTypeCharacter        = "CHARACTER"         // alias for CHAR
 	pgTypeText             = "TEXT"              // variable length string without limit
 	pgTypeVarchar          = "VARCHAR"           // variable length string with optional limit
 	pgTypeCharacterVarying = "CHARACTER VARYING" // alias for VARCHAR
@@ -115,11 +119,59 @@ func sqlType(typ reflect.Type) string {
 	return sqlType
 }
 
-// fromDatabaseType converts Postgres-specific type to a more generic `sqltype`.
-func fromDatabaseType(dbType string) string {
-	switch strings.ToUpper(dbType) {
-	case pgTypeChar, pgTypeVarchar, pgTypeCharacterVarying, pgTypeText:
-		return sqltype.VarChar
+var (
+	char        = newAliases(pgTypeChar, pgTypeCharacter)
+	varchar     = newAliases(pgTypeVarchar, pgTypeCharacterVarying)
+	timestampTz = newAliases(sqltype.Timestamp, pgTypeTimestampTz, pgTypeTimestampWithTz)
+)
+
+func (d *Dialect) EquivalentType(col1, col2 sqlschema.Column) bool {
+	if col1.SQLType == col2.SQLType {
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
 	}
-	return dbType
+
+	typ1, typ2 := strings.ToUpper(col1.SQLType), strings.ToUpper(col2.SQLType)
+
+	switch {
+	case char.IsAlias(typ1) && char.IsAlias(typ2):
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
+	case varchar.IsAlias(typ1) && varchar.IsAlias(typ2):
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
+	case timestampTz.IsAlias(typ1) && timestampTz.IsAlias(typ2):
+		return true
+	}
+	return false
+}
+
+// checkVarcharLen returns true if columns have the same VarcharLen, or,
+// if one specifies no VarcharLen and the other one has the default lenght for pgdialect.
+// We assume that the types are otherwise equivalent and that any non-character column
+// would have VarcharLen == 0;
+func checkVarcharLen(col1, col2 sqlschema.Column, defaultLen int) bool {
+	if col1.VarcharLen == col2.VarcharLen {
+		return true
+	}
+
+	if (col1.VarcharLen == 0 && col2.VarcharLen == defaultLen) || (col1.VarcharLen == defaultLen && col2.VarcharLen == 0) {
+		return true
+	}
+	return false
+}
+
+// typeAlias defines aliases for common data types. It is a lightweight string set implementation.
+type typeAlias map[string]struct{}
+
+// IsAlias checks if typ1 and typ2 are aliases of the same data type.
+func (t typeAlias) IsAlias(typ string) bool {
+	_, ok := t[typ]
+	return ok
+}
+
+// newAliases creates a set of aliases.
+func newAliases(aliases ...string) typeAlias {
+	types := make(typeAlias)
+	for _, a := range aliases {
+		types[a] = struct{}{}
+	}
+	return types
 }
