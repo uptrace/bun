@@ -1,3 +1,18 @@
+## [1.2.2](https://github.com/uptrace/bun/compare/v1.2.1...v1.2.2) (2024-08-29)
+
+
+### Bug Fixes
+
+* gracefully handle empty hstore in pgdialect ([#1010](https://github.com/uptrace/bun/issues/1010)) ([2f73d8a](https://github.com/uptrace/bun/commit/2f73d8a8e16c8718ebfc956036d9c9a01a0888bc))
+* number each unit test ([#974](https://github.com/uptrace/bun/issues/974)) ([b005dc2](https://github.com/uptrace/bun/commit/b005dc2a9034715c6f59dcfc8e76aa3b85df38ab))
+
+
+### Features
+
+* add ModelTableExpr to TruncateTableQuery ([#969](https://github.com/uptrace/bun/issues/969)) ([7bc330f](https://github.com/uptrace/bun/commit/7bc330f152cf0d9dc30956478e2731ea5816f012))
+
+
+
 ## [1.2.1](https://github.com/uptrace/bun/compare/v1.2.0...v1.2.1) (2024-04-02)
 
 

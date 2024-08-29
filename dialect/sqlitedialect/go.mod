@@ -6,7 +6,7 @@ toolchain go1.22.6
 
 replace github.com/uptrace/bun => ../..
 
-require github.com/uptrace/bun v1.2.1
+require github.com/uptrace/bun v1.2.2
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
