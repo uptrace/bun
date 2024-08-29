@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
@@ -51,7 +51,7 @@ var appenders = []AppenderFunc{
 	reflect.UnsafePointer: nil,
 }
 
-var appenderMap sync.Map
+var appenderCache = xsync.NewMapOf[reflect.Type, AppenderFunc]()
 
 func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	if field.Tag.HasOption("msgpack") {
@@ -79,14 +79,14 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 }
 
 func Appender(dialect Dialect, typ reflect.Type) AppenderFunc {
-	if v, ok := appenderMap.Load(typ); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.Load(typ); ok {
+		return v
 	}
 
 	fn := appender(dialect, typ)
 
-	if v, ok := appenderMap.LoadOrStore(typ, fn); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.LoadOrStore(typ, fn); ok {
+		return v
 	}
 	return fn
 }
