@@ -6,6 +6,7 @@ toolchain go1.22.1
 
 require (
 	github.com/jinzhu/inflection v1.0.0
+	github.com/puzpuzpuz/xsync/v3 v3.4.0
 	github.com/rs/zerolog v1.32.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc

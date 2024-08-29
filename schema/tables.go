@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type Tables struct {
 	dialect Dialect
 
 	mu     sync.Mutex
-	tables sync.Map
+	tables *xsync.MapOf[reflect.Type, *Table]
 
 	inProgress map[reflect.Type]*Table
 }
@@ -18,6 +20,7 @@ type Tables struct {
 func NewTables(dialect Dialect) *Tables {
 	return &Tables{
 		dialect:    dialect,
+		tables:     xsync.NewMapOf[reflect.Type, *Table](),
 		inProgress: make(map[reflect.Type]*Table),
 	}
 }
@@ -35,7 +38,7 @@ func (reg *Tables) Get(typ reflect.Type) *Table {
 	}
 
 	if v, ok := reg.tables.Load(typ); ok {
-		return v.(*Table)
+		return v
 	}
 
 	reg.mu.Lock()
@@ -43,7 +46,7 @@ func (reg *Tables) Get(typ reflect.Type) *Table {
 
 	if v, ok := reg.tables.Load(typ); ok {
 		reg.mu.Unlock()
-		return v.(*Table)
+		return v
 	}
 
 	table := reg.InProgress(typ)
@@ -77,10 +80,9 @@ func (reg *Tables) InProgress(typ reflect.Type) *Table {
 
 func (t *Tables) ByModel(name string) *Table {
 	var found *Table
-	t.tables.Range(func(key, value interface{}) bool {
-		t := value.(*Table)
-		if t.TypeName == name {
-			found = t
+	t.tables.Range(func(typ reflect.Type, table *Table) bool {
+		if table.TypeName == name {
+			found = table
 			return false
 		}
 		return true
@@ -90,10 +92,9 @@ func (t *Tables) ByModel(name string) *Table {
 
 func (t *Tables) ByName(name string) *Table {
 	var found *Table
-	t.tables.Range(func(key, value interface{}) bool {
-		t := value.(*Table)
-		if t.Name == name {
-			found = t
+	t.tables.Range(func(typ reflect.Type, table *Table) bool {
+		if table.Name == name {
+			found = table
 			return false
 		}
 		return true
