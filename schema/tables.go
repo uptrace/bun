@@ -25,34 +25,34 @@ func NewTables(dialect Dialect) *Tables {
 	}
 }
 
-func (reg *Tables) Register(models ...interface{}) {
+func (t *Tables) Register(models ...interface{}) {
 	for _, model := range models {
-		_ = reg.Get(reflect.TypeOf(model).Elem())
+		_ = t.Get(reflect.TypeOf(model).Elem())
 	}
 }
 
-func (reg *Tables) Get(typ reflect.Type) *Table {
+func (t *Tables) Get(typ reflect.Type) *Table {
 	typ = indirectType(typ)
 	if typ.Kind() != reflect.Struct {
 		panic(fmt.Errorf("got %s, wanted %s", typ.Kind(), reflect.Struct))
 	}
 
-	if v, ok := reg.tables.Load(typ); ok {
+	if v, ok := t.tables.Load(typ); ok {
 		return v
 	}
 
-	reg.mu.Lock()
-	defer reg.mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	if v, ok := reg.tables.Load(typ); ok {
-		reg.mu.Unlock()
+	if v, ok := t.tables.Load(typ); ok {
+		t.mu.Unlock()
 		return v
 	}
 
-	table := reg.InProgress(typ)
+	table := t.InProgress(typ)
 	table.initRelations()
 
-	reg.dialect.OnTable(table)
+	t.dialect.OnTable(table)
 	for _, field := range table.FieldMap {
 		if field.UserSQLType == "" {
 			field.UserSQLType = field.DiscoveredSQLType
@@ -62,18 +62,18 @@ func (reg *Tables) Get(typ reflect.Type) *Table {
 		}
 	}
 
-	reg.tables.Store(typ, table)
+	t.tables.Store(typ, table)
 	return table
 }
 
-func (reg *Tables) InProgress(typ reflect.Type) *Table {
-	if table, ok := reg.inProgress[typ]; ok {
+func (t *Tables) InProgress(typ reflect.Type) *Table {
+	if table, ok := t.inProgress[typ]; ok {
 		return table
 	}
 
 	table := new(Table)
-	reg.inProgress[typ] = table
-	table.init(reg.dialect, typ, false)
+	t.inProgress[typ] = table
+	table.init(t.dialect, typ, false)
 
 	return table
 }
