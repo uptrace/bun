@@ -45,7 +45,6 @@ func (t *Tables) Get(typ reflect.Type) *Table {
 	defer t.mu.Unlock()
 
 	if v, ok := t.tables.Load(typ); ok {
-		t.mu.Unlock()
 		return v
 	}
 
