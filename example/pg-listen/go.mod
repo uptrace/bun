@@ -13,10 +13,10 @@ replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 replace github.com/uptrace/bun/dialect/pgdialect => ../../dialect/pgdialect
 
 require (
-	github.com/uptrace/bun v1.2.2
-	github.com/uptrace/bun/dialect/pgdialect v1.2.2
-	github.com/uptrace/bun/driver/pgdriver v1.2.2
-	github.com/uptrace/bun/extra/bundebug v1.2.2
+	github.com/uptrace/bun v1.2.3
+	github.com/uptrace/bun/dialect/pgdialect v1.2.3
+	github.com/uptrace/bun/driver/pgdriver v1.2.3
+	github.com/uptrace/bun/extra/bundebug v1.2.3
 )
 
 require (

@@ -30,15 +30,15 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.2.2
-	github.com/uptrace/bun/dbfixture v1.2.2
-	github.com/uptrace/bun/dialect/mssqldialect v1.2.2
-	github.com/uptrace/bun/dialect/mysqldialect v1.2.2
-	github.com/uptrace/bun/dialect/pgdialect v1.2.2
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.2
-	github.com/uptrace/bun/driver/pgdriver v1.2.2
-	github.com/uptrace/bun/driver/sqliteshim v1.2.2
-	github.com/uptrace/bun/extra/bundebug v1.2.2
+	github.com/uptrace/bun v1.2.3
+	github.com/uptrace/bun/dbfixture v1.2.3
+	github.com/uptrace/bun/dialect/mssqldialect v1.2.3
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.3
+	github.com/uptrace/bun/dialect/pgdialect v1.2.3
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.3
+	github.com/uptrace/bun/driver/pgdriver v1.2.3
+	github.com/uptrace/bun/driver/sqliteshim v1.2.3
+	github.com/uptrace/bun/extra/bundebug v1.2.3
 )
 
 require (
@@ -74,7 +74,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240801135723-a856999a2e4a // indirect
-	modernc.org/libc v1.60.0 // indirect
+	modernc.org/libc v1.60.1 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.32.0 // indirect
