@@ -31,5 +31,6 @@ const (
 	UpdateFromTable
 	MSSavepoint
 	GeneratedIdentity
-	CompositeIn // ... WHERE (A,B) IN ((N, NN), (N, NN)...)
+	CompositeIn     // ... WHERE (A,B) IN ((N, NN), (N, NN)...)
+	AlterTableQuery // ALTER TABLE (temporary, all dialects must support it)
 )

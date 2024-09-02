@@ -74,7 +74,7 @@ type AfterDropTableHook interface {
 	AfterDropTable(ctx context.Context, query *DropTableQuery) error
 }
 
-// SetLogger overwriters default Bun logger.
+// SetLogger overwrites default Bun logger.
 func SetLogger(logger internal.Logging) {
 	internal.SetLogger(logger)
 }
