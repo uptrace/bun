@@ -32,6 +32,7 @@ type Dialect struct {
 
 	tables   *schema.Tables
 	features feature.Feature
+	loc      *time.Location
 }
 
 func New() *Dialect {
@@ -47,6 +48,16 @@ func New() *Dialect {
 		feature.InsertOnDuplicateKey |
 		feature.SelectExists |
 		feature.CompositeIn
+	return d
+}
+
+func NewWithLocation(loc string) *Dialect {
+	d := New()
+	location, err := time.LoadLocation(loc)
+	if err != nil {
+		panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
+	}
+	d.loc = location
 	return d
 }
 
@@ -103,9 +114,13 @@ func (d *Dialect) IdentQuote() byte {
 	return '`'
 }
 
-func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
+func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
-	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	if d.loc != nil {
+		b = tm.In(d.loc).AppendFormat(b, "2006-01-02 15:04:05.999999")
+	} else {
+		b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	}
 	b = append(b, '\'')
 	return b
 }
