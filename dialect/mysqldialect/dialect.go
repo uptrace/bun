@@ -51,8 +51,7 @@ func New() *Dialect {
 	return d
 }
 
-func NewWithLocation(loc string) *Dialect {
-	d := New()
+func (d *Dialect) WithTimeLocation(loc string) *Dialect {
 	location, err := time.LoadLocation(loc)
 	if err != nil {
 		panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
