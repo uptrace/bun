@@ -2,7 +2,7 @@ version: '3'
 
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:23.11
+    image: clickhouse/clickhouse-server:24.5
     restart: on-failure
     environment:
       CLICKHOUSE_DB: uptrace

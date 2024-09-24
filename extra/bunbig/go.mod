@@ -2,8 +2,6 @@ module github.com/uptrace/bun/extra/bunbig
 
 go 1.22
 
-toolchain go1.22.6
-
 replace github.com/uptrace/bun => ../..
 
 require (
