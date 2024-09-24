@@ -27,6 +27,8 @@ func init() {
 	}
 }
 
+type DialectOption func(d *Dialect)
+
 type Dialect struct {
 	schema.BaseDialect
 
@@ -35,7 +37,7 @@ type Dialect struct {
 	loc      *time.Location
 }
 
-func New() *Dialect {
+func New(opts ...DialectOption) *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
@@ -48,16 +50,22 @@ func New() *Dialect {
 		feature.InsertOnDuplicateKey |
 		feature.SelectExists |
 		feature.CompositeIn
+
+	for _, opt := range opts {
+		opt(d)
+	}
+
 	return d
 }
 
-func (d *Dialect) WithTimeLocation(loc string) *Dialect {
-	location, err := time.LoadLocation(loc)
-	if err != nil {
-		panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
+func WithTimeLocation(loc string) DialectOption {
+	return func(d *Dialect) {
+		location, err := time.LoadLocation(loc)
+		if err != nil {
+			panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
+		}
+		d.loc = location
 	}
-	d.loc = location
-	return d
 }
 
 func (d *Dialect) Init(db *sql.DB) {
