@@ -24,7 +24,7 @@ var _ TableModel = (*m2mModel)(nil)
 func newM2MModel(j *relationJoin) *m2mModel {
 	baseTable := j.BaseModel.Table()
 	joinModel := j.JoinModel.(*sliceTableModel)
-	baseValues := baseValues(joinModel, baseTable.PKs)
+	baseValues := baseValues(joinModel, j.basePKs())
 	if len(baseValues) == 0 {
 		return nil
 	}
@@ -80,8 +80,13 @@ func (m *m2mModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 }
 
 func (m *m2mModel) Scan(src interface{}) error {
+	defer func() { m.scanIndex++ }()
+
 	column := m.columns[m.scanIndex]
-	m.scanIndex++
+
+	if m.scanIndex < len(m.rel.M2MBaseFields) {
+		return m.scanM2MColumn(column, src)
+	}
 
 	field, ok := m.table.FieldMap[column]
 	if !ok {
@@ -90,13 +95,6 @@ func (m *m2mModel) Scan(src interface{}) error {
 
 	if err := field.ScanValue(m.strct, src); err != nil {
 		return err
-	}
-
-	for _, fk := range m.rel.M2MBaseFields {
-		if fk.Name == field.Name {
-			m.structKey = append(m.structKey, field.Value(m.strct).Interface())
-			break
-		}
 	}
 
 	return nil
