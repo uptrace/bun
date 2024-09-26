@@ -111,7 +111,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(scannerType) {
 			return addrScanner(scanScanner)
 		}

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -140,7 +141,7 @@ func TestParser_Skip(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        bool
+		want        error
 		idAfterSkip int
 	}{
 		{
@@ -152,7 +153,7 @@ func TestParser_Skip(t *testing.T) {
 			args: args{
 				skip: '?',
 			},
-			want:        true,
+			want:        nil,
 			idAfterSkip: 1,
 		},
 		{
@@ -164,7 +165,7 @@ func TestParser_Skip(t *testing.T) {
 			args: args{
 				skip: '!',
 			},
-			want:        false,
+			want:        fmt.Errorf("got %q, wanted %q", '?', '!'),
 			idAfterSkip: 0,
 		},
 	}
@@ -174,12 +175,20 @@ func TestParser_Skip(t *testing.T) {
 				b: tt.fields.b,
 				i: tt.fields.i,
 			}
-			require.Equal(t, tt.want, p.Skip(tt.args.skip))
+			equalError(t, tt.want, p.Skip(tt.args.skip))
 		})
 	}
 }
 
-func TestParser_SkipBytes(t *testing.T) {
+func equalError(t *testing.T, want, got error) {
+	if want != nil && got != nil {
+		require.Equal(t, want.Error(), got.Error())
+		return
+	}
+	require.Equal(t, want, got)
+}
+
+func TestParser_SkipPrefix(t *testing.T) {
 	type fields struct {
 		b []byte
 		i int
@@ -191,7 +200,7 @@ func TestParser_SkipBytes(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        bool
+		want        error
 		idAfterSkip int
 	}{
 		{
@@ -203,7 +212,7 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("? = "),
 			},
-			want:        true,
+			want:        nil,
 			idAfterSkip: 4,
 		},
 		{
@@ -215,7 +224,7 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("hoge"),
 			},
-			want:        false,
+			want:        fmt.Errorf(`got "? = ?", wanted prefix "hoge"`),
 			idAfterSkip: 0,
 		},
 		{
@@ -227,7 +236,7 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("? = ? hoge"),
 			},
-			want:        false,
+			want:        fmt.Errorf(`got "? = ?", wanted prefix "? = ? hoge"`),
 			idAfterSkip: 0,
 		},
 	}
@@ -237,7 +246,7 @@ func TestParser_SkipBytes(t *testing.T) {
 				b: tt.fields.b,
 				i: tt.fields.i,
 			}
-			require.Equal(t, tt.want, p.SkipBytes(tt.args.skip))
+			equalError(t, tt.want, p.SkipPrefix(tt.args.skip))
 			require.Equal(t, tt.idAfterSkip, p.i)
 		})
 	}
