@@ -367,13 +367,13 @@ func appendChildValues(
 }
 
 // appendMultiValues is an alternative to appendChildValues that doesn't use the sql keyword ID
-// but instead use a old style ((k1=v1) AND (k2=v2)) OR (...) of conditions.
+// but instead uses old style ((k1=v1) AND (k2=v2)) OR (...) conditions.
 func appendMultiValues(
 	fmter schema.Formatter, b []byte, v reflect.Value, index []int, baseFields, joinFields []*schema.Field, joinTable schema.Safe,
 ) []byte {
 	// This is based on a mix of appendChildValues and query_base.appendColumns
 
-	// These should never missmatch in length but nice to know if it does
+	// These should never mismatch in length but nice to know if it does
 	if len(joinFields) != len(baseFields) {
 		panic("not reached")
 	}
