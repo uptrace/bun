@@ -19,7 +19,7 @@ func NewMapKey(is []interface{}) MapKey {
 			return MapKey{iface: nil}
 		}
 	} else {
-		return MapKey{iface: maybeNullInt64}
+		return MapKey{iface: newMapKey(is)}
 	}
 }
 
