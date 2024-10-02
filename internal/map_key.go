@@ -12,15 +12,19 @@ type MapKey struct {
 }
 
 func NewMapKey(is []interface{}) MapKey {
-	if maybeNullInt64, ok := newMapKey(is).(sql.NullInt64); ok {
-		if maybeNullInt64.Valid {
-			return MapKey{iface: maybeNullInt64.Int64}
+	is2 := make([]any, len(is))
+	for i, v := range is {
+		if maybeNullInt64, ok := v.(sql.NullInt64); ok {
+			if maybeNullInt64.Valid {
+				is2[i] = maybeNullInt64.Int64
+			} else {
+				is2[i] = nil
+			}
 		} else {
-			return MapKey{iface: nil}
+			is2[i] = v
 		}
-	} else {
-		return MapKey{iface: newMapKey(is)}
 	}
+	return MapKey{iface: newMapKey(is2)}
 }
 
 func newMapKey(is []interface{}) interface{} {
