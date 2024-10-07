@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -140,7 +141,7 @@ func TestParser_Skip(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        bool
+		want        error
 		idAfterSkip int
 	}{
 		{
@@ -152,7 +153,7 @@ func TestParser_Skip(t *testing.T) {
 			args: args{
 				skip: '?',
 			},
-			want:        true,
+			want:        nil,
 			idAfterSkip: 1,
 		},
 		{
@@ -164,7 +165,7 @@ func TestParser_Skip(t *testing.T) {
 			args: args{
 				skip: '!',
 			},
-			want:        false,
+			want:        errors.New("got '?', wanted '!'"),
 			idAfterSkip: 0,
 		},
 	}
@@ -179,7 +180,7 @@ func TestParser_Skip(t *testing.T) {
 	}
 }
 
-func TestParser_SkipBytes(t *testing.T) {
+func TestParser_SkipPrefix(t *testing.T) {
 	type fields struct {
 		b []byte
 		i int
@@ -191,7 +192,7 @@ func TestParser_SkipBytes(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        bool
+		want        error
 		idAfterSkip int
 	}{
 		{
@@ -203,7 +204,7 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("? = "),
 			},
-			want:        true,
+			want:        nil,
 			idAfterSkip: 4,
 		},
 		{
@@ -215,11 +216,11 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("hoge"),
 			},
-			want:        false,
+			want:        errors.New(`got "? = ?", wanted prefix "hoge"`),
 			idAfterSkip: 0,
 		},
 		{
-			name: "return false when argument is longer than the remaining bytes",
+			name: "return error when argument is longer than the remaining bytes",
 			fields: fields{
 				b: []byte("? = ?"),
 				i: 0,
@@ -227,7 +228,7 @@ func TestParser_SkipBytes(t *testing.T) {
 			args: args{
 				skip: []byte("? = ? hoge"),
 			},
-			want:        false,
+			want:        errors.New(`got "? = ?", wanted prefix "? = ? hoge"`),
 			idAfterSkip: 0,
 		},
 	}
@@ -237,7 +238,7 @@ func TestParser_SkipBytes(t *testing.T) {
 				b: tt.fields.b,
 				i: tt.fields.i,
 			}
-			require.Equal(t, tt.want, p.SkipBytes(tt.args.skip))
+			require.Equal(t, tt.want, p.SkipPrefix(tt.args.skip))
 			require.Equal(t, tt.idAfterSkip, p.i)
 		})
 	}
