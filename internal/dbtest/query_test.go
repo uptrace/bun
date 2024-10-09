@@ -1545,6 +1545,17 @@ func TestQuery(t *testing.T) {
 				return db.NewInsert().Model(new(Model))
 			},
 		},
+		{
+			id: 167,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// specified option names
+				type Model struct {
+					bun.BaseModel `bun:"table:table"`
+					IsDefault     bool `bun:"column:default"`
+				}
+				return db.NewInsert().Model(new(Model))
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

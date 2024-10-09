@@ -401,6 +401,10 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 		sqlName = tag.Name
 	}
 
+	if s, ok := tag.Option("column"); ok {
+		sqlName = s
+	}
+
 	for name := range tag.Options {
 		if !isKnownFieldOption(name) {
 			internal.Warn.Printf("%s.%s has unknown tag option: %q", t.TypeName, sf.Name, name)
