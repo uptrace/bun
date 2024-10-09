@@ -67,7 +67,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 		}
 
 		if fieldType.Kind() != reflect.Ptr {
-			if reflect.PtrTo(fieldType).Implements(driverValuerType) {
+			if reflect.PointerTo(fieldType).Implements(driverValuerType) {
 				return addrAppender(appendDriverValue)
 			}
 		}
@@ -123,7 +123,7 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(queryAppenderType) {
 			return addrAppender(appendQueryAppenderValue)
 		}

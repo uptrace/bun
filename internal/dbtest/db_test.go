@@ -876,7 +876,7 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
 	require.Error(t, err)
 
-	// Create a deck that violates the user_id FK contraint
+	// Create a deck that violates the user_id FK constraint
 	deck := &Deck{UserID: 42}
 
 	_, err = db.NewInsert().Model(deck).Exec(ctx)
@@ -927,7 +927,7 @@ func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
 	require.Error(t, err)
 
-	// Create a deck that violates the user_id FK contraint
+	// Create a deck that violates the user_id FK constraint
 	deck := &Deck{UserID: 42}
 
 	_, err = db.NewInsert().Model(deck).Exec(ctx)
@@ -1012,7 +1012,7 @@ func testWithForeignKeys(t *testing.T, db *bun.DB) {
 	_, err = db.NewInsert().Model(new(Deck)).Exec(ctx)
 	require.Error(t, err)
 
-	// Create a deck that violates the user_id FK contraint
+	// Create a deck that violates the user_id FK constraint
 	deck := &Deck{UserID: 42}
 
 	_, err = db.NewInsert().Model(deck).Exec(ctx)

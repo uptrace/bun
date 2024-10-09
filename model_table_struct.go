@@ -242,7 +242,7 @@ func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, e
 	n++
 
 	// And discard the rest. This is especially important for SQLite3, which can return
-	// a row like it was inserted sucessfully and then return an actual error for the next row.
+	// a row like it was inserted successfully and then return an actual error for the next row.
 	// See issues/100.
 	for rows.Next() {
 		n++

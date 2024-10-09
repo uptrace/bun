@@ -7,7 +7,7 @@
       created_at: '{{ now }}'
       updated_at: '{{ now }}'
     - _id: doe
-      name: Jonh Doe
+      name: John Doe
       email: john@doe.com
       created_at: '{{ now }}'
 

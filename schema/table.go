@@ -100,7 +100,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 		{afterScanRowHookType, afterScanRowHookFlag},
 	}
 
-	typ = reflect.PtrTo(table.Type)
+	typ = reflect.PointerTo(table.Type)
 	for _, hook := range hooks {
 		if typ.Implements(hook.typ) {
 			table.flags = table.flags.Set(hook.flag)

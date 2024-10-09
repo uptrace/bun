@@ -207,7 +207,7 @@ smtp_mailer:
   password: mailhog
   # Uncomment to disable opportunistic TLS.
   #tls: { disabled: true }
-  # Emails will be send from this address.
+  # Emails will be sent from this address.
   from: 'uptrace@localhost'
 
 ##
