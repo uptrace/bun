@@ -3,7 +3,6 @@ package schema
 import (
 	"database/sql/driver"
 	"fmt"
-	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -99,10 +98,8 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		return appendTimeValue
 	case timePtrType:
 		return PtrAppender(appendTimeValue)
-	case ipType:
-		return appendIPValue
-	case ipNetType:
-		return appendIPNetValue
+	case ipType, ipNetType, netipPrefixType, netipAddrType:
+		return appendStringer
 	case jsonRawMessageType:
 		return appendJSONRawMessageValue
 	}
@@ -247,14 +244,8 @@ func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return fmter.Dialect().AppendTime(b, tm)
 }
 
-func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	ip := v.Interface().(net.IP)
-	return fmter.Dialect().AppendString(b, ip.String())
-}
-
-func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	ipnet := v.Interface().(net.IPNet)
-	return fmter.Dialect().AppendString(b, ipnet.String())
+func appendStringer(fmter Formatter, b []byte, v reflect.Value) []byte {
+	return fmter.Dialect().AppendString(b, v.Interface().(fmt.Stringer).String())
 }
 
 func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {
