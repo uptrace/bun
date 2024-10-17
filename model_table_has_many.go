@@ -94,7 +94,7 @@ func (m *hasManyModel) Scan(src interface{}) error {
 
 	for _, f := range m.rel.JoinFields {
 		if f.Name == field.Name {
-			m.structKey = append(m.structKey, field.Value(m.strct).Interface())
+			m.structKey = append(m.structKey, getFieldValue(field.Value(m.strct)))
 			break
 		}
 	}
@@ -103,6 +103,7 @@ func (m *hasManyModel) Scan(src interface{}) error {
 }
 
 func (m *hasManyModel) parkStruct() error {
+
 	baseValues, ok := m.baseValues[internal.NewMapKey(m.structKey)]
 	if !ok {
 		return fmt.Errorf(
@@ -143,7 +144,24 @@ func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]
 
 func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []interface{} {
 	for _, f := range fields {
-		key = append(key, f.Value(strct).Interface())
+		key = append(key, getFieldValue(f.Value(strct)))
 	}
 	return key
+}
+
+// getFieldValue extracts the value from a reflect.Value, handling pointer types appropriately.
+func getFieldValue(fieldValue reflect.Value) interface{} {
+	var keyValue interface{}
+
+	if fieldValue.Kind() == reflect.Ptr {
+		if !fieldValue.IsNil() {
+			keyValue = fieldValue.Elem().Interface()
+		} else {
+			keyValue = nil
+		}
+	} else {
+		keyValue = fieldValue.Interface()
+	}
+
+	return keyValue
 }
