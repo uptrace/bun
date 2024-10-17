@@ -24,6 +24,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
+	"github.com/uptrace/bun/schema"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
@@ -51,6 +52,13 @@ var allDBs = map[string]func(tb testing.TB) *bun.DB{
 	mariadbName:   mariadb,
 	sqliteName:    sqlite,
 	mssql2019Name: mssql2019,
+}
+
+var allDialects = []func() schema.Dialect{
+	func() schema.Dialect { return pgdialect.New() },
+	func() schema.Dialect { return mysqldialect.New() },
+	func() schema.Dialect { return sqlitedialect.New() },
+	func() schema.Dialect { return mssqldialect.New() },
 }
 
 func pg(tb testing.TB) *bun.DB {
@@ -212,6 +220,16 @@ func testEachDB(t *testing.T, f func(t *testing.T, dbName string, db *bun.DB)) {
 	for dbName, newDB := range allDBs {
 		t.Run(dbName, func(t *testing.T) {
 			f(t, dbName, newDB(t))
+		})
+	}
+}
+
+// testEachDialect allows testing dialect-specific functionality that does not require database interactions.
+func testEachDialect(t *testing.T, f func(t *testing.T, dialectName string, dialect func() schema.Dialect)) {
+	for _, newDialect := range allDialects {
+		name := newDialect().Name().String()
+		t.Run(name, func(t *testing.T) {
+			f(t, name, newDialect)
 		})
 	}
 }
