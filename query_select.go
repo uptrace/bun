@@ -66,6 +66,13 @@ func (q *SelectQuery) Err(err error) *SelectQuery {
 	return q
 }
 
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *SelectQuery) Comment(c string) *SelectQuery {
+	q.setComment(c)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	if fn != nil {
@@ -807,7 +814,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -828,7 +835,7 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -875,7 +882,7 @@ func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
 		return err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return err
 	}
@@ -929,7 +936,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 
 	qq := countQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.fmter, q.appendComment(ctx, nil))
 	if err != nil {
 		return 0, err
 	}
@@ -1021,7 +1028,7 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 	qq := selectExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.fmter, q.appendComment(ctx, nil))
 	if err != nil {
 		return false, err
 	}
@@ -1040,7 +1047,7 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	qq := whereExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.fmter, q.appendComment(ctx, nil))
 	if err != nil {
 		return false, err
 	}
@@ -1080,6 +1087,13 @@ func (q *SelectQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *Sel
 
 type selectQueryBuilder struct {
 	*SelectQuery
+}
+
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *selectQueryBuilder) Comment(c string) QueryBuilder {
+	q.setComment(c)
+	return q
 }
 
 func (q *selectQueryBuilder) WhereGroup(

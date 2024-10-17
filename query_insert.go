@@ -53,6 +53,13 @@ func (q *InsertQuery) Err(err error) *InsertQuery {
 	return q
 }
 
+// Comment prepends a comment to the beginning of the query.
+// This is useful for debugging or identifying queries in database logs.
+func (q *InsertQuery) Comment(c string) *InsertQuery {
+	q.setComment(c)
+	return q
+}
+
 // Apply calls the fn passing the SelectQuery as an argument.
 func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
 	if fn != nil {
@@ -575,7 +582,7 @@ func (q *InsertQuery) scanOrExec(
 	}
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.fmter, q.appendComment(ctx, q.db.makeQueryBytes()))
 	if err != nil {
 		return nil, err
 	}
