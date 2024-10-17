@@ -82,7 +82,11 @@ func (m *mapModel) Scan(src interface{}) error {
 		return m.scanRaw(src)
 	case reflect.Slice:
 		if scanType.Elem().Kind() == reflect.Uint8 {
-			return m.scanRaw(src)
+			srcB := src.([]byte)
+			src2 := make([]byte, len(srcB))
+			copy(src2, srcB)
+
+			return m.scanRaw(src2)
 		}
 	}
 
