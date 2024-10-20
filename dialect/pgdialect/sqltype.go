@@ -126,11 +126,11 @@ var (
 )
 
 func (d *Dialect) EquivalentType(col1, col2 sqlschema.Column) bool {
-	if col1.SQLType == col2.SQLType {
+	typ1, typ2 := strings.ToUpper(col1.SQLType), strings.ToUpper(col2.SQLType)
+
+	if typ1 == typ2 {
 		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
 	}
-
-	typ1, typ2 := strings.ToUpper(col1.SQLType), strings.ToUpper(col2.SQLType)
 
 	switch {
 	case char.IsAlias(typ1) && char.IsAlias(typ2):

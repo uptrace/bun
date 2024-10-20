@@ -16,7 +16,8 @@ func TestInspectorDialect_EquivalentType(t *testing.T) {
 			typ1, typ2 string
 			want       bool
 		}{
-			{"text", "text", true}, // identical types
+			{"text", "text", true},     // identical types
+			{"bigint", "BIGINT", true}, // case-insensitive
 
 			{sqltype.VarChar, pgTypeVarchar, true},
 			{sqltype.VarChar, pgTypeCharacterVarying, true},
