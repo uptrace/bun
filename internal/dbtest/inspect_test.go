@@ -301,41 +301,7 @@ func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got []sqlschem
 			}
 		}
 
-		var errs []string
-		for colName, wantCol := range wt.Columns {
-			errorf := func(format string, args ...interface{}) {
-				errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
-			}
-			gotCol, ok := gt.Columns[colName]
-			if !ok {
-				errorf("column is missing")
-				continue
-			}
-
-			if !d.EquivalentType(wantCol, gotCol) {
-				errorf("sql types are not equivalent:\n\t(+want)\t%s\n\t(-got)\t%s", formatType(wantCol), formatType(gotCol))
-			}
-
-			if wantCol.DefaultValue != gotCol.DefaultValue {
-				errorf("default values differ:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.DefaultValue, gotCol.DefaultValue)
-			}
-
-			if wantCol.IsNullable != gotCol.IsNullable {
-				errorf("isNullable:\n\t(+want)\t%v\n\t(-got)\t%v", wantCol.IsNullable, gotCol.IsNullable)
-			}
-
-			if wantCol.IsAutoIncrement != gotCol.IsAutoIncrement {
-				errorf("IsAutoIncrement:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsAutoIncrement, gotCol.IsAutoIncrement)
-			}
-
-			if wantCol.IsIdentity != gotCol.IsIdentity {
-				errorf("IsIdentity:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsIdentity, gotCol.IsIdentity)
-			}
-		}
-
-		for _, errMsg := range errs {
-			tb.Error(errMsg)
-		}
+		cmpColumns(tb, d, wt.Name, wt.Columns, gt.Columns)
 	}
 }
 
