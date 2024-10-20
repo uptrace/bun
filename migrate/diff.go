@@ -356,9 +356,8 @@ func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkTyp
 			continue
 		}
 
-		// Find the column with the same type and the
 		for cName, cCol := range current.Columns {
-			if !d.equalColumns(tCol, cCol) {
+			if _, keep := target.Columns[cName]; keep || !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumn{

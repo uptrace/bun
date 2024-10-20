@@ -206,6 +206,7 @@ func (op *DropConstraint) GetReverse() Operation {
 	}
 }
 
+// Change column type.
 type ChangeColumnType struct {
 	Schema string
 	Table  string

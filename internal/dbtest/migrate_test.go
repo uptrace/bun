@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
@@ -206,6 +207,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testForceRenameFK},
 		{testRenameColumnRenamesFK},
 		{testChangeColumnType_AutoCast},
+		{testIdentity},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -660,7 +662,50 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 	// Assert
 	state := inspect(ctx)
 	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
-	// require.Equal(t, wantTables, state.Tables
+}
+
+func testIdentity(t *testing.T, db *bun.DB) {
+	type TableBefore struct {
+		bun.BaseModel `bun:"table:table"`
+		A             int64 `bun:",notnull,identity"`
+		B             int64
+	}
+
+	type TableAfter struct {
+		bun.BaseModel `bun:"table:table"`
+		A             int64 `bun:",notnull"`
+		B             int64 `bun:",notnull,identity"`
+	}
+
+	wantTables := []sqlschema.Table{
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "table",
+			Columns: map[string]sqlschema.Column{
+				"a": {
+					SQLType:    sqltype.BigInt,
+					IsIdentity: false, // <- drop IDENTITY
+				},
+				"b": {
+					SQLType:    sqltype.BigInt,
+					IsIdentity: true, // <- add IDENTITY
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db, (*TableBefore)(nil))
+	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 // // TODO: rewrite these tests into AutoMigrator tests, Diff should be moved to migrate/internal package

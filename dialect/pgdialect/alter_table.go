@@ -185,32 +185,31 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 		return b, err
 	}
 
+	// alterColumn never re-assigns err, so there is no need to check for err != nil after calling it
 	var i int
 	appendAlterColumn := func() {
 		if i > 0 {
-			b = append(b, ", "...)
+			b = append(b, ","...)
 		}
 		b = append(b, " ALTER COLUMN "...)
-		b, err = bun.Ident(colDef.Column).AppendQuery(fmter, b)
+		b, _ = bun.Ident(colDef.Column).AppendQuery(fmter, b)
 		i++
 	}
 
 	got, want := colDef.From, colDef.To
 
 	if want.SQLType != got.SQLType {
-		if appendAlterColumn(); err != nil {
-			return b, err
-		}
+		appendAlterColumn()
 		b = append(b, " SET DATA TYPE "...)
 		if b, err = want.AppendQuery(fmter, b); err != nil {
 			return b, err
 		}
 	}
 
+	// Column must be declared NOT NULL before identity can be added.
+	// Although PG can resolve the order of operations itself, we make this explicit in the query.
 	if want.IsNullable != got.IsNullable {
-		if appendAlterColumn(); err != nil {
-			return b, err
-		}
+		appendAlterColumn()
 		if !want.IsNullable {
 			b = append(b, " SET NOT NULL"...)
 		} else {
@@ -218,10 +217,18 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 		}
 	}
 
-	if want.DefaultValue != got.DefaultValue {
-		if appendAlterColumn(); err != nil {
-			return b, err
+	if want.IsIdentity != got.IsIdentity {
+		appendAlterColumn()
+		if !want.IsIdentity {
+			b = append(b, " DROP IDENTITY"...)
+		} else {
+			b = append(b, " ADD"...)
+			b = appendGeneratedAsIdentity(b)
 		}
+	}
+
+	if want.DefaultValue != got.DefaultValue {
+		appendAlterColumn()
 		if want.DefaultValue == "" {
 			b = append(b, " DROP DEFAULT"...)
 		} else {
