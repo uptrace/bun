@@ -14,7 +14,7 @@ type MigratorDialect interface {
 }
 
 type Migrator interface {
-	Apply(ctx context.Context, changes ...Operation) error
+	Apply(ctx context.Context, changes ...interface{}) error
 }
 
 // migrator is a dialect-agnostic wrapper for sqlschema.MigratorDialect.
@@ -49,16 +49,10 @@ func (m *BaseMigrator) CreateTable(ctx context.Context, model interface{}) error
 	return nil
 }
 
-func (m *BaseMigrator) DropTable(ctx context.Context, schema, name string) error {
-	_, err := m.db.NewDropTable().TableExpr("?.?", bun.Ident(schema), bun.Ident(name)).Exec(ctx)
+func (m *BaseMigrator) DropTable(ctx context.Context, fqn schema.FQN) error {
+	_, err := m.db.NewDropTable().TableExpr(fqn.String()).Exec(ctx)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// Operation is a helper interface each migrate.Operation must implement
-// so an not to handle this in every dialect separately.
-type Operation interface {
-	FQN() schema.FQN
 }

@@ -24,7 +24,7 @@ type migrator struct {
 
 var _ sqlschema.Migrator = (*migrator)(nil)
 
-func (m *migrator) Apply(ctx context.Context, changes ...sqlschema.Operation) error {
+func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
 	if len(changes) == 0 {
 		return nil
 	}
@@ -41,17 +41,17 @@ func (m *migrator) Apply(ctx context.Context, changes ...sqlschema.Operation) er
 
 		switch change := change.(type) {
 		case *migrate.CreateTable:
-			log.Printf("create table %q", change.Name)
+			log.Printf("create table %q", change.FQN.Table)
 			err = m.CreateTable(ctx, change.Model)
 			if err != nil {
-				return fmt.Errorf("apply changes: create table %s: %w", change.FQN(), err)
+				return fmt.Errorf("apply changes: create table %s: %w", change.FQN, err)
 			}
 			continue
 		case *migrate.DropTable:
-			log.Printf("drop table %q", change.Name)
-			err = m.DropTable(ctx, change.Schema, change.Name)
+			log.Printf("drop table %q", change.FQN.Table)
+			err = m.DropTable(ctx, change.FQN)
 			if err != nil {
-				return fmt.Errorf("apply changes: drop table %s: %w", change.FQN(), err)
+				return fmt.Errorf("apply changes: drop table %s: %w", change.FQN, err)
 			}
 			continue
 		case *migrate.RenameTable:
@@ -88,35 +88,29 @@ func (m *migrator) Apply(ctx context.Context, changes ...sqlschema.Operation) er
 
 func (m *migrator) renameTable(fmter schema.Formatter, b []byte, rename *migrate.RenameTable) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := rename.FQN()
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
+	b, _ = rename.FQN.AppendQuery(fmter, b)
+
 	b = append(b, " RENAME TO "...)
-	b = fmter.AppendIdent(b, rename.NewName)
+	b = fmter.AppendName(b, rename.NewName)
 	return b, nil
 }
 
 func (m *migrator) renameColumn(fmter schema.Formatter, b []byte, rename *migrate.RenameColumn) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := rename.FQN()
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
+	b, _ = rename.FQN.AppendQuery(fmter, b)
 
 	b = append(b, " RENAME COLUMN "...)
-	b = fmter.AppendIdent(b, rename.OldName)
+	b = fmter.AppendName(b, rename.OldName)
 
 	b = append(b, " TO "...)
-	b = fmter.AppendIdent(b, rename.NewName)
+	b = fmter.AppendName(b, rename.NewName)
 
 	return b, nil
 }
 
 func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddColumn) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := add.FQN()
-	b, _ = fqn.AppendQuery(fmter, b)
+	b, _ = add.FQN.AppendQuery(fmter, b)
 
 	b = append(b, " ADD COLUMN "...)
 	b = fmter.AppendName(b, add.Column)
@@ -129,8 +123,7 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 
 func (m *migrator) dropColumn(fmter schema.Formatter, b []byte, drop *migrate.DropColumn) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := drop.FQN()
-	b, _ = fqn.AppendQuery(fmter, b)
+	b, _ = drop.FQN.AppendQuery(fmter, b)
 
 	b = append(b, " DROP COLUMN "...)
 	b = fmter.AppendName(b, drop.Column)
@@ -146,10 +139,10 @@ func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *mi
 	}
 
 	b = append(b, " RENAME CONSTRAINT "...)
-	b = fmter.AppendIdent(b, rename.OldName)
+	b = fmter.AppendName(b, rename.OldName)
 
 	b = append(b, " TO "...)
-	b = fmter.AppendIdent(b, rename.NewName)
+	b = fmter.AppendName(b, rename.NewName)
 
 	return b, nil
 }
@@ -162,7 +155,7 @@ func (m *migrator) dropContraint(fmter schema.Formatter, b []byte, drop *migrate
 	}
 
 	b = append(b, " DROP CONSTRAINT "...)
-	b = fmter.AppendIdent(b, drop.ConstraintName)
+	b = fmter.AppendName(b, drop.ConstraintName)
 
 	return b, nil
 }
@@ -175,7 +168,7 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 	}
 
 	b = append(b, " ADD CONSTRAINT "...)
-	b = fmter.AppendIdent(b, add.ConstraintName)
+	b = fmter.AppendName(b, add.ConstraintName)
 
 	b = append(b, " FOREIGN KEY ("...)
 	if b, err = add.FK.From.Column.Safe().AppendQuery(fmter, b); err != nil {
@@ -200,10 +193,7 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 
 func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *migrate.ChangeColumnType) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := colDef.FQN()
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
+	b, _ = colDef.FQN.AppendQuery(fmter, b)
 
 	// alterColumn never re-assigns err, so there is no need to check for err != nil after calling it
 	var i int
@@ -212,7 +202,7 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 			b = append(b, ","...)
 		}
 		b = append(b, " ALTER COLUMN "...)
-		b = fmter.AppendIdent(b, colDef.Column)
+		b = fmter.AppendName(b, colDef.Column)
 		i++
 	}
 

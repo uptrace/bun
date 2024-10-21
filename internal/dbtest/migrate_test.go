@@ -209,6 +209,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testChangeColumnType_AutoCast},
 		{testIdentity},
 		{testAddDropColumn},
+		// {testUnique},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -753,6 +754,65 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
+func testUnique(t *testing.T, db *bun.DB) {
+	type TableBefore struct {
+		bun.BaseModel `bun:"table:table"`
+		FirstName     string `bun:"first_name,unique:full_name"`
+		LastName      string `bun:"last_name,unique:full_name"`
+		Birthday      string `bun:"birthday,unique"`
+	}
+
+	type TableAfter struct {
+		bun.BaseModel `bun:"table:table"`
+		FirstName     string `bun:"first_name,unique:full_name"`
+		MiddleName    string `bun:"middle_name,unique:full_name"` // extend "full_name" unique group
+		LastName      string `bun:"last_name,unique:full_name"`
+		Birthday      string `bun:"birthday"`     // doesn't have to be unique any more
+		Email         string `bun:"email,unique"` // new column, unique
+	}
+
+	wantTables := []sqlschema.Table{
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "table",
+			Columns: map[string]sqlschema.Column{
+				"first_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"middle_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"last_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"birthday": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"email": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db, (*TableBefore)(nil))
+	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+}
 
 // // TODO: rewrite these tests into AutoMigrator tests, Diff should be moved to migrate/internal package
 // func TestDiff(t *testing.T) {

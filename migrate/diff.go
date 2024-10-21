@@ -8,6 +8,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
+	"github.com/uptrace/bun/schema"
 )
 
 // Diff calculates the diff between the current database schema and the target state.
@@ -29,8 +30,7 @@ AddedLoop:
 		for _, removed := range removedTables.Values() {
 			if d.canRename(removed, added) {
 				d.changes.Add(&RenameTable{
-					Schema:  removed.Schema,
-					OldName: removed.Name,
+					FQN:     schema.FQN{removed.Schema, removed.Name},
 					NewName: added.Name,
 				})
 
@@ -52,9 +52,8 @@ AddedLoop:
 		}
 		// If a new table did not appear because of the rename operation, then it must've been created.
 		d.changes.Add(&CreateTable{
-			Schema: added.Schema,
-			Name:   added.Name,
-			Model:  added.Model,
+			FQN:   schema.FQN{added.Schema, added.Name},
+			Model: added.Model,
 		})
 		created.Add(added)
 	}
@@ -63,8 +62,7 @@ AddedLoop:
 	dropped := currentTables.Sub(targetTables)
 	for _, t := range dropped.Values() {
 		d.changes.Add(&DropTable{
-			Schema: t.Schema,
-			Name:   t.Name,
+			FQN: schema.FQN{t.Schema, t.Name},
 		})
 	}
 
@@ -144,9 +142,9 @@ func (c *changeset) Add(op ...Operation) {
 // Func creates a MigrationFunc that applies all operations all the changeset.
 func (c *changeset) Func(m sqlschema.Migrator) MigrationFunc {
 	return func(ctx context.Context, db *bun.DB) error {
-		var operations []sqlschema.Operation
+		var operations []interface{}
 		for _, op := range c.operations {
-			operations = append(operations, op.(sqlschema.Operation))
+			operations = append(operations, op.(interface{}))
 		}
 		return m.Apply(ctx, operations...)
 	}
@@ -349,8 +347,7 @@ ChangedRenamed:
 		if cCol, ok := current.Columns[tName]; ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnType{
-					Schema: target.Schema,
-					Table:  target.Name,
+					FQN:    schema.FQN{target.Schema, target.Name},
 					Column: tName,
 					From:   cCol,
 					To:     d.makeTargetColDef(cCol, tCol),
@@ -367,8 +364,7 @@ ChangedRenamed:
 				continue
 			}
 			d.changes.Add(&RenameColumn{
-				Schema:  target.Schema,
-				Table:   target.Name,
+				FQN:     schema.FQN{target.Schema, target.Name},
 				OldName: cName,
 				NewName: tName,
 			})
@@ -379,8 +375,7 @@ ChangedRenamed:
 		}
 
 		d.changes.Add(&AddColumn{
-			Schema: target.Schema,
-			Table:  target.Name,
+			FQN:    schema.FQN{target.Schema, target.Name},
 			Column: tName,
 			ColDef: tCol,
 		})
@@ -390,8 +385,7 @@ ChangedRenamed:
 	for cName, cCol := range current.Columns {
 		if _, keep := target.Columns[cName]; !keep {
 			d.changes.Add(&DropColumn{
-				Schema: target.Schema,
-				Table:  target.Name,
+				FQN:    schema.FQN{target.Schema, target.Name},
 				Column: cName,
 				ColDef: cCol,
 			})
