@@ -3,7 +3,9 @@ package pgdriver_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -285,6 +287,73 @@ func TestPartialScan(t *testing.T) {
 		err := db.QueryRow("select generate_series(0, 10)").Scan(&num)
 		require.NoError(t, err)
 		require.Equal(t, 0, num)
+	}
+}
+
+func TestTransactionIsolationLevels(t *testing.T) {
+	db := sqlDB()
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
+	type testCase struct {
+		*sql.TxOptions
+		supported      bool
+		expectedIsoLvl string
+	}
+	testCases := []testCase{
+		// supported
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelDefault, ReadOnly: true}, supported: true, expectedIsoLvl: "READ COMMITTED"},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelDefault, ReadOnly: false}, supported: true, expectedIsoLvl: "READ COMMITTED"},
+
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelReadUncommitted, ReadOnly: true}, supported: true, expectedIsoLvl: sql.LevelReadUncommitted.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelReadUncommitted, ReadOnly: false}, supported: true, expectedIsoLvl: sql.LevelReadUncommitted.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: true}, supported: true, expectedIsoLvl: sql.LevelReadCommitted.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelReadCommitted, ReadOnly: false}, supported: true, expectedIsoLvl: sql.LevelReadCommitted.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true}, supported: true, expectedIsoLvl: sql.LevelRepeatableRead.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: false}, supported: true, expectedIsoLvl: sql.LevelRepeatableRead.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelSerializable, ReadOnly: true}, supported: true, expectedIsoLvl: sql.LevelSerializable.String()},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelSerializable, ReadOnly: false}, supported: true, expectedIsoLvl: sql.LevelSerializable.String()},
+		// unsupported
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelLinearizable, ReadOnly: true}, supported: false},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelLinearizable, ReadOnly: false}, supported: false},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelSnapshot, ReadOnly: true}, supported: false},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelSnapshot, ReadOnly: false}, supported: false},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelWriteCommitted, ReadOnly: true}, supported: false},
+		{TxOptions: &sql.TxOptions{Isolation: sql.LevelWriteCommitted, ReadOnly: false}, supported: false},
+	}
+	testIsolationFunc := func(t *testing.T, testCase testCase) {
+		tx, err := db.BeginTx(context.Background(), testCase.TxOptions)
+		if !testCase.supported {
+			require.Error(t, err)
+			return
+		}
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			err := tx.Rollback()
+			require.NoError(t, err)
+		})
+
+		var currentLvl string
+		err = tx.QueryRow("SHOW TRANSACTION ISOLATION LEVEL;").Scan(&currentLvl)
+		require.NoError(t, err)
+		expectedIsoLvl := strings.ToUpper(testCase.expectedIsoLvl)
+		currentIsoLvl := strings.ToUpper(currentLvl)
+		require.Equal(t, expectedIsoLvl, currentIsoLvl)
+
+		var readOnlyResult string
+		err = tx.QueryRow("SHOW TRANSACTION_READ_ONLY").Scan(&readOnlyResult)
+		require.NoError(t, err)
+		isReadOnly := strings.ToUpper(readOnlyResult) == "ON"
+
+		require.Equal(t, testCase.ReadOnly, isReadOnly)
+	}
+
+	for i := 0; i < len(testCases); i++ {
+		testCase := testCases[i]
+		name := fmt.Sprintf("test isolation level %s read only %t", testCase.Isolation.String(), testCase.ReadOnly)
+		t.Run(name, func(t *testing.T) {
+			testIsolationFunc(t, testCase)
+		})
 	}
 }
 
