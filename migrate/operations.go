@@ -120,6 +120,84 @@ func (op *RenameColumn) DependsOn(another Operation) bool {
 	return ok && rt.Schema == op.Schema && rt.NewName == op.Table
 }
 
+type AddColumn struct {
+	Schema string
+	Table  string
+	Column string
+	ColDef sqlschema.Column
+}
+
+var _ Operation = (*AddColumn)(nil)
+var _ sqlschema.Operation = (*AddColumn)(nil)
+
+func (op *AddColumn) FQN() schema.FQN {
+	return schema.FQN{
+		Schema: op.Schema,
+		Table:  op.Table,
+	}
+}
+
+func (op *AddColumn) GetReverse() Operation {
+	return &DropColumn{
+		Schema: op.Schema,
+		Table:  op.Table,
+		Column: op.Column,
+	}
+}
+
+type DropColumn struct {
+	Schema string
+	Table  string
+	Column string
+	ColDef sqlschema.Column
+}
+
+var _ Operation = (*DropColumn)(nil)
+var _ sqlschema.Operation = (*DropColumn)(nil)
+
+func (op *DropColumn) FQN() schema.FQN {
+	return schema.FQN{
+		Schema: op.Schema,
+		Table:  op.Table,
+	}
+}
+
+func (op *DropColumn) GetReverse() Operation {
+	return &AddColumn{
+		Schema: op.Schema,
+		Table:  op.Table,
+		Column: op.Column,
+		ColDef: op.ColDef,
+	}
+}
+
+func (op *DropColumn) DependsOn(another Operation) bool {
+	// TODO: refactor
+	if dc, ok := another.(*DropConstraint); ok {
+		var fCol bool
+		fCols := dc.FK.From.Column.Split()
+		for _, c := range fCols {
+			if c == op.Column {
+				fCol = true
+				break
+			}
+		}
+
+		var tCol bool
+		tCols := dc.FK.To.Column.Split()
+		for _, c := range tCols {
+			if c == op.Column {
+				tCol = true
+				break
+			}
+		}
+
+		return (dc.FK.From.Schema == op.Schema && dc.FK.From.Table == op.Table && fCol) ||
+			(dc.FK.To.Schema == op.Schema && dc.FK.To.Table == op.Table && tCol)
+	}
+	return false
+}
+
 // RenameConstraint.
 type RenameConstraint struct {
 	FK      sqlschema.FK
@@ -168,6 +246,7 @@ func (op *AddForeignKey) FQN() schema.FQN {
 func (op *AddForeignKey) DependsOn(another Operation) bool {
 	switch another := another.(type) {
 	case *RenameTable:
+		// TODO: provide some sort of "DependsOn" method for FK
 		return another.Schema == op.FK.From.Schema && another.NewName == op.FK.From.Table
 	case *CreateTable:
 		return (another.Schema == op.FK.To.Schema && another.Name == op.FK.To.Table) || // either it's the referencing one

@@ -340,8 +340,12 @@ func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.
 
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
+ChangedRenamed:
 	for tName, tCol := range target.Columns {
-		// This column exists in the database, so it hasn't been renamed.
+
+		// This column exists in the database, so it hasn't been renamed, dropped, or added.
+		// Still, we should not delete(columns, thisColumn), because later we will need to
+		// check that we do not try to rename a column to an already a name that already exists.
 		if cCol, ok := current.Columns[tName]; ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnType{
@@ -351,13 +355,15 @@ func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkTyp
 					From:   cCol,
 					To:     d.makeTargetColDef(cCol, tCol),
 				})
-				// TODO: Can I delete (current.Column, tName) then? Because if it's type has changed, it will never match in the line 343.
 			}
 			continue
 		}
 
+		// Column tName does not exist in the database -- it's been either renamed or added.
+		// Find renamed columns first.
 		for cName, cCol := range current.Columns {
-			if _, keep := target.Columns[cName]; keep || !d.equalColumns(tCol, cCol) {
+			// Cannot rename if a column with this name already exists or the types differ.
+			if _, exists := current.Columns[tName]; exists || !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumn{
@@ -368,7 +374,27 @@ func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkTyp
 			})
 			delete(current.Columns, cName) // no need to check this column again
 			d.refMap.UpdateC(sqlschema.C(target.Schema, target.Name, cName), tName)
-			break
+
+			continue ChangedRenamed
+		}
+
+		d.changes.Add(&AddColumn{
+			Schema: target.Schema,
+			Table:  target.Name,
+			Column: tName,
+			ColDef: tCol,
+		})
+	}
+
+	// Drop columns which do not exist in the target schema and were not renamed.
+	for cName, cCol := range current.Columns {
+		if _, keep := target.Columns[cName]; !keep {
+			d.changes.Add(&DropColumn{
+				Schema: target.Schema,
+				Table:  target.Name,
+				Column: cName,
+				ColDef: cCol,
+			})
 		}
 	}
 }

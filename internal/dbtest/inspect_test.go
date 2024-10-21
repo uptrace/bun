@@ -3,6 +3,7 @@ package dbtest_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -306,14 +307,17 @@ func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got []sqlschem
 }
 
 func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, want, got map[string]sqlschema.Column) {
+	tb.Helper()
 	var errs []string
+
+	var missing []string
 	for colName, wantCol := range want {
 		errorf := func(format string, args ...interface{}) {
 			errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
 		}
 		gotCol, ok := got[colName]
 		if !ok {
-			errorf("column is missing")
+			missing = append(missing, colName)
 			continue
 		}
 
@@ -336,6 +340,21 @@ func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, w
 		if wantCol.IsIdentity != gotCol.IsIdentity {
 			errorf("IsIdentity:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsIdentity, gotCol.IsIdentity)
 		}
+	}
+
+	if len(missing) > 0 {
+		errs = append(errs, fmt.Sprintf("%q has missing columns: %q", tableName, strings.Join(missing, "\", \"")))
+	}
+
+	var extra []string
+	for colName := range got {
+		if _, ok := want[colName]; !ok {
+			extra = append(extra, colName)
+		}
+	}
+
+	if len(extra) > 0 {
+		errs = append(errs, fmt.Sprintf("%q has extra columns: %q", tableName, strings.Join(extra, "\", \"")))
 	}
 
 	for _, errMsg := range errs {

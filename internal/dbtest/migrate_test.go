@@ -208,6 +208,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testRenameColumnRenamesFK},
 		{testChangeColumnType_AutoCast},
 		{testIdentity},
+		{testAddDropColumn},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -707,6 +708,51 @@ func testIdentity(t *testing.T, db *bun.DB) {
 	state := inspect(ctx)
 	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
+
+func testAddDropColumn(t *testing.T, db *bun.DB) {
+	type TableBefore struct {
+		bun.BaseModel `bun:"table:table"`
+		DoNotTouch    string `bun:"do_not_touch"`
+		DropMe        string `bun:"dropme"`
+	}
+
+	type TableAfter struct {
+		bun.BaseModel `bun:"table:table"`
+		DoNotTouch    string `bun:"do_not_touch"`
+		AddMe         bool   `bun:"addme"`
+	}
+
+	wantTables := []sqlschema.Table{
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "table",
+			Columns: map[string]sqlschema.Column{
+				"do_not_touch": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"addme": {
+					SQLType:    sqltype.Boolean,
+					IsNullable: true,
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db, (*TableBefore)(nil))
+	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+}
+
 
 // // TODO: rewrite these tests into AutoMigrator tests, Diff should be moved to migrate/internal package
 // func TestDiff(t *testing.T) {
