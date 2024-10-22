@@ -360,7 +360,7 @@ ChangedRenamed:
 		// Find renamed columns first.
 		for cName, cCol := range current.Columns {
 			// Cannot rename if a column with this name already exists or the types differ.
-			if _, exists := current.Columns[tName]; exists || !d.equalColumns(tCol, cCol) {
+			if _, exists := target.Columns[cName]; exists || !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumn{
