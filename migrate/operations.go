@@ -202,6 +202,7 @@ func (op *AddForeignKey) GetReverse() Operation {
 	}
 }
 
+// TODO: Rename to DropForeignKey
 // DropConstraint.
 type DropConstraint struct {
 	FK             sqlschema.FK
@@ -221,6 +222,63 @@ func (op *DropConstraint) GetReverse() Operation {
 	return &AddForeignKey{
 		FK:             op.FK,
 		ConstraintName: op.ConstraintName,
+	}
+}
+
+type AddUniqueConstraint struct {
+	FQN    schema.FQN
+	Unique sqlschema.Unique
+}
+
+var _ Operation = (*AddUniqueConstraint)(nil)
+
+func (op *AddUniqueConstraint) GetReverse() Operation {
+	return &DropUniqueConstraint{
+		FQN:    op.FQN,
+		Unique: op.Unique,
+	}
+}
+
+func (op *AddUniqueConstraint) DependsOn(another Operation) bool {
+	switch another := another.(type) {
+	case *AddColumn:
+		var sameColumn bool
+		for _, column := range op.Unique.Columns.Split() {
+			if column == another.Column {
+				sameColumn = true
+				break
+			}
+		}
+		return op.FQN == another.FQN && sameColumn
+	case *RenameTable:
+		return op.FQN.Schema == another.FQN.Schema && op.FQN.Table == another.NewName
+	case *DropUniqueConstraint:
+		// We want to drop the constraint with the same name before adding this one.
+		return op.FQN == another.FQN && op.Unique.Name == another.Unique.Name
+	default:
+		return false
+	}
+
+}
+
+type DropUniqueConstraint struct {
+	FQN    schema.FQN
+	Unique sqlschema.Unique
+}
+
+var _ Operation = (*DropUniqueConstraint)(nil)
+
+func (op *DropUniqueConstraint) DependsOn(another Operation) bool {
+	if rename, ok := another.(*RenameTable); ok {
+		return op.FQN.Schema == rename.FQN.Schema && op.FQN.Table == rename.NewName
+	}
+	return false
+}
+
+func (op *DropUniqueConstraint) GetReverse() Operation {
+	return &AddUniqueConstraint{
+		FQN:    op.FQN,
+		Unique: op.Unique,
 	}
 }
 

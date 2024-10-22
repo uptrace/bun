@@ -209,7 +209,8 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testChangeColumnType_AutoCast},
 		{testIdentity},
 		{testAddDropColumn},
-		// {testUnique},
+		{testUnique},
+		{testUniqueRenamedTable},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -542,16 +543,16 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
 	type TennantBefore struct {
 		bun.BaseModel `bun:"table:tennants"`
-		ID            int64 `bun:",pk,identity"`
+		ID            int64 `bun:"id,pk,identity"`
 		Apartment     int8
-		NeighbourID   int64
+		NeighbourID   int64 `bun:"neighbour_id"`
 
 		Neighbour *TennantBefore `bun:"rel:has-one,join:neighbour_id=id"`
 	}
 
 	type TennantAfter struct {
 		bun.BaseModel `bun:"table:tennants"`
-		TennantID     int64 `bun:",pk,identity"`
+		TennantID     int64 `bun:"tennant_id,pk,identity"`
 		Apartment     int8
 		NeighbourID   int64 `bun:"my_neighbour"`
 
@@ -760,6 +761,8 @@ func testUnique(t *testing.T, db *bun.DB) {
 		FirstName     string `bun:"first_name,unique:full_name"`
 		LastName      string `bun:"last_name,unique:full_name"`
 		Birthday      string `bun:"birthday,unique"`
+		PetName       string `bun:"pet_name,unique:pet"`
+		PetBreed      string `bun:"pet_breed,unique:pet"`
 	}
 
 	type TableAfter struct {
@@ -767,8 +770,12 @@ func testUnique(t *testing.T, db *bun.DB) {
 		FirstName     string `bun:"first_name,unique:full_name"`
 		MiddleName    string `bun:"middle_name,unique:full_name"` // extend "full_name" unique group
 		LastName      string `bun:"last_name,unique:full_name"`
-		Birthday      string `bun:"birthday"`     // doesn't have to be unique any more
-		Email         string `bun:"email,unique"` // new column, unique
+
+		Birthday string `bun:"birthday"`     // doesn't have to be unique any more
+		Email    string `bun:"email,unique"` // new column, unique
+
+		PetName  string `bun:"pet_name,unique"`
+		PetBreed string `bun:"pet_breed"` // shrink "pet" unique group
 	}
 
 	wantTables := []sqlschema.Table{
@@ -796,6 +803,90 @@ func testUnique(t *testing.T, db *bun.DB) {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
+				"pet_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"pet_breed": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+			},
+			UniqueContraints: []sqlschema.Unique{
+				{Columns: sqlschema.NewComposite("email")},
+				{Columns: sqlschema.NewComposite("pet_name")},
+				// We can only be sure of the user-defined index name
+				{Name: "full_name", Columns: sqlschema.NewComposite("first_name", "middle_name", "last_name")},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db, (*TableBefore)(nil))
+	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+}
+
+func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
+	type TableBefore struct {
+		bun.BaseModel `bun:"table:before"`
+		FirstName     string `bun:"first_name,unique:full_name"`
+		LastName      string `bun:"last_name,unique:full_name"`
+		Birthday      string `bun:"birthday,unique"`
+		PetName       string `bun:"pet_name,unique:pet"`
+		PetBreed      string `bun:"pet_breed,unique:pet"`
+	}
+
+	type TableAfter struct {
+		bun.BaseModel `bun:"table:after"`
+		// Expand full_name unique group and rename it.
+		FirstName string `bun:"first_name,unique:birth_certificate"`
+		LastName  string `bun:"last_name,unique:birth_certificate"`
+		Birthday  string `bun:"birthday,unique:birth_certificate"`
+
+		// pet_name and pet_breed have their own unique indices now.
+		PetName  string `bun:"pet_name,unique"`
+		PetBreed string `bun:"pet_breed,unique"`
+	}
+
+	wantTables := []sqlschema.Table{
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "after",
+			Columns: map[string]sqlschema.Column{
+				"first_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"last_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"birthday": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"pet_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"pet_breed": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+			},
+			UniqueContraints: []sqlschema.Unique{
+				{Columns: sqlschema.NewComposite("pet_name")},
+				{Columns: sqlschema.NewComposite("pet_breed")},
+				{Name: "full_name", Columns: sqlschema.NewComposite("first_name", "last_name", "birthday")},
 			},
 		},
 	}

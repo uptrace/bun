@@ -2,6 +2,7 @@ package sqlschema
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/uptrace/bun/schema"
@@ -13,10 +14,20 @@ type State struct {
 }
 
 type Table struct {
-	Schema  string
-	Name    string
-	Model   interface{}
+	// Schema containing the table.
+	Schema string
+
+	// Table name.
+	Name string
+
+	// Model stores a pointer to the bun's underlying Go struct for the table.
+	Model interface{}
+
+	// Columns map each column name to the column type definition.
 	Columns map[string]Column
+
+	// UniqueConstraints defined on the table.
+	UniqueContraints []Unique
 }
 
 // T returns a fully-qualified name object for the table.
@@ -131,7 +142,7 @@ type cFQN struct {
 
 // C creates a fully-qualified column name object.
 func C(schema, table string, columns ...string) cFQN {
-	return cFQN{tFQN: T(schema, table), Column: newComposite(columns...)}
+	return cFQN{tFQN: T(schema, table), Column: NewComposite(columns...)}
 }
 
 // T returns the FQN of the column's parent table.
@@ -143,8 +154,9 @@ func (c cFQN) T() tFQN {
 // Although having duplicated column references in a FK is illegal, composite neither validates nor enforces this constraint on the caller.
 type composite string
 
-// newComposite creates a composite column from a slice of column names.
-func newComposite(columns ...string) composite {
+// NewComposite creates a composite column from a slice of column names.
+func NewComposite(columns ...string) composite {
+	slices.Sort(columns)
 	return composite(strings.Join(columns, ","))
 }
 
@@ -162,9 +174,14 @@ func (c composite) Split() []string {
 }
 
 // Contains checks that a composite column contains every part of another composite.
-func (c composite) Contains(other composite) bool {
+func (c composite) contains(other composite) bool {
+	return c.Contains(string(other))
+}
+
+// Contains checks that a composite column contains the current column.
+func (c composite) Contains(other string) bool {
 	var count int
-	checkColumns := other.Split()
+	checkColumns := composite(other).Split()
 	wantCount := len(checkColumns)
 
 	for _, check := range checkColumns {
@@ -187,7 +204,7 @@ func (c composite) Replace(oldColumn, newColumn string) composite {
 	for i, column := range columns {
 		if column == oldColumn {
 			columns[i] = newColumn
-			return newComposite(columns...)
+			return NewComposite(columns...)
 		}
 	}
 	return c
@@ -242,9 +259,9 @@ func (fk *FK) dependsT(t tFQN) (ok bool, cols []*cFQN) {
 //	depends on C("a", "b", "c_1"), C("a", "b", "c_2"), C("w", "x", "y_1"), and C("w", "x", "y_2")
 func (fk *FK) dependsC(c cFQN) (bool, *cFQN) {
 	switch {
-	case fk.From.Column.Contains(c.Column):
+	case fk.From.Column.contains(c.Column):
 		return true, &fk.From
-	case fk.To.Column.Contains(c.Column):
+	case fk.To.Column.contains(c.Column):
 		return true, &fk.To
 	}
 	return false, nil
@@ -346,4 +363,15 @@ func (r RefMap) Deleted() (fks []FK) {
 		}
 	}
 	return
+}
+
+// Unique represents a unique constraint defined on 1 or more columns.
+type Unique struct {
+	Name    string
+	Columns composite
+}
+
+// Equals checks that two unique constraint are the same, assuming both are defined for the same table.
+func (u Unique) Equals(other Unique) bool {
+	return u.Columns == other.Columns
 }

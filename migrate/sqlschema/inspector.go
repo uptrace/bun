@@ -75,11 +75,31 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			}
 		}
 
+		var unique []Unique
+		for name, group := range t.Unique {
+			// Create a separate unique index for single-column unique constraints
+			//  let each dialect apply the default naming convention.
+			if name == "" {
+				for _, f := range group {
+					unique = append(unique, Unique{Columns: NewComposite(f.Name)})
+				}
+				continue
+			}
+
+			// Set the name if it is a "unique group", in which case the user has provided the name.
+			var columns []string
+			for _, f := range group {
+				columns = append(columns, f.Name)
+			}
+			unique = append(unique, Unique{Name: name, Columns: NewComposite(columns...)})
+		}
+
 		state.Tables = append(state.Tables, Table{
-			Schema:  t.Schema,
-			Name:    t.Name,
-			Model:   t.ZeroIface,
-			Columns: columns,
+			Schema:           t.Schema,
+			Name:             t.Name,
+			Model:            t.ZeroIface,
+			Columns:          columns,
+			UniqueContraints: unique,
 		})
 
 		for _, rel := range t.Relations {

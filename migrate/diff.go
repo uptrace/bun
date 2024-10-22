@@ -37,6 +37,7 @@ AddedLoop:
 				// Here we do not check for created / dropped columns, as well as column type changes,
 				// because it is only possible to detect a renamed table if its signature (see state.go) did not change.
 				d.detectColumnChanges(removed, added, false)
+				d.detectConstraintChanges(removed, added)
 
 				// Update referenced table in all related FKs.
 				if d.detectRenamedFKs {
@@ -82,6 +83,7 @@ AddedLoop:
 			}
 		}
 		d.detectColumnChanges(current, target, true)
+		d.detectConstraintChanges(current, target)
 	}
 
 	// Compare and update FKs ----------------
@@ -338,6 +340,8 @@ func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.
 
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
+	fqn := schema.FQN{target.Schema, target.Name}
+
 ChangedRenamed:
 	for tName, tCol := range target.Columns {
 
@@ -347,7 +351,7 @@ ChangedRenamed:
 		if cCol, ok := current.Columns[tName]; ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnType{
-					FQN:    schema.FQN{target.Schema, target.Name},
+					FQN:    fqn,
 					Column: tName,
 					From:   cCol,
 					To:     d.makeTargetColDef(cCol, tCol),
@@ -364,7 +368,7 @@ ChangedRenamed:
 				continue
 			}
 			d.changes.Add(&RenameColumn{
-				FQN:     schema.FQN{target.Schema, target.Name},
+				FQN:     fqn,
 				OldName: cName,
 				NewName: tName,
 			})
@@ -375,7 +379,7 @@ ChangedRenamed:
 		}
 
 		d.changes.Add(&AddColumn{
-			FQN:    schema.FQN{target.Schema, target.Name},
+			FQN:    fqn,
 			Column: tName,
 			ColDef: tCol,
 		})
@@ -385,11 +389,42 @@ ChangedRenamed:
 	for cName, cCol := range current.Columns {
 		if _, keep := target.Columns[cName]; !keep {
 			d.changes.Add(&DropColumn{
-				FQN:    schema.FQN{target.Schema, target.Name},
+				FQN:    fqn,
 				Column: cName,
 				ColDef: cCol,
 			})
 		}
+	}
+}
+
+func (d *detector) detectConstraintChanges(current, target sqlschema.Table) {
+	fqn := schema.FQN{target.Schema, target.Name}
+
+Add:
+	for _, want := range target.UniqueContraints {
+		for _, got := range current.UniqueContraints {
+			if got.Equals(want) {
+				continue Add
+			}
+		}
+		d.changes.Add(&AddUniqueConstraint{
+			FQN:    fqn,
+			Unique: want,
+		})
+	}
+
+Drop:
+	for _, got := range current.UniqueContraints {
+		for _, want := range target.UniqueContraints {
+			if got.Equals(want) {
+				continue Drop
+			}
+		}
+
+		d.changes.Add(&DropUniqueConstraint{
+			FQN:    fqn,
+			Unique: got,
+		})
 	}
 }
 

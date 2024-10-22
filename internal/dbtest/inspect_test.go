@@ -42,7 +42,7 @@ type Office struct {
 
 type Publisher struct {
 	ID        string    `bun:"publisher_id,pk,default:gen_random_uuid(),unique:office_fk"`
-	Name      string    `bun:"publisher_name,unique,notnull,unique:office_fk"`
+	Name      string    `bun:"publisher_name,notnull,unique:office_fk"`
 	CreatedAt time.Time `bun:"created_at,default:current_timestamp"`
 
 	// Writers write articles for this publisher.
@@ -63,8 +63,9 @@ type PublisherToJournalist struct {
 type Journalist struct {
 	bun.BaseModel `bun:"table:authors"`
 	ID            int    `bun:"author_id,pk,identity"`
-	FirstName     string `bun:",notnull"`
-	LastName      string
+	FirstName     string `bun:"first_name,notnull,unique:full_name"`
+	LastName      string `bun:"last_name,notnull,unique:full_name"`
+	Email         string `bun:"email,notnull,unique"`
 
 	// Articles that this journalist has written.
 	Articles []*Article `bun:"rel:has-many,join:author_id=author_id"`
@@ -171,6 +172,9 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						SQLType: "bigint",
 					},
 				},
+				UniqueContraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewComposite("editor", "title")},
+				},
 			},
 			{
 				Schema: defaultSchema,
@@ -185,9 +189,15 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						SQLType: sqltype.VarChar,
 					},
 					"last_name": {
-						SQLType:    sqltype.VarChar,
-						IsNullable: true,
+						SQLType: sqltype.VarChar,
 					},
+					"email": {
+						SQLType: sqltype.VarChar,
+					},
+				},
+				UniqueContraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewComposite("first_name", "last_name")},
+					{Columns: sqlschema.NewComposite("email")},
 				},
 			},
 			{
@@ -221,6 +231,9 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						DefaultValue: "current_timestamp",
 						IsNullable:   true,
 					},
+				},
+				UniqueContraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewComposite("publisher_id", "publisher_name")},
 				},
 			},
 		}
@@ -268,7 +281,7 @@ func mustCreateTableWithFKs(tb testing.TB, ctx context.Context, db *bun.DB, mode
 	for _, model := range models {
 		create := db.NewCreateTable().Model(model).WithForeignKeys()
 		_, err := create.Exec(ctx)
-		require.NoError(tb, err, "must create table %q:", create.GetTableName())
+		require.NoError(tb, err, "arrange: must create table %q:", create.GetTableName())
 		mustDropTableOnCleanup(tb, ctx, db, model)
 	}
 }
@@ -303,9 +316,11 @@ func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got []sqlschem
 		}
 
 		cmpColumns(tb, d, wt.Name, wt.Columns, gt.Columns)
+		cmpConstraints(tb, wt, gt)
 	}
 }
 
+// cmpColumns compares that column definitions on the tables are
 func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, want, got map[string]sqlschema.Column) {
 	tb.Helper()
 	var errs []string
@@ -360,6 +375,20 @@ func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, w
 	for _, errMsg := range errs {
 		tb.Error(errMsg)
 	}
+}
+
+// cmpConstraints compares constraints defined on the table with the expected ones.
+func cmpConstraints(tb testing.TB, want, got sqlschema.Table) {
+	tb.Helper()
+
+	// Only keep columns included in each unique constraint for comparison.
+	stripNames := func(uniques []sqlschema.Unique) (res []string) {
+		for _, u := range uniques {
+			res = append(res, u.Columns.String())
+		}
+		return
+	}
+	require.ElementsMatch(tb, stripNames(want.UniqueContraints), stripNames(got.UniqueContraints), "table %q does not have expected unique constraints (listA=want, listB=got)", want.Name)
 }
 
 func tableNames(tables []sqlschema.Table) (names []string) {
@@ -440,6 +469,32 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			require.Len(t, got.Tables, 1)
 			cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, got.Tables[0].Columns)
+		})
+
+		t.Run("inspect unique constraints", func(t *testing.T) {
+			type Model struct {
+				ID        string `bun:",unique"`
+				FirstName string `bun:"first_name,unique:full_name"`
+				LastName  string `bun:"last_name,unique:full_name"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Model)(nil))
+			inspector := sqlschema.NewSchemaInspector(tables)
+
+			want := sqlschema.Table{
+				Name: "models",
+				UniqueContraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewComposite("id")},
+					{Name: "full_name", Columns: sqlschema.NewComposite("first_name", "last_name")},
+				},
+			}
+
+			got, err := inspector.Inspect(context.Background())
+			require.NoError(t, err)
+
+			require.Len(t, got.Tables, 1)
+			cmpConstraints(t, want, got.Tables[0])
 		})
 	})
 }

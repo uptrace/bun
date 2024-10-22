@@ -48,7 +48,10 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
 			return state, err
 		}
+
 		colDefs := make(map[string]sqlschema.Column)
+		uniqueGroups := make(map[string][]string)
+
 		for _, c := range columns {
 			def := c.Default
 			if c.IsSerial || c.IsIdentity {
@@ -66,12 +69,25 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 				IsAutoIncrement: c.IsSerial,
 				IsIdentity:      c.IsIdentity,
 			}
+
+			for _, group := range c.UniqueGroups {
+				uniqueGroups[group] = append(uniqueGroups[group], c.Name)
+			}
+		}
+
+		var unique []sqlschema.Unique
+		for name, columns := range uniqueGroups {
+			unique = append(unique, sqlschema.Unique{
+				Name:    name,
+				Columns: sqlschema.NewComposite(columns...),
+			})
 		}
 
 		state.Tables = append(state.Tables, sqlschema.Table{
-			Schema:  table.Schema,
-			Name:    table.Name,
-			Columns: colDefs,
+			Schema:           table.Schema,
+			Name:             table.Name,
+			Columns:          colDefs,
+			UniqueContraints: unique,
 		})
 	}
 
@@ -106,8 +122,7 @@ type InformationSchemaColumn struct {
 	IndentityType    string   `bun:"identity_type"`
 	IsSerial         bool     `bun:"is_serial"`
 	IsNullable       bool     `bun:"is_nullable"`
-	IsUnique         bool     `bun:"is_unique"`
-	UniqueGroup      []string `bun:"unique_group,array"`
+	UniqueGroups     []string `bun:"unique_groups,array"`
 }
 
 type ForeignKey struct {
@@ -156,8 +171,7 @@ SELECT
 	"c".column_default = format('nextval(''%s_%s_seq''::regclass)', "c".table_name, "c".column_name) AS is_serial,
 	COALESCE("c".identity_type, '') AS identity_type,
 	"c".is_nullable = 'YES' AS is_nullable,
-	'u' = ANY("c".constraint_type) AS is_unique,
-	"c"."constraint_name" AS unique_group
+	"c"."unique_groups" AS unique_groups
 FROM (
 	SELECT
 		"table_schema",
@@ -170,7 +184,7 @@ FROM (
 		"c".is_nullable,
 		att.array_dims,
 		att.identity_type,
-		att."constraint_name",
+		att."unique_groups",
 		att."constraint_type"
 	FROM information_schema.columns "c"
 		LEFT JOIN (
@@ -180,7 +194,7 @@ FROM (
 				"c".attname AS "column_name",
 				"c".attndims AS array_dims,
 				"c".attidentity AS identity_type,
-				ARRAY_AGG(con.conname) AS "constraint_name",
+				ARRAY_AGG(con.conname) FILTER (WHERE con.contype = 'u') AS "unique_groups",
 				ARRAY_AGG(con.contype) AS "constraint_type"
 			FROM ( 
 				SELECT 
@@ -200,76 +214,6 @@ FROM (
 	) "c"
 WHERE "table_schema" = ? AND "table_name" = ?
 ORDER BY "table_schema", "table_name", "column_name"
-`
-
-	// sqlInspectSchema retrieves column type definitions for all user-defined tables.
-	// Other relations, such as views and indices, as well as Posgres's internal relations are excluded.
-	//
-	// TODO: implement scanning ORM relations for RawQuery too, so that one could scan this query directly to InformationSchemaTable.
-	sqlInspectSchema = `
-SELECT
-	"t"."table_schema",
-	"t".table_name,
-	"c".column_name,
-	"c".data_type,
-	"c".character_maximum_length::integer AS varchar_len,
-	"c".data_type = 'ARRAY' AS is_array,
-	COALESCE("c".array_dims, 0) AS array_dims,
-	CASE
-		WHEN "c".column_default ~ '^''.*''::.*$' THEN substring("c".column_default FROM '^''(.*)''::.*$')
-		ELSE "c".column_default
-	END AS "default",
-	"c".constraint_type = 'p' AS is_pk,
-	"c".is_identity = 'YES' AS is_identity,
-	"c".column_default = format('nextval(''%s_%s_seq''::regclass)', "t".table_name, "c".column_name) AS is_serial,
-	COALESCE("c".identity_type, '') AS identity_type,
-	"c".is_nullable = 'YES' AS is_nullable,
-	"c".constraint_type = 'u' AS is_unique,
-	"c"."constraint_name" AS unique_group
-FROM information_schema.tables "t"
-	LEFT JOIN (
-		SELECT
-			"table_schema",
-			"table_name",
-			"column_name",
-			"c".data_type,
-			"c".character_maximum_length,
-			"c".column_default,
-			"c".is_identity,
-			"c".is_nullable,
-			att.array_dims,
-			att.identity_type,
-			att."constraint_name",
-			att."constraint_type"
-		FROM information_schema.columns "c"
-			LEFT JOIN (
-				SELECT
-					s.nspname AS table_schema,
-					"t".relname AS "table_name",
-					"c".attname AS "column_name",
-					"c".attndims AS array_dims,
-					"c".attidentity AS identity_type,
-					con.conname AS "constraint_name",
-					con.contype AS "constraint_type"
-				FROM ( 
-					SELECT 
-						conname,
-						contype,
-						connamespace,
-						conrelid,
-						conrelid AS attrelid,
-						UNNEST(conkey) AS attnum
-					FROM pg_constraint
-				) con
-					LEFT JOIN pg_attribute "c" USING (attrelid, attnum)
-					LEFT JOIN pg_namespace s ON s.oid = con.connamespace
-					LEFT JOIN pg_class "t" ON "t".oid = con.conrelid
-			) att USING (table_schema, "table_name", "column_name")
-	) "c" USING (table_schema, "table_name")
-WHERE table_type = 'BASE TABLE'
-	AND table_schema <> 'information_schema'
-	AND table_schema NOT LIKE 'pg_%'
-ORDER BY table_schema, table_name
 `
 
 	// sqlInspectForeignKeys get FK definitions for user-defined tables.

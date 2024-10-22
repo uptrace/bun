@@ -62,10 +62,14 @@ func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
 			b, err = m.addColumn(fmter, b, change)
 		case *migrate.DropColumn:
 			b, err = m.dropColumn(fmter, b, change)
-		case *migrate.DropConstraint:
-			b, err = m.dropContraint(fmter, b, change)
 		case *migrate.AddForeignKey:
 			b, err = m.addForeignKey(fmter, b, change)
+		case *migrate.AddUniqueConstraint:
+			b, err = m.addUnique(fmter, b, change)
+		case *migrate.DropUniqueConstraint:
+			b, err = m.dropConstraint(fmter, b, change.FQN, change.Unique.Name)
+		case *migrate.DropConstraint:
+			b, err = m.dropConstraint(fmter, b, change.FQN(), change.ConstraintName)
 		case *migrate.RenameConstraint:
 			b, err = m.renameConstraint(fmter, b, change)
 		case *migrate.ChangeColumnType:
@@ -147,15 +151,34 @@ func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *mi
 	return b, nil
 }
 
-func (m *migrator) dropContraint(fmter schema.Formatter, b []byte, drop *migrate.DropConstraint) (_ []byte, err error) {
+func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.AddUniqueConstraint) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
-	fqn := drop.FQN()
+	if b, err = change.FQN.AppendQuery(fmter, b); err != nil {
+		return b, err
+	}
+
+	b = append(b, " ADD CONSTRAINT "...)
+	if change.Unique.Name != "" {
+		b = fmter.AppendName(b, change.Unique.Name)
+	} else {
+		// Default naming scheme for unique constraints in Postgres is <table>_<column>_key
+		b = fmter.AppendName(b, fmt.Sprintf("%s_%s_key", change.FQN.Table, change.Unique.Columns))
+	}
+	b = append(b, " UNIQUE ("...)
+	b, _ = change.Unique.Columns.Safe().AppendQuery(fmter, b)
+	b = append(b, ")"...)
+
+	return b, nil
+}
+
+func (m *migrator) dropConstraint(fmter schema.Formatter, b []byte, fqn schema.FQN, name string) (_ []byte, err error) {
+	b = append(b, "ALTER TABLE "...)
 	if b, err = fqn.AppendQuery(fmter, b); err != nil {
 		return b, err
 	}
 
 	b = append(b, " DROP CONSTRAINT "...)
-	b = fmter.AppendName(b, drop.ConstraintName)
+	b = fmter.AppendName(b, name)
 
 	return b, nil
 }
