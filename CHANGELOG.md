@@ -1,3 +1,22 @@
+## [1.2.3](https://github.com/uptrace/bun/compare/v1.2.2...v1.2.3) (2024-08-31)
+
+
+
+## [1.2.2](https://github.com/uptrace/bun/compare/v1.2.1...v1.2.2) (2024-08-29)
+
+
+### Bug Fixes
+
+* gracefully handle empty hstore in pgdialect ([#1010](https://github.com/uptrace/bun/issues/1010)) ([2f73d8a](https://github.com/uptrace/bun/commit/2f73d8a8e16c8718ebfc956036d9c9a01a0888bc))
+* number each unit test ([#974](https://github.com/uptrace/bun/issues/974)) ([b005dc2](https://github.com/uptrace/bun/commit/b005dc2a9034715c6f59dcfc8e76aa3b85df38ab))
+
+
+### Features
+
+* add ModelTableExpr to TruncateTableQuery ([#969](https://github.com/uptrace/bun/issues/969)) ([7bc330f](https://github.com/uptrace/bun/commit/7bc330f152cf0d9dc30956478e2731ea5816f012))
+
+
+
 ## [1.2.1](https://github.com/uptrace/bun/compare/v1.2.0...v1.2.1) (2024-04-02)
 
 
@@ -14,7 +33,7 @@
 
 ### Features
 
-* Allow overiding of Warn and Deprecated loggers ([#952](https://github.com/uptrace/bun/issues/952)) ([0e9d737](https://github.com/uptrace/bun/commit/0e9d737e4ca2deb86930237ee32a39cf3f7e8157))
+* Allow overriding of Warn and Deprecated loggers ([#952](https://github.com/uptrace/bun/issues/952)) ([0e9d737](https://github.com/uptrace/bun/commit/0e9d737e4ca2deb86930237ee32a39cf3f7e8157))
 * enable SNI ([#953](https://github.com/uptrace/bun/issues/953)) ([4071ffb](https://github.com/uptrace/bun/commit/4071ffb5bcb1b233cda239c92504d8139dcf1d2f))
 * **idb:** add NewMerge method to IDB ([#966](https://github.com/uptrace/bun/issues/966)) ([664e2f1](https://github.com/uptrace/bun/commit/664e2f154f1153d2a80cd062a5074f1692edaee7))
 
@@ -100,7 +119,7 @@
 
 ### Bug Fixes
 
-* add support for inserting values with unicode encoding for mssql dialect ([e98c6c0](https://github.com/uptrace/bun/commit/e98c6c0f033b553bea3bbc783aa56c2eaa17718f))
+* add support for inserting values with Unicode encoding for mssql dialect ([e98c6c0](https://github.com/uptrace/bun/commit/e98c6c0f033b553bea3bbc783aa56c2eaa17718f))
 * fix relation tag ([a3eedff](https://github.com/uptrace/bun/commit/a3eedff49700490d4998dcdcdc04f554d8f17166))
 
 
@@ -136,7 +155,7 @@
 
 ### Bug Fixes
 
-* addng dialect override for append-bool ([#695](https://github.com/uptrace/bun/issues/695)) ([338f2f0](https://github.com/uptrace/bun/commit/338f2f04105ad89e64530db86aeb387e2ad4789e))
+* adding dialect override for append-bool ([#695](https://github.com/uptrace/bun/issues/695)) ([338f2f0](https://github.com/uptrace/bun/commit/338f2f04105ad89e64530db86aeb387e2ad4789e))
 * don't call hooks twice for whereExists ([9057857](https://github.com/uptrace/bun/commit/90578578e717f248e4b6eb114c5b495fd8d4ed41))
 * don't lock migrations when running Migrate and Rollback ([69a7354](https://github.com/uptrace/bun/commit/69a7354d987ff2ed5338c9ef5f4ce320724299ab))
 * **query:** make WhereDeleted compatible with ForceDelete ([299c3fd](https://github.com/uptrace/bun/commit/299c3fd57866aaecd127a8f219c95332898475db)), closes [#673](https://github.com/uptrace/bun/issues/673)
@@ -304,7 +323,7 @@ recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
 
 - append slice values
   ([4a65129](https://github.com/uptrace/bun/commit/4a651294fb0f1e73079553024810c3ead9777311))
-- check for nils when appeding driver.Value
+- check for nils when appending driver.Value
   ([7bb1640](https://github.com/uptrace/bun/commit/7bb1640a00fceca1e1075fe6544b9a4842ab2b26))
 - cleanup soft deletes for mssql
   ([e72e2c5](https://github.com/uptrace/bun/commit/e72e2c5d0a85f3d26c3fa22c7284c2de1dcfda8e))
@@ -323,7 +342,7 @@ recommended to upgrade to v1.0.24 before upgrading to v1.1.x.
 
 ### Deprecated
 
-In the comming v1.1.x release, Bun will stop automatically adding `,pk,autoincrement` options on
+In the coming v1.1.x release, Bun will stop automatically adding `,pk,autoincrement` options on
 `ID int64/int32` fields. This version (v1.0.23) only prints a warning when it encounters such
 fields, but the code will continue working as before.
 
@@ -441,7 +460,7 @@ In v1.1.x, such options as `,nopk` and `,allowzero` will not be necessary and wi
   ([693f1e1](https://github.com/uptrace/bun/commit/693f1e135999fc31cf83b99a2530a695b20f4e1b))
 - add model embedding via embed:prefix\_
   ([9a2cedc](https://github.com/uptrace/bun/commit/9a2cedc8b08fa8585d4bfced338bd0a40d736b1d))
-- change the default logoutput to stderr
+- change the default log output to stderr
   ([4bf5773](https://github.com/uptrace/bun/commit/4bf577382f19c64457cbf0d64490401450954654)),
   closes [#349](https://github.com/uptrace/bun/issues/349)
 

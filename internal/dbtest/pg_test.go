@@ -750,6 +750,22 @@ func TestPostgresHStoreQuote(t *testing.T) {
 	require.Equal(t, wanted, m)
 }
 
+func TestPostgresHStoreEmpty(t *testing.T) {
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS HSTORE;`)
+	require.NoError(t, err)
+
+	wanted := map[string]string{}
+	m := make(map[string]string)
+	err = db.NewSelect().
+		ColumnExpr("?::hstore", pgdialect.HStore(wanted)).
+		Scan(ctx, pgdialect.HStore(&m))
+	require.NoError(t, err)
+	require.Equal(t, wanted, m)
+}
+
 func TestPostgresSkipupdateField(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
@@ -830,6 +846,30 @@ func TestPostgresCustomTypeBytes(t *testing.T) {
 	mustResetModel(t, ctx, db, (*Model)(nil))
 
 	in := &Model{Data: []*Issue722{{V: []byte("hello")}}}
+	_, err := db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
+}
+
+func TestPostgresMultiRange(t *testing.T) {
+	type Model struct {
+		ID    int64                           `bun:",pk,autoincrement"`
+		Value pgdialect.MultiRange[time.Time] `bun:",multirange,type:tstzmultirange"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	r1 := pgdialect.NewRange(time.Unix(1000, 0), time.Unix(2000, 0))
+	r2 := pgdialect.NewRange(time.Unix(5000, 0), time.Unix(6000, 0))
+	in := &Model{Value: pgdialect.MultiRange[time.Time]{r1, r2}}
 	_, err := db.NewInsert().Model(in).Exec(ctx)
 	require.NoError(t, err)
 

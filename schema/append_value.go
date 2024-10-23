@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
@@ -51,7 +51,7 @@ var appenders = []AppenderFunc{
 	reflect.UnsafePointer: nil,
 }
 
-var appenderMap sync.Map
+var appenderCache = xsync.NewMapOf[reflect.Type, AppenderFunc]()
 
 func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	if field.Tag.HasOption("msgpack") {
@@ -67,7 +67,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 		}
 
 		if fieldType.Kind() != reflect.Ptr {
-			if reflect.PtrTo(fieldType).Implements(driverValuerType) {
+			if reflect.PointerTo(fieldType).Implements(driverValuerType) {
 				return addrAppender(appendDriverValue)
 			}
 		}
@@ -79,14 +79,14 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 }
 
 func Appender(dialect Dialect, typ reflect.Type) AppenderFunc {
-	if v, ok := appenderMap.Load(typ); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.Load(typ); ok {
+		return v
 	}
 
 	fn := appender(dialect, typ)
 
-	if v, ok := appenderMap.LoadOrStore(typ, fn); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.LoadOrStore(typ, fn); ok {
+		return v
 	}
 	return fn
 }
@@ -99,10 +99,10 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		return appendTimeValue
 	case timePtrType:
 		return PtrAppender(appendTimeValue)
-	case ipType:
-		return appendIPValue
 	case ipNetType:
 		return appendIPNetValue
+	case ipType, netipPrefixType, netipAddrType:
+		return appendStringer
 	case jsonRawMessageType:
 		return appendJSONRawMessageValue
 	}
@@ -123,7 +123,7 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(queryAppenderType) {
 			return addrAppender(appendQueryAppenderValue)
 		}
@@ -247,14 +247,13 @@ func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return fmter.Dialect().AppendTime(b, tm)
 }
 
-func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	ip := v.Interface().(net.IP)
-	return fmter.Dialect().AppendString(b, ip.String())
-}
-
 func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	ipnet := v.Interface().(net.IPNet)
 	return fmter.Dialect().AppendString(b, ipnet.String())
+}
+
+func appendStringer(fmter Formatter, b []byte, v reflect.Value) []byte {
+	return fmter.Dialect().AppendString(b, v.Interface().(fmt.Stringer).String())
 }
 
 func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {

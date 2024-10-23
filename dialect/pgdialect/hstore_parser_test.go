@@ -1,8 +1,10 @@
 package pgdialect
 
 import (
-	"io"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestHStoreParser(t *testing.T) {
@@ -10,6 +12,8 @@ func TestHStoreParser(t *testing.T) {
 		s string
 		m map[string]string
 	}{
+		{``, map[string]string{}},
+
 		{`""=>""`, map[string]string{"": ""}},
 		{`"\\"=>"\\"`, map[string]string{`\`: `\`}},
 		{`"'"=>"'"`, map[string]string{"'": "'"}},
@@ -21,42 +25,17 @@ func TestHStoreParser(t *testing.T) {
 		{`"{1}"=>"{2}", "{3}"=>"{4}"`, map[string]string{"{1}": "{2}", "{3}": "{4}"}},
 	}
 
-	for testi, test := range tests {
-		p := newHStoreParser([]byte(test.s))
+	for i, test := range tests {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			p := newHStoreParser([]byte(test.s))
 
-		got := make(map[string]string)
-		for {
-			key, err := p.NextKey()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				t.Fatal(err)
+			got := make(map[string]string)
+			for p.Next() {
+				got[p.Key()] = p.Value()
 			}
 
-			value, err := p.NextValue()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				t.Fatal(err)
-			}
-
-			got[key] = value
-		}
-
-		if len(got) != len(test.m) {
-			t.Fatalf(
-				"test #%d got %d elements, wanted %d (got=%#v wanted=%#v)",
-				testi, len(got), len(test.m), got, test.m)
-		}
-
-		for k, v := range got {
-			if v != test.m[k] {
-				t.Fatalf(
-					"test #%d key #%s does not match: %s != %s (got=%#v wanted=%#v)",
-					testi, k, v, test.m[k], got, test.m)
-			}
-		}
+			require.NoError(t, p.Err())
+			require.Equal(t, test.m, got)
+		})
 	}
 }

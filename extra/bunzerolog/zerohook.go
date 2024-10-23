@@ -95,6 +95,7 @@ func NewQueryHook(opts ...Option) *QueryHook {
 			duration := h.now().Sub(event.StartTime)
 
 			return zerevent.
+				Ctx(ctx).
 				Err(event.Err).
 				Str("query", event.Query).
 				Str("operation", event.Operation()).

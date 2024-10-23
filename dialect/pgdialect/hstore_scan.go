@@ -2,7 +2,6 @@ package pgdialect
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 
 	"github.com/uptrace/bun/schema"
@@ -58,25 +57,11 @@ func decodeMapStringString(src interface{}) (map[string]string, error) {
 	m := make(map[string]string)
 
 	p := newHStoreParser(b)
-	for {
-		key, err := p.NextKey()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		value, err := p.NextValue()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		m[key] = value
+	for p.Next() {
+		m[p.Key()] = p.Value()
 	}
-
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
 	return m, nil
 }

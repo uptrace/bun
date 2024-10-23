@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"net"
+	"net/netip"
 	"reflect"
 	"time"
 )
@@ -14,6 +15,8 @@ var (
 	timeType           = timePtrType.Elem()
 	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
 	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
+	netipPrefixType    = reflect.TypeOf((*netip.Prefix)(nil)).Elem()
+	netipAddrType      = reflect.TypeOf((*netip.Addr)(nil)).Elem()
 	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
 
 	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()

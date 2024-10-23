@@ -40,16 +40,11 @@ then
 fi
 
 git checkout master
+make go_mod_tidy
 
 PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; \
   | sed 's/^\.\///' \
   | sort)
-
-for dir in $PACKAGE_DIRS
-do
-    printf "${dir}: go mod tidy -compat=1.20\n"
-    (cd ./${dir} && go mod tidy -compat=1.20)
-done
 
 for dir in $PACKAGE_DIRS
 do

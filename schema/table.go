@@ -74,16 +74,7 @@ type structField struct {
 	Table *Table
 }
 
-func newTable(
-	dialect Dialect, typ reflect.Type, seen map[reflect.Type]*Table, canAddr bool,
-) *Table {
-	if table, ok := seen[typ]; ok {
-		return table
-	}
-
-	table := new(Table)
-	seen[typ] = table
-
+func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 	table.dialect = dialect
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()
@@ -97,7 +88,7 @@ func newTable(
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
-	table.processFields(typ, seen, canAddr)
+	table.processFields(typ, canAddr)
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -109,28 +100,15 @@ func newTable(
 		{afterScanRowHookType, afterScanRowHookFlag},
 	}
 
-	typ = reflect.PtrTo(table.Type)
+	typ = reflect.PointerTo(table.Type)
 	for _, hook := range hooks {
 		if typ.Implements(hook.typ) {
 			table.flags = table.flags.Set(hook.flag)
 		}
 	}
-
-	return table
 }
 
-func (t *Table) init() {
-	for _, field := range t.relFields {
-		t.processRelation(field)
-	}
-	t.relFields = nil
-}
-
-func (t *Table) processFields(
-	typ reflect.Type,
-	seen map[reflect.Type]*Table,
-	canAddr bool,
-) {
+func (t *Table) processFields(typ reflect.Type, canAddr bool) {
 	type embeddedField struct {
 		prefix     string
 		index      []int
@@ -172,7 +150,7 @@ func (t *Table) processFields(
 				continue
 			}
 
-			subtable := newTable(t.dialect, sfType, seen, canAddr)
+			subtable := t.dialect.Tables().InProgress(sfType)
 
 			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
@@ -206,7 +184,7 @@ func (t *Table) processFields(
 					t.TypeName, sf.Name, fieldType.Kind()))
 			}
 
-			subtable := newTable(t.dialect, fieldType, seen, canAddr)
+			subtable := t.dialect.Tables().InProgress(fieldType)
 			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
 					prefix:     prefix,
@@ -229,7 +207,7 @@ func (t *Table) processFields(
 			}
 			t.StructMap[field.Name] = &structField{
 				Index: field.Index,
-				Table: newTable(t.dialect, field.IndirectType, seen, canAddr),
+				Table: t.dialect.Tables().InProgress(field.IndirectType),
 			}
 		}
 	}
@@ -489,6 +467,13 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 }
 
 //---------------------------------------------------------------------------------------
+
+func (t *Table) initRelations() {
+	for _, field := range t.relFields {
+		t.processRelation(field)
+	}
+	t.relFields = nil
+}
 
 func (t *Table) processRelation(field *Field) {
 	if rel, ok := field.Tag.Option("rel"); ok {
@@ -918,6 +903,7 @@ func isKnownFieldOption(name string) bool {
 		"array",
 		"hstore",
 		"composite",
+		"multirange",
 		"json_use_number",
 		"msgpack",
 		"notnull",

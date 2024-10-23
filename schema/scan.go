@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -53,7 +53,7 @@ func init() {
 	}
 }
 
-var scannerMap sync.Map
+var scannerCache = xsync.NewMapOf[reflect.Type, ScannerFunc]()
 
 func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	if field.Tag.HasOption("msgpack") {
@@ -72,14 +72,14 @@ func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 }
 
 func Scanner(typ reflect.Type) ScannerFunc {
-	if v, ok := scannerMap.Load(typ); ok {
-		return v.(ScannerFunc)
+	if v, ok := scannerCache.Load(typ); ok {
+		return v
 	}
 
 	fn := scanner(typ)
 
-	if v, ok := scannerMap.LoadOrStore(typ, fn); ok {
-		return v.(ScannerFunc)
+	if v, ok := scannerCache.LoadOrStore(typ, fn); ok {
+		return v
 	}
 	return fn
 }
@@ -111,7 +111,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(scannerType) {
 			return addrScanner(scanScanner)
 		}

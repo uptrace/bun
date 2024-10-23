@@ -568,8 +568,8 @@ func (q *SelectQuery) appendQuery(
 		return nil, err
 	}
 
-	for _, j := range q.joins {
-		b, err = j.AppendQuery(fmter, b)
+	for _, join := range q.joins {
+		b, err = join.AppendQuery(fmter, b)
 		if err != nil {
 			return nil, err
 		}

@@ -3,140 +3,98 @@ package pgdialect
 import (
 	"bytes"
 	"fmt"
+	"io"
 )
 
 type hstoreParser struct {
-	*streamParser
-	err error
+	p pgparser
+
+	key   string
+	value string
+	err   error
 }
 
 func newHStoreParser(b []byte) *hstoreParser {
-	p := &hstoreParser{
-		streamParser: newStreamParser(b, 0),
+	p := new(hstoreParser)
+	if len(b) != 0 && (len(b) < 6 || b[0] != '"') {
+		p.err = fmt.Errorf("pgdialect: can't parse hstore: %q", b)
+		return p
 	}
-	if len(b) < 6 || b[0] != '"' {
-		p.err = fmt.Errorf("bun: can't parse hstore: %q", b)
-	}
+	p.p.Reset(b)
 	return p
 }
 
-func (p *hstoreParser) NextKey() (string, error) {
+func (p *hstoreParser) Next() bool {
 	if p.err != nil {
-		return "", p.err
+		return false
 	}
-
-	err := p.skipByte('"')
-	if err != nil {
-		return "", err
-	}
-
-	key, err := p.readSubstring()
-	if err != nil {
-		return "", err
-	}
-
-	const separator = "=>"
-
-	for i := range separator {
-		err = p.skipByte(separator[i])
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return string(key), nil
+	p.err = p.readNext()
+	return p.err == nil
 }
 
-func (p *hstoreParser) NextValue() (string, error) {
-	if p.err != nil {
-		return "", p.err
+func (p *hstoreParser) Err() error {
+	if p.err != io.EOF {
+		return p.err
+	}
+	return nil
+}
+
+func (p *hstoreParser) Key() string {
+	return p.key
+}
+
+func (p *hstoreParser) Value() string {
+	return p.value
+}
+
+func (p *hstoreParser) readNext() error {
+	if !p.p.Valid() {
+		return io.EOF
 	}
 
-	c, err := p.readByte()
+	if err := p.p.Skip('"'); err != nil {
+		return err
+	}
+
+	key, err := p.p.ReadUnescapedSubstring('"')
 	if err != nil {
-		return "", err
+		return err
+	}
+	p.key = string(key)
+
+	if err := p.p.SkipPrefix([]byte("=>")); err != nil {
+		return err
 	}
 
-	switch c {
+	ch, err := p.p.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	switch ch {
 	case '"':
-		value, err := p.readSubstring()
+		value, err := p.p.ReadUnescapedSubstring(ch)
 		if err != nil {
-			return "", err
+			return err
 		}
-
-		if p.peek() == ',' {
-			p.skipNext()
-		}
-
-		if p.peek() == ' ' {
-			p.skipNext()
-		}
-
-		return string(value), nil
+		p.skipComma()
+		p.value = string(value)
+		return nil
 	default:
-		value := p.readSimple()
+		value := p.p.ReadLiteral(ch)
 		if bytes.Equal(value, []byte("NULL")) {
-			value = nil
+			p.value = ""
 		}
-
-		if p.peek() == ',' {
-			p.skipNext()
-		}
-
-		return string(value), nil
+		p.skipComma()
+		return nil
 	}
 }
 
-func (p *hstoreParser) readSimple() []byte {
-	p.unreadByte()
-
-	if i := bytes.IndexByte(p.b[p.i:], ','); i >= 0 {
-		b := p.b[p.i : p.i+i]
-		p.i += i
-		return b
+func (p *hstoreParser) skipComma() {
+	if p.p.Peek() == ',' {
+		p.p.Advance()
 	}
-
-	b := p.b[p.i:len(p.b)]
-	p.i = len(p.b)
-	return b
-}
-
-func (p *hstoreParser) readSubstring() ([]byte, error) {
-	c, err := p.readByte()
-	if err != nil {
-		return nil, err
+	if p.p.Peek() == ' ' {
+		p.p.Advance()
 	}
-
-	p.buf = p.buf[:0]
-	for {
-		if c == '"' {
-			break
-		}
-
-		next, err := p.readByte()
-		if err != nil {
-			return nil, err
-		}
-
-		if c == '\\' {
-			switch next {
-			case '\\', '"':
-				p.buf = append(p.buf, next)
-
-				c, err = p.readByte()
-				if err != nil {
-					return nil, err
-				}
-			default:
-				p.buf = append(p.buf, '\\')
-				c = next
-			}
-			continue
-		}
-
-		p.buf = append(p.buf, c)
-		c = next
-	}
-
-	return p.buf, nil
 }
