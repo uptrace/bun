@@ -84,14 +84,16 @@ func (m *m2mModel) Scan(src interface{}) error {
 	m.scanIndex++
 
 	// Base pks must come first.
-	if m.scanIndex < len(m.rel.M2MBaseFields) {
+	if m.scanIndex <= len(m.rel.M2MBaseFields) {
 		return m.scanM2MColumn(column, src)
 	}
 
 	if field, ok := m.table.FieldMap[column]; ok {
 		return field.ScanValue(m.strct, src)
 	}
-	return m.scanM2MColumn(column, src)
+
+	_, err := m.scanColumn(column, src)
+	return err
 }
 
 func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
