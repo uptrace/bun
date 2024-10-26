@@ -6,7 +6,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.2.4
+	github.com/uptrace/bun v1.2.5
 )
 
 require (
