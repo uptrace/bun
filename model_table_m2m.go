@@ -80,24 +80,20 @@ func (m *m2mModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 }
 
 func (m *m2mModel) Scan(src interface{}) error {
-	defer func() { m.scanIndex++ }()
-
 	column := m.columns[m.scanIndex]
+	m.scanIndex++
 
+	// Base pks must come first.
 	if m.scanIndex < len(m.rel.M2MBaseFields) {
 		return m.scanM2MColumn(column, src)
 	}
 
-	field, ok := m.table.FieldMap[column]
-	if !ok {
-		return m.scanM2MColumn(column, src)
+	if field, ok := m.table.FieldMap[column]; ok {
+		return field.ScanValue(m.strct, src)
 	}
 
-	if err := field.ScanValue(m.strct, src); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := m.scanColumn(column, src)
+	return err
 }
 
 func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
