@@ -258,6 +258,8 @@ func TestDB(t *testing.T) {
 		{testFKViolation},
 		{testWithForeignKeysAndRules},
 		{testWithForeignKeys},
+		{testWithForeignKeysHasMany},
+		{testWithPointerForeignKeysHasMany},
 		{testInterfaceAny},
 		{testInterfaceJSON},
 		{testScanRawMessage},
@@ -1041,6 +1043,114 @@ func testWithForeignKeys(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.NotNil(t, d.User)
 	require.Equal(t, d.User.Name, "root")
+}
+
+func testWithForeignKeysHasMany(t *testing.T, db *bun.DB) {
+	type User struct {
+		ID     int `bun:",pk"`
+		DeckID int
+		Name   string
+	}
+	type Deck struct {
+		ID    int     `bun:",pk"`
+		Users []*User `bun:"rel:has-many,join:id=deck_id"`
+	}
+
+	if db.Dialect().Name() == dialect.SQLite {
+		_, err := db.Exec("PRAGMA foreign_keys = ON;")
+		require.NoError(t, err)
+	}
+
+	for _, model := range []interface{}{(*Deck)(nil), (*User)(nil)} {
+		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	mustResetModel(t, ctx, db, (*User)(nil))
+	_, err := db.NewCreateTable().
+		Model((*Deck)(nil)).
+		IfNotExists().
+		WithForeignKeys().
+		Exec(ctx)
+	require.NoError(t, err)
+	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
+
+	deckID := 1
+	deck := Deck{ID: deckID}
+	_, err = db.NewInsert().Model(&deck).Exec(ctx)
+	require.NoError(t, err)
+
+	userID1 := 1
+	userID2 := 2
+	users := []*User{
+		{ID: userID1, DeckID: deckID, Name: "user 1"},
+		{ID: userID2, DeckID: deckID, Name: "user 2"},
+	}
+
+	res, err := db.NewInsert().Model(&users).Exec(ctx)
+	require.NoError(t, err)
+
+	affected, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.Equal(t, int64(2), affected)
+
+	err = db.NewSelect().Model(&deck).Relation("Users").Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, deck.Users, 2)
+}
+
+func testWithPointerForeignKeysHasMany(t *testing.T, db *bun.DB) {
+	type User struct {
+		ID     *int `bun:",pk"`
+		DeckID *int
+		Name   string
+	}
+	type Deck struct {
+		ID    *int    `bun:",pk"`
+		Users []*User `bun:"rel:has-many,join:id=deck_id"`
+	}
+
+	if db.Dialect().Name() == dialect.SQLite {
+		_, err := db.Exec("PRAGMA foreign_keys = ON;")
+		require.NoError(t, err)
+	}
+
+	for _, model := range []interface{}{(*Deck)(nil), (*User)(nil)} {
+		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	mustResetModel(t, ctx, db, (*User)(nil))
+	_, err := db.NewCreateTable().
+		Model((*Deck)(nil)).
+		IfNotExists().
+		WithForeignKeys().
+		Exec(ctx)
+	require.NoError(t, err)
+	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
+
+	deckID := 1
+	deck := Deck{ID: &deckID}
+	_, err = db.NewInsert().Model(&deck).Exec(ctx)
+	require.NoError(t, err)
+
+	userID1 := 1
+	userID2 := 2
+	users := []*User{
+		{ID: &userID1, DeckID: &deckID, Name: "user 1"},
+		{ID: &userID2, DeckID: &deckID, Name: "user 2"},
+	}
+
+	res, err := db.NewInsert().Model(&users).Exec(ctx)
+	require.NoError(t, err)
+
+	affected, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.Equal(t, int64(2), affected)
+
+	err = db.NewSelect().Model(&deck).Relation("Users").Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, deck.Users, 2)
 }
 
 func testInterfaceAny(t *testing.T, db *bun.DB) {
