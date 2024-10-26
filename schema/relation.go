@@ -13,21 +13,25 @@ const (
 )
 
 type Relation struct {
-	Type       int
-	Field      *Field
-	JoinTable  *Table
-	BaseFields []*Field
-	JoinFields []*Field
-	OnUpdate   string
-	OnDelete   string
-	Condition  []string
+	// Base and Join can be explained with this query:
+	//
+	// SELECT * FROM base_table JOIN join_table
+
+	Type      int
+	Field     *Field
+	JoinTable *Table
+	BasePKs   []*Field
+	JoinPKs   []*Field
+	OnUpdate  string
+	OnDelete  string
+	Condition []string
 
 	PolymorphicField *Field
 	PolymorphicValue string
 
-	M2MTable      *Table
-	M2MBaseFields []*Field
-	M2MJoinFields []*Field
+	M2MTable   *Table
+	M2MBasePKs []*Field
+	M2MJoinPKs []*Field
 }
 
 // References returns true if the table to which the Relation belongs needs to declare a foreign key constraint to create the relation.

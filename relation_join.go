@@ -70,11 +70,11 @@ func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 }
 
 func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *SelectQuery {
-	if len(j.Relation.JoinFields) > 1 {
+	if len(j.Relation.JoinPKs) > 1 {
 		where = append(where, '(')
 	}
-	where = appendColumns(where, j.JoinModel.Table().SQLAlias, j.Relation.JoinFields)
-	if len(j.Relation.JoinFields) > 1 {
+	where = appendColumns(where, j.JoinModel.Table().SQLAlias, j.Relation.JoinPKs)
+	if len(j.Relation.JoinPKs) > 1 {
 		where = append(where, ')')
 	}
 	where = append(where, " IN ("...)
@@ -83,7 +83,7 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
-		j.Relation.BaseFields,
+		j.Relation.BasePKs,
 	)
 	where = append(where, ")"...)
 	q = q.Where(internal.String(where))
@@ -104,8 +104,8 @@ func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
-		j.Relation.BaseFields,
-		j.Relation.JoinFields,
+		j.Relation.BasePKs,
+		j.Relation.JoinPKs,
 		j.JoinModel.Table().SQLAlias,
 	)
 
@@ -178,7 +178,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 
 	if j.Relation.M2MTable != nil {
 		// We only need base pks to park joined models to the base model.
-		fields := j.Relation.M2MBaseFields
+		fields := j.Relation.M2MBasePKs
 
 		b := make([]byte, 0, len(fields))
 		b = appendColumns(b, j.Relation.M2MTable.SQLAlias, fields)
@@ -193,7 +193,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	join = append(join, " AS "...)
 	join = append(join, j.Relation.M2MTable.SQLAlias...)
 	join = append(join, " ON ("...)
-	for i, col := range j.Relation.M2MBaseFields {
+	for i, col := range j.Relation.M2MBasePKs {
 		if i > 0 {
 			join = append(join, ", "...)
 		}
@@ -202,13 +202,13 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 		join = append(join, col.SQLName...)
 	}
 	join = append(join, ") IN ("...)
-	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, j.Relation.BaseFields)
+	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, j.Relation.BasePKs)
 	join = append(join, ")"...)
 	q = q.Join(internal.String(join))
 
 	joinTable := j.JoinModel.Table()
-	for i, m2mJoinField := range j.Relation.M2MJoinFields {
-		joinField := j.Relation.JoinFields[i]
+	for i, m2mJoinField := range j.Relation.M2MJoinPKs {
+		joinField := j.Relation.JoinPKs[i]
 		q = q.Where("?.? = ?.?",
 			joinTable.SQLAlias, joinField.SQLName,
 			j.Relation.M2MTable.SQLAlias, m2mJoinField.SQLName)
@@ -310,13 +310,13 @@ func (j *relationJoin) appendHasOneJoin(
 	b = append(b, " ON "...)
 
 	b = append(b, '(')
-	for i, baseField := range j.Relation.BaseFields {
+	for i, baseField := range j.Relation.BasePKs {
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
 		b = j.appendAlias(fmter, b)
 		b = append(b, '.')
-		b = append(b, j.Relation.JoinFields[i].SQLName...)
+		b = append(b, j.Relation.JoinPKs[i].SQLName...)
 		b = append(b, " = "...)
 		b = j.appendBaseAlias(fmter, b)
 		b = append(b, '.')

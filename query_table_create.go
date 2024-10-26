@@ -302,9 +302,9 @@ func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []by
 			b, err = q.appendFK(fmter, b, schema.QueryWithArgs{
 				Query: "(?) REFERENCES ? (?) ? ?",
 				Args: []interface{}{
-					Safe(appendColumns(nil, "", rel.BaseFields)),
+					Safe(appendColumns(nil, "", rel.BasePKs)),
 					rel.JoinTable.SQLName,
-					Safe(appendColumns(nil, "", rel.JoinFields)),
+					Safe(appendColumns(nil, "", rel.JoinPKs)),
 					Safe(rel.OnUpdate),
 					Safe(rel.OnDelete),
 				},

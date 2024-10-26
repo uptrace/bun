@@ -566,7 +566,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 			joinColumn := joinColumns[i]
 
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
@@ -575,7 +575,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 			}
 
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
@@ -586,17 +586,17 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		return rel
 	}
 
-	rel.JoinFields = joinTable.PKs
+	rel.JoinPKs = joinTable.PKs
 	fkPrefix := internal.Underscore(field.GoName) + "_"
 	for _, joinPK := range joinTable.PKs {
 		fkName := fkPrefix + joinPK.Name
 		if fk := t.FieldMap[fkName]; fk != nil {
-			rel.BaseFields = append(rel.BaseFields, fk)
+			rel.BasePKs = append(rel.BasePKs, fk)
 			continue
 		}
 
 		if fk := t.FieldMap[joinPK.Name]; fk != nil {
-			rel.BaseFields = append(rel.BaseFields, fk)
+			rel.BasePKs = append(rel.BasePKs, fk)
 			continue
 		}
 
@@ -629,7 +629,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		baseColumns, joinColumns := parseRelationJoin(join)
 		for i, baseColumn := range baseColumns {
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
@@ -639,7 +639,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 
 			joinColumn := joinColumns[i]
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
@@ -650,17 +650,17 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		return rel
 	}
 
-	rel.BaseFields = t.PKs
+	rel.BasePKs = t.PKs
 	fkPrefix := internal.Underscore(t.ModelName) + "_"
 	for _, pk := range t.PKs {
 		fkName := fkPrefix + pk.Name
 		if f := joinTable.FieldMap[fkName]; f != nil {
-			rel.JoinFields = append(rel.JoinFields, f)
+			rel.JoinPKs = append(rel.JoinPKs, f)
 			continue
 		}
 
 		if f := joinTable.FieldMap[pk.Name]; f != nil {
-			rel.JoinFields = append(rel.JoinFields, f)
+			rel.JoinPKs = append(rel.JoinPKs, f)
 			continue
 		}
 
@@ -709,7 +709,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-many %s: %s must have column %s",
@@ -718,7 +718,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-many %s: %s must have column %s",
@@ -727,7 +727,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 		}
 	} else {
-		rel.BaseFields = t.PKs
+		rel.BasePKs = t.PKs
 		fkPrefix := internal.Underscore(t.ModelName) + "_"
 		if isPolymorphic {
 			polymorphicColumn = fkPrefix + "type"
@@ -736,12 +736,12 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 		for _, pk := range t.PKs {
 			joinColumn := fkPrefix + pk.Name
 			if fk := joinTable.FieldMap[joinColumn]; fk != nil {
-				rel.JoinFields = append(rel.JoinFields, fk)
+				rel.JoinPKs = append(rel.JoinPKs, fk)
 				continue
 			}
 
 			if fk := joinTable.FieldMap[pk.Name]; fk != nil {
-				rel.JoinFields = append(rel.JoinFields, fk)
+				rel.JoinPKs = append(rel.JoinPKs, fk)
 				continue
 			}
 
@@ -841,12 +841,12 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	}
 
 	leftRel := m2mTable.belongsToRelation(leftField)
-	rel.BaseFields = leftRel.JoinFields
-	rel.M2MBaseFields = leftRel.BaseFields
+	rel.BasePKs = leftRel.JoinPKs
+	rel.M2MBasePKs = leftRel.BasePKs
 
 	rightRel := m2mTable.belongsToRelation(rightField)
-	rel.JoinFields = rightRel.JoinFields
-	rel.M2MJoinFields = rightRel.BaseFields
+	rel.JoinPKs = rightRel.JoinPKs
+	rel.M2MJoinPKs = rightRel.BasePKs
 
 	return rel
 }
