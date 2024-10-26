@@ -91,9 +91,7 @@ func (m *m2mModel) Scan(src interface{}) error {
 	if field, ok := m.table.FieldMap[column]; ok {
 		return field.ScanValue(m.strct, src)
 	}
-
-	_, err := m.scanColumn(column, src)
-	return err
+	return m.scanM2MColumn(column, src)
 }
 
 func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
