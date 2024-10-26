@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -418,7 +419,11 @@ func (q *baseQuery) _appendTables(
 		} else {
 			b = fmter.AppendQuery(b, string(q.table.SQLNameForSelects))
 			if withAlias && q.table.SQLAlias != q.table.SQLNameForSelects {
-				b = append(b, " AS "...)
+				if q.db.dialect.Name() == dialect.Oracle {
+					b = append(b, ' ')
+				} else {
+					b = append(b, " AS "...)
+				}
 				b = append(b, q.table.SQLAlias...)
 			}
 		}
