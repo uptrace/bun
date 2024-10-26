@@ -538,6 +538,11 @@ func (q *SelectQuery) appendQuery(
 	if count && !cteCount {
 		b = append(b, "count(*)"...)
 	} else {
+		// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
+		if q.limit > 0 && len(q.order) == 0 && fmter.Dialect().Name() == dialect.MSSQL {
+			b = append(b, "0 AS _temp_sort, "...)
+		}
+
 		b, err = q.appendColumns(fmter, b)
 		if err != nil {
 			return nil, err
@@ -793,6 +798,12 @@ func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, e
 
 		return b, nil
 	}
+
+	// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
+	if q.limit > 0 && fmter.Dialect().Name() == dialect.MSSQL {
+		return append(b, " ORDER BY _temp_sort"...), nil
+	}
+
 	return b, nil
 }
 
