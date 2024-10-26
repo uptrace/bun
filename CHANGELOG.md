@@ -1,3 +1,28 @@
+## [1.2.5](https://github.com/uptrace/bun/compare/v1.2.3...v1.2.5) (2024-10-26)
+
+
+### Bug Fixes
+
+* allow Limit() without Order() with MSSQL ([#1009](https://github.com/uptrace/bun/issues/1009)) ([1a46ddc](https://github.com/uptrace/bun/commit/1a46ddc0d3ca0bdc60ca8be5ad1886799d14c8b0))
+* copy bytes in mapModel.Scan ([#1030](https://github.com/uptrace/bun/issues/1030)) ([#1032](https://github.com/uptrace/bun/issues/1032)) ([39fda4e](https://github.com/uptrace/bun/commit/39fda4e3d341e59e4955f751cb354a939e57c1b1))
+* fix issue with has-many join and pointer fields ([#950](https://github.com/uptrace/bun/issues/950)) ([#983](https://github.com/uptrace/bun/issues/983)) ([cbc5177](https://github.com/uptrace/bun/commit/cbc517792ba6cdcef1828f3699d3d4dfe3c5e0eb))
+* restore explicit column: name override ([#984](https://github.com/uptrace/bun/issues/984)) ([169f258](https://github.com/uptrace/bun/commit/169f258a9460cad451f3025d2ef8df1bbd42a003))
+* return column option back ([#1036](https://github.com/uptrace/bun/issues/1036)) ([a3ccbea](https://github.com/uptrace/bun/commit/a3ccbeab39151d3eed6cb245fe15cfb5d71ba557))
+* sql.NullString mistaken as custom struct ([#1019](https://github.com/uptrace/bun/issues/1019)) ([87c77b8](https://github.com/uptrace/bun/commit/87c77b8911f2035b0ee8ea96356a2c7600b5b94d))
+* typos ([#1026](https://github.com/uptrace/bun/issues/1026)) ([760de7d](https://github.com/uptrace/bun/commit/760de7d0fad15dc761475670a4dde056aef9210d))
+
+
+### Features
+
+* add transaction isolation level support to pgdriver ([#1034](https://github.com/uptrace/bun/issues/1034)) ([3ef44ce](https://github.com/uptrace/bun/commit/3ef44ce1cdd969a21b76d6c803119cf12c375cb0))
+
+
+### Performance Improvements
+
+* refactor SelectQuery.ScanAndCount to optimize performance when there is no limit and offset ([#1035](https://github.com/uptrace/bun/issues/1035)) ([8638613](https://github.com/uptrace/bun/commit/86386135897485bbada6c50ec9a2743626111433))
+
+
+
 ## [1.2.4](https://github.com/uptrace/bun/compare/v1.2.3...v1.2.4) (2024-10-26)
 
 
