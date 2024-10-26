@@ -5,7 +5,7 @@ go 1.22
 replace github.com/uptrace/bun => ../
 
 require (
-	github.com/uptrace/bun v1.2.3
+	github.com/uptrace/bun v1.2.4
 	gopkg.in/yaml.v3 v3.0.1
 )
 
