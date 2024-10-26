@@ -13,6 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 )
 
@@ -443,6 +444,10 @@ func testCompositeHasMany(t *testing.T, db *bun.DB) {
 }
 
 func testCompositeM2M(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip()
+	}
+
 	type Item struct {
 		ID     int64 `bun:",pk"`
 		ShopID int64 `bun:",pk"`

@@ -177,6 +177,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	index := j.JoinModel.parentIndex()
 
 	if j.Relation.M2MTable != nil {
+		// We only need base pks to park joined models to the base model.
 		fields := j.Relation.M2MBaseFields
 
 		b := make([]byte, 0, len(fields))
@@ -201,8 +202,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 		join = append(join, col.SQLName...)
 	}
 	join = append(join, ") IN ("...)
-
-	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, j.basePKs())
+	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, j.Relation.BaseFields)
 	join = append(join, ")"...)
 	q = q.Join(internal.String(join))
 
@@ -218,15 +218,6 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	q = q.Apply(j.hasManyColumns)
 
 	return q
-}
-
-func (j *relationJoin) basePKs() []*schema.Field {
-	baseTable := j.BaseModel.Table()
-	pks := make([]*schema.Field, 0, len(baseTable.PKs))
-	for _, f := range j.Relation.BaseFields {
-		pks = append(pks, baseTable.FieldMap[f.Name])
-	}
-	return pks
 }
 
 func (j *relationJoin) hasParent() bool {
