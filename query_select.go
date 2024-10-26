@@ -541,7 +541,6 @@ func (q *SelectQuery) appendQuery(
 		// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
 		if q.limit > 0 && len(q.order) == 0 && fmter.Dialect().Name() == dialect.MSSQL {
 			b = append(b, "0 AS _temp_sort, "...)
-			q.order = []schema.QueryWithArgs{schema.UnsafeIdent("_temp_sort")}
 		}
 
 		b, err = q.appendColumns(fmter, b)
