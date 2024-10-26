@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -213,15 +212,23 @@ var _ driver.ConnBeginTx = (*Conn)(nil)
 
 func (cn *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	// No need to check if the conn is closed. ExecContext below handles that.
+	isolation := sql.IsolationLevel(opts.Isolation)
 
-	if sql.IsolationLevel(opts.Isolation) != sql.LevelDefault {
-		return nil, errors.New("pgdriver: custom IsolationLevel is not supported")
+	var command string
+	switch isolation {
+	case sql.LevelDefault:
+		command = "BEGIN"
+	case sql.LevelReadUncommitted, sql.LevelReadCommitted, sql.LevelRepeatableRead, sql.LevelSerializable:
+		command = fmt.Sprintf("BEGIN; SET TRANSACTION ISOLATION LEVEL %s", isolation.String())
+	default:
+		return nil, fmt.Errorf("pgdriver: unsupported transaction isolation: %s", isolation.String())
 	}
+
 	if opts.ReadOnly {
-		return nil, errors.New("pgdriver: ReadOnly transactions are not supported")
+		command = fmt.Sprintf("%s READ ONLY", command)
 	}
 
-	if _, err := cn.ExecContext(ctx, "BEGIN", nil); err != nil {
+	if _, err := cn.ExecContext(ctx, command, nil); err != nil {
 		return nil, err
 	}
 	return tx{cn: cn}, nil

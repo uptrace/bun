@@ -1,3 +1,4 @@
+//go:build !appengine
 // +build !appengine
 
 package bunotel
@@ -5,14 +6,15 @@ package bunotel
 import "unsafe"
 
 func bytesToString(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
+	if len(b) == 0 {
+		return ""
+	}
+	return unsafe.String(&b[0], len(b))
 }
 
 func stringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(
-		&struct {
-			string
-			Cap int
-		}{s, len(s)},
-	))
+	if s == "" {
+		return []byte{}
+	}
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

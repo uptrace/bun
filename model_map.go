@@ -1,6 +1,7 @@
 package bun
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"reflect"
@@ -82,6 +83,8 @@ func (m *mapModel) Scan(src interface{}) error {
 		return m.scanRaw(src)
 	case reflect.Slice:
 		if scanType.Elem().Kind() == reflect.Uint8 {
+			// Reference types such as []byte are only valid until the next call to Scan.
+			src := bytes.Clone(src.([]byte))
 			return m.scanRaw(src)
 		}
 	}

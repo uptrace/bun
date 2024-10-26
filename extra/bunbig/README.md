@@ -66,7 +66,7 @@ let we have x , y as two bigint.Bigint numbers in buntypes.
    y:= bunbig.FromInt64(90)
 ```
 
-For comparing the above numbers, we can do as follow:
+For comparing the above numbers, we can do as follows:
 
 ```
    cmp:=x.Cmp(y)
