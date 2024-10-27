@@ -122,6 +122,10 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 
 	b, _ = add.ColDef.AppendQuery(fmter, b)
 
+	if add.ColDef.IsIdentity {
+		b = appendGeneratedAsIdentity(b)
+	}
+
 	return b, nil
 }
 
