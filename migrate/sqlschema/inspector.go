@@ -111,10 +111,10 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			}
 
 			var fromCols, toCols []string
-			for _, f := range rel.BaseFields {
+			for _, f := range rel.BasePKs {
 				fromCols = append(fromCols, f.Name)
 			}
-			for _, f := range rel.JoinFields {
+			for _, f := range rel.JoinPKs {
 				toCols = append(toCols, f.Name)
 			}
 
