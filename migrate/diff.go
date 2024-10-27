@@ -30,7 +30,7 @@ AddedLoop:
 		for _, removed := range removedTables.Values() {
 			if d.canRename(removed, added) {
 				d.changes.Add(&RenameTable{
-					FQN:     schema.FQN{removed.Schema, removed.Name},
+					FQN:     schema.FQN{Schema: removed.Schema, Table: removed.Name},
 					NewName: added.Name,
 				})
 
@@ -53,7 +53,7 @@ AddedLoop:
 		}
 		// If a new table did not appear because of the rename operation, then it must've been created.
 		d.changes.Add(&CreateTable{
-			FQN:   schema.FQN{added.Schema, added.Name},
+			FQN:   schema.FQN{Schema: added.Schema, Table: added.Name},
 			Model: added.Model,
 		})
 		created.Add(added)
@@ -63,7 +63,7 @@ AddedLoop:
 	dropped := currentTables.Sub(targetTables)
 	for _, t := range dropped.Values() {
 		d.changes.Add(&DropTable{
-			FQN: schema.FQN{t.Schema, t.Name},
+			FQN: schema.FQN{Schema: t.Schema, Table: t.Name},
 		})
 	}
 
@@ -340,7 +340,7 @@ func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.
 
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
-	fqn := schema.FQN{target.Schema, target.Name}
+	fqn := schema.FQN{Schema: target.Schema, Table: target.Name}
 
 ChangedRenamed:
 	for tName, tCol := range target.Columns {
@@ -398,7 +398,7 @@ ChangedRenamed:
 }
 
 func (d *detector) detectConstraintChanges(current, target sqlschema.Table) {
-	fqn := schema.FQN{target.Schema, target.Name}
+	fqn := schema.FQN{Schema: target.Schema, Table: target.Name}
 
 Add:
 	for _, want := range target.UniqueContraints {

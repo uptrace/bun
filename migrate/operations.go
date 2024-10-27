@@ -54,7 +54,7 @@ var _ Operation = (*RenameTable)(nil)
 
 func (op *RenameTable) GetReverse() Operation {
 	return &RenameTable{
-		FQN:     schema.FQN{op.FQN.Schema, op.NewName},
+		FQN:     schema.FQN{Schema: op.FQN.Schema, Table: op.NewName},
 		NewName: op.FQN.Table,
 	}
 }
