@@ -100,7 +100,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Columns: map[string]sqlschema.Column{
 					"office_name": {
 						SQLType: sqltype.VarChar,
-						IsPK:    true,
 					},
 					"publisher_id": {
 						SQLType:    sqltype.VarChar,
@@ -111,6 +110,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						IsNullable: true,
 					},
 				},
+				PK: &sqlschema.PK{Columns: sqlschema.NewComposite("office_name")},
 			},
 			{
 				Schema: defaultSchema,
@@ -118,7 +118,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Columns: map[string]sqlschema.Column{
 					"isbn": {
 						SQLType:         "bigint",
-						IsPK:            true,
 						IsNullable:      false,
 						IsAutoIncrement: false,
 						IsIdentity:      true,
@@ -126,7 +125,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 					"editor": {
 						SQLType:         sqltype.VarChar,
-						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: false,
 						IsIdentity:      false,
@@ -134,7 +132,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 					"title": {
 						SQLType:         sqltype.VarChar,
-						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: false,
 						IsIdentity:      false,
@@ -143,7 +140,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					"locale": {
 						SQLType:         sqltype.VarChar,
 						VarcharLen:      5,
-						IsPK:            false,
 						IsNullable:      true,
 						IsAutoIncrement: false,
 						IsIdentity:      false,
@@ -151,7 +147,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 					"page_count": {
 						SQLType:         "smallint",
-						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: false,
 						IsIdentity:      false,
@@ -159,7 +154,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 					"book_count": {
 						SQLType:         "integer",
-						IsPK:            false,
 						IsNullable:      false,
 						IsAutoIncrement: true,
 						IsIdentity:      false,
@@ -172,6 +166,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						SQLType: "bigint",
 					},
 				},
+				PK: &sqlschema.PK{Columns: sqlschema.NewComposite("isbn")},
 				UniqueContraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewComposite("editor", "title")},
 				},
@@ -182,7 +177,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Columns: map[string]sqlschema.Column{
 					"author_id": {
 						SQLType:    "bigint",
-						IsPK:       true,
 						IsIdentity: true,
 					},
 					"first_name": {
@@ -195,6 +189,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						SQLType: sqltype.VarChar,
 					},
 				},
+				PK: &sqlschema.PK{Columns: sqlschema.NewComposite("author_id")},
 				UniqueContraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewComposite("first_name", "last_name")},
 					{Columns: sqlschema.NewComposite("email")},
@@ -206,13 +201,12 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Columns: map[string]sqlschema.Column{
 					"publisher_id": {
 						SQLType: sqltype.VarChar,
-						IsPK:    true,
 					},
 					"author_id": {
 						SQLType: "bigint",
-						IsPK:    true,
 					},
 				},
+				PK: &sqlschema.PK{Columns: sqlschema.NewComposite("publisher_id", "author_id")},
 			},
 			{
 				Schema: defaultSchema,
@@ -220,7 +214,6 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				Columns: map[string]sqlschema.Column{
 					"publisher_id": {
 						SQLType:      sqltype.VarChar,
-						IsPK:         true,
 						DefaultValue: "gen_random_uuid()",
 					},
 					"publisher_name": {
@@ -232,6 +225,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						IsNullable:   true,
 					},
 				},
+				PK: &sqlschema.PK{Columns: sqlschema.NewComposite("publisher_id")},
 				UniqueContraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewComposite("publisher_id", "publisher_name")},
 				},
@@ -301,7 +295,7 @@ func mustCreateSchema(tb testing.TB, ctx context.Context, db *bun.DB, schema str
 func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got []sqlschema.Table) {
 	tb.Helper()
 
-	require.Equal(tb, tableNames(want), tableNames(got), "different set of tables")
+	require.ElementsMatch(tb, tableNames(want), tableNames(got), "different set of tables")
 
 	// Now we are guaranteed to have the same tables.
 	for _, wt := range want {
@@ -345,15 +339,15 @@ func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, w
 		}
 
 		if wantCol.IsNullable != gotCol.IsNullable {
-			errorf("isNullable:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsNullable, gotCol.IsNullable)
+			errorf("isNullable:\n\t(+want)\t%t\n\t(-got)\t%t", wantCol.IsNullable, gotCol.IsNullable)
 		}
 
 		if wantCol.IsAutoIncrement != gotCol.IsAutoIncrement {
-			errorf("IsAutoIncrement:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsAutoIncrement, gotCol.IsAutoIncrement)
+			errorf("IsAutoIncrement:\n\t(+want)\t%s\b\t(-got)\t%t", wantCol.IsAutoIncrement, gotCol.IsAutoIncrement)
 		}
 
 		if wantCol.IsIdentity != gotCol.IsIdentity {
-			errorf("IsIdentity:\n\t(+want)\t%s\n\t(-got)\t%s", wantCol.IsIdentity, gotCol.IsIdentity)
+			errorf("IsIdentity:\n\t(+want)\t%t\n\t(-got)\t%t", wantCol.IsIdentity, gotCol.IsIdentity)
 		}
 	}
 
@@ -380,6 +374,13 @@ func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, w
 // cmpConstraints compares constraints defined on the table with the expected ones.
 func cmpConstraints(tb testing.TB, want, got sqlschema.Table) {
 	tb.Helper()
+
+	if want.PK != nil {
+		require.NotNilf(tb, got.PK, "table %q missing primary key, want: (%s)", want.Name, want.PK.Columns)
+		require.Equalf(tb, want.PK.Columns, got.PK.Columns, "table %q has wrong primary key", want.Name)
+	} else {
+		require.Nilf(tb, got.PK, "table %q shouldn't have a primary key", want.Name)
+	}
 
 	// Only keep columns included in each unique constraint for comparison.
 	stripNames := func(uniques []sqlschema.Unique) (res []string) {
@@ -495,6 +496,25 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			require.Len(t, got.Tables, 1)
 			cmpConstraints(t, want, got.Tables[0])
+		})
+		t.Run("collects primary keys", func(t *testing.T) {
+			type Model struct {
+				ID       string    `bun:",pk"`
+				Email    string    `bun:",pk"`
+				Birthday time.Time `bun:",notnull"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Model)(nil))
+			inspector := sqlschema.NewSchemaInspector(tables)
+			want := sqlschema.NewComposite("id", "email")
+
+			got, err := inspector.Inspect(context.Background())
+			require.NoError(t, err)
+
+			require.Len(t, got.Tables, 1)
+			require.NotNilf(t, got.Tables[0].PK, "did not register primary key, want (%s)", want)
+			require.Equal(t, want, got.Tables[0].PK.Columns, "wrong primary key columns")
 		})
 	})
 }

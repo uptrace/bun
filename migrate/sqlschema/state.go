@@ -28,6 +28,9 @@ type Table struct {
 
 	// UniqueConstraints defined on the table.
 	UniqueContraints []Unique
+
+	// PrimaryKey holds the primary key definition if any.
+	PK *PK
 }
 
 // T returns a fully-qualified name object for the table.
@@ -40,13 +43,13 @@ type Column struct {
 	SQLType         string
 	VarcharLen      int
 	DefaultValue    string
-	IsPK            bool
 	IsNullable      bool
 	IsAutoIncrement bool
 	IsIdentity      bool
 	// TODO: add Precision and Cardinality for timestamps/bit-strings/floats and arrays respectively.
 }
 
+// AppendQuery appends full SQL data type.
 func (c *Column) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, c.SQLType...)
 	if c.VarcharLen == 0 {
@@ -374,4 +377,10 @@ type Unique struct {
 // Equals checks that two unique constraint are the same, assuming both are defined for the same table.
 func (u Unique) Equals(other Unique) bool {
 	return u.Columns == other.Columns
+}
+
+// PK represents a primary key constraint defined on 1 or more columns.
+type PK struct {
+	Name    string
+	Columns composite
 }

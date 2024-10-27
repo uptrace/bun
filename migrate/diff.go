@@ -375,6 +375,9 @@ ChangedRenamed:
 			delete(current.Columns, cName) // no need to check this column again
 			d.refMap.UpdateC(sqlschema.C(target.Schema, target.Name, cName), tName)
 
+			// Update primary key definition to avoid superficially recreating the constraint.
+			current.PK.Columns = current.PK.Columns.Replace(cName, tName)
+
 			continue ChangedRenamed
 		}
 
@@ -424,6 +427,29 @@ Drop:
 		d.changes.Add(&DropUniqueConstraint{
 			FQN:    fqn,
 			Unique: got,
+		})
+	}
+
+	// Detect primary key changes
+	if target.PK == nil && current.PK == nil {
+		return
+	}
+	switch {
+	case target.PK == nil && current.PK != nil:
+		d.changes.Add(&DropPrimaryKey{
+			FQN: fqn,
+			PK:  current.PK,
+		})
+	case current.PK == nil && target.PK != nil:
+		d.changes.Add(&AddPrimaryKey{
+			FQN: fqn,
+			PK:  target.PK,
+		})
+	case target.PK.Columns != current.PK.Columns:
+		d.changes.Add(&ChangePrimaryKey{
+			FQN: fqn,
+			Old: current.PK,
+			New: target.PK,
 		})
 	}
 }

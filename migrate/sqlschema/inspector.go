@@ -68,7 +68,6 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
 				DefaultValue:    exprToLower(f.SQLDefault),
-				IsPK:            f.IsPK,
 				IsNullable:      !f.NotNull,
 				IsAutoIncrement: f.AutoIncrement,
 				IsIdentity:      f.Identity,
@@ -94,12 +93,22 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			unique = append(unique, Unique{Name: name, Columns: NewComposite(columns...)})
 		}
 
+		var pk *PK
+		if len(t.PKs) > 0 {
+			var columns []string
+			for _, f := range t.PKs {
+				columns = append(columns, f.Name)
+			}
+			pk = &PK{Columns: NewComposite(columns...)}
+		}
+
 		state.Tables = append(state.Tables, Table{
 			Schema:           t.Schema,
 			Name:             t.Name,
 			Model:            t.ZeroIface,
 			Columns:          columns,
 			UniqueContraints: unique,
+			PK:               pk,
 		})
 
 		for _, rel := range t.Relations {

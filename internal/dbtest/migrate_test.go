@@ -211,6 +211,7 @@ func TestAutoMigrator_Run(t *testing.T) {
 		{testAddDropColumn},
 		{testUnique},
 		{testUniqueRenamedTable},
+		{testUpdatePrimaryKeys},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -481,7 +482,7 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 	// Database state
 	type Original struct {
 		bun.BaseModel `bun:"original"`
-		ID            int64 `bun:",pk"`
+		ID            int64 `bun:"id,pk"`
 	}
 
 	type Model1 struct {
@@ -494,7 +495,7 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 	// Model state
 	type Renamed struct {
 		bun.BaseModel `bun:"renamed"`
-		Count         int64 `bun:",pk"` // renamed column in renamed model
+		Count         int64 `bun:"count,pk"` // renamed column in renamed model
 	}
 
 	type Model2 struct {
@@ -613,13 +614,8 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "table",
 			Columns: map[string]sqlschema.Column{
-				// "new_pk": {
-				// 	IsPK:    true,
-				// 	SQLType: "bigint",
-				// },
 				"bigger_int": {
 					SQLType:    "bigint",
-					IsPK:       true,
 					IsIdentity: true,
 				},
 				"ts": {
@@ -650,6 +646,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 				// 	SQLType: "array",
 				// },
 			},
+			PK: &sqlschema.PK{Columns: sqlschema.NewComposite("bigger_int")},
 		},
 	}
 
@@ -896,6 +893,127 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*TableAfter)(nil))
 	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+
+	// Act
+	err := m.Run(ctx)
+	require.NoError(t, err)
+
+	// Assert
+	state := inspect(ctx)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+}
+
+func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
+	// Has a composite primary key.
+	type DropPKBefore struct {
+		bun.BaseModel `bun:"table:drop_your_pks"`
+		FirstName     string `bun:"first_name,pk"`
+		LastName      string `bun:"last_name,pk"`
+	}
+
+	// This table doesn't have any primary keys at all.
+	type AddNewPKBefore struct {
+		bun.BaseModel `bun:"table:add_new_pk"`
+		FirstName     string `bun:"first_name"`
+		LastName      string `bun:"last_name"`
+	}
+
+	// Has an (identity) ID column as primary key.
+	type ChangePKBefore struct {
+		bun.BaseModel `bun:"table:change_pk"`
+		ID            int64  `bun:"deprecated,pk,identity"`
+		FirstName     string `bun:"first_name"`
+		LastName      string `bun:"last_name"`
+	}
+
+	// ------------------------
+
+	// Doesn't have any primary keys.
+	type DropPKAfter struct {
+		bun.BaseModel `bun:"table:drop_your_pks"`
+		FirstName     string `bun:"first_name,notnull"`
+		LastName      string `bun:"last_name,notnull"`
+	}
+
+	// Has a new (identity) ID column as primary key.
+	type AddNewPKAfter struct {
+		bun.BaseModel `bun:"table:add_new_pk"`
+		ID            int64  `bun:"new_id,pk,identity"`
+		FirstName     string `bun:"first_name"`
+		LastName      string `bun:"last_name"`
+	}
+
+	// Has a composite primary key in place of the old ID.
+	type ChangePKAfter struct {
+		bun.BaseModel `bun:"table:change_pk"`
+		FirstName     string `bun:"first_name,pk"`
+		LastName      string `bun:"last_name,pk"`
+	}
+
+	wantTables := []sqlschema.Table{
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "drop_your_pks",
+			Columns: map[string]sqlschema.Column{
+				"first_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+				"last_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+			},
+		},
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "add_new_pk",
+			Columns: map[string]sqlschema.Column{
+				"new_id": {
+					SQLType:    sqltype.BigInt,
+					IsNullable: false,
+					IsIdentity: true,
+				},
+				"first_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				"last_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+			},
+			PK: &sqlschema.PK{Columns: sqlschema.NewComposite("new_id")},
+		},
+		{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "change_pk",
+			Columns: map[string]sqlschema.Column{
+				"first_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+				"last_name": {
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+			},
+			PK: &sqlschema.PK{Columns: sqlschema.NewComposite("first_name", "last_name")},
+		},
+	}
+
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db,
+		(*DropPKBefore)(nil),
+		(*AddNewPKBefore)(nil),
+		(*ChangePKBefore)(nil),
+	)
+	m := newAutoMigrator(t, db, migrate.WithModel(
+		(*DropPKAfter)(nil),
+		(*AddNewPKAfter)(nil),
+		(*ChangePKAfter)(nil)),
+	)
 
 	// Act
 	err := m.Run(ctx)

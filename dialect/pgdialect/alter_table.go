@@ -54,6 +54,31 @@ func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
 				return fmt.Errorf("apply changes: drop table %s: %w", change.FQN, err)
 			}
 			continue
+		case *migrate.ChangePrimaryKey:
+			// TODO: refactor!
+			b, err = m.dropConstraint(fmter, b, change.FQN, change.Old.Name)
+			if err != nil {
+				return fmt.Errorf("apply changes: %w", err)
+			}
+
+			query := internal.String(b)
+			log.Println("exec query: " + query)
+			if _, err = conn.ExecContext(ctx, query); err != nil {
+				return fmt.Errorf("apply changes: %w", err)
+			}
+
+			b = []byte{}
+			b, err = m.addPrimaryKey(fmter, b, change.FQN, change.New.Columns.Safe())
+			if err != nil {
+				return fmt.Errorf("apply changes: %w", err)
+			}
+
+			query = internal.String(b)
+			log.Println("exec query: " + query)
+			if _, err = conn.ExecContext(ctx, query); err != nil {
+				return fmt.Errorf("apply changes: %w", err)
+			}
+			continue
 		case *migrate.RenameTable:
 			b, err = m.renameTable(fmter, b, change)
 		case *migrate.RenameColumn:
@@ -62,6 +87,8 @@ func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
 			b, err = m.addColumn(fmter, b, change)
 		case *migrate.DropColumn:
 			b, err = m.dropColumn(fmter, b, change)
+		case *migrate.AddPrimaryKey:
+			b, err = m.addPrimaryKey(fmter, b, change.FQN, change.PK.Columns.Safe())
 		case *migrate.AddForeignKey:
 			b, err = m.addForeignKey(fmter, b, change)
 		case *migrate.AddUniqueConstraint:
@@ -70,6 +97,8 @@ func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
 			b, err = m.dropConstraint(fmter, b, change.FQN, change.Unique.Name)
 		case *migrate.DropConstraint:
 			b, err = m.dropConstraint(fmter, b, change.FQN(), change.ConstraintName)
+		case *migrate.DropPrimaryKey:
+			b, err = m.dropConstraint(fmter, b, change.FQN, change.PK.Name)
 		case *migrate.RenameConstraint:
 			b, err = m.renameConstraint(fmter, b, change)
 		case *migrate.ChangeColumnType:
@@ -151,6 +180,19 @@ func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *mi
 
 	b = append(b, " TO "...)
 	b = fmter.AppendName(b, rename.NewName)
+
+	return b, nil
+}
+
+func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, fqn schema.FQN, columns schema.Safe) (_ []byte, err error) {
+	b = append(b, "ALTER TABLE "...)
+	if b, err = fqn.AppendQuery(fmter, b); err != nil {
+		return b, err
+	}
+
+	b = append(b, " ADD PRIMARY KEY ("...)
+	b, _ = columns.AppendQuery(fmter, b)
+	b = append(b, ")"...)
 
 	return b, nil
 }

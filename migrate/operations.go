@@ -115,9 +115,10 @@ func (op *DropColumn) GetReverse() Operation {
 
 func (op *DropColumn) DependsOn(another Operation) bool {
 	// TODO: refactor
-	if dc, ok := another.(*DropConstraint); ok {
+	switch drop := another.(type) {
+	case *DropConstraint:
 		var fCol bool
-		fCols := dc.FK.From.Column.Split()
+		fCols := drop.FK.From.Column.Split()
 		for _, c := range fCols {
 			if c == op.Column {
 				fCol = true
@@ -126,7 +127,7 @@ func (op *DropColumn) DependsOn(another Operation) bool {
 		}
 
 		var tCol bool
-		tCols := dc.FK.To.Column.Split()
+		tCols := drop.FK.To.Column.Split()
 		for _, c := range tCols {
 			if c == op.Column {
 				tCol = true
@@ -134,8 +135,13 @@ func (op *DropColumn) DependsOn(another Operation) bool {
 			}
 		}
 
-		return (dc.FK.From.Schema == op.FQN.Schema && dc.FK.From.Table == op.FQN.Table && fCol) ||
-			(dc.FK.To.Schema == op.FQN.Schema && dc.FK.To.Table == op.FQN.Table && tCol)
+		return (drop.FK.From.Schema == op.FQN.Schema && drop.FK.From.Table == op.FQN.Table && fCol) ||
+			(drop.FK.To.Schema == op.FQN.Schema && drop.FK.To.Table == op.FQN.Table && tCol)
+
+	case *DropPrimaryKey:
+		return op.FQN == drop.FQN && drop.PK.Columns.Contains(op.Column)
+	case *ChangePrimaryKey:
+		return op.FQN == drop.FQN && drop.Old.Columns.Contains(op.Column)
 	}
 	return false
 }
@@ -300,6 +306,68 @@ func (op *ChangeColumnType) GetReverse() Operation {
 		To:     op.From,
 	}
 }
+
+type DropPrimaryKey struct {
+	FQN schema.FQN
+	PK  *sqlschema.PK
+}
+
+var _ Operation = (*DropPrimaryKey)(nil)
+
+func (op *DropPrimaryKey) GetReverse() Operation {
+	return &AddPrimaryKey{
+		FQN: op.FQN,
+		PK:  op.PK,
+	}
+}
+
+type AddPrimaryKey struct {
+	FQN schema.FQN
+	PK  *sqlschema.PK
+}
+
+var _ Operation = (*AddPrimaryKey)(nil)
+
+func (op *AddPrimaryKey) GetReverse() Operation {
+	return &DropPrimaryKey{
+		FQN: op.FQN,
+		PK:  op.PK,
+	}
+}
+
+func (op *AddPrimaryKey) DependsOn(another Operation) bool {
+	switch another := another.(type) {
+	case *AddColumn:
+		return op.FQN == another.FQN && op.PK.Columns.Contains(another.Column)
+	}
+	return false
+}
+
+type ChangePrimaryKey struct {
+	FQN schema.FQN
+	Old *sqlschema.PK
+	New *sqlschema.PK
+}
+
+var _ Operation = (*AddPrimaryKey)(nil)
+
+func (op *ChangePrimaryKey) GetReverse() Operation {
+	return &ChangePrimaryKey{
+		FQN: op.FQN,
+		Old: op.New,
+		New: op.Old,
+	}
+}
+
+// func (op *ChangePrimaryKey) DependsOn(another Operation) bool {
+// 	switch another := another.(type) {
+// 	case *AddColumn:
+// 		return op.FQN == another.FQN && op.PK.Columns.Contains(another.Column)
+// 	case *RenameColumn:
+// 		return op.FQN == another.FQN && op.PK.Columns.Contains(another.NewName)
+// 	}
+// 	return false
+// }
 
 // noop is a migration that doesn't change the schema.
 type noop struct{}

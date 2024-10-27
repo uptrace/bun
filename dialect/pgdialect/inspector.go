@@ -64,7 +64,6 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
 				DefaultValue:    def,
-				IsPK:            c.IsPK,
 				IsNullable:      c.IsNullable,
 				IsAutoIncrement: c.IsSerial,
 				IsIdentity:      c.IsIdentity,
@@ -83,11 +82,20 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 			})
 		}
 
+		var pk *sqlschema.PK
+		if len(table.PrimaryKey.Columns) > 0 {
+			pk = &sqlschema.PK{
+				Name:    table.PrimaryKey.ConstraintName,
+				Columns: sqlschema.NewComposite(table.PrimaryKey.Columns...),
+			}
+		}
+
 		state.Tables = append(state.Tables, sqlschema.Table{
 			Schema:           table.Schema,
 			Name:             table.Name,
 			Columns:          colDefs,
 			UniqueContraints: unique,
+			PK:               pk,
 		})
 	}
 
@@ -101,8 +109,9 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 }
 
 type InformationSchemaTable struct {
-	Schema string `bun:"table_schema,pk"`
-	Name   string `bun:"table_name,pk"`
+	Schema     string     `bun:"table_schema,pk"`
+	Name       string     `bun:"table_name,pk"`
+	PrimaryKey PrimaryKey `bun:"embed:primary_key_"`
 
 	Columns []*InformationSchemaColumn `bun:"rel:has-many,join:table_schema=table_schema,join:table_name=table_name"`
 }
@@ -117,7 +126,6 @@ type InformationSchemaColumn struct {
 	ArrayDims        int      `bun:"array_dims"`
 	Default          string   `bun:"default"`
 	IsDefaultLiteral bool     `bun:"default_is_literal_expr"`
-	IsPK             bool     `bun:"is_pk"`
 	IsIdentity       bool     `bun:"is_identity"`
 	IndentityType    string   `bun:"identity_type"`
 	IsSerial         bool     `bun:"is_serial"`
@@ -135,18 +143,38 @@ type ForeignKey struct {
 	TargetColumns  []string `bun:"target_columns,array"`
 }
 
+type PrimaryKey struct {
+	ConstraintName string   `bun:"name"`
+	Columns        []string `bun:"columns,array"`
+}
+
 const (
 	// sqlInspectTables retrieves all user-defined tables across all schemas.
 	// It excludes relations from Postgres's reserved "pg_" schemas and views from the "information_schema".
 	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
 	sqlInspectTables = `
-SELECT "table_schema", "table_name"
-FROM information_schema.tables
+SELECT
+	"t".table_schema,
+	"t".table_name,
+	pk.name AS primary_key_name,
+	pk.columns AS primary_key_columns
+FROM information_schema.tables "t"
+	LEFT JOIN (
+		SELECT i.indrelid, "idx".relname AS "name", ARRAY_AGG("a".attname) AS "columns"
+		FROM pg_index i 
+			JOIN pg_attribute "a"
+				ON "a".attrelid = i.indrelid
+				AND "a".attnum = ANY("i".indkey)
+				AND i.indisprimary
+			JOIN pg_class "idx" ON i.indexrelid = "idx".oid
+		GROUP BY 1, 2
+	) pk
+	ON ("t".table_schema || '.' || "t".table_name)::regclass = pk.indrelid
 WHERE table_type = 'BASE TABLE'
-	AND "table_schema" <> 'information_schema'
-	AND "table_schema" NOT LIKE 'pg_%'
+	AND "t".table_schema <> 'information_schema'
+	AND "t".table_schema NOT LIKE 'pg_%'
 	AND "table_name" NOT IN (?)
-ORDER BY "table_schema", "table_name"
+ORDER BY "t".table_schema, "t".table_name
 `
 
 	// sqlInspectColumnsQuery retrieves column definitions for the specified table.
@@ -166,7 +194,6 @@ SELECT
 		ELSE "c".column_default
 	END AS "default",
 	"c".column_default ~ '^''.*''::.*$' OR "c".column_default ~ '^[0-9\.]+$' AS default_is_literal_expr,
-	'p' = ANY("c".constraint_type) AS is_pk,
 	"c".is_identity = 'YES' AS is_identity,
 	"c".column_default = format('nextval(''%s_%s_seq''::regclass)', "c".table_name, "c".column_name) AS is_serial,
 	COALESCE("c".identity_type, '') AS identity_type,
