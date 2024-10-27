@@ -894,6 +894,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
+	mustDropTableOnCleanup(t, ctx, db, (*TableAfter)(nil))
 	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
