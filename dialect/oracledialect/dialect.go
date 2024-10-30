@@ -36,7 +36,8 @@ func New() *Dialect {
 		//feature.InsertReturning | // TODO
 		//feature.Output | // TODO
 		feature.InsertOnConflict |
-		//feature.TableNotExists |
+		feature.TableTruncate |
+		feature.TableNotExists |
 		feature.SelectExists |
 		feature.AutoIncrement |
 		feature.CompositeIn
