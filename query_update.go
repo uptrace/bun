@@ -53,7 +53,7 @@ func (q *UpdateQuery) Err(err error) *UpdateQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
+// Apply calls the fn passing the UpdateQuery as an argument.
 func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
 	if fn != nil {
 		return fn(q)
