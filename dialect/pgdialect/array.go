@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"time"
@@ -159,7 +160,7 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	case int64:
 		return strconv.AppendInt(b, v, 10)
 	case float64:
-		return dialect.AppendFloat64(b, v)
+		return arrayAppendFloat64(b, v)
 	case bool:
 		return dialect.AppendBool(b, v)
 	case []byte:
@@ -167,7 +168,10 @@ func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
 	case string:
 		return arrayAppendString(b, v)
 	case time.Time:
-		return fmter.Dialect().AppendTime(b, v)
+		b = append(b, '"')
+		b = appendTime(b, v)
+		b = append(b, '"')
+		return b
 	default:
 		err := fmt.Errorf("pgdialect: can't append %T", v)
 		return dialect.AppendError(b, err)
@@ -288,7 +292,7 @@ func appendFloat64Slice(b []byte, floats []float64) []byte {
 
 	b = append(b, '{')
 	for _, n := range floats {
-		b = dialect.AppendFloat64(b, n)
+		b = arrayAppendFloat64(b, n)
 		b = append(b, ',')
 	}
 	if len(floats) > 0 {
@@ -300,6 +304,19 @@ func appendFloat64Slice(b []byte, floats []float64) []byte {
 	b = append(b, '\'')
 
 	return b
+}
+
+func arrayAppendFloat64(b []byte, num float64) []byte {
+	switch {
+	case math.IsNaN(num):
+		return append(b, "NaN"...)
+	case math.IsInf(num, 1):
+		return append(b, "Infinity"...)
+	case math.IsInf(num, -1):
+		return append(b, "-Infinity"...)
+	default:
+		return strconv.AppendFloat(b, num, 'f', -1, 64)
+	}
 }
 
 func appendTimeSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -381,6 +398,10 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 			} else if dest.Len() > 0 {
 				dest.Set(dest.Slice(0, 0))
 			}
+		}
+
+		if src == nil {
+			return nil
 		}
 
 		b, err := toBytes(src)
@@ -553,7 +574,7 @@ func scanFloat64SliceValue(dest reflect.Value, src interface{}) error {
 }
 
 func scanFloat64Slice(src interface{}) ([]float64, error) {
-	if src == -1 {
+	if src == nil {
 		return nil, nil
 	}
 
@@ -593,7 +614,7 @@ func toBytes(src interface{}) ([]byte, error) {
 	case []byte:
 		return src, nil
 	default:
-		return nil, fmt.Errorf("bun: got %T, wanted []byte or string", src)
+		return nil, fmt.Errorf("pgdialect: got %T, wanted []byte or string", src)
 	}
 }
 
