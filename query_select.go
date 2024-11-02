@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/uptrace/bun/dialect"
@@ -25,14 +23,12 @@ type union struct {
 type SelectQuery struct {
 	whereBaseQuery
 	idxHintsQuery
+	orderLimitOffsetQuery
 
 	distinctOn []schema.QueryWithArgs
 	joins      []joinQuery
 	group      []schema.QueryWithArgs
 	having     []schema.QueryWithArgs
-	order      []schema.QueryWithArgs
-	limit      int32
-	offset     int32
 	selFor     schema.QueryWithArgs
 
 	union []union
@@ -279,46 +275,22 @@ func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
 }
 
 func (q *SelectQuery) Order(orders ...string) *SelectQuery {
-	for _, order := range orders {
-		if order == "" {
-			continue
-		}
-
-		index := strings.IndexByte(order, ' ')
-		if index == -1 {
-			q.order = append(q.order, schema.UnsafeIdent(order))
-			continue
-		}
-
-		field := order[:index]
-		sort := order[index+1:]
-
-		switch strings.ToUpper(sort) {
-		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
-			"ASC NULLS LAST", "DESC NULLS LAST":
-			q.order = append(q.order, schema.SafeQuery("? ?", []interface{}{
-				Ident(field),
-				Safe(sort),
-			}))
-		default:
-			q.order = append(q.order, schema.UnsafeIdent(order))
-		}
-	}
+	q.addOrder(orders...)
 	return q
 }
 
 func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery {
-	q.order = append(q.order, schema.SafeQuery(query, args))
+	q.addOrderExpr(query, args...)
 	return q
 }
 
 func (q *SelectQuery) Limit(n int) *SelectQuery {
-	q.limit = int32(n)
+	q.setLimit(n)
 	return q
 }
 
 func (q *SelectQuery) Offset(n int) *SelectQuery {
-	q.offset = int32(n)
+	q.setOffset(n)
 	return q
 }
 
@@ -615,35 +587,9 @@ func (q *SelectQuery) appendQuery(
 			return nil, err
 		}
 
-		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.limit > 0 && q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-				b = append(b, " ROWS"...)
-
-				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-				b = append(b, " ROWS ONLY"...)
-			} else if q.limit > 0 {
-				b = append(b, " OFFSET 0 ROWS"...)
-
-				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-				b = append(b, " ROWS ONLY"...)
-			} else if q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-				b = append(b, " ROWS"...)
-			}
-		} else {
-			if q.limit > 0 {
-				b = append(b, " LIMIT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-			}
-			if q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-			}
+		b, err = q.appendLimitOffset(fmter, b)
+		if err != nil {
+			return nil, err
 		}
 
 		if !q.selFor.IsZero() {
@@ -780,31 +726,6 @@ func (q *SelectQuery) appendInlineRelColumns(
 func (q *SelectQuery) appendTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
 	return q.appendTablesWithAlias(fmter, b)
-}
-
-func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if len(q.order) > 0 {
-		b = append(b, " ORDER BY "...)
-
-		for i, f := range q.order {
-			if i > 0 {
-				b = append(b, ", "...)
-			}
-			b, err = f.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return b, nil
-	}
-
-	// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
-	if q.limit > 0 && fmter.Dialect().Name() == dialect.MSSQL {
-		return append(b, " ORDER BY _temp_sort"...), nil
-	}
-
-	return b, nil
 }
 
 //------------------------------------------------------------------------------

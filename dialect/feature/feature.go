@@ -31,5 +31,7 @@ const (
 	UpdateFromTable
 	MSSavepoint
 	GeneratedIdentity
-	CompositeIn // ... WHERE (A,B) IN ((N, NN), (N, NN)...)
+	CompositeIn      // ... WHERE (A,B) IN ((N, NN), (N, NN)...)
+	UpdateOrderLimit // UPDATE ... ORDER BY ... LIMIT ...
+	DeleteOrderLimit // DELETE ... ORDER BY ... LIMIT ...
 )

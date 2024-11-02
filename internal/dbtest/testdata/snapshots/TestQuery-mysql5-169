@@ -1,0 +1,1 @@
+DELETE FROM `models` WHERE (`id` = NULL) ORDER BY `id` LIMIT 1
