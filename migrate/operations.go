@@ -11,26 +11,26 @@ type Operation interface {
 	GetReverse() Operation
 }
 
-// CreateTable
-type CreateTable struct {
+// CreateTableOp
+type CreateTableOp struct {
 	FQN   schema.FQN
 	Model interface{}
 }
 
-var _ Operation = (*CreateTable)(nil)
+var _ Operation = (*CreateTableOp)(nil)
 
-func (op *CreateTable) GetReverse() Operation {
-	return &DropTable{FQN: op.FQN}
+func (op *CreateTableOp) GetReverse() Operation {
+	return &DropTableOp{FQN: op.FQN}
 }
 
-type DropTable struct {
+type DropTableOp struct {
 	FQN schema.FQN
 }
 
-var _ Operation = (*DropTable)(nil)
+var _ Operation = (*DropTableOp)(nil)
 
-func (op *DropTable) DependsOn(another Operation) bool {
-	d, ok := another.(*DropConstraint)
+func (op *DropTableOp) DependsOn(another Operation) bool {
+	d, ok := another.(*DropForeignKeyOp)
 	//
 	return ok && ((d.FK.From.Schema == op.FQN.Schema && d.FK.From.Table == op.FQN.Table) ||
 		(d.FK.To.Schema == op.FQN.Schema && d.FK.To.Table == op.FQN.Table))
@@ -41,82 +41,82 @@ func (op *DropTable) DependsOn(another Operation) bool {
 //
 // TODO: we can fetch table definitions for deleted tables
 // from the database engine and execute them as a raw query.
-func (op *DropTable) GetReverse() Operation {
+func (op *DropTableOp) GetReverse() Operation {
 	return &noop{}
 }
 
-type RenameTable struct {
+type RenameTableOp struct {
 	FQN     schema.FQN
 	NewName string
 }
 
-var _ Operation = (*RenameTable)(nil)
+var _ Operation = (*RenameTableOp)(nil)
 
-func (op *RenameTable) GetReverse() Operation {
-	return &RenameTable{
+func (op *RenameTableOp) GetReverse() Operation {
+	return &RenameTableOp{
 		FQN:     schema.FQN{Schema: op.FQN.Schema, Table: op.NewName},
 		NewName: op.FQN.Table,
 	}
 }
 
-// RenameColumn.
-type RenameColumn struct {
+// RenameColumnOp.
+type RenameColumnOp struct {
 	FQN     schema.FQN
 	OldName string
 	NewName string
 }
 
-var _ Operation = (*RenameColumn)(nil)
+var _ Operation = (*RenameColumnOp)(nil)
 
-func (op *RenameColumn) GetReverse() Operation {
-	return &RenameColumn{
+func (op *RenameColumnOp) GetReverse() Operation {
+	return &RenameColumnOp{
 		FQN:     op.FQN,
 		OldName: op.NewName,
 		NewName: op.OldName,
 	}
 }
 
-func (op *RenameColumn) DependsOn(another Operation) bool {
-	rt, ok := another.(*RenameTable)
+func (op *RenameColumnOp) DependsOn(another Operation) bool {
+	rt, ok := another.(*RenameTableOp)
 	return ok && rt.FQN.Schema == op.FQN.Schema && rt.NewName == op.FQN.Table
 }
 
-type AddColumn struct {
+type AddColumnOp struct {
 	FQN    schema.FQN
 	Column string
 	ColDef sqlschema.Column
 }
 
-var _ Operation = (*AddColumn)(nil)
+var _ Operation = (*AddColumnOp)(nil)
 
-func (op *AddColumn) GetReverse() Operation {
-	return &DropColumn{
+func (op *AddColumnOp) GetReverse() Operation {
+	return &DropColumnOp{
 		FQN:    op.FQN,
 		Column: op.Column,
 		ColDef: op.ColDef,
 	}
 }
 
-type DropColumn struct {
+type DropColumnOp struct {
 	FQN    schema.FQN
 	Column string
 	ColDef sqlschema.Column
 }
 
-var _ Operation = (*DropColumn)(nil)
+var _ Operation = (*DropColumnOp)(nil)
 
-func (op *DropColumn) GetReverse() Operation {
-	return &AddColumn{
+func (op *DropColumnOp) GetReverse() Operation {
+	return &AddColumnOp{
 		FQN:    op.FQN,
 		Column: op.Column,
 		ColDef: op.ColDef,
 	}
 }
 
-func (op *DropColumn) DependsOn(another Operation) bool {
+func (op *DropColumnOp) DependsOn(another Operation) bool {
 	// TODO: refactor
 	switch drop := another.(type) {
-	case *DropConstraint:
+	case *DropForeignKeyOp:
 		var fCol bool
 		fCols := drop.FK.From.Column.Split()
 		for _, c := range fCols {
@@ -138,116 +138,114 @@ func (op *DropColumn) DependsOn(another Operation) bool {
 		return (drop.FK.From.Schema == op.FQN.Schema && drop.FK.From.Table == op.FQN.Table && fCol) ||
 			(drop.FK.To.Schema == op.FQN.Schema && drop.FK.To.Table == op.FQN.Table && tCol)
 
-	case *DropPrimaryKey:
+	case *DropPrimaryKeyOp:
 		return op.FQN == drop.FQN && drop.PK.Columns.Contains(op.Column)
-	case *ChangePrimaryKey:
+	case *ChangePrimaryKeyOp:
 		return op.FQN == drop.FQN && drop.Old.Columns.Contains(op.Column)
 	}
 	return false
 }
 
-// RenameConstraint.
-type RenameConstraint struct {
+// RenameForeignKeyOp.
+type RenameForeignKeyOp struct {
 	FK      sqlschema.FK
 	OldName string
 	NewName string
 }
 
-var _ Operation = (*RenameConstraint)(nil)
+var _ Operation = (*RenameForeignKeyOp)(nil)
 
-func (op *RenameConstraint) FQN() schema.FQN {
+func (op *RenameForeignKeyOp) FQN() schema.FQN {
 	return schema.FQN{
 		Schema: op.FK.From.Schema,
 		Table:  op.FK.From.Table,
 	}
 }
 
-func (op *RenameConstraint) DependsOn(another Operation) bool {
-	rt, ok := another.(*RenameTable)
+func (op *RenameForeignKeyOp) DependsOn(another Operation) bool {
+	rt, ok := another.(*RenameTableOp)
 	return ok && rt.FQN.Schema == op.FK.From.Schema && rt.NewName == op.FK.From.Table
 }
 
-func (op *RenameConstraint) GetReverse() Operation {
-	return &RenameConstraint{
+func (op *RenameForeignKeyOp) GetReverse() Operation {
+	return &RenameForeignKeyOp{
 		FK:      op.FK,
 		OldName: op.OldName,
 		NewName: op.NewName,
 	}
 }
 
-type AddForeignKey struct {
+type AddForeignKeyOp struct {
 	FK             sqlschema.FK
 	ConstraintName string
 }
 
-var _ Operation = (*AddForeignKey)(nil)
+var _ Operation = (*AddForeignKeyOp)(nil)
 
-func (op *AddForeignKey) FQN() schema.FQN {
+func (op *AddForeignKeyOp) FQN() schema.FQN {
 	return schema.FQN{
 		Schema: op.FK.From.Schema,
 		Table:  op.FK.From.Table,
 	}
 }
 
-func (op *AddForeignKey) DependsOn(another Operation) bool {
+func (op *AddForeignKeyOp) DependsOn(another Operation) bool {
 	switch another := another.(type) {
-	case *RenameTable:
+	case *RenameTableOp:
 		// TODO: provide some sort of "DependsOn" method for FK
 		return another.FQN.Schema == op.FK.From.Schema && another.NewName == op.FK.From.Table
-	case *CreateTable:
+	case *CreateTableOp:
 		return (another.FQN.Schema == op.FK.To.Schema && another.FQN.Table == op.FK.To.Table) || // either it's the referencing one
 			(another.FQN.Schema == op.FK.From.Schema && another.FQN.Table == op.FK.From.Table) // or the one being referenced
 	}
 	return false
 }
 
-func (op *AddForeignKey) GetReverse() Operation {
-	return &DropConstraint{
+func (op *AddForeignKeyOp) GetReverse() Operation {
+	return &DropForeignKeyOp{
 		FK:             op.FK,
 		ConstraintName: op.ConstraintName,
 	}
 }
 
-// TODO: Rename to DropForeignKey
-// DropConstraint.
-type DropConstraint struct {
+type DropForeignKeyOp struct {
 	FK             sqlschema.FK
 	ConstraintName string
 }
 
-var _ Operation = (*DropConstraint)(nil)
+var _ Operation = (*DropForeignKeyOp)(nil)
 
-func (op *DropConstraint) FQN() schema.FQN {
+func (op *DropForeignKeyOp) FQN() schema.FQN {
 	return schema.FQN{
 		Schema: op.FK.From.Schema,
 		Table:  op.FK.From.Table,
 	}
 }
 
-func (op *DropConstraint) GetReverse() Operation {
-	return &AddForeignKey{
+func (op *DropForeignKeyOp) GetReverse() Operation {
+	return &AddForeignKeyOp{
 		FK:             op.FK,
 		ConstraintName: op.ConstraintName,
 	}
 }
 
-type AddUniqueConstraint struct {
+type AddUniqueConstraintOp struct {
 	FQN    schema.FQN
 	Unique sqlschema.Unique
 }
 
-var _ Operation = (*AddUniqueConstraint)(nil)
+var _ Operation = (*AddUniqueConstraintOp)(nil)
 
-func (op *AddUniqueConstraint) GetReverse() Operation {
-	return &DropUniqueConstraint{
+func (op *AddUniqueConstraintOp) GetReverse() Operation {
+	return &DropUniqueConstraintOp{
 		FQN:    op.FQN,
 		Unique: op.Unique,
 	}
 }
 
-func (op *AddUniqueConstraint) DependsOn(another Operation) bool {
+func (op *AddUniqueConstraintOp) DependsOn(another Operation) bool {
 	switch another := another.(type) {
-	case *AddColumn:
+	case *AddColumnOp:
 		var sameColumn bool
 		for _, column := range op.Unique.Columns.Split() {
 			if column == another.Column {
@@ -256,9 +254,9 @@ func (op *AddUniqueConstraint) DependsOn(another Operation) bool {
 			}
 		}
 		return op.FQN == another.FQN && sameColumn
-	case *RenameTable:
+	case *RenameTableOp:
 		return op.FQN.Schema == another.FQN.Schema && op.FQN.Table == another.NewName
-	case *DropUniqueConstraint:
+	case *DropUniqueConstraintOp:
 		// We want to drop the constraint with the same name before adding this one.
 		return op.FQN == another.FQN && op.Unique.Name == another.Unique.Name
 	default:
@@ -267,39 +265,39 @@ func (op *AddUniqueConstraint) DependsOn(another Operation) bool {
 
 }
 
-type DropUniqueConstraint struct {
+type DropUniqueConstraintOp struct {
 	FQN    schema.FQN
 	Unique sqlschema.Unique
 }
 
-var _ Operation = (*DropUniqueConstraint)(nil)
+var _ Operation = (*DropUniqueConstraintOp)(nil)
 
-func (op *DropUniqueConstraint) DependsOn(another Operation) bool {
-	if rename, ok := another.(*RenameTable); ok {
+func (op *DropUniqueConstraintOp) DependsOn(another Operation) bool {
+	if rename, ok := another.(*RenameTableOp); ok {
 		return op.FQN.Schema == rename.FQN.Schema && op.FQN.Table == rename.NewName
 	}
 	return false
 }
 
-func (op *DropUniqueConstraint) GetReverse() Operation {
-	return &AddUniqueConstraint{
+func (op *DropUniqueConstraintOp) GetReverse() Operation {
+	return &AddUniqueConstraintOp{
 		FQN:    op.FQN,
 		Unique: op.Unique,
 	}
 }
 
 // Change column type.
-type ChangeColumnType struct {
+type ChangeColumnTypeOp struct {
 	FQN    schema.FQN
 	Column string
 	From   sqlschema.Column
 	To     sqlschema.Column
 }
 
-var _ Operation = (*ChangeColumnType)(nil)
+var _ Operation = (*ChangeColumnTypeOp)(nil)
 
-func (op *ChangeColumnType) GetReverse() Operation {
-	return &ChangeColumnType{
+func (op *ChangeColumnTypeOp) GetReverse() Operation {
+	return &ChangeColumnTypeOp{
 		FQN:    op.FQN,
 		Column: op.Column,
 		From:   op.To,
@@ -307,67 +305,57 @@ func (op *ChangeColumnType) GetReverse() Operation {
 	}
 }
 
-type DropPrimaryKey struct {
+type DropPrimaryKeyOp struct {
 	FQN schema.FQN
 	PK  *sqlschema.PK
 }
 
-var _ Operation = (*DropPrimaryKey)(nil)
+var _ Operation = (*DropPrimaryKeyOp)(nil)
 
-func (op *DropPrimaryKey) GetReverse() Operation {
-	return &AddPrimaryKey{
+func (op *DropPrimaryKeyOp) GetReverse() Operation {
+	return &AddPrimaryKeyOp{
 		FQN: op.FQN,
 		PK:  op.PK,
 	}
 }
 
-type AddPrimaryKey struct {
+type AddPrimaryKeyOp struct {
 	FQN schema.FQN
 	PK  *sqlschema.PK
 }
 
-var _ Operation = (*AddPrimaryKey)(nil)
+var _ Operation = (*AddPrimaryKeyOp)(nil)
 
-func (op *AddPrimaryKey) GetReverse() Operation {
-	return &DropPrimaryKey{
+func (op *AddPrimaryKeyOp) GetReverse() Operation {
+	return &DropPrimaryKeyOp{
 		FQN: op.FQN,
 		PK:  op.PK,
 	}
 }
 
-func (op *AddPrimaryKey) DependsOn(another Operation) bool {
+func (op *AddPrimaryKeyOp) DependsOn(another Operation) bool {
 	switch another := another.(type) {
-	case *AddColumn:
+	case *AddColumnOp:
 		return op.FQN == another.FQN && op.PK.Columns.Contains(another.Column)
 	}
 	return false
 }
 
-type ChangePrimaryKey struct {
+type ChangePrimaryKeyOp struct {
 	FQN schema.FQN
 	Old *sqlschema.PK
 	New *sqlschema.PK
 }
 
-var _ Operation = (*AddPrimaryKey)(nil)
+var _ Operation = (*AddPrimaryKeyOp)(nil)
 
-func (op *ChangePrimaryKey) GetReverse() Operation {
-	return &ChangePrimaryKey{
+func (op *ChangePrimaryKeyOp) GetReverse() Operation {
+	return &ChangePrimaryKeyOp{
 		FQN: op.FQN,
 		Old: op.New,
 		New: op.Old,
 	}
 }
-
-// func (op *ChangePrimaryKey) DependsOn(another Operation) bool {
-// 	switch another := another.(type) {
-// 	case *AddColumn:
-// 		return op.FQN == another.FQN && op.PK.Columns.Contains(another.Column)
-// 	case *RenameColumn:
-// 		return op.FQN == another.FQN && op.PK.Columns.Contains(another.NewName)
-// 	}
-// 	return false
-// }
 
 // noop is a migration that doesn't change the schema.
 type noop struct{}

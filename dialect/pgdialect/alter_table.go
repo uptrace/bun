@@ -1,12 +1,9 @@
 package pgdialect
 
 import (
-	"context"
 	"fmt"
-	"log"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
@@ -24,115 +21,64 @@ type migrator struct {
 
 var _ sqlschema.Migrator = (*migrator)(nil)
 
-func (m *migrator) Apply(ctx context.Context, changes ...interface{}) error {
-	if len(changes) == 0 {
-		return nil
-	}
-	var conn bun.IConn
-	var err error
-
-	if conn, err = m.db.Conn(ctx); err != nil {
-		return err
-	}
-
+func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err error) {
 	fmter := m.db.Formatter()
-	for _, change := range changes {
-		var b []byte // TODO(dyma): call db.MakeQueryBytes
 
-		switch change := change.(type) {
-		case *migrate.CreateTable:
-			log.Printf("create table %q", change.FQN.Table)
-			err = m.CreateTable(ctx, change.Model)
-			if err != nil {
-				return fmt.Errorf("apply changes: create table %s: %w", change.FQN, err)
-			}
-			continue
-		case *migrate.DropTable:
-			log.Printf("drop table %q", change.FQN.Table)
-			err = m.DropTable(ctx, change.FQN)
-			if err != nil {
-				return fmt.Errorf("apply changes: drop table %s: %w", change.FQN, err)
-			}
-			continue
-		case *migrate.ChangePrimaryKey:
-			// TODO: refactor!
-			b, err = m.dropConstraint(fmter, b, change.FQN, change.Old.Name)
-			if err != nil {
-				return fmt.Errorf("apply changes: %w", err)
-			}
-
-			query := internal.String(b)
-			log.Println("exec query: " + query)
-			if _, err = conn.ExecContext(ctx, query); err != nil {
-				return fmt.Errorf("apply changes: %w", err)
-			}
-
-			b = []byte{}
-			b, err = m.addPrimaryKey(fmter, b, change.FQN, change.New.Columns.Safe())
-			if err != nil {
-				return fmt.Errorf("apply changes: %w", err)
-			}
-
-			query = internal.String(b)
-			log.Println("exec query: " + query)
-			if _, err = conn.ExecContext(ctx, query); err != nil {
-				return fmt.Errorf("apply changes: %w", err)
-			}
-			continue
-		case *migrate.RenameTable:
-			b, err = m.renameTable(fmter, b, change)
-		case *migrate.RenameColumn:
-			b, err = m.renameColumn(fmter, b, change)
-		case *migrate.AddColumn:
-			b, err = m.addColumn(fmter, b, change)
-		case *migrate.DropColumn:
-			b, err = m.dropColumn(fmter, b, change)
-		case *migrate.AddPrimaryKey:
-			b, err = m.addPrimaryKey(fmter, b, change.FQN, change.PK.Columns.Safe())
-		case *migrate.AddForeignKey:
-			b, err = m.addForeignKey(fmter, b, change)
-		case *migrate.AddUniqueConstraint:
-			b, err = m.addUnique(fmter, b, change)
-		case *migrate.DropUniqueConstraint:
-			b, err = m.dropConstraint(fmter, b, change.FQN, change.Unique.Name)
-		case *migrate.DropConstraint:
-			b, err = m.dropConstraint(fmter, b, change.FQN(), change.ConstraintName)
-		case *migrate.DropPrimaryKey:
-			b, err = m.dropConstraint(fmter, b, change.FQN, change.PK.Name)
-		case *migrate.RenameConstraint:
-			b, err = m.renameConstraint(fmter, b, change)
-		case *migrate.ChangeColumnType:
-			b, err = m.changeColumnType(fmter, b, change)
-		default:
-			return fmt.Errorf("apply changes: unknown operation %T", change)
-		}
-		if err != nil {
-			return fmt.Errorf("apply changes: %w", err)
-		}
-
-		query := internal.String(b)
-		log.Println("exec query: " + query)
-		if _, err = conn.ExecContext(ctx, query); err != nil {
-			return fmt.Errorf("apply changes: %w", err)
-		}
+	// Append ALTER TABLE statement to the enclosed query bytes []byte.
+	appendAlterTable := func(query []byte, fqn schema.FQN) []byte {
+		query = append(query, "ALTER TABLE "...)
+		query, _ = fqn.AppendQuery(fmter, query)
+		return append(query, " "...)
 	}
-	return nil
+
+	switch change := operation.(type) {
+	case *migrate.CreateTableOp:
+		return m.AppendCreateTable(b, change.Model)
+	case *migrate.DropTableOp:
+		return m.AppendDropTable(b, change.FQN)
+	case *migrate.RenameTableOp:
+		b, err = m.renameTable(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.RenameColumnOp:
+		b, err = m.renameColumn(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.AddColumnOp:
+		b, err = m.addColumn(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.DropColumnOp:
+		b, err = m.dropColumn(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.AddPrimaryKeyOp:
+		b, err = m.addPrimaryKey(fmter, appendAlterTable(b, change.FQN), change.PK.Columns.Safe())
+	case *migrate.ChangePrimaryKeyOp:
+		b, err = m.changePrimaryKey(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.DropPrimaryKeyOp:
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.PK.Name)
+	case *migrate.AddUniqueConstraintOp:
+		b, err = m.addUnique(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.DropUniqueConstraintOp:
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.Unique.Name)
+	case *migrate.ChangeColumnTypeOp:
+		b, err = m.changeColumnType(fmter, appendAlterTable(b, change.FQN), change)
+	case *migrate.AddForeignKeyOp:
+		b, err = m.addForeignKey(fmter, appendAlterTable(b, change.FQN()), change)
+	case *migrate.DropForeignKeyOp:
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN()), change.ConstraintName)
+	// case *migrate.RenameForeignKeyOp:
+	// 	b, err = m.renameConstraint(fmter, b, change)
+	default:
+		return nil, fmt.Errorf("append sql: unknown operation %T", change)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("append sql: %w", err)
+	}
+	return b, nil
 }
 
-func (m *migrator) renameTable(fmter schema.Formatter, b []byte, rename *migrate.RenameTable) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	b, _ = rename.FQN.AppendQuery(fmter, b)
-
-	b = append(b, " RENAME TO "...)
+func (m *migrator) renameTable(fmter schema.Formatter, b []byte, rename *migrate.RenameTableOp) (_ []byte, err error) {
+	b = append(b, "RENAME TO "...)
 	b = fmter.AppendName(b, rename.NewName)
 	return b, nil
 }
 
-func (m *migrator) renameColumn(fmter schema.Formatter, b []byte, rename *migrate.RenameColumn) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	b, _ = rename.FQN.AppendQuery(fmter, b)
-
-	b = append(b, " RENAME COLUMN "...)
+func (m *migrator) renameColumn(fmter schema.Formatter, b []byte, rename *migrate.RenameColumnOp) (_ []byte, err error) {
+	b = append(b, "RENAME COLUMN "...)
 	b = fmter.AppendName(b, rename.OldName)
 
 	b = append(b, " TO "...)
@@ -141,15 +87,18 @@ func (m *migrator) renameColumn(fmter schema.Formatter, b []byte, rename *migrat
 	return b, nil
 }
 
-func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddColumn) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	b, _ = add.FQN.AppendQuery(fmter, b)
-
-	b = append(b, " ADD COLUMN "...)
+func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddColumnOp) (_ []byte, err error) {
+	b = append(b, "ADD COLUMN "...)
 	b = fmter.AppendName(b, add.Column)
 	b = append(b, " "...)
 
 	b, _ = add.ColDef.AppendQuery(fmter, b)
+
+	if add.ColDef.DefaultValue != "" {
+		b = append(b, " DEFAULT "...)
+		b = append(b, add.ColDef.DefaultValue...)
+		b = append(b, " "...)
+	}
 
 	if add.ColDef.IsIdentity {
 		b = appendGeneratedAsIdentity(b)
@@ -158,17 +107,22 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 	return b, nil
 }
 
-func (m *migrator) dropColumn(fmter schema.Formatter, b []byte, drop *migrate.DropColumn) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	b, _ = drop.FQN.AppendQuery(fmter, b)
-
-	b = append(b, " DROP COLUMN "...)
+func (m *migrator) dropColumn(fmter schema.Formatter, b []byte, drop *migrate.DropColumnOp) (_ []byte, err error) {
+	b = append(b, "DROP COLUMN "...)
 	b = fmter.AppendName(b, drop.Column)
 
 	return b, nil
 }
 
-func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *migrate.RenameConstraint) (_ []byte, err error) {
+func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, columns schema.Safe) (_ []byte, err error) {
+	b = append(b, "ADD PRIMARY KEY ("...)
+	b, _ = columns.AppendQuery(fmter, b)
+	b = append(b, ")"...)
+
+	return b, nil
+}
+
+func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *migrate.RenameForeignKeyOp) (_ []byte, err error) {
 	b = append(b, "ALTER TABLE "...)
 	fqn := rename.FQN()
 	if b, err = fqn.AppendQuery(fmter, b); err != nil {
@@ -184,26 +138,15 @@ func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *mi
 	return b, nil
 }
 
-func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, fqn schema.FQN, columns schema.Safe) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
-
-	b = append(b, " ADD PRIMARY KEY ("...)
-	b, _ = columns.AppendQuery(fmter, b)
-	b = append(b, ")"...)
-
+func (m *migrator) changePrimaryKey(fmter schema.Formatter, b []byte, change *migrate.ChangePrimaryKeyOp) (_ []byte, err error) {
+	b, _ = m.dropConstraint(fmter, b, change.Old.Name)
+	b = append(b, ", "...)
+	b, _ = m.addPrimaryKey(fmter, b, change.New.Columns.Safe())
 	return b, nil
 }
 
-func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.AddUniqueConstraint) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	if b, err = change.FQN.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
-
-	b = append(b, " ADD CONSTRAINT "...)
+func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.AddUniqueConstraintOp) (_ []byte, err error) {
+	b = append(b, "ADD CONSTRAINT "...)
 	if change.Unique.Name != "" {
 		b = fmter.AppendName(b, change.Unique.Name)
 	} else {
@@ -217,33 +160,22 @@ func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.A
 	return b, nil
 }
 
-func (m *migrator) dropConstraint(fmter schema.Formatter, b []byte, fqn schema.FQN, name string) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
-
-	b = append(b, " DROP CONSTRAINT "...)
+func (m *migrator) dropConstraint(fmter schema.Formatter, b []byte, name string) (_ []byte, err error) {
+	b = append(b, "DROP CONSTRAINT "...)
 	b = fmter.AppendName(b, name)
 
 	return b, nil
 }
 
-func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.AddForeignKey) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	fqn := add.FQN()
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
-
-	b = append(b, " ADD CONSTRAINT "...)
+func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.AddForeignKeyOp) (_ []byte, err error) {
+	b = append(b, "ADD CONSTRAINT "...)
 	b = fmter.AppendName(b, add.ConstraintName)
 
 	b = append(b, " FOREIGN KEY ("...)
 	if b, err = add.FK.From.Column.Safe().AppendQuery(fmter, b); err != nil {
 		return b, err
 	}
-	b = append(b, ") "...)
+	b = append(b, ")"...)
 
 	other := schema.FQN{Schema: add.FK.To.Schema, Table: add.FK.To.Table}
 	b = append(b, " REFERENCES "...)
@@ -260,24 +192,22 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 	return b, nil
 }
 
-func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *migrate.ChangeColumnType) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	b, _ = colDef.FQN.AppendQuery(fmter, b)
-
+func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *migrate.ChangeColumnTypeOp) (_ []byte, err error) {
 	// alterColumn never re-assigns err, so there is no need to check for err != nil after calling it
 	var i int
 	appendAlterColumn := func() {
 		if i > 0 {
-			b = append(b, ","...)
+			b = append(b, ", "...)
 		}
-		b = append(b, " ALTER COLUMN "...)
+		b = append(b, "ALTER COLUMN "...)
 		b = fmter.AppendName(b, colDef.Column)
 		i++
 	}
 
 	got, want := colDef.From, colDef.To
 
-	if want.SQLType != got.SQLType {
+	inspector := m.db.Dialect().(sqlschema.InspectorDialect)
+	if !inspector.EquivalentType(want, got) {
 		appendAlterColumn()
 		b = append(b, " SET DATA TYPE "...)
 		if b, err = want.AppendQuery(fmter, b); err != nil {

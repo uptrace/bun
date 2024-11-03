@@ -1,7 +1,6 @@
 package sqlschema
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/uptrace/bun"
@@ -14,7 +13,7 @@ type MigratorDialect interface {
 }
 
 type Migrator interface {
-	Apply(ctx context.Context, changes ...interface{}) error
+	AppendSQL(b []byte, operation interface{}) ([]byte, error)
 }
 
 // migrator is a dialect-agnostic wrapper for sqlschema.MigratorDialect.
@@ -41,18 +40,10 @@ func NewBaseMigrator(db *bun.DB) *BaseMigrator {
 	return &BaseMigrator{db: db}
 }
 
-func (m *BaseMigrator) CreateTable(ctx context.Context, model interface{}) error {
-	_, err := m.db.NewCreateTable().Model(model).Exec(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
+func (m *BaseMigrator) AppendCreateTable(b []byte, model interface{}) ([]byte, error) {
+	return m.db.NewCreateTable().Model(model).AppendQuery(m.db.Formatter(), b)
 }
 
-func (m *BaseMigrator) DropTable(ctx context.Context, fqn schema.FQN) error {
-	_, err := m.db.NewDropTable().TableExpr(fqn.String()).Exec(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
+func (m *BaseMigrator) AppendDropTable(b []byte, fqn schema.FQN) ([]byte, error) {
+	return m.db.NewDropTable().TableExpr(fqn.String()).AppendQuery(m.db.Formatter(), b)
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "hobbies"."movies" ADD COLUMN "language" varchar(20) DEFAULT 'en-GB' 

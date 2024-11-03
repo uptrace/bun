@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -29,7 +30,7 @@ AddedLoop:
 		removedTables := currentTables.Sub(targetTables)
 		for _, removed := range removedTables.Values() {
 			if d.canRename(removed, added) {
-				d.changes.Add(&RenameTable{
+				d.changes.Add(&RenameTableOp{
 					FQN:     schema.FQN{Schema: removed.Schema, Table: removed.Name},
 					NewName: added.Name,
 				})
@@ -52,7 +53,7 @@ AddedLoop:
 			}
 		}
 		// If a new table did not appear because of the rename operation, then it must've been created.
-		d.changes.Add(&CreateTable{
+		d.changes.Add(&CreateTableOp{
 			FQN:   schema.FQN{Schema: added.Schema, Table: added.Name},
 			Model: added.Model,
 		})
@@ -62,7 +63,7 @@ AddedLoop:
 	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
 	dropped := currentTables.Sub(targetTables)
 	for _, t := range dropped.Values() {
-		d.changes.Add(&DropTable{
+		d.changes.Add(&DropTableOp{
 			FQN: schema.FQN{Schema: t.Schema, Table: t.Name},
 		})
 	}
@@ -96,7 +97,7 @@ AddedLoop:
 		// Add RenameFK migrations for updated FKs.
 		for old, renamed := range d.refMap.Updated() {
 			newName := d.fkNameFunc(renamed)
-			d.changes.Add(&RenameConstraint{
+			d.changes.Add(&RenameForeignKeyOp{
 				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
 				OldName: d.current.FKs[old],
 				NewName: newName,
@@ -111,7 +112,7 @@ AddedLoop:
 	// Add AddFK migrations for newly added FKs.
 	for fk := range d.target.FKs {
 		if _, ok := currentFKs[fk]; !ok {
-			d.changes.Add(&AddForeignKey{
+			d.changes.Add(&AddForeignKeyOp{
 				FK:             fk,
 				ConstraintName: d.fkNameFunc(fk),
 			})
@@ -121,7 +122,7 @@ AddedLoop:
 	// Add DropFK migrations for removed FKs.
 	for fk, fkName := range currentFKs {
 		if _, ok := d.target.FKs[fk]; !ok {
-			d.changes.Add(&DropConstraint{
+			d.changes.Add(&DropForeignKeyOp{
 				FK:             fk,
 				ConstraintName: fkName,
 			})
@@ -144,11 +145,7 @@ func (c *changeset) Add(op ...Operation) {
 // Func creates a MigrationFunc that applies all operations all the changeset.
 func (c *changeset) Func(m sqlschema.Migrator) MigrationFunc {
 	return func(ctx context.Context, db *bun.DB) error {
-		var operations []interface{}
-		for _, op := range c.operations {
-			operations = append(operations, op.(interface{}))
-		}
-		return m.Apply(ctx, operations...)
+		return c.apply(ctx, db, m)
 	}
 }
 
@@ -164,6 +161,27 @@ func (c *changeset) Down(m sqlschema.Migrator) MigrationFunc {
 		reverse.Add(c.operations[i].GetReverse())
 	}
 	return reverse.Func(m)
+}
+
+// apply generates SQL for each operation and executes it.
+func (c *changeset) apply(ctx context.Context, db *bun.DB, m sqlschema.Migrator) error {
+	if len(c.operations) == 0 {
+		return nil
+	}
+
+	for _, op := range c.operations {
+		b := internal.MakeQueryBytes()
+		b, err := m.AppendSQL(b, op)
+		if err != nil {
+			return fmt.Errorf("apply changes: %w", err)
+		}
+
+		query := internal.String(b)
+		if _, err = db.ExecContext(ctx, query); err != nil {
+			return fmt.Errorf("apply changes: %w", err)
+		}
+	}
+	return nil
 }
 
 func (c *changeset) ResolveDependencies() error {
@@ -350,7 +368,7 @@ ChangedRenamed:
 		// check that we do not try to rename a column to an already a name that already exists.
 		if cCol, ok := current.Columns[tName]; ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
-				d.changes.Add(&ChangeColumnType{
+				d.changes.Add(&ChangeColumnTypeOp{
 					FQN:    fqn,
 					Column: tName,
 					From:   cCol,
@@ -367,7 +385,7 @@ ChangedRenamed:
 			if _, exists := target.Columns[cName]; exists || !d.equalColumns(tCol, cCol) {
 				continue
 			}
-			d.changes.Add(&RenameColumn{
+			d.changes.Add(&RenameColumnOp{
 				FQN:     fqn,
 				OldName: cName,
 				NewName: tName,
@@ -381,7 +399,7 @@ ChangedRenamed:
 			continue ChangedRenamed
 		}
 
-		d.changes.Add(&AddColumn{
+		d.changes.Add(&AddColumnOp{
 			FQN:    fqn,
 			Column: tName,
 			ColDef: tCol,
@@ -391,7 +409,7 @@ ChangedRenamed:
 	// Drop columns which do not exist in the target schema and were not renamed.
 	for cName, cCol := range current.Columns {
 		if _, keep := target.Columns[cName]; !keep {
-			d.changes.Add(&DropColumn{
+			d.changes.Add(&DropColumnOp{
 				FQN:    fqn,
 				Column: cName,
 				ColDef: cCol,
@@ -410,7 +428,7 @@ Add:
 				continue Add
 			}
 		}
-		d.changes.Add(&AddUniqueConstraint{
+		d.changes.Add(&AddUniqueConstraintOp{
 			FQN:    fqn,
 			Unique: want,
 		})
@@ -424,7 +442,7 @@ Drop:
 			}
 		}
 
-		d.changes.Add(&DropUniqueConstraint{
+		d.changes.Add(&DropUniqueConstraintOp{
 			FQN:    fqn,
 			Unique: got,
 		})
@@ -436,17 +454,17 @@ Drop:
 	}
 	switch {
 	case target.PK == nil && current.PK != nil:
-		d.changes.Add(&DropPrimaryKey{
+		d.changes.Add(&DropPrimaryKeyOp{
 			FQN: fqn,
 			PK:  current.PK,
 		})
 	case current.PK == nil && target.PK != nil:
-		d.changes.Add(&AddPrimaryKey{
+		d.changes.Add(&AddPrimaryKeyOp{
 			FQN: fqn,
 			PK:  target.PK,
 		})
 	case target.PK.Columns != current.PK.Columns:
-		d.changes.Add(&ChangePrimaryKey{
+		d.changes.Add(&ChangePrimaryKeyOp{
 			FQN: fqn,
 			Old: current.PK,
 			New: target.PK,

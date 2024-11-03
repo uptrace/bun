@@ -9,8 +9,13 @@ import (
 	"time"
 
 	"github.com/bradleyjkemp/cupaloy"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/internal"
+	"github.com/uptrace/bun/migrate"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -1571,6 +1576,192 @@ func TestQuery(t *testing.T) {
 				} else {
 					query = timeRE.ReplaceAll(query, []byte("[TIME]"))
 					cupaloy.SnapshotT(t, string(query))
+				}
+			})
+		}
+	})
+}
+
+func TestAlterTable(t *testing.T) {
+	type Movie struct {
+		bun.BaseModel `bun:"table:hobbies.movies"`
+		ID            string
+		Director      string `bun:"director,notnull"`
+		Budget        int32
+		ReleaseDate   time.Time
+		HasOscar      bool
+		Genre         string
+	}
+
+	fqn := schema.FQN{Schema: "hobbies", Table: "movies"}
+
+	tests := []struct {
+		name      string
+		operation interface{}
+	}{
+		{name: "create table", operation: &migrate.CreateTableOp{
+			FQN:   fqn,
+			Model: (*Movie)(nil),
+		}},
+		{name: "drop table", operation: &migrate.DropTableOp{
+			FQN: fqn,
+		}},
+		{name: "rename table", operation: &migrate.RenameTableOp{
+			FQN:     fqn,
+			NewName: "films",
+		}},
+		{name: "rename column", operation: &migrate.RenameColumnOp{
+			FQN:     fqn,
+			OldName: "has_oscar",
+			NewName: "has_awards",
+		}},
+		{name: "add column with default value", operation: &migrate.AddColumnOp{
+			FQN:    fqn,
+			Column: "language",
+			ColDef: sqlschema.Column{
+				SQLType:      "varchar",
+				VarcharLen:   20,
+				IsNullable:   false,
+				DefaultValue: "'en-GB'",
+			},
+		}},
+		{name: "add column with identity", operation: &migrate.AddColumnOp{
+			FQN:    fqn,
+			Column: "n",
+			ColDef: sqlschema.Column{
+				SQLType:    sqltype.BigInt,
+				IsNullable: false,
+				IsIdentity: true,
+			},
+		}},
+		{name: "drop column", operation: &migrate.DropColumnOp{
+			FQN:    fqn,
+			Column: "director",
+			ColDef: sqlschema.Column{
+				SQLType:    sqltype.VarChar,
+				IsNullable: false,
+			},
+		}},
+		{name: "add unique constraint", operation: &migrate.AddUniqueConstraintOp{
+			FQN: fqn,
+			Unique: sqlschema.Unique{
+				Name:    "one_genre_per_director",
+				Columns: sqlschema.NewComposite("genre", "director"),
+			},
+		}},
+		{name: "drop unique constraint", operation: &migrate.DropUniqueConstraintOp{
+			FQN: fqn,
+			Unique: sqlschema.Unique{
+				Name:    "one_genre_per_director",
+				Columns: sqlschema.NewComposite("genre", "director"),
+			},
+		}},
+		{name: "change column type int to bigint", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "budget",
+			From:   sqlschema.Column{SQLType: sqltype.Integer},
+			To:     sqlschema.Column{SQLType: sqltype.BigInt},
+		}},
+		{name: "add default", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "budget",
+			From:   sqlschema.Column{DefaultValue: ""},
+			To:     sqlschema.Column{DefaultValue: "100"},
+		}},
+		{name: "drop default", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "budget",
+			From:   sqlschema.Column{DefaultValue: "100"},
+			To:     sqlschema.Column{DefaultValue: ""},
+		}},
+		{name: "make nullable", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "director",
+			From:   sqlschema.Column{IsNullable: false},
+			To:     sqlschema.Column{IsNullable: true},
+		}},
+		{name: "add notnull", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "budget",
+			From:   sqlschema.Column{IsNullable: true},
+			To:     sqlschema.Column{IsNullable: false},
+		}},
+		{name: "increase varchar length", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "language",
+			From:   sqlschema.Column{SQLType: "varchar", VarcharLen: 20},
+			To:     sqlschema.Column{SQLType: "varchar", VarcharLen: 255},
+		}},
+		{name: "add identity", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "id",
+			From:   sqlschema.Column{IsIdentity: false},
+			To:     sqlschema.Column{IsIdentity: true},
+		}},
+		{name: "drop identity", operation: &migrate.ChangeColumnTypeOp{
+			FQN:    fqn,
+			Column: "id",
+			From:   sqlschema.Column{IsIdentity: true},
+			To:     sqlschema.Column{IsIdentity: false},
+		}},
+		{name: "add primary key", operation: &migrate.AddPrimaryKeyOp{
+			FQN: fqn,
+			PK: &sqlschema.PK{
+				Name:    "new_pk",
+				Columns: sqlschema.NewComposite("id"),
+			},
+		}},
+		{name: "drop primary key", operation: &migrate.DropPrimaryKeyOp{
+			FQN: fqn,
+			PK: &sqlschema.PK{
+				Name:    "new_pk",
+				Columns: sqlschema.NewComposite("id"),
+			},
+		}},
+		{name: "change primary key", operation: &migrate.ChangePrimaryKeyOp{
+			FQN: fqn,
+			Old: &sqlschema.PK{
+				Name:    "old_pk",
+				Columns: sqlschema.NewComposite("id"),
+			},
+			New: &sqlschema.PK{
+				Name:    "new_pk",
+				Columns: sqlschema.NewComposite("director", "genre"),
+			},
+		}},
+		{name: "add foreign key", operation: &migrate.AddForeignKeyOp{
+			ConstraintName: "genre_description",
+			FK: sqlschema.FK{
+				From: sqlschema.C("hobbies", "movies", "genre"),
+				To:   sqlschema.C("wiki", "film_genres", "id"),
+			},
+		}},
+		{name: "drop foreign key", operation: &migrate.DropForeignKeyOp{
+			ConstraintName: "genre_description",
+			FK: sqlschema.FK{
+				From: sqlschema.C("hobbies", "movies", "genre"),
+				To:   sqlschema.C("wiki", "film_genres", "id"),
+			},
+		}},
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		migrator, err := sqlschema.NewMigrator(db)
+		if err != nil {
+			t.Skip(err)
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				b := internal.MakeQueryBytes()
+
+				b, err := migrator.AppendSQL(b, tt.operation)
+				require.NoError(t, err, "append sql")
+
+				if err == nil {
+					cupaloy.SnapshotT(t, string(b))
+				} else {
+					cupaloy.SnapshotT(t, err.Error())
 				}
 			})
 		}
