@@ -314,7 +314,7 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 	return []*MigrationFile{up, down}, nil
 }
 
-func (m *Migrator) createSQL(ctx context.Context, fname string, transactional bool) (*MigrationFile, error) {
+func (m *Migrator) createSQL(_ context.Context, fname string, transactional bool) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
 	template := sqlTemplate

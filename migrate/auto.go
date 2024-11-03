@@ -1,8 +1,11 @@
 package migrate
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
@@ -72,6 +75,12 @@ func WithMarkAppliedOnSuccessAuto(enabled bool) AutoMigratorOption {
 	}
 }
 
+func WithMigrationsDirectoryAuto(directory string) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.migrationsOpts = append(m.migrationsOpts, WithMigrationsDirectory(directory))
+	}
+}
+
 type AutoMigrator struct {
 	db *bun.DB
 
@@ -98,6 +107,9 @@ type AutoMigrator struct {
 
 	// migratorOpts are passed to Migrator constructor.
 	migratorOpts []MigratorOption
+
+	// migrationsOpts are passed to Migrations constructor.
+	migrationsOpts []MigrationsOption
 }
 
 func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, error) {
@@ -156,14 +168,37 @@ func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 // Migrate writes required changes to a new migration file and runs the migration.
 // This will create and entry in the migrations table, making it possible to revert
 // the changes with Migrator.Rollback().
-func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) error {
-	changes, err := am.plan(ctx)
+func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
+	migrations, _, err := am.createSQLMigrations(ctx)
 	if err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
 
-	migrations := NewMigrations()
+	migrator := NewMigrator(am.db, migrations, am.migratorOpts...)
+	if err := migrator.Init(ctx); err != nil {
+		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+
+	group, err := migrator.Migrate(ctx, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+	return group, nil
+}
+
+func (am *AutoMigrator) CreateSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
+	_, files, err := am.createSQLMigrations(ctx)
+	return files, err
+}
+
+func (am *AutoMigrator) createSQLMigrations(ctx context.Context) (*Migrations, []*MigrationFile, error) {
+	changes, err := am.plan(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create sql migrations: %w", err)
+	}
+
 	name, _ := genMigrationName("auto")
+	migrations := NewMigrations(am.migrationsOpts...)
 	migrations.Add(Migration{
 		Name:    name,
 		Up:      changes.Up(am.dbMigrator),
@@ -171,26 +206,34 @@ func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) er
 		Comment: "Changes detected by bun.migrate.AutoMigrator",
 	})
 
-	migrator := NewMigrator(am.db, migrations, am.migratorOpts...)
-	if err := migrator.Init(ctx); err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+	up, err := am.createSQL(ctx, migrations, name+".up.sql", changes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create sql migration up: %w", err)
 	}
 
-	if _, err := migrator.Migrate(ctx, opts...); err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+	down, err := am.createSQL(ctx, migrations, name+".down.sql", changes.GetReverse())
+	if err != nil {
+		return nil, nil, fmt.Errorf("create sql migration down: %w", err)
 	}
-	return nil
+	return migrations, []*MigrationFile{up, down}, nil
 }
 
-// Run runs required migrations in-place and without creating a database entry.
-func (am *AutoMigrator) Run(ctx context.Context) error {
-	changes, err := am.plan(ctx)
-	if err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+func (am *AutoMigrator) createSQL(_ context.Context, migrations *Migrations, fname string, changes *changeset) (*MigrationFile, error) {
+	var buf bytes.Buffer
+	if err := changes.WriteTo(&buf, am.dbMigrator); err != nil {
+		return nil, err
 	}
-	up := changes.Up(am.dbMigrator)
-	if err := up(ctx, am.db); err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+	content := buf.Bytes()
+
+	fpath := filepath.Join(migrations.getDirectory(), fname)
+	if err := os.WriteFile(fpath, content, 0o644); err != nil {
+		return nil, err
 	}
-	return nil
+
+	mf := &MigrationFile{
+		Name:    fname,
+		Path:    fpath,
+		Content: string(content),
+	}
+	return mf, nil
 }

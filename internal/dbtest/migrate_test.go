@@ -3,6 +3,8 @@ package dbtest_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -19,14 +21,28 @@ const (
 	migrationLocksTable = "test_migration_locks"
 )
 
+var migrationsDir = filepath.Join(os.TempDir(), "dbtest")
+
+// cleanupMigrations adds a cleanup function to reset migration tables.
+// The reset does not run for skipped tests to avoid unnecessary work.
+//
+// Usage:
+//
+//	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+//		cleanupMigrations(t, ctx, db)
+//		// some test that may generate migration entries in the db
+//	})
 func cleanupMigrations(tb testing.TB, ctx context.Context, db *bun.DB) {
 	tb.Cleanup(func() {
-		var err error
-		_, err = db.NewDropTable().ModelTableExpr(migrationsTable).Exec(ctx)
-		require.NoError(tb, err, "drop %q table", migrationsTable)
+		if tb.Skipped() {
+			return
+		}
 
-		_, err = db.NewDropTable().ModelTableExpr(migrationLocksTable).Exec(ctx)
-		require.NoError(tb, err, "drop %q table", migrationLocksTable)
+		m := migrate.NewMigrator(db, migrate.NewMigrations(),
+			migrate.WithTableName(migrationsTable),
+			migrate.WithLocksTableName(migrationLocksTable),
+		)
+		require.NoError(tb, m.Reset(ctx))
 	})
 }
 
@@ -163,27 +179,45 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	require.Equal(t, []string{"down2", "down1"}, history)
 }
 
-// newAutoMigrator creates an AutoMigrator configured to use test migratins/locks tables.
-// If the dialect doesn't support schema inspections or migrations, the test will fail with the corresponding error.
-func newAutoMigrator(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigratorOption) *migrate.AutoMigrator {
+// newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
+// tables and dedicated migrations directory. If an AutoMigrator cannob be created because
+// the dialect doesn't support either schema inspections or migrations, the test will be *skipped*
+// with the corresponding error.
+// Additionally, it will create the migrations directory and if
+// one does not exist and add a function to tear it down on cleanup.
+func newAutoMigratorOrSkip(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigratorOption) *migrate.AutoMigrator {
 	tb.Helper()
 
 	opts = append(opts,
 		migrate.WithTableNameAuto(migrationsTable),
 		migrate.WithLocksTableNameAuto(migrationLocksTable),
+		migrate.WithMigrationsDirectoryAuto(migrationsDir),
 	)
 
 	m, err := migrate.NewAutoMigrator(db, opts...)
-	require.NoError(tb, err)
+	if err != nil {
+		tb.Skip(err)
+	}
+
+	err = os.MkdirAll(migrationsDir, os.ModePerm)
+	require.NoError(tb, err, "cannot continue test without migrations directory")
+
+	tb.Cleanup(func() {
+		if err := os.RemoveAll(migrationsDir); err != nil {
+			tb.Logf("cleanup: remove migrations dir: %v", err)
+		}
+	})
+
 	return m
 }
 
 // inspectDbOrSkip returns a function to inspect the current state of the database.
-// It calls tb.Skip() if the current dialect doesn't support database inpection and
-// fails the test if the inspector cannot successfully retrieve database state.
+// The test will be *skipped* if the current dialect doesn't support database inpection
+// and fail if the inspector cannot successfully retrieve database state.
 func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.State {
 	tb.Helper()
-	inspector, err := sqlschema.NewInspector(db)
+	// AutoMigrator excludes these tables by default, but here we need to do this explicitly.
+	inspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
 	if err != nil {
 		tb.Skip(err)
 	}
@@ -194,7 +228,78 @@ func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.
 	}
 }
 
-func TestAutoMigrator_Run(t *testing.T) {
+func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
+	type NewTable struct {
+		bun.BaseModel `bun:"table:new_table"`
+		Bar           string
+		Baz           time.Time
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		ctx := context.Background()
+		m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*NewTable)(nil)))
+
+		migrations, err := m.CreateSQLMigrations(ctx)
+		require.NoError(t, err, "should create migrations successfully")
+
+		require.Len(t, migrations, 2, "expected up/down migration pair")
+		require.DirExists(t, migrationsDir)
+		checkMigrationFileContains(t, ".up.sql", "CREATE TABLE")
+		checkMigrationFileContains(t, ".down.sql", "DROP TABLE")
+	})
+}
+
+// checkMigrationFileContains expected SQL snippet.
+func checkMigrationFileContains(t *testing.T, fileSuffix string, content string) {
+	t.Helper()
+
+	files, err := os.ReadDir(migrationsDir)
+	require.NoErrorf(t, err, "list files in %s", migrationsDir)
+
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), fileSuffix) {
+			b, err := os.ReadFile(filepath.Join(migrationsDir, f.Name()))
+			require.NoError(t, err)
+			require.Containsf(t, string(b), content, "expected %s file to contain string", f.Name())
+			return
+		}
+	}
+	t.Errorf("no *%s file in migrations directory (%s)", fileSuffix, migrationsDir)
+}
+
+// checkMigrationFilesExist makes sure both up- and down- SQL migration files were created.
+func checkMigrationFilesExist(t *testing.T) {
+	t.Helper()
+
+	files, err := os.ReadDir(migrationsDir)
+	require.NoErrorf(t, err, "list files in %s", migrationsDir)
+
+	var up, down bool
+	for _, f := range files {
+		if !up && strings.HasSuffix(f.Name(), ".up.sql") {
+			up = true
+		} else if !down && strings.HasSuffix(f.Name(), ".down.sql") {
+			down = true
+		}
+	}
+
+	if !up {
+		t.Errorf("no .up.sql file created in migrations directory (%s)", migrationsDir)
+	}
+	if !down {
+		t.Errorf("no .down.sql file created in migrations directory (%s)", migrationsDir)
+	}
+}
+
+func runMigrations(t *testing.T, m *migrate.AutoMigrator) {
+	t.Helper()
+
+	_, err := m.Migrate(ctx)
+	require.NoError(t, err, "auto migration failed")
+	checkMigrationFilesExist(t)
+}
+
+func TestAutoMigrator_Migrate(t *testing.T) {
 
 	tests := []struct {
 		fn func(t *testing.T, db *bun.DB)
@@ -219,6 +324,11 @@ func TestAutoMigrator_Run(t *testing.T) {
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		for _, tt := range tests {
 			t.Run(funcName(tt.fn), func(t *testing.T) {
+				// Because they are executed so fast, tests may generate migrations
+				// with the same timestamp, so that only the first of them will apply.
+				// To eliminate these side-effects we cleanup migration tables after
+				// after every test case.
+				cleanupMigrations(t, ctx, db)
 				tt.fn(t, db)
 			})
 		}
@@ -241,16 +351,14 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*initial)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*changed)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*changed)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*changed)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
 	tables := state.Tables
-
 	require.Len(t, tables, 1)
 	require.Equal(t, "changed", tables[0].Name)
 }
@@ -272,16 +380,14 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*DropMe)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*CreateMe)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*CreateMe)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*CreateMe)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
 	tables := state.Tables
-
 	require.Len(t, tables, 1)
 	require.Equal(t, "createme", tables[0].Name)
 }
@@ -332,15 +438,14 @@ func testAlterForeignKeys(t *testing.T, db *bun.DB) {
 	)
 	mustDropTableOnCleanup(t, ctx, db, (*ThingsToOwner)(nil))
 
-	m := newAutoMigrator(t, db, migrate.WithModel(
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel(
 		(*ThingCommon)(nil),
 		(*OwnerCommon)(nil),
 		(*ThingsToOwner)(nil),
 	))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -399,7 +504,7 @@ func testForceRenameFK(t *testing.T, db *bun.DB) {
 	)
 	mustDropTableOnCleanup(t, ctx, db, (*Person)(nil))
 
-	m := newAutoMigrator(t, db,
+	m := newAutoMigratorOrSkip(t, db,
 		migrate.WithModel(
 			(*Person)(nil),
 			(*PersonalThing)(nil),
@@ -413,13 +518,11 @@ func testForceRenameFK(t *testing.T, db *bun.DB) {
 	)
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
 	schema := db.Dialect().DefaultSchema()
-
 	wantName, ok := state.FKs[sqlschema.FK{
 		From: sqlschema.C(schema, "things", "owner_id"),
 		To:   sqlschema.C(schema, "people", "id"),
@@ -459,7 +562,7 @@ func testCustomFKNameFunc(t *testing.T, db *bun.DB) {
 		(*Column)(nil),
 	)
 
-	m := newAutoMigrator(t, db,
+	m := newAutoMigratorOrSkip(t, db,
 		migrate.WithFKNameFunc(func(sqlschema.FK) string { return "test_fkey" }),
 		migrate.WithModel(
 			(*TableM)(nil),
@@ -468,8 +571,7 @@ func testCustomFKNameFunc(t *testing.T, db *bun.DB) {
 	)
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -514,18 +616,16 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 		(*Model1)(nil),
 	)
 	mustDropTableOnCleanup(t, ctx, db, (*Renamed)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel(
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel(
 		(*Model2)(nil),
 		(*Renamed)(nil),
 	))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
-
 	require.Len(t, state.Tables, 2)
 
 	var renamed, model2 sqlschema.Table
@@ -565,18 +665,16 @@ func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustCreateTableWithFKs(t, ctx, db, (*TennantBefore)(nil))
-	m := newAutoMigrator(t, db,
+	m := newAutoMigratorOrSkip(t, db,
 		migrate.WithRenameFK(true),
 		migrate.WithModel((*TennantAfter)(nil)),
 	)
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
-
 	fkName := state.FKs[sqlschema.FK{
 		From: sqlschema.C(db.Dialect().DefaultSchema(), "tennants", "my_neighbour"),
 		To:   sqlschema.C(db.Dialect().DefaultSchema(), "tennants", "tennant_id"),
@@ -655,11 +753,10 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -699,11 +796,10 @@ func testIdentity(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -743,11 +839,10 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -823,11 +918,10 @@ func testUnique(t *testing.T, db *bun.DB) {
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -894,11 +988,10 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*TableAfter)(nil))
-	m := newAutoMigrator(t, db, migrate.WithModel((*TableAfter)(nil)))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)
@@ -1011,15 +1104,14 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		(*AddNewPKBefore)(nil),
 		(*ChangePKBefore)(nil),
 	)
-	m := newAutoMigrator(t, db, migrate.WithModel(
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel(
 		(*DropPKAfter)(nil),
 		(*AddNewPKAfter)(nil),
 		(*ChangePKAfter)(nil)),
 	)
 
 	// Act
-	err := m.Run(ctx)
-	require.NoError(t, err)
+	runMigrations(t, m)
 
 	// Assert
 	state := inspect(ctx)

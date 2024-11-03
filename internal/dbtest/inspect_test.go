@@ -75,7 +75,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		db.RegisterModel((*PublisherToJournalist)(nil))
 
-		dbInspector, err := sqlschema.NewInspector(db)
+		dbInspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
 		if err != nil {
 			t.Skip(err)
 		}

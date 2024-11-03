@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/uptrace/bun"
@@ -149,6 +150,15 @@ func (c *changeset) Func(m sqlschema.Migrator) MigrationFunc {
 	}
 }
 
+// GetReverse returns a new changeset with each operation in it "reversed" and in reverse order.
+func (c *changeset) GetReverse() *changeset {
+	var reverse changeset
+	for i := len(c.operations) - 1; i >= 0; i-- {
+		reverse.Add(c.operations[i].GetReverse())
+	}
+	return &reverse
+}
+
 // Up is syntactic sugar.
 func (c *changeset) Up(m sqlschema.Migrator) MigrationFunc {
 	return c.Func(m)
@@ -156,11 +166,7 @@ func (c *changeset) Up(m sqlschema.Migrator) MigrationFunc {
 
 // Down is syntactic sugar.
 func (c *changeset) Down(m sqlschema.Migrator) MigrationFunc {
-	var reverse changeset
-	for i := len(c.operations) - 1; i >= 0; i-- {
-		reverse.Add(c.operations[i].GetReverse())
-	}
-	return reverse.Func(m)
+	return c.GetReverse().Func(m)
 }
 
 // apply generates SQL for each operation and executes it.
@@ -180,6 +186,29 @@ func (c *changeset) apply(ctx context.Context, db *bun.DB, m sqlschema.Migrator)
 		if _, err = db.ExecContext(ctx, query); err != nil {
 			return fmt.Errorf("apply changes: %w", err)
 		}
+	}
+	return nil
+}
+
+func (c *changeset) WriteTo(w io.Writer, m sqlschema.Migrator) error {
+	var err error
+
+	b := internal.MakeQueryBytes()
+	for _, op := range c.operations {
+		if _, isNoop := op.(*noop); isNoop {
+			// TODO: write migration-specific commend instead
+			b = append(b, "-- Down-migrations are not supported for some changes.\n"...)
+			continue
+		}
+
+		b, err = m.AppendSQL(b, op)
+		if err != nil {
+			return fmt.Errorf("write changeset: %w", err)
+		}
+		b = append(b, ";\n"...)
+	}
+	if _, err := w.Write(b); err != nil {
+		return fmt.Errorf("write changeset: %w", err)
 	}
 	return nil
 }
