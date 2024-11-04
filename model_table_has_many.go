@@ -51,7 +51,7 @@ func (m *hasManyModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error
 	dest := makeDest(m, len(columns))
 
 	var n int
-
+	m.structKey = make([]interface{}, len(m.rel.JoinPKs))
 	for rows.Next() {
 		if m.sliceOfPtr {
 			m.strct = reflect.New(m.table.Type).Elem()
@@ -59,9 +59,8 @@ func (m *hasManyModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error
 			m.strct.Set(m.table.ZeroValue)
 		}
 		m.structInited = false
-
 		m.scanIndex = 0
-		m.structKey = m.structKey[:0]
+
 		if err := rows.Scan(dest...); err != nil {
 			return 0, err
 		}
@@ -92,9 +91,9 @@ func (m *hasManyModel) Scan(src interface{}) error {
 		return err
 	}
 
-	for _, f := range m.rel.JoinPKs {
-		if f.Name == field.Name {
-			m.structKey = append(m.structKey, indirectFieldValue(field.Value(m.strct)))
+	for i, f := range m.rel.JoinPKs {
+		if f.Name == column {
+			m.structKey[i] = indirectFieldValue(field.Value(m.strct))
 			break
 		}
 	}
