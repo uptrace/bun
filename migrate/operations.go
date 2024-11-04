@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"fmt"
+
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -38,11 +40,9 @@ func (op *DropTableOp) DependsOn(another Operation) bool {
 
 // GetReverse for a DropTable returns a no-op migration. Logically, CreateTable is the reverse,
 // but DropTable does not have the table's definition to create one.
-//
-// TODO: we can fetch table definitions for deleted tables
-// from the database engine and execute them as a raw query.
 func (op *DropTableOp) GetReverse() Operation {
-	return &noop{}
+	c := comment(fmt.Sprintf("WARNING: \"DROP TABLE %s\" cannot be reversed automatically because table definition is not available", op.FQN.String()))
+	return &c
 }
 
 type RenameTableOp struct {
@@ -357,9 +357,15 @@ func (op *ChangePrimaryKeyOp) GetReverse() Operation {
 	}
 }
 
-// noop is a migration that doesn't change the schema.
-type noop struct{}
+// comment denotes an Operation that cannot be executed.
+// 
+// Operations, which cannot be reversed due to current technical limitations,
+// may return &comment with a helpful message from their GetReverse() method.
+// 
+// Chnagelog should skip it when applying operations or output as log message,
+// and write it as an SQL comment when creating migration files.
+type comment string
 
-var _ Operation = (*noop)(nil)
+var _ Operation = (*comment)(nil)
 
-func (*noop) GetReverse() Operation { return &noop{} }
+func (c *comment) GetReverse() Operation { return c }

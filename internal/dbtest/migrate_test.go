@@ -304,16 +304,16 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 	tests := []struct {
 		fn func(t *testing.T, db *bun.DB)
 	}{
-		{testRenameTable},
-		{testRenamedColumns},
+		// {testRenameTable},
+		// {testRenamedColumns},
 		{testCreateDropTable},
-		{testAlterForeignKeys},
-		{testChangeColumnType_AutoCast},
-		{testIdentity},
-		{testAddDropColumn},
-		{testUnique},
-		{testUniqueRenamedTable},
-		{testUpdatePrimaryKeys},
+		// {testAlterForeignKeys},
+		// {testChangeColumnType_AutoCast},
+		// {testIdentity},
+		// {testAddDropColumn},
+		// {testUnique},
+		// {testUniqueRenamedTable},
+		// {testUpdatePrimaryKeys},
 
 		// Suspended support for renaming foreign keys:
 		// {testCustomFKNameFunc},

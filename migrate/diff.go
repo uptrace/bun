@@ -176,6 +176,10 @@ func (c *changeset) apply(ctx context.Context, db *bun.DB, m sqlschema.Migrator)
 	}
 
 	for _, op := range c.operations {
+		if _, isComment := op.(*comment); isComment {
+			continue
+		}
+
 		b := internal.MakeQueryBytes()
 		b, err := m.AppendSQL(b, op)
 		if err != nil {
@@ -195,9 +199,10 @@ func (c *changeset) WriteTo(w io.Writer, m sqlschema.Migrator) error {
 
 	b := internal.MakeQueryBytes()
 	for _, op := range c.operations {
-		if _, isNoop := op.(*noop); isNoop {
-			// TODO: write migration-specific commend instead
-			b = append(b, "-- Down-migrations are not supported for some changes.\n"...)
+		if c, isComment := op.(*comment); isComment {
+			b = append(b, "/*\n"...)
+			b = append(b, *c...)
+			b = append(b, "\n*/"...)
 			continue
 		}
 
