@@ -45,11 +45,11 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 	case *migrate.DropColumnOp:
 		b, err = m.dropColumn(fmter, appendAlterTable(b, change.FQN), change)
 	case *migrate.AddPrimaryKeyOp:
-		b, err = m.addPrimaryKey(fmter, appendAlterTable(b, change.FQN), change.PK.Columns.Safe())
+		b, err = m.addPrimaryKey(fmter, appendAlterTable(b, change.FQN), change.PrimaryKey)
 	case *migrate.ChangePrimaryKeyOp:
 		b, err = m.changePrimaryKey(fmter, appendAlterTable(b, change.FQN), change)
 	case *migrate.DropPrimaryKeyOp:
-		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.PK.Name)
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.PrimaryKey.Name)
 	case *migrate.AddUniqueConstraintOp:
 		b, err = m.addUnique(fmter, appendAlterTable(b, change.FQN), change)
 	case *migrate.DropUniqueConstraintOp:
@@ -114,9 +114,9 @@ func (m *migrator) dropColumn(fmter schema.Formatter, b []byte, drop *migrate.Dr
 	return b, nil
 }
 
-func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, columns schema.Safe) (_ []byte, err error) {
+func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, pk sqlschema.PrimaryKey) (_ []byte, err error) {
 	b = append(b, "ADD PRIMARY KEY ("...)
-	b, _ = columns.AppendQuery(fmter, b)
+	b, _ = pk.Columns.AppendQuery(fmter, b)
 	b = append(b, ")"...)
 
 	return b, nil
@@ -141,7 +141,7 @@ func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *mi
 func (m *migrator) changePrimaryKey(fmter schema.Formatter, b []byte, change *migrate.ChangePrimaryKeyOp) (_ []byte, err error) {
 	b, _ = m.dropConstraint(fmter, b, change.Old.Name)
 	b = append(b, ", "...)
-	b, _ = m.addPrimaryKey(fmter, b, change.New.Columns.Safe())
+	b, _ = m.addPrimaryKey(fmter, b, change.New)
 	return b, nil
 }
 
@@ -154,7 +154,7 @@ func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.A
 		b = fmter.AppendName(b, fmt.Sprintf("%s_%s_key", change.FQN.Table, change.Unique.Columns))
 	}
 	b = append(b, " UNIQUE ("...)
-	b, _ = change.Unique.Columns.Safe().AppendQuery(fmter, b)
+	b, _ = change.Unique.Columns.AppendQuery(fmter, b)
 	b = append(b, ")"...)
 
 	return b, nil
@@ -172,19 +172,18 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 	b = fmter.AppendName(b, add.ConstraintName)
 
 	b = append(b, " FOREIGN KEY ("...)
-	if b, err = add.FK.From.Column.Safe().AppendQuery(fmter, b); err != nil {
+	if b, err = add.ForeignKey.From.Column.AppendQuery(fmter, b); err != nil {
 		return b, err
 	}
 	b = append(b, ")"...)
 
-	other := schema.FQN{Schema: add.FK.To.Schema, Table: add.FK.To.Table}
 	b = append(b, " REFERENCES "...)
-	if b, err = other.AppendQuery(fmter, b); err != nil {
+	if b, err = add.ForeignKey.To.FQN.AppendQuery(fmter, b); err != nil {
 		return b, err
 	}
 
 	b = append(b, " ("...)
-	if b, err = add.FK.To.Column.Safe().AppendQuery(fmter, b); err != nil {
+	if b, err = add.ForeignKey.To.Column.AppendQuery(fmter, b); err != nil {
 		return b, err
 	}
 	b = append(b, ")"...)

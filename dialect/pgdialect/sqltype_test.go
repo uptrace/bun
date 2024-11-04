@@ -42,8 +42,8 @@ func TestInspectorDialect_EquivalentType(t *testing.T) {
 			}
 			t.Run(tt.typ1+eq+tt.typ2, func(t *testing.T) {
 				got := d.EquivalentType(
-					sqlschema.Column{SQLType: tt.typ1},
-					sqlschema.Column{SQLType: tt.typ2},
+					sqlschema.ColumnDefinition{SQLType: tt.typ1},
+					sqlschema.ColumnDefinition{SQLType: tt.typ2},
 				)
 				require.Equal(t, tt.want, got)
 			})
@@ -54,25 +54,25 @@ func TestInspectorDialect_EquivalentType(t *testing.T) {
 	t.Run("custom varchar length", func(t *testing.T) {
 		for _, tt := range []struct {
 			name       string
-			col1, col2 sqlschema.Column
+			col1, col2 sqlschema.ColumnDefinition
 			want       bool
 		}{
 			{
 				name: "varchars of different length are not equivalent",
-				col1: sqlschema.Column{SQLType: "varchar", VarcharLen: 10},
-				col2: sqlschema.Column{SQLType: "varchar"},
+				col1: sqlschema.ColumnDefinition{SQLType: "varchar", VarcharLen: 10},
+				col2: sqlschema.ColumnDefinition{SQLType: "varchar"},
 				want: false,
 			},
 			{
 				name: "varchar with no explicit length is equivalent to varchar of default length",
-				col1: sqlschema.Column{SQLType: "varchar", VarcharLen: d.DefaultVarcharLen()},
-				col2: sqlschema.Column{SQLType: "varchar"},
+				col1: sqlschema.ColumnDefinition{SQLType: "varchar", VarcharLen: d.DefaultVarcharLen()},
+				col2: sqlschema.ColumnDefinition{SQLType: "varchar"},
 				want: true,
 			},
 			{
 				name: "characters with equal custom length",
-				col1: sqlschema.Column{SQLType: "character varying", VarcharLen: 200},
-				col2: sqlschema.Column{SQLType: "varchar", VarcharLen: 200},
+				col1: sqlschema.ColumnDefinition{SQLType: "character varying", VarcharLen: 200},
+				col2: sqlschema.ColumnDefinition{SQLType: "varchar", VarcharLen: 200},
 				want: true,
 			},
 		} {

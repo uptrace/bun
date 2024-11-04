@@ -17,115 +17,70 @@ import (
 // The result changeset is not sorted, i.e. the caller should resolve dependencies
 // before applying the changes.
 func (d *detector) Diff() *changeset {
-	targetTables := newTableSet(d.target.Tables...)
-	currentTables := newTableSet(d.current.Tables...) // keeps state (which models still need to be checked)
+RenameCreate:
+	for wantName, wantTable := range d.target.TableDefinitions {
 
-	// These table-sets record changes to the targetTables set.
-	created := newTableSet()
-	renamed := newTableSet()
+		// A table with this name exists in the database. We assume that schema objects won't
+		// be renamed to an already existing name, nor do we support such cases.
+		// Simply check if the table definition has changed.
+		if haveTable, ok := d.current.TableDefinitions[wantName]; ok {
+			d.detectColumnChanges(haveTable, wantTable, true)
+			d.detectConstraintChanges(haveTable, wantTable)
+			continue
+		}
 
-	// Discover CREATE/RENAME/DROP TABLE
-	addedTables := targetTables.Sub(currentTables)
-AddedLoop:
-	for _, added := range addedTables.Values() {
-		removedTables := currentTables.Sub(targetTables)
-		for _, removed := range removedTables.Values() {
-			if d.canRename(removed, added) {
+		// Find all renamed tables. We assume that renamed tables have the same signature.
+		for haveName, haveTable := range d.current.TableDefinitions {
+			if _, exists := d.target.TableDefinitions[haveName]; !exists && d.canRename(haveTable, wantTable) {
 				d.changes.Add(&RenameTableOp{
-					FQN:     schema.FQN{Schema: removed.Schema, Table: removed.Name},
-					NewName: added.Name,
+					FQN:     haveTable.FQN(),
+					NewName: wantName,
 				})
+				d.refMap.RenameTable(haveTable.FQN(), wantName)
 
-				// Here we do not check for created / dropped columns, as well as column type changes,
-				// because it is only possible to detect a renamed table if its signature (see state.go) did not change.
-				d.detectColumnChanges(removed, added, false)
-				d.detectConstraintChanges(removed, added)
-
-				// Update referenced table in all related FKs.
-				if d.detectRenamedFKs {
-					d.refMap.UpdateT(removed.T(), added.T())
-				}
-
-				renamed.Add(added)
-
-				// Do not check this model further, we know it was renamed.
-				currentTables.Remove(removed.Name)
-				continue AddedLoop
+				// Find renamed columns, if any, and check if constraints (PK, UNIQUE) have been updated.
+				// We need not check wantTable any further.
+				d.detectColumnChanges(haveTable, wantTable, false)
+				d.detectConstraintChanges(haveTable, wantTable)
+				delete(d.current.TableDefinitions, haveName)
+				continue RenameCreate
 			}
 		}
-		// If a new table did not appear because of the rename operation, then it must've been created.
+
+		// If wantTable does not exist in the database and was not renamed
+		// then we need to create this table in the database.
+		additional := wantTable.Additional.(sqlschema.SchemaTable)
 		d.changes.Add(&CreateTableOp{
-			FQN:   schema.FQN{Schema: added.Schema, Table: added.Name},
-			Model: added.Model,
-		})
-		created.Add(added)
-	}
-
-	// Tables that aren't present anymore and weren't renamed or left untouched were deleted.
-	dropped := currentTables.Sub(targetTables)
-	for _, t := range dropped.Values() {
-		d.changes.Add(&DropTableOp{
-			FQN: schema.FQN{Schema: t.Schema, Table: t.Name},
+			FQN:   wantTable.FQN(),
+			Model: additional.Model,
 		})
 	}
 
-	// Detect changes in existing tables that weren't renamed.
-	//
-	// TODO: here having State.Tables be a map[string]Table would be much more convenient.
-	// Then we can alse retire tableSet, or at least simplify it to a certain extent.
-	curEx := currentTables.Sub(dropped)
-	tarEx := targetTables.Sub(created).Sub(renamed)
-	for _, target := range tarEx.Values() {
-		// TODO(dyma): step is redundant if we have map[string]Table
-		var current sqlschema.Table
-		for _, cur := range curEx.Values() {
-			if cur.Name == target.Name {
-				current = cur
-				break
-			}
-		}
-		d.detectColumnChanges(current, target, true)
-		d.detectConstraintChanges(current, target)
-	}
-
-	// Compare and update FKs ----------------
-	currentFKs := make(map[sqlschema.FK]string)
-	for k, v := range d.current.FKs {
-		currentFKs[k] = v
-	}
-
-	if d.detectRenamedFKs {
-		// Add RenameFK migrations for updated FKs.
-		for old, renamed := range d.refMap.Updated() {
-			newName := d.fkNameFunc(renamed)
-			d.changes.Add(&RenameForeignKeyOp{
-				FK:      renamed, // TODO: make sure this is applied after the table/columns are renamed
-				OldName: d.current.FKs[old],
-				NewName: newName,
+	// Drop any remaining "current" tables which do not have a model.
+	for name, table := range d.current.TableDefinitions {
+		if _, keep := d.target.TableDefinitions[name]; !keep {
+			d.changes.Add(&DropTableOp{
+				FQN: table.FQN(),
 			})
-
-			// Add this FK to currentFKs to prevent it from firing in the two loops below.
-			currentFKs[renamed] = newName
-			delete(currentFKs, old)
 		}
 	}
 
-	// Add AddFK migrations for newly added FKs.
-	for fk := range d.target.FKs {
+	currentFKs := d.refMap.Deref()
+
+	for fk := range d.target.ForeignKeys {
 		if _, ok := currentFKs[fk]; !ok {
 			d.changes.Add(&AddForeignKeyOp{
-				FK:             fk,
+				ForeignKey:     fk,
 				ConstraintName: d.fkNameFunc(fk),
 			})
 		}
 	}
 
-	// Add DropFK migrations for removed FKs.
-	for fk, fkName := range currentFKs {
-		if _, ok := d.target.FKs[fk]; !ok {
+	for fk, name := range currentFKs {
+		if _, ok := d.target.ForeignKeys[fk]; !ok {
 			d.changes.Add(&DropForeignKeyOp{
-				FK:             fk,
-				ConstraintName: fkName,
+				ConstraintName: name,
+				ForeignKey:     fk,
 			})
 		}
 	}
@@ -293,9 +248,9 @@ func (c *changeset) ResolveDependencies() error {
 
 type diffOption func(*detectorConfig)
 
-func withFKNameFunc(f func(sqlschema.FK) string) diffOption {
+func withFKNameFunc(f func(sqlschema.ForeignKey) string) diffOption {
 	return func(cfg *detectorConfig) {
-		cfg.FKNameFunc = f
+		// cfg.FKNameFunc = f
 	}
 }
 
@@ -305,7 +260,7 @@ func withDetectRenamedFKs(enabled bool) diffOption {
 	}
 }
 
-func withTypeEquivalenceFunc(f sqlschema.TypeEquivalenceFunc) diffOption {
+func withTypeEquivalenceFunc(f TypeEquivalenceFunc) diffOption {
 	return func(cfg *detectorConfig) {
 		cfg.EqType = f
 	}
@@ -313,39 +268,40 @@ func withTypeEquivalenceFunc(f sqlschema.TypeEquivalenceFunc) diffOption {
 
 // detectorConfig controls how differences in the model states are resolved.
 type detectorConfig struct {
-	FKNameFunc       func(sqlschema.FK) string
+	FKNameFunc       func(sqlschema.ForeignKey) string
 	DetectRenamedFKs bool
-	EqType           sqlschema.TypeEquivalenceFunc
+	EqType           TypeEquivalenceFunc
 }
 
+// detector may modify the passed database schemas, so it isn't safe to re-use them.
 type detector struct {
 	// current state represents the existing database schema.
-	current sqlschema.State
+	current sqlschema.DatabaseSchema
 
 	// target state represents the database schema defined in bun models.
-	target sqlschema.State
+	target sqlschema.DatabaseSchema
 
 	changes changeset
-	refMap  sqlschema.RefMap
+	refMap  refMap
 
 	// fkNameFunc builds the name for created/renamed FK contraints.
-	fkNameFunc func(sqlschema.FK) string
+	fkNameFunc func(sqlschema.ForeignKey) string
 
 	// eqType determines column type equivalence.
 	// Default is direct comparison with '==' operator, which is inaccurate
 	// due to the existence of dialect-specific type aliases. The caller
 	// should pass a concrete InspectorDialect.EquuivalentType for robust comparison.
-	eqType sqlschema.TypeEquivalenceFunc
+	eqType TypeEquivalenceFunc
 
 	// detectRenemedFKs controls how FKs are treated when their references (table/column) are renamed.
 	detectRenamedFKs bool
 }
 
-func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
+func newDetector(got, want sqlschema.DatabaseSchema, opts ...diffOption) *detector {
 	cfg := &detectorConfig{
 		FKNameFunc:       defaultFKName,
 		DetectRenamedFKs: false,
-		EqType: func(c1, c2 sqlschema.Column) bool {
+		EqType: func(c1, c2 sqlschema.ColumnDefinition) bool {
 			return c1.SQLType == c2.SQLType && c1.VarcharLen == c2.VarcharLen
 		},
 	}
@@ -353,15 +309,10 @@ func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
 		opt(cfg)
 	}
 
-	var existingFKs []sqlschema.FK
-	for fk := range got.FKs {
-		existingFKs = append(existingFKs, fk)
-	}
-
 	return &detector{
 		current:          got,
 		target:           want,
-		refMap:           sqlschema.NewRefMap(existingFKs...),
+		refMap:           newRefMap(got.ForeignKeys),
 		fkNameFunc:       cfg.FKNameFunc,
 		detectRenamedFKs: cfg.DetectRenamedFKs,
 		eqType:           cfg.EqType,
@@ -369,11 +320,11 @@ func newDetector(got, want sqlschema.State, opts ...diffOption) *detector {
 }
 
 // canRename checks if t1 can be renamed to t2.
-func (d *detector) canRename(t1, t2 sqlschema.Table) bool {
-	return t1.Schema == t2.Schema && sqlschema.EqualSignatures(t1, t2, d.equalColumns)
+func (d *detector) canRename(t1, t2 sqlschema.TableDefinition) bool {
+	return t1.Schema == t2.Schema && equalSignatures(t1, t2, d.equalColumns)
 }
 
-func (d *detector) equalColumns(col1, col2 sqlschema.Column) bool {
+func (d *detector) equalColumns(col1, col2 sqlschema.ColumnDefinition) bool {
 	return d.eqType(col1, col2) &&
 		col1.DefaultValue == col2.DefaultValue &&
 		col1.IsNullable == col2.IsNullable &&
@@ -381,7 +332,7 @@ func (d *detector) equalColumns(col1, col2 sqlschema.Column) bool {
 		col1.IsIdentity == col2.IsIdentity
 }
 
-func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.Column {
+func (d *detector) makeTargetColDef(current, target sqlschema.ColumnDefinition) sqlschema.ColumnDefinition {
 	// Avoid unneccessary type-change migrations if the types are equivalent.
 	if d.eqType(current, target) {
 		target.SQLType = current.SQLType
@@ -391,16 +342,16 @@ func (d *detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.
 }
 
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
-func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
+func (d *detector) detectColumnChanges(current, target sqlschema.TableDefinition, checkType bool) {
 	fqn := schema.FQN{Schema: target.Schema, Table: target.Name}
 
 ChangedRenamed:
-	for tName, tCol := range target.Columns {
+	for tName, tCol := range target.ColumnDefimitions {
 
 		// This column exists in the database, so it hasn't been renamed, dropped, or added.
 		// Still, we should not delete(columns, thisColumn), because later we will need to
 		// check that we do not try to rename a column to an already a name that already exists.
-		if cCol, ok := current.Columns[tName]; ok {
+		if cCol, ok := current.ColumnDefimitions[tName]; ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnTypeOp{
 					FQN:    fqn,
@@ -414,9 +365,9 @@ ChangedRenamed:
 
 		// Column tName does not exist in the database -- it's been either renamed or added.
 		// Find renamed columns first.
-		for cName, cCol := range current.Columns {
+		for cName, cCol := range current.ColumnDefimitions {
 			// Cannot rename if a column with this name already exists or the types differ.
-			if _, exists := target.Columns[cName]; exists || !d.equalColumns(tCol, cCol) {
+			if _, exists := target.ColumnDefimitions[cName]; exists || !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumnOp{
@@ -424,11 +375,11 @@ ChangedRenamed:
 				OldName: cName,
 				NewName: tName,
 			})
-			delete(current.Columns, cName) // no need to check this column again
-			d.refMap.UpdateC(sqlschema.C(target.Schema, target.Name, cName), tName)
+			d.refMap.RenameColumn(fqn, cName, tName)
+			delete(current.ColumnDefimitions, cName) // no need to check this column again
 
 			// Update primary key definition to avoid superficially recreating the constraint.
-			current.PK.Columns = current.PK.Columns.Replace(cName, tName)
+			current.PrimaryKey.Columns.Replace(cName, tName)
 
 			continue ChangedRenamed
 		}
@@ -441,8 +392,8 @@ ChangedRenamed:
 	}
 
 	// Drop columns which do not exist in the target schema and were not renamed.
-	for cName, cCol := range current.Columns {
-		if _, keep := target.Columns[cName]; !keep {
+	for cName, cCol := range current.ColumnDefimitions {
+		if _, keep := target.ColumnDefimitions[cName]; !keep {
 			d.changes.Add(&DropColumnOp{
 				FQN:    fqn,
 				Column: cName,
@@ -452,7 +403,7 @@ ChangedRenamed:
 	}
 }
 
-func (d *detector) detectConstraintChanges(current, target sqlschema.Table) {
+func (d *detector) detectConstraintChanges(current, target sqlschema.TableDefinition) {
 	fqn := schema.FQN{Schema: target.Schema, Table: target.Name}
 
 Add:
@@ -483,93 +434,138 @@ Drop:
 	}
 
 	// Detect primary key changes
-	if target.PK == nil && current.PK == nil {
+	if target.PrimaryKey == nil && current.PrimaryKey == nil {
 		return
 	}
 	switch {
-	case target.PK == nil && current.PK != nil:
+	case target.PrimaryKey == nil && current.PrimaryKey != nil:
 		d.changes.Add(&DropPrimaryKeyOp{
-			FQN: fqn,
-			PK:  current.PK,
+			FQN:        fqn,
+			PrimaryKey: *current.PrimaryKey,
 		})
-	case current.PK == nil && target.PK != nil:
+	case current.PrimaryKey == nil && target.PrimaryKey != nil:
 		d.changes.Add(&AddPrimaryKeyOp{
-			FQN: fqn,
-			PK:  target.PK,
+			FQN:        fqn,
+			PrimaryKey: *target.PrimaryKey,
 		})
-	case target.PK.Columns != current.PK.Columns:
+	case target.PrimaryKey.Columns != current.PrimaryKey.Columns:
 		d.changes.Add(&ChangePrimaryKeyOp{
 			FQN: fqn,
-			Old: current.PK,
-			New: target.PK,
+			Old: *current.PrimaryKey,
+			New: *target.PrimaryKey,
 		})
 	}
-}
-
-// sqlschema utils ------------------------------------------------------------
-
-// tableSet stores unique table definitions.
-type tableSet struct {
-	underlying map[string]sqlschema.Table
-}
-
-func newTableSet(initial ...sqlschema.Table) *tableSet {
-	set := &tableSet{
-		underlying: make(map[string]sqlschema.Table),
-	}
-	for _, t := range initial {
-		set.Add(t)
-	}
-	return set
-}
-
-func (set *tableSet) Add(t sqlschema.Table) {
-	set.underlying[t.Name] = t
-}
-
-func (set *tableSet) Remove(s string) {
-	delete(set.underlying, s)
-}
-
-func (set *tableSet) Values() (tables []sqlschema.Table) {
-	for _, t := range set.underlying {
-		tables = append(tables, t)
-	}
-	return
-}
-
-func (set *tableSet) Sub(other *tableSet) *tableSet {
-	res := set.clone()
-	for v := range other.underlying {
-		if _, ok := set.underlying[v]; ok {
-			res.Remove(v)
-		}
-	}
-	return res
-}
-
-func (set *tableSet) clone() *tableSet {
-	res := newTableSet()
-	for _, t := range set.underlying {
-		res.Add(t)
-	}
-	return res
-}
-
-// String is a debug helper to get a list of table names in the set.
-func (set *tableSet) String() string {
-	var s strings.Builder
-	for k := range set.underlying {
-		if s.Len() > 0 {
-			s.WriteString(", ")
-		}
-		s.WriteString(k)
-	}
-	return s.String()
 }
 
 // defaultFKName returns a name for the FK constraint in the format {tablename}_{columnname(s)}_fkey, following the Postgres convention.
-func defaultFKName(fk sqlschema.FK) string {
+func defaultFKName(fk sqlschema.ForeignKey) string {
 	columnnames := strings.Join(fk.From.Column.Split(), "_")
-	return fmt.Sprintf("%s_%s_fkey", fk.From.Table, columnnames)
+	return fmt.Sprintf("%s_%s_fkey", fk.From.FQN.Table, columnnames)
+}
+
+type TypeEquivalenceFunc func(sqlschema.ColumnDefinition, sqlschema.ColumnDefinition) bool
+
+// equalSignatures determines if two tables have the same "signature".
+func equalSignatures(t1, t2 sqlschema.TableDefinition, eq TypeEquivalenceFunc) bool {
+	sig1 := newSignature(t1, eq)
+	sig2 := newSignature(t2, eq)
+	return sig1.Equals(sig2)
+}
+
+// signature is a set of column definitions, which allows "relation/name-agnostic" comparison between them;
+// meaning that two columns are considered equal if their types are the same.
+type signature struct {
+
+	// underlying stores the number of occurences for each unique column type.
+	// It helps to account for the fact that a table might have multiple columns that have the same type.
+	underlying map[sqlschema.ColumnDefinition]int
+
+	eq TypeEquivalenceFunc
+}
+
+func newSignature(t sqlschema.TableDefinition, eq TypeEquivalenceFunc) signature {
+	s := signature{
+		underlying: make(map[sqlschema.ColumnDefinition]int),
+		eq:         eq,
+	}
+	s.scan(t)
+	return s
+}
+
+// scan iterates over table's field and counts occurrences of each unique column definition.
+func (s *signature) scan(t sqlschema.TableDefinition) {
+	for _, scanCol := range t.ColumnDefimitions {
+		// This is slightly more expensive than if the columns could be compared directly
+		// and we always did s.underlying[col]++, but we get type-equivalence in return.
+		col, count := s.getCount(scanCol)
+		if count == 0 {
+			s.underlying[scanCol] = 1
+		} else {
+			s.underlying[col]++
+		}
+	}
+}
+
+// getCount uses TypeEquivalenceFunc to find a column with the same (equivalent) SQL type
+// and returns its count. Count 0 means there are no columns with of this type.
+func (s *signature) getCount(keyCol sqlschema.ColumnDefinition) (key sqlschema.ColumnDefinition, count int) {
+	for col, cnt := range s.underlying {
+		if s.eq(col, keyCol) {
+			return col, cnt
+		}
+	}
+	return keyCol, 0
+}
+
+// Equals returns true if 2 signatures share an identical set of columns.
+func (s *signature) Equals(other signature) bool {
+	if len(s.underlying) != len(other.underlying) {
+		return false
+	}
+	for col, count := range s.underlying {
+		if _, countOther := other.getCount(col); countOther != count {
+			return false
+		}
+	}
+	return true
+}
+
+type refMap map[*sqlschema.ForeignKey]string
+
+func newRefMap(fks map[sqlschema.ForeignKey]string) refMap {
+	rm := make(map[*sqlschema.ForeignKey]string)
+	for fk, name := range fks {
+		rm[&fk] = name
+	}
+	return rm
+}
+
+func (rm refMap) RenameTable(table schema.FQN, newName string) {
+	for fk := range rm {
+		switch table {
+		case fk.From.FQN:
+			fk.From.FQN.Table = newName
+		case fk.To.FQN:
+			fk.To.FQN.Table = newName
+		}
+	}
+}
+
+func (rm refMap) RenameColumn(table schema.FQN, column, newName string) {
+	for fk := range rm {
+		if table == fk.From.FQN {
+			fk.From.Column.Replace(column, newName)
+		}
+		if table == fk.To.FQN {
+			fk.To.Column.Replace(column, newName)
+		}
+	}
+}
+
+func (rm refMap) Deref() map[sqlschema.ForeignKey]string {
+	out := make(map[sqlschema.ForeignKey]string)
+	for fk, name := range rm {
+		out[*fk] = name
+	}
+	return out
 }

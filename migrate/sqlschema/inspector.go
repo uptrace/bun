@@ -17,11 +17,11 @@ type InspectorDialect interface {
 	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
 	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
 	// or specify the same VARCHAR length differently (VARCHAR(255) ~ VARCHAR).
-	EquivalentType(Column, Column) bool
+	EquivalentType(ColumnDefinition, ColumnDefinition) bool
 }
 
 type Inspector interface {
-	Inspect(ctx context.Context) (State, error)
+	Inspect(ctx context.Context) (DatabaseSchema, error)
 }
 
 type inspector struct {
@@ -38,6 +38,12 @@ func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
 	}, nil
 }
 
+// SchemaTable provides additional table metadata that is only accessible from scanning Go models.
+type SchemaTable struct {
+	// Model stores the zero interface to the underlying Go struct.
+	Model interface{}
+}
+
 // SchemaInspector creates the current project state from the passed bun.Models.
 // Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
 type SchemaInspector struct {
@@ -52,19 +58,20 @@ func NewSchemaInspector(tables *schema.Tables) *SchemaInspector {
 	}
 }
 
-func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
-	state := State{
-		FKs: make(map[FK]string),
+func (si *SchemaInspector) Inspect(ctx context.Context) (DatabaseSchema, error) {
+	state := DatabaseSchema{
+		TableDefinitions: make(map[string]TableDefinition),
+		ForeignKeys:      make(map[ForeignKey]string),
 	}
 	for _, t := range si.tables.All() {
-		columns := make(map[string]Column)
+		columns := make(map[string]ColumnDefinition)
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
 				return state, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
-			columns[f.Name] = Column{
+			columns[f.Name] = ColumnDefinition{
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
 				DefaultValue:    exprToLower(f.SQLDefault),
@@ -80,7 +87,7 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			//  let each dialect apply the default naming convention.
 			if name == "" {
 				for _, f := range group {
-					unique = append(unique, Unique{Columns: NewComposite(f.Name)})
+					unique = append(unique, Unique{Columns: NewColumns(f.Name)})
 				}
 				continue
 			}
@@ -90,26 +97,28 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			for _, f := range group {
 				columns = append(columns, f.Name)
 			}
-			unique = append(unique, Unique{Name: name, Columns: NewComposite(columns...)})
+			unique = append(unique, Unique{Name: name, Columns: NewColumns(columns...)})
 		}
 
-		var pk *PK
+		var pk *PrimaryKey
 		if len(t.PKs) > 0 {
 			var columns []string
 			for _, f := range t.PKs {
 				columns = append(columns, f.Name)
 			}
-			pk = &PK{Columns: NewComposite(columns...)}
+			pk = &PrimaryKey{Columns: NewColumns(columns...)}
 		}
 
-		state.Tables = append(state.Tables, Table{
-			Schema:           t.Schema,
-			Name:             t.Name,
-			Model:            t.ZeroIface,
-			Columns:          columns,
-			UniqueContraints: unique,
-			PK:               pk,
-		})
+		state.TableDefinitions[t.Name] = TableDefinition{
+			Schema:            t.Schema,
+			Name:              t.Name,
+			ColumnDefimitions: columns,
+			UniqueContraints:  unique,
+			PrimaryKey:        pk,
+			Additional: SchemaTable{
+				Model: t.ZeroIface,
+			},
+		}
 
 		for _, rel := range t.Relations {
 			// These relations are nominal and do not need a foreign key to be declared in the current table.
@@ -128,9 +137,9 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (State, error) {
 			}
 
 			target := rel.JoinTable
-			state.FKs[FK{
-				From: C(t.Schema, t.Name, fromCols...),
-				To:   C(target.Schema, target.Name, toCols...),
+			state.ForeignKeys[ForeignKey{
+				From: NewColumnReference(t.Schema, t.Name, fromCols...),
+				To:   NewColumnReference(target.Schema, target.Name, toCols...),
 			}] = ""
 		}
 	}

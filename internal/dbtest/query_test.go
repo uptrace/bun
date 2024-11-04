@@ -1618,7 +1618,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "add column with default value", operation: &migrate.AddColumnOp{
 			FQN:    fqn,
 			Column: "language",
-			ColDef: sqlschema.Column{
+			ColDef: sqlschema.ColumnDefinition{
 				SQLType:      "varchar",
 				VarcharLen:   20,
 				IsNullable:   false,
@@ -1628,7 +1628,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "add column with identity", operation: &migrate.AddColumnOp{
 			FQN:    fqn,
 			Column: "n",
-			ColDef: sqlschema.Column{
+			ColDef: sqlschema.ColumnDefinition{
 				SQLType:    sqltype.BigInt,
 				IsNullable: false,
 				IsIdentity: true,
@@ -1637,7 +1637,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "drop column", operation: &migrate.DropColumnOp{
 			FQN:    fqn,
 			Column: "director",
-			ColDef: sqlschema.Column{
+			ColDef: sqlschema.ColumnDefinition{
 				SQLType:    sqltype.VarChar,
 				IsNullable: false,
 			},
@@ -1646,101 +1646,101 @@ func TestAlterTable(t *testing.T) {
 			FQN: fqn,
 			Unique: sqlschema.Unique{
 				Name:    "one_genre_per_director",
-				Columns: sqlschema.NewComposite("genre", "director"),
+				Columns: sqlschema.NewColumns("genre", "director"),
 			},
 		}},
 		{name: "drop unique constraint", operation: &migrate.DropUniqueConstraintOp{
 			FQN: fqn,
 			Unique: sqlschema.Unique{
 				Name:    "one_genre_per_director",
-				Columns: sqlschema.NewComposite("genre", "director"),
+				Columns: sqlschema.NewColumns("genre", "director"),
 			},
 		}},
 		{name: "change column type int to bigint", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.Column{SQLType: sqltype.Integer},
-			To:     sqlschema.Column{SQLType: sqltype.BigInt},
+			From:   sqlschema.ColumnDefinition{SQLType: sqltype.Integer},
+			To:     sqlschema.ColumnDefinition{SQLType: sqltype.BigInt},
 		}},
 		{name: "add default", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.Column{DefaultValue: ""},
-			To:     sqlschema.Column{DefaultValue: "100"},
+			From:   sqlschema.ColumnDefinition{DefaultValue: ""},
+			To:     sqlschema.ColumnDefinition{DefaultValue: "100"},
 		}},
 		{name: "drop default", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.Column{DefaultValue: "100"},
-			To:     sqlschema.Column{DefaultValue: ""},
+			From:   sqlschema.ColumnDefinition{DefaultValue: "100"},
+			To:     sqlschema.ColumnDefinition{DefaultValue: ""},
 		}},
 		{name: "make nullable", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "director",
-			From:   sqlschema.Column{IsNullable: false},
-			To:     sqlschema.Column{IsNullable: true},
+			From:   sqlschema.ColumnDefinition{IsNullable: false},
+			To:     sqlschema.ColumnDefinition{IsNullable: true},
 		}},
 		{name: "add notnull", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.Column{IsNullable: true},
-			To:     sqlschema.Column{IsNullable: false},
+			From:   sqlschema.ColumnDefinition{IsNullable: true},
+			To:     sqlschema.ColumnDefinition{IsNullable: false},
 		}},
 		{name: "increase varchar length", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "language",
-			From:   sqlschema.Column{SQLType: "varchar", VarcharLen: 20},
-			To:     sqlschema.Column{SQLType: "varchar", VarcharLen: 255},
+			From:   sqlschema.ColumnDefinition{SQLType: "varchar", VarcharLen: 20},
+			To:     sqlschema.ColumnDefinition{SQLType: "varchar", VarcharLen: 255},
 		}},
 		{name: "add identity", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "id",
-			From:   sqlschema.Column{IsIdentity: false},
-			To:     sqlschema.Column{IsIdentity: true},
+			From:   sqlschema.ColumnDefinition{IsIdentity: false},
+			To:     sqlschema.ColumnDefinition{IsIdentity: true},
 		}},
 		{name: "drop identity", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "id",
-			From:   sqlschema.Column{IsIdentity: true},
-			To:     sqlschema.Column{IsIdentity: false},
+			From:   sqlschema.ColumnDefinition{IsIdentity: true},
+			To:     sqlschema.ColumnDefinition{IsIdentity: false},
 		}},
 		{name: "add primary key", operation: &migrate.AddPrimaryKeyOp{
 			FQN: fqn,
-			PK: &sqlschema.PK{
+			PrimaryKey: sqlschema.PrimaryKey{
 				Name:    "new_pk",
-				Columns: sqlschema.NewComposite("id"),
+				Columns: sqlschema.NewColumns("id"),
 			},
 		}},
 		{name: "drop primary key", operation: &migrate.DropPrimaryKeyOp{
 			FQN: fqn,
-			PK: &sqlschema.PK{
+			PrimaryKey: sqlschema.PrimaryKey{
 				Name:    "new_pk",
-				Columns: sqlschema.NewComposite("id"),
+				Columns: sqlschema.NewColumns("id"),
 			},
 		}},
 		{name: "change primary key", operation: &migrate.ChangePrimaryKeyOp{
 			FQN: fqn,
-			Old: &sqlschema.PK{
+			Old: sqlschema.PrimaryKey{
 				Name:    "old_pk",
-				Columns: sqlschema.NewComposite("id"),
+				Columns: sqlschema.NewColumns("id"),
 			},
-			New: &sqlschema.PK{
+			New: sqlschema.PrimaryKey{
 				Name:    "new_pk",
-				Columns: sqlschema.NewComposite("director", "genre"),
+				Columns: sqlschema.NewColumns("director", "genre"),
 			},
 		}},
 		{name: "add foreign key", operation: &migrate.AddForeignKeyOp{
 			ConstraintName: "genre_description",
-			FK: sqlschema.FK{
-				From: sqlschema.C("hobbies", "movies", "genre"),
-				To:   sqlschema.C("wiki", "film_genres", "id"),
+			ForeignKey: sqlschema.ForeignKey{
+				From: sqlschema.NewColumnReference("hobbies", "movies", "genre"),
+				To:   sqlschema.NewColumnReference("wiki", "film_genres", "id"),
 			},
 		}},
 		{name: "drop foreign key", operation: &migrate.DropForeignKeyOp{
 			ConstraintName: "genre_description",
-			FK: sqlschema.FK{
-				From: sqlschema.C("hobbies", "movies", "genre"),
-				To:   sqlschema.C("wiki", "film_genres", "id"),
+			ForeignKey: sqlschema.ForeignKey{
+				From: sqlschema.NewColumnReference("hobbies", "movies", "genre"),
+				To:   sqlschema.NewColumnReference("wiki", "film_genres", "id"),
 			},
 		}},
 	}

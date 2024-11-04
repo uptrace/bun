@@ -36,7 +36,7 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 //
 // More generally, this option will have no effect whenever FKs are included in the CREATE TABLE definition,
 // which is the default strategy. Perhaps it would make sense to allow disabling this and switching to separate (CreateTable + AddFK)
-func WithFKNameFunc(f func(sqlschema.FK) string) AutoMigratorOption {
+func WithFKNameFunc(f func(sqlschema.ForeignKey) string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.diffOpts = append(m.diffOpts, withFKNameFunc(f))
 	}

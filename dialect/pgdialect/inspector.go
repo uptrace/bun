@@ -23,8 +23,11 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
-	var state sqlschema.State
+func (in *Inspector) Inspect(ctx context.Context) (sqlschema.DatabaseSchema, error) {
+	schema := sqlschema.DatabaseSchema{
+		TableDefinitions: make(map[string]sqlschema.TableDefinition),
+		ForeignKeys:      make(map[sqlschema.ForeignKey]string),
+	}
 
 	exclude := in.excludeTables
 	if len(exclude) == 0 {
@@ -34,22 +37,22 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 
 	var tables []*InformationSchemaTable
 	if err := in.db.NewRaw(sqlInspectTables, bun.In(exclude)).Scan(ctx, &tables); err != nil {
-		return state, err
+		return schema, err
 	}
 
 	var fks []*ForeignKey
 	if err := in.db.NewRaw(sqlInspectForeignKeys, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
-		return state, err
+		return schema, err
 	}
-	state.FKs = make(map[sqlschema.FK]string, len(fks))
+	schema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
 
 	for _, table := range tables {
 		var columns []*InformationSchemaColumn
 		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
-			return state, err
+			return schema, err
 		}
 
-		colDefs := make(map[string]sqlschema.Column)
+		colDefs := make(map[string]sqlschema.ColumnDefinition)
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -60,7 +63,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 				def = strings.ToLower(def)
 			}
 
-			colDefs[c.Name] = sqlschema.Column{
+			colDefs[c.Name] = sqlschema.ColumnDefinition{
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
 				DefaultValue:    def,
@@ -78,34 +81,34 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.State, error) {
 		for name, columns := range uniqueGroups {
 			unique = append(unique, sqlschema.Unique{
 				Name:    name,
-				Columns: sqlschema.NewComposite(columns...),
+				Columns: sqlschema.NewColumns(columns...),
 			})
 		}
 
-		var pk *sqlschema.PK
+		var pk *sqlschema.PrimaryKey
 		if len(table.PrimaryKey.Columns) > 0 {
-			pk = &sqlschema.PK{
+			pk = &sqlschema.PrimaryKey{
 				Name:    table.PrimaryKey.ConstraintName,
-				Columns: sqlschema.NewComposite(table.PrimaryKey.Columns...),
+				Columns: sqlschema.NewColumns(table.PrimaryKey.Columns...),
 			}
 		}
 
-		state.Tables = append(state.Tables, sqlschema.Table{
-			Schema:           table.Schema,
-			Name:             table.Name,
-			Columns:          colDefs,
-			UniqueContraints: unique,
-			PK:               pk,
-		})
+		schema.TableDefinitions[table.Name] = sqlschema.TableDefinition{
+			Schema:            table.Schema,
+			Name:              table.Name,
+			ColumnDefimitions: colDefs,
+			PrimaryKey:        pk,
+			UniqueContraints:  unique,
+		}
 	}
 
 	for _, fk := range fks {
-		state.FKs[sqlschema.FK{
-			From: sqlschema.C(fk.SourceSchema, fk.SourceTable, fk.SourceColumns...),
-			To:   sqlschema.C(fk.TargetSchema, fk.TargetTable, fk.TargetColumns...),
+		schema.ForeignKeys[sqlschema.ForeignKey{
+			From: sqlschema.NewColumnReference(fk.SourceSchema, fk.SourceTable, fk.SourceColumns...),
+			To:   sqlschema.NewColumnReference(fk.TargetSchema, fk.TargetTable, fk.TargetColumns...),
 		}] = fk.ConstraintName
 	}
-	return state, nil
+	return schema, nil
 }
 
 type InformationSchemaTable struct {
