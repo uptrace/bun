@@ -4,6 +4,7 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/uptrace/bun)](https://pkg.go.dev/github.com/uptrace/bun)
 [![Documentation](https://img.shields.io/badge/bun-documentation-informational)](https://bun.uptrace.dev/)
 [![Chat](https://discordapp.com/api/guilds/752070105847955518/widget.png)](https://discord.gg/rWtp5Aj)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20Bun%20Guru-006BFF)](https://gurubase.io/g/bun)
 
 > Bun is brought to you by :star: [**uptrace/uptrace**](https://github.com/uptrace/uptrace). Uptrace
 > is an open-source APM tool that supports distributed tracing, metrics, and logs. You can use it to
