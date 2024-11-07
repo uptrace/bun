@@ -44,10 +44,12 @@ func (q *DeleteQuery) Err(err error) *DeleteQuery {
 	return q
 }
 
-// Apply calls the fn passing the DeleteQuery as an argument.
-func (q *DeleteQuery) Apply(fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the DeleteQuery as an argument.
+func (q *DeleteQuery) Apply(fns ...func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }

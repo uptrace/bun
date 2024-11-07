@@ -66,10 +66,12 @@ func (q *SelectQuery) Err(err error) *SelectQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
-func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the SelectQuery as an argument.
+func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }

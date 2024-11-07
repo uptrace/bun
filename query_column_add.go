@@ -42,9 +42,12 @@ func (q *AddColumnQuery) Err(err error) *AddColumnQuery {
 	return q
 }
 
-func (q *AddColumnQuery) Apply(fn func(*AddColumnQuery) *AddColumnQuery) *AddColumnQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the AddColumnQuery as an argument.
+func (q *AddColumnQuery) Apply(fns ...func(*AddColumnQuery) *AddColumnQuery) *AddColumnQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }

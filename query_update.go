@@ -53,10 +53,12 @@ func (q *UpdateQuery) Err(err error) *UpdateQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
-func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the UpdateQuery as an argument.
+func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }

@@ -40,9 +40,12 @@ func (q *DropColumnQuery) Err(err error) *DropColumnQuery {
 	return q
 }
 
-func (q *DropColumnQuery) Apply(fn func(*DropColumnQuery) *DropColumnQuery) *DropColumnQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the DropColumnQuery as an argument.
+func (q *DropColumnQuery) Apply(fns ...func(*DropColumnQuery) *DropColumnQuery) *DropColumnQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }
