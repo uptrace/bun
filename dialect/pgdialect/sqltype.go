@@ -125,8 +125,8 @@ var (
 	timestampTz = newAliases(sqltype.Timestamp, pgTypeTimestampTz, pgTypeTimestampWithTz)
 )
 
-func (d *Dialect) EquivalentType(col1, col2 sqlschema.ColumnDefinition) bool {
-	typ1, typ2 := strings.ToUpper(col1.SQLType), strings.ToUpper(col2.SQLType)
+func (d *Dialect) EquivalentType(col1, col2 sqlschema.Column) bool {
+	typ1, typ2 := strings.ToUpper(col1.GetSQLType()), strings.ToUpper(col2.GetSQLType())
 
 	if typ1 == typ2 {
 		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
@@ -147,12 +147,14 @@ func (d *Dialect) EquivalentType(col1, col2 sqlschema.ColumnDefinition) bool {
 // if one specifies no VarcharLen and the other one has the default lenght for pgdialect.
 // We assume that the types are otherwise equivalent and that any non-character column
 // would have VarcharLen == 0;
-func checkVarcharLen(col1, col2 sqlschema.ColumnDefinition, defaultLen int) bool {
-	if col1.VarcharLen == col2.VarcharLen {
+func checkVarcharLen(col1, col2 sqlschema.Column, defaultLen int) bool {
+	vl1, vl2 := col1.GetVarcharLen(), col2.GetVarcharLen()
+
+	if vl1 == vl2 {
 		return true
 	}
 
-	if (col1.VarcharLen == 0 && col2.VarcharLen == defaultLen) || (col1.VarcharLen == defaultLen && col2.VarcharLen == 0) {
+	if (vl1 == 0 && vl2 == defaultLen) || (vl1 == defaultLen && vl2 == 0) {
 		return true
 	}
 	return false

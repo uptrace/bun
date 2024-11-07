@@ -92,15 +92,19 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 	b = fmter.AppendName(b, add.Column)
 	b = append(b, " "...)
 
-	b, _ = add.ColDef.AppendQuery(fmter, b)
+	colDef, ok := add.ColDef.(sqlschema.ColumnDefinition)
+	if !ok {
+		return nil, fmt.Errorf("column %q does not implement sqlschema.ColumnDefinition, got %T", add.ColDef.GetName(), add.ColDef)
+	}
+	b, _ = colDef.AppendQuery(fmter, b)
 
-	if add.ColDef.DefaultValue != "" {
+	if add.ColDef.GetDefaultValue() != "" {
 		b = append(b, " DEFAULT "...)
-		b = append(b, add.ColDef.DefaultValue...)
+		b = append(b, add.ColDef.GetDefaultValue()...)
 		b = append(b, " "...)
 	}
 
-	if add.ColDef.IsIdentity {
+	if add.ColDef.GetIsIdentity() {
 		b = appendGeneratedAsIdentity(b)
 	}
 
@@ -207,27 +211,32 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 
 	inspector := m.db.Dialect().(sqlschema.InspectorDialect)
 	if !inspector.EquivalentType(want, got) {
+		colDef, ok := want.(sqlschema.ColumnDefinition)
+		if !ok {
+			return nil, fmt.Errorf("column %q does not implement sqlschema.ColumnDefinition, got %T", want.GetName(), want)
+		}
+
 		appendAlterColumn()
 		b = append(b, " SET DATA TYPE "...)
-		if b, err = want.AppendQuery(fmter, b); err != nil {
+		if b, err = colDef.AppendQuery(fmter, b); err != nil {
 			return b, err
 		}
 	}
 
 	// Column must be declared NOT NULL before identity can be added.
 	// Although PG can resolve the order of operations itself, we make this explicit in the query.
-	if want.IsNullable != got.IsNullable {
+	if want.GetIsNullable() != got.GetIsNullable() {
 		appendAlterColumn()
-		if !want.IsNullable {
+		if !want.GetIsNullable() {
 			b = append(b, " SET NOT NULL"...)
 		} else {
 			b = append(b, " DROP NOT NULL"...)
 		}
 	}
 
-	if want.IsIdentity != got.IsIdentity {
+	if want.GetIsIdentity() != got.GetIsIdentity() {
 		appendAlterColumn()
-		if !want.IsIdentity {
+		if !want.GetIsIdentity() {
 			b = append(b, " DROP IDENTITY"...)
 		} else {
 			b = append(b, " ADD"...)
@@ -235,13 +244,13 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 		}
 	}
 
-	if want.DefaultValue != got.DefaultValue {
+	if want.GetDefaultValue() != got.GetDefaultValue() {
 		appendAlterColumn()
-		if want.DefaultValue == "" {
+		if want.GetDefaultValue() == "" {
 			b = append(b, " DROP DEFAULT"...)
 		} else {
 			b = append(b, " SET DEFAULT "...)
-			b = append(b, want.DefaultValue...)
+			b = append(b, want.GetDefaultValue()...)
 		}
 	}
 

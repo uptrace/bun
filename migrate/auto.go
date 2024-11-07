@@ -3,11 +3,14 @@ package migrate
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -157,8 +160,7 @@ func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 		return nil, err
 	}
 
-	detector := newDetector(got, want, am.diffOpts...)
-	changes := detector.Diff()
+	changes := diff(got, want, am.diffOpts...)
 	if err := changes.ResolveDependencies(); err != nil {
 		return nil, fmt.Errorf("plan migrations: %w", err)
 	}
@@ -236,4 +238,150 @@ func (am *AutoMigrator) createSQL(_ context.Context, migrations *Migrations, fna
 		Content: string(content),
 	}
 	return mf, nil
+}
+
+// Func creates a MigrationFunc that applies all operations all the changeset.
+func (c *changeset) Func(m sqlschema.Migrator) MigrationFunc {
+	return func(ctx context.Context, db *bun.DB) error {
+		return c.apply(ctx, db, m)
+	}
+}
+
+// GetReverse returns a new changeset with each operation in it "reversed" and in reverse order.
+func (c *changeset) GetReverse() *changeset {
+	var reverse changeset
+	for i := len(c.operations) - 1; i >= 0; i-- {
+		reverse.Add(c.operations[i].GetReverse())
+	}
+	return &reverse
+}
+
+// Up is syntactic sugar.
+func (c *changeset) Up(m sqlschema.Migrator) MigrationFunc {
+	return c.Func(m)
+}
+
+// Down is syntactic sugar.
+func (c *changeset) Down(m sqlschema.Migrator) MigrationFunc {
+	return c.GetReverse().Func(m)
+}
+
+// apply generates SQL for each operation and executes it.
+func (c *changeset) apply(ctx context.Context, db *bun.DB, m sqlschema.Migrator) error {
+	if len(c.operations) == 0 {
+		return nil
+	}
+
+	for _, op := range c.operations {
+		if _, isComment := op.(*comment); isComment {
+			continue
+		}
+
+		b := internal.MakeQueryBytes()
+		b, err := m.AppendSQL(b, op)
+		if err != nil {
+			return fmt.Errorf("apply changes: %w", err)
+		}
+
+		query := internal.String(b)
+		if _, err = db.ExecContext(ctx, query); err != nil {
+			return fmt.Errorf("apply changes: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *changeset) WriteTo(w io.Writer, m sqlschema.Migrator) error {
+	var err error
+
+	b := internal.MakeQueryBytes()
+	for _, op := range c.operations {
+		if c, isComment := op.(*comment); isComment {
+			b = append(b, "/*\n"...)
+			b = append(b, *c...)
+			b = append(b, "\n*/"...)
+			continue
+		}
+
+		b, err = m.AppendSQL(b, op)
+		if err != nil {
+			return fmt.Errorf("write changeset: %w", err)
+		}
+		b = append(b, ";\n"...)
+	}
+	if _, err := w.Write(b); err != nil {
+		return fmt.Errorf("write changeset: %w", err)
+	}
+	return nil
+}
+
+func (c *changeset) ResolveDependencies() error {
+	if len(c.operations) <= 1 {
+		return nil
+	}
+
+	const (
+		unvisited = iota
+		current
+		visited
+	)
+	
+	status := make(map[Operation]int, len(c.operations))
+	for _, op := range c.operations {
+		status[op] = unvisited
+	}
+
+	var resolved []Operation
+	var nextOp Operation
+	var visit func(op Operation) error
+
+	next := func() bool {
+		for op, s := range status {
+			if s == unvisited {
+				nextOp = op
+				return true
+			}
+		}
+		return false
+	}
+
+	// visit iterates over c.operations until it finds all operations that depend on the current one
+	// or runs into cirtular dependency, in which case it will return an error.
+	visit = func(op Operation) error {
+		switch status[op] {
+		case visited:
+			return nil
+		case current:
+			// TODO: add details (circle) to the error message
+			return errors.New("detected circular dependency")
+		}
+
+		status[op] = current
+
+		for _, another := range c.operations {
+			if dop, hasDeps := another.(interface {
+				DependsOn(Operation) bool
+			}); another == op || !hasDeps || !dop.DependsOn(op) {
+				continue
+			}
+			if err := visit(another); err != nil {
+				return err
+			}
+		}
+
+		status[op] = visited
+
+		// Any dependent nodes would've already been added to the list by now, so we prepend.
+		resolved = append([]Operation{op}, resolved...)
+		return nil
+	}
+
+	for next() {
+		if err := visit(nextOp); err != nil {
+			return err
+		}
+	}
+
+	c.operations = resolved
+	return nil
 }

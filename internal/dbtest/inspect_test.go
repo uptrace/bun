@@ -93,11 +93,11 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		defaultSchema := db.Dialect().DefaultSchema()
 
 		// Tables come sorted alphabetically by schema and table.
-		wantTables := map[string]sqlschema.TableDefinition{
-			"offices": {
+		wantTables := map[schema.FQN]sqlschema.TableDefinition{
+			{Schema: "admin", Table: "offices"}: {
 				Schema: "admin",
 				Name:   "offices",
-				ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 					"office_name": {
 						SQLType: sqltype.VarChar,
 					},
@@ -112,10 +112,10 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				},
 				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
 			},
-			"articles": {
+			{Schema: defaultSchema, Table: "articles"}: {
 				Schema: defaultSchema,
 				Name:   "articles",
-				ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 					"isbn": {
 						SQLType:         "bigint",
 						IsNullable:      false,
@@ -167,14 +167,14 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 				},
 				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
-				UniqueContraints: []sqlschema.Unique{
+				UniqueConstraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewColumns("editor", "title")},
 				},
 			},
-			"authors": {
+			{Schema: defaultSchema, Table: "authors"}: {
 				Schema: defaultSchema,
 				Name:   "authors",
-				ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 					"author_id": {
 						SQLType:    "bigint",
 						IsIdentity: true,
@@ -190,15 +190,15 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 				},
 				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
-				UniqueContraints: []sqlschema.Unique{
+				UniqueConstraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewColumns("first_name", "last_name")},
 					{Columns: sqlschema.NewColumns("email")},
 				},
 			},
-			"publisher_to_journalists": {
+			{Schema: defaultSchema, Table: "publisher_to_journalists"}: {
 				Schema: defaultSchema,
 				Name:   "publisher_to_journalists",
-				ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 					"publisher_id": {
 						SQLType: sqltype.VarChar,
 					},
@@ -208,10 +208,10 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				},
 				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
 			},
-			"publishers": {
+			{Schema: defaultSchema, Table: "publishers"}: {
 				Schema: defaultSchema,
 				Name:   "publishers",
-				ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 					"publisher_id": {
 						SQLType:      sqltype.VarChar,
 						DefaultValue: "gen_random_uuid()",
@@ -226,7 +226,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					},
 				},
 				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
-				UniqueContraints: []sqlschema.Unique{
+				UniqueConstraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
 				},
 			},
@@ -260,10 +260,11 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 
 		// State.FKs store their database names, which differ from dialect to dialect.
 		// Because of that we compare FKs and Tables separately.
-		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, got.TableDefinitions)
+		gotTables := got.(sqlschema.DatabaseSchema).TableDefinitions
+		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, gotTables)
 
 		var fks []sqlschema.ForeignKey
-		for fk := range got.ForeignKeys {
+		for fk := range got.GetForeignKeys() {
 			fks = append(fks, fk)
 		}
 		require.ElementsMatch(t, wantFKs, fks)
@@ -292,23 +293,23 @@ func mustCreateSchema(tb testing.TB, ctx context.Context, db *bun.DB, schema str
 
 // cmpTables compares table schemas using dialect-specific equivalence checks for column types
 // and reports the differences as t.Error().
-func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[string]sqlschema.TableDefinition) {
+func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema.FQN]sqlschema.TableDefinition) {
 	tb.Helper()
 
 	require.ElementsMatch(tb, tableNames(want), tableNames(got), "different set of tables")
 
 	// Now we are guaranteed to have the same tables.
-	for wantName, wantTable := range want {
+	for _, wantTable := range want {
 		// TODO(dyma): this will be simplified by map[string]Table
 		var gt sqlschema.TableDefinition
 		for i := range got {
-			if got[i].Name == wantName {
+			if got[i].Name == wantTable.Name {
 				gt = got[i]
 				break
 			}
 		}
 
-		cmpColumns(tb, d, wantName, wantTable.ColumnDefimitions, gt.ColumnDefimitions)
+		cmpColumns(tb, d, wantTable.Name, wantTable.ColumnDefinitions, gt.ColumnDefinitions)
 		cmpConstraints(tb, wantTable, gt)
 	}
 }
@@ -388,12 +389,12 @@ func cmpConstraints(tb testing.TB, want, got sqlschema.TableDefinition) {
 		}
 		return
 	}
-	require.ElementsMatch(tb, stripNames(want.UniqueContraints), stripNames(got.UniqueContraints), "table %q does not have expected unique constraints (listA=want, listB=got)", want.Name)
+	require.ElementsMatch(tb, stripNames(want.UniqueConstraints), stripNames(got.UniqueConstraints), "table %q does not have expected unique constraints (listA=want, listB=got)", want.Name)
 }
 
-func tableNames(tables map[string]sqlschema.TableDefinition) (names []string) {
-	for name := range tables {
-		names = append(names, name)
+func tableNames(tables map[schema.FQN]sqlschema.TableDefinition) (names []string) {
+	for fqn := range tables {
+		names = append(names, fqn.Table)
 	}
 	return
 }
@@ -435,9 +436,10 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			require.Len(t, got.TableDefinitions, 1)
-			for _, table := range got.TableDefinitions {
-				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.ColumnDefimitions)
+			gotTables := got.(sqlschema.BunModelSchema).ModelTables
+			require.Len(t, gotTables, 1)
+			for _, table := range gotTables {
+				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.ColumnDefinitions)
 				return
 			}
 		})
@@ -470,9 +472,10 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			require.Len(t, got.TableDefinitions, 1)
-			for _, table := range got.TableDefinitions {
-				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.ColumnDefimitions)
+			gotTables := got.(sqlschema.BunModelSchema).ModelTables
+			require.Len(t, gotTables, 1)
+			for _, table := range gotTables {
+				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.ColumnDefinitions)
 			}
 		})
 
@@ -489,7 +492,7 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			want := sqlschema.TableDefinition{
 				Name: "models",
-				UniqueContraints: []sqlschema.Unique{
+				UniqueConstraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewColumns("id")},
 					{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name")},
 				},
@@ -498,9 +501,10 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			require.Len(t, got.TableDefinitions, 1)
-			for _, table := range got.TableDefinitions {
-				cmpConstraints(t, want, table)
+			gotTables := got.(sqlschema.BunModelSchema).ModelTables
+			require.Len(t, gotTables, 1)
+			for _, table := range gotTables {
+				cmpConstraints(t, want, table.TableDefinition)
 				return
 			}
 		})
@@ -519,8 +523,9 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			require.Len(t, got.TableDefinitions, 1)
-			for _, table := range got.TableDefinitions {
+			gotTables := got.(sqlschema.BunModelSchema).ModelTables
+			require.Len(t, gotTables, 1)
+			for _, table := range gotTables {
 				require.NotNilf(t, table.PrimaryKey, "did not register primary key, want (%s)", want)
 				require.Equal(t, want, table.PrimaryKey.Columns, "wrong primary key columns")
 				return

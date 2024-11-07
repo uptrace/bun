@@ -17,11 +17,35 @@ type InspectorDialect interface {
 	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
 	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
 	// or specify the same VARCHAR length differently (VARCHAR(255) ~ VARCHAR).
-	EquivalentType(ColumnDefinition, ColumnDefinition) bool
+	EquivalentType(Column, Column) bool
 }
 
 type Inspector interface {
-	Inspect(ctx context.Context) (DatabaseSchema, error)
+	Inspect(ctx context.Context) (Schema, error)
+}
+
+type Schema interface {
+	GetTables() []Table
+	GetForeignKeys() map[ForeignKey]string
+}
+
+type Table interface {
+	GetSchema() string
+	GetName() string
+	GetColumns() []Column
+	GetPrimaryKey() *PrimaryKey
+	GetUniqueConstraints() []Unique
+	GetFQN() schema.FQN
+}
+
+type Column interface {
+	GetName() string
+	GetSQLType() string
+	GetVarcharLen() int
+	GetDefaultValue() string
+	GetIsNullable() bool
+	GetIsAutoIncrement() bool
+	GetIsIdentity() bool
 }
 
 type inspector struct {
@@ -38,12 +62,6 @@ func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
 	}, nil
 }
 
-// SchemaTable provides additional table metadata that is only accessible from scanning Go models.
-type SchemaTable struct {
-	// Model stores the zero interface to the underlying Go struct.
-	Model interface{}
-}
-
 // SchemaInspector creates the current project state from the passed bun.Models.
 // Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
 type SchemaInspector struct {
@@ -58,10 +76,34 @@ func NewSchemaInspector(tables *schema.Tables) *SchemaInspector {
 	}
 }
 
-func (si *SchemaInspector) Inspect(ctx context.Context) (DatabaseSchema, error) {
-	state := DatabaseSchema{
-		TableDefinitions: make(map[string]TableDefinition),
-		ForeignKeys:      make(map[ForeignKey]string),
+type BunModelSchema struct {
+	DatabaseSchema
+
+	ModelTables map[schema.FQN]ModelTable
+}
+
+func (ms BunModelSchema) GetTables() []Table {
+	var tables []Table
+	for _, t := range ms.ModelTables {
+		tables = append(tables, t)
+	}
+	return tables
+}
+
+// ModelTable provides additional table metadata that is only accessible from scanning Go models.
+type ModelTable struct {
+	TableDefinition
+
+	// Model stores the zero interface to the underlying Go struct.
+	Model interface{}
+}
+
+func (si *SchemaInspector) Inspect(ctx context.Context) (Schema, error) {
+	state := BunModelSchema{
+		DatabaseSchema: DatabaseSchema{
+			ForeignKeys: make(map[ForeignKey]string),
+		},
+		ModelTables: make(map[schema.FQN]ModelTable),
 	}
 	for _, t := range si.tables.All() {
 		columns := make(map[string]ColumnDefinition)
@@ -72,6 +114,7 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (DatabaseSchema, error) 
 				return state, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
 			columns[f.Name] = ColumnDefinition{
+				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
 				DefaultValue:    exprToLower(f.SQLDefault),
@@ -109,15 +152,16 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (DatabaseSchema, error) 
 			pk = &PrimaryKey{Columns: NewColumns(columns...)}
 		}
 
-		state.TableDefinitions[t.Name] = TableDefinition{
-			Schema:            t.Schema,
-			Name:              t.Name,
-			ColumnDefimitions: columns,
-			UniqueContraints:  unique,
-			PrimaryKey:        pk,
-			Additional: SchemaTable{
-				Model: t.ZeroIface,
+		fqn := schema.FQN{Schema: t.Schema, Table: t.Name}
+		state.ModelTables[fqn] = ModelTable{
+			TableDefinition: TableDefinition{
+				Schema:            t.Schema,
+				Name:              t.Name,
+				ColumnDefinitions: columns,
+				UniqueConstraints: unique,
+				PrimaryKey:        pk,
 			},
+			Model: t.ZeroIface,
 		}
 
 		for _, rel := range t.Relations {

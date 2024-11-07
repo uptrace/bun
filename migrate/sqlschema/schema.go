@@ -9,45 +9,69 @@ import (
 )
 
 type DatabaseSchema struct {
-	TableDefinitions map[string]TableDefinition
+	TableDefinitions map[schema.FQN]TableDefinition
 	ForeignKeys      map[ForeignKey]string
 }
+
+var _ Schema = (*DatabaseSchema)(nil)
 
 type TableDefinition struct {
 	Schema string
 	Name   string
 
-	// ColumnDefimitions map each column name to the column definition.
-	ColumnDefimitions map[string]ColumnDefinition
+	// ColumnDefinitions map each column name to the column definition.
+	ColumnDefinitions map[string]ColumnDefinition
 
 	// PrimaryKey holds the primary key definition.
 	// A nil value means that no primary key is defined for the table.
 	PrimaryKey *PrimaryKey
 
 	// UniqueConstraints defined on the table.
-	UniqueContraints []Unique
-
-	// Additional metadata that Inspector implementations might provide about the table.
-	Additional interface{}
+	UniqueConstraints []Unique
 }
 
-func (t TableDefinition) FQN() schema.FQN {
-	return schema.FQN{Schema: t.Schema, Table: t.Name}
-}
+var _ Table = (*TableDefinition)(nil)
 
 // ColumnDefinition stores attributes of a database column.
 type ColumnDefinition struct {
+	Name            string
 	SQLType         string
 	VarcharLen      int
 	DefaultValue    string
 	IsNullable      bool
 	IsAutoIncrement bool
 	IsIdentity      bool
-
-	// Additional metadata that Inspector implementations might provide about the column.
-	Additional interface{}
-
 	// TODO: add Precision and Cardinality for timestamps/bit-strings/floats and arrays respectively.
+}
+
+var _ Column = (*ColumnDefinition)(nil)
+
+func (cd ColumnDefinition) GetName() string {
+	return cd.Name
+}
+
+func (cd ColumnDefinition) GetSQLType() string {
+	return cd.SQLType
+}
+
+func (cd ColumnDefinition) GetVarcharLen() int {
+	return cd.VarcharLen
+}
+
+func (cd ColumnDefinition) GetDefaultValue() string {
+	return cd.DefaultValue
+}
+
+func (cd ColumnDefinition) GetIsNullable() bool {
+	return cd.IsNullable
+}
+
+func (cd ColumnDefinition) GetIsAutoIncrement() bool {
+	return cd.IsAutoIncrement
+}
+
+func (cd ColumnDefinition) GetIsIdentity() bool {
+	return cd.IsIdentity
 }
 
 // AppendQuery appends full SQL data type.
@@ -160,4 +184,40 @@ type PrimaryKey struct {
 type ColumnReference struct {
 	FQN    schema.FQN
 	Column Columns
+}
+
+func (ds DatabaseSchema) GetTables() []Table {
+	var tables []Table
+	for i := range ds.TableDefinitions {
+		tables = append(tables, ds.TableDefinitions[i])
+	}
+	return tables
+}
+
+func (ds DatabaseSchema) GetForeignKeys() map[ForeignKey]string {
+	return ds.ForeignKeys
+}
+
+func (td TableDefinition) GetSchema() string {
+	return td.Schema
+}
+func (td TableDefinition) GetName() string {
+	return td.Name
+}
+func (td TableDefinition) GetColumns() []Column {
+	var columns []Column
+	for i := range td.ColumnDefinitions {
+		columns = append(columns, td.ColumnDefinitions[i])
+	}
+	return columns
+}
+func (td TableDefinition) GetPrimaryKey() *PrimaryKey {
+	return td.PrimaryKey
+}
+func (td TableDefinition) GetUniqueConstraints() []Unique {
+	return td.UniqueConstraints
+}
+
+func (t TableDefinition) GetFQN() schema.FQN {
+	return schema.FQN{Schema: t.Schema, Table: t.Name}
 }

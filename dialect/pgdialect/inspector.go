@@ -6,6 +6,13 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
+	"github.com/uptrace/bun/schema"
+)
+
+type (
+	Schema = sqlschema.DatabaseSchema
+	Table  = sqlschema.TableDefinition
+	Column = sqlschema.ColumnDefinition
 )
 
 func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) sqlschema.Inspector {
@@ -23,9 +30,9 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (in *Inspector) Inspect(ctx context.Context) (sqlschema.DatabaseSchema, error) {
-	schema := sqlschema.DatabaseSchema{
-		TableDefinitions: make(map[string]sqlschema.TableDefinition),
+func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
+	dbSchema := Schema{
+		TableDefinitions: make(map[schema.FQN]Table),
 		ForeignKeys:      make(map[sqlschema.ForeignKey]string),
 	}
 
@@ -37,22 +44,22 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.DatabaseSchema, err
 
 	var tables []*InformationSchemaTable
 	if err := in.db.NewRaw(sqlInspectTables, bun.In(exclude)).Scan(ctx, &tables); err != nil {
-		return schema, err
+		return dbSchema, err
 	}
 
 	var fks []*ForeignKey
 	if err := in.db.NewRaw(sqlInspectForeignKeys, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
-		return schema, err
+		return dbSchema, err
 	}
-	schema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
+	dbSchema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
 
 	for _, table := range tables {
 		var columns []*InformationSchemaColumn
 		if err := in.db.NewRaw(sqlInspectColumnsQuery, table.Schema, table.Name).Scan(ctx, &columns); err != nil {
-			return schema, err
+			return dbSchema, err
 		}
 
-		colDefs := make(map[string]sqlschema.ColumnDefinition)
+		colDefs := make(map[string]Column)
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -63,7 +70,8 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.DatabaseSchema, err
 				def = strings.ToLower(def)
 			}
 
-			colDefs[c.Name] = sqlschema.ColumnDefinition{
+			colDefs[c.Name] = Column{
+				Name:            c.Name,
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
 				DefaultValue:    def,
@@ -93,22 +101,23 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.DatabaseSchema, err
 			}
 		}
 
-		schema.TableDefinitions[table.Name] = sqlschema.TableDefinition{
+		fqn := schema.FQN{Schema: table.Schema, Table: table.Name}
+		dbSchema.TableDefinitions[fqn] = Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
-			ColumnDefimitions: colDefs,
+			ColumnDefinitions: colDefs,
 			PrimaryKey:        pk,
-			UniqueContraints:  unique,
+			UniqueConstraints: unique,
 		}
 	}
 
 	for _, fk := range fks {
-		schema.ForeignKeys[sqlschema.ForeignKey{
+		dbSchema.ForeignKeys[sqlschema.ForeignKey{
 			From: sqlschema.NewColumnReference(fk.SourceSchema, fk.SourceTable, fk.SourceColumns...),
 			To:   sqlschema.NewColumnReference(fk.TargetSchema, fk.TargetTable, fk.TargetColumns...),
 		}] = fk.ConstraintName
 	}
-	return schema, nil
+	return dbSchema, nil
 }
 
 type InformationSchemaTable struct {

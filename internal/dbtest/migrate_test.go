@@ -14,6 +14,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
+	"github.com/uptrace/bun/schema"
 )
 
 const (
@@ -224,7 +225,7 @@ func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.
 	return func(ctx context.Context) sqlschema.DatabaseSchema {
 		state, err := inspector.Inspect(ctx)
 		require.NoError(tb, err)
-		return state
+		return state.(sqlschema.DatabaseSchema)
 	}
 }
 
@@ -360,7 +361,7 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	state := inspect(ctx)
 	tables := state.TableDefinitions
 	require.Len(t, tables, 1)
-	require.Contains(t, tables, "changed")
+	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "changed"})
 }
 
 func testCreateDropTable(t *testing.T, db *bun.DB) {
@@ -389,7 +390,7 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 	state := inspect(ctx)
 	tables := state.TableDefinitions
 	require.Len(t, tables, 1)
-	require.Contains(t, tables, "createme")
+	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "createme"})
 }
 
 func testAlterForeignKeys(t *testing.T, db *bun.DB) {
@@ -639,9 +640,9 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 		}
 	}
 
-	require.Contains(t, renamed.ColumnDefimitions, "count")
-	require.Contains(t, model2.ColumnDefimitions, "second_column")
-	require.Contains(t, model2.ColumnDefimitions, "do_not_rename")
+	require.Contains(t, renamed.ColumnDefinitions, "count")
+	require.Contains(t, model2.ColumnDefinitions, "second_column")
+	require.Contains(t, model2.ColumnDefinitions, "do_not_rename")
 }
 
 func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
@@ -710,11 +711,11 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"change_me_own_type": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "change_me_own_type"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_me_own_type",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"bigger_int": {
 					SQLType:    "bigint",
 					IsIdentity: true,
@@ -777,11 +778,11 @@ func testIdentity(t *testing.T, db *bun.DB) {
 		B             int64 `bun:",notnull,identity"`
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"bourne_identity": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "bourne_identity"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "bourne_identity",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"a": {
 					SQLType:    sqltype.BigInt,
 					IsIdentity: false, // <- drop IDENTITY
@@ -820,11 +821,11 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 		AddMe         bool   `bun:"addme"`
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"column_madness": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "column_madness"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "column_madness",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"do_not_touch": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -873,11 +874,11 @@ func testUnique(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed"` // shrink "pet" unique group
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"uniqlo_stores": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "uniqlo_stores"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "uniqlo_stores",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -907,7 +908,7 @@ func testUnique(t *testing.T, db *bun.DB) {
 					IsNullable: true,
 				},
 			},
-			UniqueContraints: []sqlschema.Unique{
+			UniqueConstraints: []sqlschema.Unique{
 				{Columns: sqlschema.NewColumns("email")},
 				{Columns: sqlschema.NewColumns("pet_name")},
 				// We can only be sure of the user-defined index name
@@ -951,11 +952,11 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed,unique"`
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"after": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "after"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "after",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -977,7 +978,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 					IsNullable: true,
 				},
 			},
-			UniqueContraints: []sqlschema.Unique{
+			UniqueConstraints: []sqlschema.Unique{
 				{Columns: sqlschema.NewColumns("pet_name")},
 				{Columns: sqlschema.NewColumns("pet_breed")},
 				{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name", "birthday")},
@@ -1046,11 +1047,11 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		LastName      string `bun:"last_name,pk"`
 	}
 
-	wantTables := map[string]sqlschema.TableDefinition{
-		"drop_your_pks": {
+	wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		{Schema: db.Dialect().DefaultSchema(), Table: "drop_your_pks"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "drop_your_pks",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
@@ -1061,10 +1062,10 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 				},
 			},
 		},
-		"add_new_pk": {
+		{Schema: db.Dialect().DefaultSchema(), Table: "add_new_pk"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "add_new_pk",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"new_id": {
 					SQLType:    sqltype.BigInt,
 					IsNullable: false,
@@ -1081,10 +1082,10 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 			},
 			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
 		},
-		"change_pk": {
+		{Schema: db.Dialect().DefaultSchema(), Table: "change_pk"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_pk",
-			ColumnDefimitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,

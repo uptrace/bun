@@ -82,7 +82,7 @@ func (op *RenameColumnOp) DependsOn(another Operation) bool {
 type AddColumnOp struct {
 	FQN    schema.FQN
 	Column string
-	ColDef sqlschema.ColumnDefinition
+	ColDef sqlschema.Column
 }
 
 var _ Operation = (*AddColumnOp)(nil)
@@ -98,7 +98,7 @@ func (op *AddColumnOp) GetReverse() Operation {
 type DropColumnOp struct {
 	FQN    schema.FQN
 	Column string
-	ColDef sqlschema.ColumnDefinition
+	ColDef sqlschema.Column
 }
 
 var _ Operation = (*DropColumnOp)(nil)
@@ -250,8 +250,8 @@ func (op *DropUniqueConstraintOp) GetReverse() Operation {
 type ChangeColumnTypeOp struct {
 	FQN    schema.FQN
 	Column string
-	From   sqlschema.ColumnDefinition
-	To     sqlschema.ColumnDefinition
+	From   sqlschema.Column
+	To     sqlschema.Column
 }
 
 var _ Operation = (*ChangeColumnTypeOp)(nil)
