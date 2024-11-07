@@ -2,7 +2,7 @@ name: Prune stale issues/prs
 on:
   workflow_dispatch:
   schedule:
-  - cron: '0 */3 * * *'
+  - cron: '0 3 * * *'
 
 permissions:
   contents: read
