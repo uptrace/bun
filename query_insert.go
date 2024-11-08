@@ -53,10 +53,12 @@ func (q *InsertQuery) Err(err error) *InsertQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
-func (q *InsertQuery) Apply(fn func(*InsertQuery) *InsertQuery) *InsertQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the InsertQuery as an argument.
+func (q *InsertQuery) Apply(fns ...func(*InsertQuery) *InsertQuery) *InsertQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }
