@@ -1556,6 +1556,35 @@ func TestQuery(t *testing.T) {
 				return db.NewInsert().Model(new(Model))
 			},
 		},
+		{
+			id: 168,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... ORDER BY ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Model)).WherePK().Order("id")
+			},
+		},
+		{
+			id: 169,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Model)).WherePK().Order("id").Limit(1)
+			},
+		},
+		{
+			id: 170,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... USING ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Story)).TableExpr("archived_stories AS src").
+					Where("src.id = story.id").Order("src.id").Limit(1)
+			},
+		},
+		{
+			id: 171,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// UPDATE ... SET ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewUpdate().Model(new(Story)).Set("name = ?", "new-name").WherePK().Order("id").Limit(1)
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
