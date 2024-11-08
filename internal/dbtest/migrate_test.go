@@ -315,11 +315,6 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 		{testUnique},
 		{testUniqueRenamedTable},
 		{testUpdatePrimaryKeys},
-
-		// Suspended support for renaming foreign keys:
-		// {testCustomFKNameFunc},
-		// {testForceRenameFK},
-		// {testRenameColumnRenamesFK},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -470,120 +465,6 @@ func testAlterForeignKeys(t *testing.T, db *bun.DB) {
 	})
 }
 
-func testForceRenameFK(t *testing.T, db *bun.DB) {
-	// Database state
-	type Owner struct {
-		ID int64 `bun:",pk"`
-	}
-
-	type OwnedThing struct {
-		bun.BaseModel `bun:"table:things"`
-		ID            int64 `bun:",pk"`
-		OwnerID       int64 `bun:"owner_id,notnull"`
-
-		Owner *Owner `bun:"rel:belongs-to,join:owner_id=id"`
-	}
-
-	// Model state
-	type Person struct {
-		ID int64 `bun:",pk"`
-	}
-
-	type PersonalThing struct {
-		bun.BaseModel `bun:"table:things"`
-		ID            int64 `bun:",pk"`
-		PersonID      int64 `bun:"owner_id,notnull"`
-
-		Owner *Person `bun:"rel:belongs-to,join:owner_id=id"`
-	}
-
-	ctx := context.Background()
-	inspect := inspectDbOrSkip(t, db)
-
-	mustCreateTableWithFKs(t, ctx, db,
-		(*Owner)(nil),
-		(*OwnedThing)(nil),
-	)
-	mustDropTableOnCleanup(t, ctx, db, (*Person)(nil))
-
-	m := newAutoMigratorOrSkip(t, db,
-		migrate.WithModel(
-			(*Person)(nil),
-			(*PersonalThing)(nil),
-		),
-		migrate.WithRenameFK(true),
-		migrate.WithFKNameFunc(func(fk sqlschema.ForeignKey) string {
-			return strings.Join([]string{
-				fk.From.FQN.Table, fk.To.FQN.Table, "fkey",
-			}, "_")
-		}),
-	)
-
-	// Act
-	runMigrations(t, m)
-
-	// Assert
-	state := inspect(ctx)
-	schema := db.Dialect().DefaultSchema()
-	wantName, ok := state.ForeignKeys[sqlschema.ForeignKey{
-		From: sqlschema.NewColumnReference(schema, "things", "owner_id"),
-		To:   sqlschema.NewColumnReference(schema, "people", "id"),
-	}]
-	require.True(t, ok, "expect state.ForeignKeys to contain things_people_fkey")
-	require.Equal(t, wantName, "things_people_fkey")
-}
-
-func testCustomFKNameFunc(t *testing.T, db *bun.DB) {
-	// Database state
-	type Column struct {
-		OID   int64 `bun:",pk"`
-		RelID int64 `bun:"attrelid,notnull"`
-	}
-	type Table struct {
-		OID int64 `bun:",pk"`
-	}
-
-	// Model state
-	type ColumnM struct {
-		bun.BaseModel `bun:"table:columns"`
-		OID           int64 `bun:",pk"`
-		RelID         int64 `bun:"attrelid,notnull"`
-
-		Table *Table `bun:"rel:belongs-to,join:attrelid=oid"`
-	}
-	type TableM struct {
-		bun.BaseModel `bun:"table:tables"`
-		OID           int64 `bun:",pk"`
-	}
-
-	ctx := context.Background()
-	inspect := inspectDbOrSkip(t, db)
-
-	mustCreateTableWithFKs(t, ctx, db,
-		(*Table)(nil),
-		(*Column)(nil),
-	)
-
-	m := newAutoMigratorOrSkip(t, db,
-		migrate.WithFKNameFunc(func(sqlschema.ForeignKey) string { return "test_fkey" }),
-		migrate.WithModel(
-			(*TableM)(nil),
-			(*ColumnM)(nil),
-		),
-	)
-
-	// Act
-	runMigrations(t, m)
-
-	// Assert
-	state := inspect(ctx)
-	fkName := state.ForeignKeys[sqlschema.ForeignKey{
-		From: sqlschema.NewColumnReference(db.Dialect().DefaultSchema(), "columns", "attrelid"),
-		To:   sqlschema.NewColumnReference(db.Dialect().DefaultSchema(), "tables", "oid"),
-	}]
-	require.Equal(t, "test_fkey", fkName)
-}
-
 func testRenamedColumns(t *testing.T, db *bun.DB) {
 	// Database state
 	type Original struct {
@@ -643,45 +524,6 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 	require.Contains(t, renamed.ColumnDefinitions, "count")
 	require.Contains(t, model2.ColumnDefinitions, "second_column")
 	require.Contains(t, model2.ColumnDefinitions, "do_not_rename")
-}
-
-func testRenameColumnRenamesFK(t *testing.T, db *bun.DB) {
-	type TennantBefore struct {
-		bun.BaseModel `bun:"table:tennants"`
-		ID            int64 `bun:"id,pk,identity"`
-		Apartment     int8
-		NeighbourID   int64 `bun:"neighbour_id"`
-
-		Neighbour *TennantBefore `bun:"rel:has-one,join:neighbour_id=id"`
-	}
-
-	type TennantAfter struct {
-		bun.BaseModel `bun:"table:tennants"`
-		TennantID     int64 `bun:"tennant_id,pk,identity"`
-		Apartment     int8
-		NeighbourID   int64 `bun:"my_neighbour"`
-
-		Neighbour *TennantAfter `bun:"rel:has-one,join:my_neighbour=tennant_id"`
-	}
-
-	ctx := context.Background()
-	inspect := inspectDbOrSkip(t, db)
-	mustCreateTableWithFKs(t, ctx, db, (*TennantBefore)(nil))
-	m := newAutoMigratorOrSkip(t, db,
-		migrate.WithRenameFK(true),
-		migrate.WithModel((*TennantAfter)(nil)),
-	)
-
-	// Act
-	runMigrations(t, m)
-
-	// Assert
-	state := inspect(ctx)
-	fkName := state.ForeignKeys[sqlschema.ForeignKey{
-		From: sqlschema.NewColumnReference(db.Dialect().DefaultSchema(), "tennants", "my_neighbour"),
-		To:   sqlschema.NewColumnReference(db.Dialect().DefaultSchema(), "tennants", "tennant_id"),
-	}]
-	require.Equal(t, "tennants_my_neighbour_fkey", fkName)
 }
 
 // testChangeColumnType_AutoCast checks type changes which can be type-casted automatically,

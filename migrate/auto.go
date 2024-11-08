@@ -31,29 +31,6 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 	}
 }
 
-// WithFKNameFunc sets the function to build a new name for created or renamed FK constraints.
-//
-// Notice: this option is not supported in SQLite dialect and will have no effect.
-// SQLite does not implement ADD CONSTRAINT, so adding or renaming a constraint will require re-creating the table.
-// We need to support custom FKNameFunc in CreateTable to control how FKs are named.
-//
-// More generally, this option will have no effect whenever FKs are included in the CREATE TABLE definition,
-// which is the default strategy. Perhaps it would make sense to allow disabling this and switching to separate (CreateTable + AddFK)
-func WithFKNameFunc(f func(sqlschema.ForeignKey) string) AutoMigratorOption {
-	return func(m *AutoMigrator) {
-		m.diffOpts = append(m.diffOpts, withFKNameFunc(f))
-	}
-}
-
-// WithRenameFK prevents AutoMigrator from recreating foreign keys when their dependent relations are renamed,
-// and forces it to run a RENAME CONSTRAINT query instead. Creating an index on a large table can take a very long time,
-// and in those cases simply renaming the FK makes a lot more sense.
-func WithRenameFK(enabled bool) AutoMigratorOption {
-	return func(m *AutoMigrator) {
-		m.diffOpts = append(m.diffOpts, withDetectRenamedFKs(enabled))
-	}
-}
-
 // WithTableNameAuto overrides default migrations table name.
 func WithTableNameAuto(table string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
@@ -325,7 +302,7 @@ func (c *changeset) ResolveDependencies() error {
 		current
 		visited
 	)
-	
+
 	status := make(map[Operation]int, len(c.operations))
 	for _, op := range c.operations {
 		status[op] = unvisited

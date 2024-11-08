@@ -2,6 +2,7 @@ package pgdialect
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
@@ -60,8 +61,6 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 		b, err = m.addForeignKey(fmter, appendAlterTable(b, change.FQN()), change)
 	case *migrate.DropForeignKeyOp:
 		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN()), change.ConstraintName)
-	// case *migrate.RenameForeignKeyOp:
-	// 	b, err = m.renameConstraint(fmter, b, change)
 	default:
 		return nil, fmt.Errorf("append sql: unknown operation %T", change)
 	}
@@ -126,22 +125,6 @@ func (m *migrator) addPrimaryKey(fmter schema.Formatter, b []byte, pk sqlschema.
 	return b, nil
 }
 
-func (m *migrator) renameConstraint(fmter schema.Formatter, b []byte, rename *migrate.RenameForeignKeyOp) (_ []byte, err error) {
-	b = append(b, "ALTER TABLE "...)
-	fqn := rename.FQN()
-	if b, err = fqn.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
-
-	b = append(b, " RENAME CONSTRAINT "...)
-	b = fmter.AppendName(b, rename.OldName)
-
-	b = append(b, " TO "...)
-	b = fmter.AppendName(b, rename.NewName)
-
-	return b, nil
-}
-
 func (m *migrator) changePrimaryKey(fmter schema.Formatter, b []byte, change *migrate.ChangePrimaryKeyOp) (_ []byte, err error) {
 	b, _ = m.dropConstraint(fmter, b, change.Old.Name)
 	b = append(b, ", "...)
@@ -173,7 +156,14 @@ func (m *migrator) dropConstraint(fmter schema.Formatter, b []byte, name string)
 
 func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.AddForeignKeyOp) (_ []byte, err error) {
 	b = append(b, "ADD CONSTRAINT "...)
-	b = fmter.AppendName(b, add.ConstraintName)
+
+	name := add.ConstraintName
+	if name == "" {
+		colRef := add.ForeignKey.From
+		columns := strings.Join(colRef.Column.Split(), "_")
+		name = fmt.Sprintf("%s_%s_fkey", colRef.FQN.Table, columns)
+	}
+	b = fmter.AppendName(b, name)
 
 	b = append(b, " FOREIGN KEY ("...)
 	if b, err = add.ForeignKey.From.Column.AppendQuery(fmter, b); err != nil {

@@ -84,7 +84,7 @@ RenameCreate:
 		if _, ok := currentFKs[fk]; !ok {
 			d.changes.Add(&AddForeignKeyOp{
 				ForeignKey:     fk,
-				ConstraintName: d.fkNameFunc(fk),
+				ConstraintName: "", // leave empty to let each dialect apply their convention
 			})
 		}
 	}
@@ -221,8 +221,6 @@ Drop:
 
 func newDetector(got, want sqlschema.Schema, opts ...diffOption) *detector {
 	cfg := &detectorConfig{
-		FKNameFunc:       defaultFKName,
-		DetectRenamedFKs: false,
 		EqType: func(c1, c2 sqlschema.Column) bool {
 			return c1.GetSQLType() == c2.GetSQLType() && c1.GetVarcharLen() == c2.GetVarcharLen()
 		},
@@ -235,25 +233,11 @@ func newDetector(got, want sqlschema.Schema, opts ...diffOption) *detector {
 		current:          got,
 		target:           want,
 		refMap:           newRefMap(got.GetForeignKeys()),
-		fkNameFunc:       cfg.FKNameFunc,
-		detectRenamedFKs: cfg.DetectRenamedFKs,
 		eqType:           cfg.EqType,
 	}
 }
 
 type diffOption func(*detectorConfig)
-
-func withFKNameFunc(f func(sqlschema.ForeignKey) string) diffOption {
-	return func(cfg *detectorConfig) {
-		// cfg.FKNameFunc = f
-	}
-}
-
-func withDetectRenamedFKs(enabled bool) diffOption {
-	return func(cfg *detectorConfig) {
-		cfg.DetectRenamedFKs = enabled
-	}
-}
 
 func withTypeEquivalenceFunc(f TypeEquivalenceFunc) diffOption {
 	return func(cfg *detectorConfig) {
@@ -263,8 +247,6 @@ func withTypeEquivalenceFunc(f TypeEquivalenceFunc) diffOption {
 
 // detectorConfig controls how differences in the model states are resolved.
 type detectorConfig struct {
-	FKNameFunc       func(sqlschema.ForeignKey) string
-	DetectRenamedFKs bool
 	EqType           TypeEquivalenceFunc
 }
 
@@ -279,17 +261,11 @@ type detector struct {
 	changes changeset
 	refMap  refMap
 
-	// fkNameFunc builds the name for created/renamed FK contraints.
-	fkNameFunc func(sqlschema.ForeignKey) string
-
 	// eqType determines column type equivalence.
 	// Default is direct comparison with '==' operator, which is inaccurate
 	// due to the existence of dialect-specific type aliases. The caller
 	// should pass a concrete InspectorDialect.EquuivalentType for robust comparison.
 	eqType TypeEquivalenceFunc
-
-	// detectRenemedFKs controls how FKs are treated when their references (table/column) are renamed.
-	detectRenamedFKs bool
 }
 
 // canRename checks if t1 can be renamed to t2.

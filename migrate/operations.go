@@ -123,32 +123,6 @@ func (op *DropColumnOp) DependsOn(another Operation) bool {
 	return false
 }
 
-// RenameForeignKeyOp.
-type RenameForeignKeyOp struct {
-	FK      sqlschema.ForeignKey
-	OldName string
-	NewName string
-}
-
-var _ Operation = (*RenameForeignKeyOp)(nil)
-
-func (op *RenameForeignKeyOp) FQN() schema.FQN {
-	return op.FK.From.FQN
-}
-
-// func (op *RenameForeignKeyOp) DependsOn(another Operation) bool {
-// 	rt, ok := another.(*RenameTableOp)
-// 	return ok && rt.FQN.Schema == op.FK.From.Schema && rt.NewName == op.FK.From.Table
-// }
-
-func (op *RenameForeignKeyOp) GetReverse() Operation {
-	return &RenameForeignKeyOp{
-		FK:      op.FK,
-		OldName: op.OldName,
-		NewName: op.NewName,
-	}
-}
-
 type AddForeignKeyOp struct {
 	ForeignKey     sqlschema.ForeignKey
 	ConstraintName string
