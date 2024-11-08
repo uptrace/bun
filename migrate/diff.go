@@ -58,7 +58,7 @@ RenameCreate:
 
 		// If wantTable does not exist in the database and was not renamed
 		// then we need to create this table in the database.
-		additional := wantTable.(sqlschema.ModelTable)
+		additional := wantTable.(sqlschema.BunTable)
 		d.changes.Add(&CreateTableOp{
 			FQN:   wantTable.GetFQN(),
 			Model: additional.Model,
@@ -379,6 +379,11 @@ func (s *signature) Equals(other signature) bool {
 	return true
 }
 
+// refMap is a utility for tracking superficial changes in foreign keys,
+// which do not require any modificiation in the database.
+// Modern SQL dialects automatically updated foreign key constraints whenever
+// a column or a table is renamed. Detector can use refMap to ignore any
+// differences in foreign keys which were caused by renamed column/table.
 type refMap map[*sqlschema.ForeignKey]string
 
 func newRefMap(fks map[sqlschema.ForeignKey]string) refMap {
@@ -389,6 +394,7 @@ func newRefMap(fks map[sqlschema.ForeignKey]string) refMap {
 	return rm
 }
 
+// RenameT updates table name in all foreign key definions which depend on it.
 func (rm refMap) RenameTable(table schema.FQN, newName string) {
 	for fk := range rm {
 		switch table {
@@ -400,6 +406,7 @@ func (rm refMap) RenameTable(table schema.FQN, newName string) {
 	}
 }
 
+// RenameColumn updates column name in all foreign key definions which depend on it.
 func (rm refMap) RenameColumn(table schema.FQN, column, newName string) {
 	for fk := range rm {
 		if table == fk.From.FQN {
@@ -411,6 +418,7 @@ func (rm refMap) RenameColumn(table schema.FQN, column, newName string) {
 	}
 }
 
+// Deref returns copies of ForeignKey values to a map. 
 func (rm refMap) Deref() map[sqlschema.ForeignKey]string {
 	out := make(map[sqlschema.ForeignKey]string)
 	for fk, name := range rm {

@@ -64,6 +64,36 @@ func WithMigrationsDirectoryAuto(directory string) AutoMigratorOption {
 	}
 }
 
+// AutoMigrator performs automated schema migrations.
+//
+// It is designed to be a drop-in replacement for some Migrator functionality and supports all existing
+// configuration options.
+// Similarly to Migrator, it has methods to create SQL migrations, write them to a file, and apply them.
+// Unlike Migrator, it detects the differences between the state defined by bun models and the current
+// database schema automatically.
+//
+// Usage:
+//  1. Generate migrations and apply them au once with AutoMigrator.Migrate().
+//  2. Create up- and down-SQL migration files and apply migrations using Migrator.Migrate().
+//
+// While both methods produce complete, reversible migrations (with entries in the database
+// and SQL migration files), prefer creating migrations and applying them separately for
+// any non-trivial cases to ensure AutoMigrator detects expected changes correctly.
+//
+// Limitations:
+//   - AutoMigrator only supports a subset of the possible ALTER TABLE modifications.
+//   - Some changes are not automatically reversible. For example, you would need to manually
+//     add a CREATE TABLE query to the .down migration file to revert a DROP TABLE migration.
+//   - Does not validate most dialect-specific constraints. For example, when changing column
+//     data type, make sure the data con be auto-casted to the new type.
+//   - Due to how the schema-state diff is calculated, it is not possible to rename a table and
+//     modify any of its columns' _data type_ in a single run. This will cause the AutoMigrator
+//     to drop and re-create the table under a different name; it is better to apply this change in 2 steps.
+//     Renaming a table and renaming its columns at the same time is possible.
+//   - Renaming table/column to an existing name, i.e. like this [A->B] [B->C], is not possible due to how
+//     AutoMigrator distinguishes "rename" and "unchanged" columns.
+//
+// Dialect must implement both sqlschema.Inspector and sqlschema.Migrator to be used with AutoMigrator.
 type AutoMigrator struct {
 	db *bun.DB
 
@@ -122,7 +152,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 
 	tables := schema.NewTables(db.Dialect())
 	tables.Register(am.includeModels...)
-	am.modelInspector = sqlschema.NewSchemaInspector(tables)
+	am.modelInspector = sqlschema.NewBunModelInspector(tables)
 
 	return am, nil
 }

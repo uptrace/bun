@@ -9,11 +9,28 @@ import (
 
 // Operation encapsulates the request to change a database definition
 // and knowns which operation can revert it.
+//
+// It is useful to define "monolith" Operations whenever possible,
+// even though they a dialect may require several distinct steps to apply them.
+// For example, changing a primary key involves first dropping the old constraint
+// before generating the new one. Yet, this is only an implementation detail and
+// passing a higher-level ChangePrimaryKeyOp will give the dialect more information
+// about the applied change.
+//
+// Some operations might be irreversible due to technical limitations. Returning
+// a *comment from GetReverse() will add an explanatory note to the generate migation file.
+//
+// To declare dependency on another Operation, operations should implement
+// { DependsOn(Operation) bool } interface, which Changeset will use to resolve dependencies.
 type Operation interface {
 	GetReverse() Operation
 }
 
-// CreateTableOp
+// CreateTableOp creates a new table in the schema.
+//
+// It does not report dependency on any other migration and may be executed first.
+// Make sure the dialect does not include FOREIGN KEY constraints in the CREATE TABLE
+// statement, as those may potentially reference not-yet-existing columns/tables.
 type CreateTableOp struct {
 	FQN   schema.FQN
 	Model interface{}
@@ -25,6 +42,7 @@ func (op *CreateTableOp) GetReverse() Operation {
 	return &DropTableOp{FQN: op.FQN}
 }
 
+// DropTableOp drops a database table. This operation is not reversible.
 type DropTableOp struct {
 	FQN schema.FQN
 }
@@ -43,6 +61,7 @@ func (op *DropTableOp) GetReverse() Operation {
 	return &c
 }
 
+// RenameTableOp renames the table. Note, that changing the "schema" part of the table's FQN is not allowed.
 type RenameTableOp struct {
 	FQN     schema.FQN
 	NewName string
@@ -57,7 +76,8 @@ func (op *RenameTableOp) GetReverse() Operation {
 	}
 }
 
-// RenameColumnOp.
+// RenameColumnOp renames a column in the table. If the changeset includes a rename operation
+// for the column's table, it should be executed first.
 type RenameColumnOp struct {
 	FQN     schema.FQN
 	OldName string
@@ -79,6 +99,7 @@ func (op *RenameColumnOp) DependsOn(another Operation) bool {
 	return ok && op.FQN.Schema == rename.FQN.Schema && op.FQN.Table == rename.NewName
 }
 
+// AddColumnOp adds a new column to the table.
 type AddColumnOp struct {
 	FQN    schema.FQN
 	Column string
@@ -95,6 +116,12 @@ func (op *AddColumnOp) GetReverse() Operation {
 	}
 }
 
+// DropColumnOp drop a column from the table.
+//
+// While some dialects allow DROP CASCADE to drop dependent constraints,
+// explicit handling on constraints is preferred for transparency and debugging.
+// DropColumnOp depends on DropForeignKeyOp, DropPrimaryKeyOp, and ChangePrimaryKeyOp
+// if any of the constraints is defined on this table.
 type DropColumnOp struct {
 	FQN    schema.FQN
 	Column string
@@ -123,6 +150,7 @@ func (op *DropColumnOp) DependsOn(another Operation) bool {
 	return false
 }
 
+// AddForeignKey adds a new FOREIGN KEY constraint.
 type AddForeignKeyOp struct {
 	ForeignKey     sqlschema.ForeignKey
 	ConstraintName string
@@ -152,6 +180,7 @@ func (op *AddForeignKeyOp) GetReverse() Operation {
 	}
 }
 
+// DropForeignKeyOp drops a FOREIGN KEY constraint.
 type DropForeignKeyOp struct {
 	ForeignKey     sqlschema.ForeignKey
 	ConstraintName string
@@ -170,6 +199,7 @@ func (op *DropForeignKeyOp) GetReverse() Operation {
 	}
 }
 
+// AddUniqueConstraintOp adds new UNIQUE constraint to the table.
 type AddUniqueConstraintOp struct {
 	FQN    schema.FQN
 	Unique sqlschema.Unique
@@ -199,6 +229,7 @@ func (op *AddUniqueConstraintOp) DependsOn(another Operation) bool {
 
 }
 
+// DropUniqueConstraintOp drops a UNIQUE constraint.
 type DropUniqueConstraintOp struct {
 	FQN    schema.FQN
 	Unique sqlschema.Unique
@@ -220,7 +251,10 @@ func (op *DropUniqueConstraintOp) GetReverse() Operation {
 	}
 }
 
-// Change column type.
+// ChangeColumnTypeOp set a new data type for the column.
+// The two types should be such that the data can be auto-casted from one to another.
+// E.g. reducing VARCHAR lenght is not possible in most dialects.
+// AutoMigrator does not enforce or validate these rules.
 type ChangeColumnTypeOp struct {
 	FQN    schema.FQN
 	Column string
@@ -239,6 +273,7 @@ func (op *ChangeColumnTypeOp) GetReverse() Operation {
 	}
 }
 
+// DropPrimaryKeyOp drops the table's PRIMARY KEY.
 type DropPrimaryKeyOp struct {
 	FQN        schema.FQN
 	PrimaryKey sqlschema.PrimaryKey
@@ -253,6 +288,7 @@ func (op *DropPrimaryKeyOp) GetReverse() Operation {
 	}
 }
 
+// AddPrimaryKeyOp adds a new PRIMARY KEY to the table.
 type AddPrimaryKeyOp struct {
 	FQN        schema.FQN
 	PrimaryKey sqlschema.PrimaryKey
@@ -275,6 +311,7 @@ func (op *AddPrimaryKeyOp) DependsOn(another Operation) bool {
 	return false
 }
 
+// ChangePrimaryKeyOp changes the PRIMARY KEY of the table.
 type ChangePrimaryKeyOp struct {
 	FQN schema.FQN
 	Old sqlschema.PrimaryKey

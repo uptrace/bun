@@ -406,7 +406,7 @@ func formatType(c sqlschema.ColumnDefinition) string {
 	return fmt.Sprintf("%s(%d)", c.SQLType, c.VarcharLen)
 }
 
-func TestSchemaInspector_Inspect(t *testing.T) {
+func TestBunModelInspector_Inspect(t *testing.T) {
 	testEachDialect(t, func(t *testing.T, dialectName string, dialect schema.Dialect) {
 		if _, ok := dialect.(sqlschema.InspectorDialect); !ok {
 			t.Skip(dialectName + " is not sqlschema.InspectorDialect")
@@ -420,7 +420,7 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewSchemaInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables)
 
 			want := map[string]sqlschema.ColumnDefinition{
 				"id": {
@@ -453,7 +453,7 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewSchemaInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables)
 
 			want := map[string]sqlschema.ColumnDefinition{
 				"id": {
@@ -488,7 +488,7 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewSchemaInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables)
 
 			want := sqlschema.TableDefinition{
 				Name: "models",
@@ -517,7 +517,7 @@ func TestSchemaInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewSchemaInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables)
 			want := sqlschema.NewColumns("id", "email")
 
 			got, err := inspector.Inspect(context.Background())

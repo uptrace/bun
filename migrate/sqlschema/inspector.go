@@ -20,10 +20,12 @@ type InspectorDialect interface {
 	EquivalentType(Column, Column) bool
 }
 
+// Inspector reads schema state.
 type Inspector interface {
 	Inspect(ctx context.Context) (Schema, error)
 }
 
+// Schema is an abstract collection of database objects.
 type Schema interface {
 	GetTables() []Table
 	GetForeignKeys() map[ForeignKey]string
@@ -48,10 +50,12 @@ type Column interface {
 	GetIsIdentity() bool
 }
 
+// inspector is opaque pointer to a databse inspector.
 type inspector struct {
 	Inspector
 }
 
+// NewInspector creates a new database inspector, if the dialect supports it.
 func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
 	dialect, ok := (db.Dialect()).(InspectorDialect)
 	if !ok {
@@ -62,24 +66,25 @@ func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
 	}, nil
 }
 
-// SchemaInspector creates the current project state from the passed bun.Models.
-// Do not recycle SchemaInspector for different sets of models, as older models will not be de-registerred before the next run.
-type SchemaInspector struct {
+// BunModelInspector creates the current project state from the passed bun.Models.
+// Do not recycle BunModelInspector for different sets of models, as older models will not be de-registerred before the next run.
+type BunModelInspector struct {
 	tables *schema.Tables
 }
 
-var _ Inspector = (*SchemaInspector)(nil)
+var _ Inspector = (*BunModelInspector)(nil)
 
-func NewSchemaInspector(tables *schema.Tables) *SchemaInspector {
-	return &SchemaInspector{
+func NewBunModelInspector(tables *schema.Tables) *BunModelInspector {
+	return &BunModelInspector{
 		tables: tables,
 	}
 }
 
+// BunModelSchema is the schema state derived from bun table models.
 type BunModelSchema struct {
 	DatabaseSchema
 
-	ModelTables map[schema.FQN]ModelTable
+	ModelTables map[schema.FQN]BunTable
 }
 
 func (ms BunModelSchema) GetTables() []Table {
@@ -90,22 +95,22 @@ func (ms BunModelSchema) GetTables() []Table {
 	return tables
 }
 
-// ModelTable provides additional table metadata that is only accessible from scanning Go models.
-type ModelTable struct {
+// BunTable provides additional table metadata that is only accessible from scanning bun models.
+type BunTable struct {
 	TableDefinition
 
 	// Model stores the zero interface to the underlying Go struct.
 	Model interface{}
 }
 
-func (si *SchemaInspector) Inspect(ctx context.Context) (Schema, error) {
+func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
 	state := BunModelSchema{
 		DatabaseSchema: DatabaseSchema{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
-		ModelTables: make(map[schema.FQN]ModelTable),
+		ModelTables: make(map[schema.FQN]BunTable),
 	}
-	for _, t := range si.tables.All() {
+	for _, t := range bmi.tables.All() {
 		columns := make(map[string]ColumnDefinition)
 		for _, f := range t.Fields {
 
@@ -153,7 +158,7 @@ func (si *SchemaInspector) Inspect(ctx context.Context) (Schema, error) {
 		}
 
 		fqn := schema.FQN{Schema: t.Schema, Table: t.Name}
-		state.ModelTables[fqn] = ModelTable{
+		state.ModelTables[fqn] = BunTable{
 			TableDefinition: TableDefinition{
 				Schema:            t.Schema,
 				Name:              t.Name,

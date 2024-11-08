@@ -8,6 +8,9 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// DatabaseSchema provides a default implementation of the Schema interface.
+// Dialects which support schema inspection may return it directly from Inspect()
+// or embed it in their custom schema structs.
 type DatabaseSchema struct {
 	TableDefinitions map[schema.FQN]TableDefinition
 	ForeignKeys      map[ForeignKey]string
