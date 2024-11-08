@@ -25,6 +25,8 @@ func WithModel(models ...interface{}) AutoMigratorOption {
 }
 
 // WithExcludeTable tells the AutoMigrator to ignore a table in the database.
+// This prevents AutoMigrator from dropping tables which may exist in the schema
+// but which are not used by the application.
 func WithExcludeTable(tables ...string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.excludeTables = append(m.excludeTables, tables...)
@@ -55,6 +57,7 @@ func WithMarkAppliedOnSuccessAuto(enabled bool) AutoMigratorOption {
 	}
 }
 
+// WithMigrationsDirectoryAuto overrides the default directory for migration files.
 func WithMigrationsDirectoryAuto(directory string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.migrationsOpts = append(m.migrationsOpts, WithMigrationsDirectory(directory))
@@ -146,9 +149,9 @@ func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 
 // Migrate writes required changes to a new migration file and runs the migration.
 // This will create and entry in the migrations table, making it possible to revert
-// the changes with Migrator.Rollback().
+// the changes with Migrator.Rollback(). MigrationOptions are passed on to Migrator.Migrate().
 func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
-	migrations, _, err := am.createSQLMigrations(ctx)
+	migrations, _, err := am.createSQLMigrations(ctx, false)
 	if err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
@@ -165,12 +168,21 @@ func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*
 	return group, nil
 }
 
+// CreateSQLMigration writes required changes to a new migration file.
+// Use migrate.Migrator to apply the generated migrations.
 func (am *AutoMigrator) CreateSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
-	_, files, err := am.createSQLMigrations(ctx)
+	_, files, err := am.createSQLMigrations(ctx, true)
 	return files, err
 }
 
-func (am *AutoMigrator) createSQLMigrations(ctx context.Context) (*Migrations, []*MigrationFile, error) {
+// CreateTxSQLMigration writes required changes to a new migration file making sure they will be executed
+// in a transaction when applied. Use migrate.Migrator to apply the generated migrations.
+func (am *AutoMigrator) CreateTxSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
+	_, files, err := am.createSQLMigrations(ctx, false)
+	return files, err
+}
+
+func (am *AutoMigrator) createSQLMigrations(ctx context.Context, transactional bool) (*Migrations, []*MigrationFile, error) {
 	changes, err := am.plan(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create sql migrations: %w", err)
@@ -185,20 +197,30 @@ func (am *AutoMigrator) createSQLMigrations(ctx context.Context) (*Migrations, [
 		Comment: "Changes detected by bun.migrate.AutoMigrator",
 	})
 
-	up, err := am.createSQL(ctx, migrations, name+".up.sql", changes)
+	// Append .tx.up.sql or .up.sql to migration name, dependin if it should be transactional.
+	fname := func(direction string) string {
+		return name + map[bool]string{true: ".tx.", false: "."}[transactional] + direction + ".sql"
+	}
+
+	up, err := am.createSQL(ctx, migrations, fname("up"), changes, transactional)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create sql migration up: %w", err)
 	}
 
-	down, err := am.createSQL(ctx, migrations, name+".down.sql", changes.GetReverse())
+	down, err := am.createSQL(ctx, migrations, fname("down"), changes.GetReverse(), transactional)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create sql migration down: %w", err)
 	}
 	return migrations, []*MigrationFile{up, down}, nil
 }
 
-func (am *AutoMigrator) createSQL(_ context.Context, migrations *Migrations, fname string, changes *changeset) (*MigrationFile, error) {
+func (am *AutoMigrator) createSQL(_ context.Context, migrations *Migrations, fname string, changes *changeset, transactional bool) (*MigrationFile, error) {
 	var buf bytes.Buffer
+
+	if transactional {
+		buf.WriteString("SET statement_timeout = 0;")
+	}
+
 	if err := changes.WriteTo(&buf, am.dbMigrator); err != nil {
 		return nil, err
 	}

@@ -240,18 +240,31 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 		ctx := context.Background()
 		m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*NewTable)(nil)))
 
-		migrations, err := m.CreateSQLMigrations(ctx)
-		require.NoError(t, err, "should create migrations successfully")
+		t.Run("basic", func(t *testing.T) {
+			migrations, err := m.CreateSQLMigrations(ctx)
+			require.NoError(t, err, "should create migrations successfully")
 
-		require.Len(t, migrations, 2, "expected up/down migration pair")
-		require.DirExists(t, migrationsDir)
-		checkMigrationFileContains(t, ".up.sql", "CREATE TABLE")
-		checkMigrationFileContains(t, ".down.sql", "DROP TABLE")
+			require.Len(t, migrations, 2, "expected up/down migration pair")
+			require.DirExists(t, migrationsDir)
+			checkMigrationFileContains(t, ".up.sql", "CREATE TABLE")
+			checkMigrationFileContains(t, ".down.sql", "DROP TABLE")
+		})
+
+		t.Run("transactional", func(t *testing.T) {
+			migrations, err := m.CreateTxSQLMigrations(ctx)
+			require.NoError(t, err, "should create migrations successfully")
+
+			require.Len(t, migrations, 2, "expected up/down migration pair")
+			require.DirExists(t, migrationsDir)
+			checkMigrationFileContains(t, "tx.up.sql", "CREATE TABLE", "SET statement_timeout = 0")
+			checkMigrationFileContains(t, "tx.down.sql", "DROP TABLE", "SET statement_timeout = 0")
+		})
+
 	})
 }
 
 // checkMigrationFileContains expected SQL snippet.
-func checkMigrationFileContains(t *testing.T, fileSuffix string, content string) {
+func checkMigrationFileContains(t *testing.T, fileSuffix string, snippets ...string) {
 	t.Helper()
 
 	files, err := os.ReadDir(migrationsDir)
@@ -261,7 +274,9 @@ func checkMigrationFileContains(t *testing.T, fileSuffix string, content string)
 		if strings.HasSuffix(f.Name(), fileSuffix) {
 			b, err := os.ReadFile(filepath.Join(migrationsDir, f.Name()))
 			require.NoError(t, err)
-			require.Containsf(t, string(b), content, "expected %s file to contain string", f.Name())
+			for _, content := range snippets {
+				require.Containsf(t, string(b), content, "expected %s file to contain string", f.Name())
+			}
 			return
 		}
 	}
