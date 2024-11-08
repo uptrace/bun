@@ -1,9 +1,6 @@
 package migrate
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -230,10 +227,10 @@ func newDetector(got, want sqlschema.Schema, opts ...diffOption) *detector {
 	}
 
 	return &detector{
-		current:          got,
-		target:           want,
-		refMap:           newRefMap(got.GetForeignKeys()),
-		eqType:           cfg.EqType,
+		current: got,
+		target:  want,
+		refMap:  newRefMap(got.GetForeignKeys()),
+		eqType:  cfg.EqType,
 	}
 }
 
@@ -247,7 +244,7 @@ func withTypeEquivalenceFunc(f TypeEquivalenceFunc) diffOption {
 
 // detectorConfig controls how differences in the model states are resolved.
 type detectorConfig struct {
-	EqType           TypeEquivalenceFunc
+	EqType TypeEquivalenceFunc
 }
 
 // detector may modify the passed database schemas, so it isn't safe to re-use them.
@@ -312,12 +309,6 @@ func (d *detector) mapNameToColumn(t sqlschema.Table) map[string]sqlschema.Colum
 		m[c.GetName()] = c
 	}
 	return m
-}
-
-// defaultFKName returns a name for the FK constraint in the format {tablename}_{columnname(s)}_fkey, following the Postgres convention.
-func defaultFKName(fk sqlschema.ForeignKey) string {
-	columnnames := strings.Join(fk.From.Column.Split(), "_")
-	return fmt.Sprintf("%s_%s_fkey", fk.From.FQN.Table, columnnames)
 }
 
 type TypeEquivalenceFunc func(sqlschema.Column, sqlschema.Column) bool
