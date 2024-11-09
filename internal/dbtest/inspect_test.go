@@ -93,7 +93,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		defaultSchema := db.Dialect().DefaultSchema()
 
 		// Tables come sorted alphabetically by schema and table.
-		wantTables := map[schema.FQN]sqlschema.TableDefinition{
+		wantTables := map[schema.FQN]sqlschema.BaseTable{
 			{Schema: "admin", Table: "offices"}: {
 				Schema: "admin",
 				Name:   "offices",
@@ -260,7 +260,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 
 		// State.FKs store their database names, which differ from dialect to dialect.
 		// Because of that we compare FKs and Tables separately.
-		gotTables := got.(sqlschema.DatabaseSchema).TableDefinitions
+		gotTables := got.(sqlschema.DatabaseSchema).BaseTables
 		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, gotTables)
 
 		var fks []sqlschema.ForeignKey
@@ -293,7 +293,7 @@ func mustCreateSchema(tb testing.TB, ctx context.Context, db *bun.DB, schema str
 
 // cmpTables compares table schemas using dialect-specific equivalence checks for column types
 // and reports the differences as t.Error().
-func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema.FQN]sqlschema.TableDefinition) {
+func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema.FQN]sqlschema.BaseTable) {
 	tb.Helper()
 
 	require.ElementsMatch(tb, tableNames(want), tableNames(got), "different set of tables")
@@ -301,7 +301,7 @@ func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema
 	// Now we are guaranteed to have the same tables.
 	for _, wantTable := range want {
 		// TODO(dyma): this will be simplified by map[string]Table
-		var gt sqlschema.TableDefinition
+		var gt sqlschema.BaseTable
 		for i := range got {
 			if got[i].Name == wantTable.Name {
 				gt = got[i]
@@ -372,7 +372,7 @@ func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, w
 }
 
 // cmpConstraints compares constraints defined on the table with the expected ones.
-func cmpConstraints(tb testing.TB, want, got sqlschema.TableDefinition) {
+func cmpConstraints(tb testing.TB, want, got sqlschema.BaseTable) {
 	tb.Helper()
 
 	if want.PrimaryKey != nil {
@@ -392,7 +392,7 @@ func cmpConstraints(tb testing.TB, want, got sqlschema.TableDefinition) {
 	require.ElementsMatch(tb, stripNames(want.UniqueConstraints), stripNames(got.UniqueConstraints), "table %q does not have expected unique constraints (listA=want, listB=got)", want.Name)
 }
 
-func tableNames(tables map[schema.FQN]sqlschema.TableDefinition) (names []string) {
+func tableNames(tables map[schema.FQN]sqlschema.BaseTable) (names []string) {
 	for fqn := range tables {
 		names = append(names, fqn.Table)
 	}
@@ -490,7 +490,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			want := sqlschema.TableDefinition{
+			want := sqlschema.BaseTable{
 				Name: "models",
 				UniqueConstraints: []sqlschema.Unique{
 					{Columns: sqlschema.NewColumns("id")},
@@ -504,7 +504,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			gotTables := got.(sqlschema.BunModelSchema).ModelTables
 			require.Len(t, gotTables, 1)
 			for _, table := range gotTables {
-				cmpConstraints(t, want, table.TableDefinition)
+				cmpConstraints(t, want, table.BaseTable)
 				return
 			}
 		})

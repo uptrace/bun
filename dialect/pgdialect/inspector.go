@@ -11,7 +11,7 @@ import (
 
 type (
 	Schema = sqlschema.DatabaseSchema
-	Table  = sqlschema.TableDefinition
+	Table  = sqlschema.BaseTable
 	Column = sqlschema.BaseColumn
 )
 
@@ -32,8 +32,8 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 
 func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 	dbSchema := Schema{
-		TableDefinitions: make(map[schema.FQN]Table),
-		ForeignKeys:      make(map[sqlschema.ForeignKey]string),
+		BaseTables:  make(map[schema.FQN]Table),
+		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
 	exclude := in.excludeTables
@@ -102,7 +102,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 		}
 
 		fqn := schema.FQN{Schema: table.Schema, Table: table.Name}
-		dbSchema.TableDefinitions[fqn] = Table{
+		dbSchema.BaseTables[fqn] = Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
 			ColumnDefinitions: colDefs,

@@ -32,26 +32,6 @@ type Schema interface {
 	GetForeignKeys() map[ForeignKey]string
 }
 
-type Table interface {
-	GetSchema() string
-	GetName() string
-	GetColumns() []Column
-	GetPrimaryKey() *PrimaryKey
-	GetUniqueConstraints() []Unique
-	GetFQN() schema.FQN
-}
-
-type Column interface {
-	GetName() string
-	GetSQLType() string
-	GetVarcharLen() int
-	GetDefaultValue() string
-	GetIsNullable() bool
-	GetIsAutoIncrement() bool
-	GetIsIdentity() bool
-	AppendQuery(schema.Formatter, []byte) ([]byte, error)
-}
-
 // inspector is opaque pointer to a databse inspector.
 type inspector struct {
 	Inspector
@@ -99,7 +79,7 @@ func (ms BunModelSchema) GetTables() []Table {
 
 // BunTable provides additional table metadata that is only accessible from scanning bun models.
 type BunTable struct {
-	TableDefinition
+	BaseTable
 
 	// Model stores the zero interface to the underlying Go struct.
 	Model interface{}
@@ -161,7 +141,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
 
 		fqn := schema.FQN{Schema: t.Schema, Table: t.Name}
 		state.ModelTables[fqn] = BunTable{
-			TableDefinition: TableDefinition{
+			BaseTable: BaseTable{
 				Schema:            t.Schema,
 				Name:              t.Name,
 				ColumnDefinitions: columns,

@@ -1,7 +1,6 @@
 package sqlschema
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
@@ -12,82 +11,11 @@ import (
 // Dialects which support schema inspection may return it directly from Inspect()
 // or embed it in their custom schema structs.
 type DatabaseSchema struct {
-	TableDefinitions map[schema.FQN]TableDefinition
-	ForeignKeys      map[ForeignKey]string
+	BaseTables  map[schema.FQN]BaseTable
+	ForeignKeys map[ForeignKey]string
 }
 
 var _ Schema = (*DatabaseSchema)(nil)
-
-type TableDefinition struct {
-	Schema string
-	Name   string
-
-	// ColumnDefinitions map each column name to the column definition.
-	ColumnDefinitions map[string]*BaseColumn
-
-	// PrimaryKey holds the primary key definition.
-	// A nil value means that no primary key is defined for the table.
-	PrimaryKey *PrimaryKey
-
-	// UniqueConstraints defined on the table.
-	UniqueConstraints []Unique
-}
-
-var _ Table = (*TableDefinition)(nil)
-
-// BaseColumn stores attributes of a database column.
-type BaseColumn struct {
-	Name            string
-	SQLType         string
-	VarcharLen      int
-	DefaultValue    string
-	IsNullable      bool
-	IsAutoIncrement bool
-	IsIdentity      bool
-	// TODO: add Precision and Cardinality for timestamps/bit-strings/floats and arrays respectively.
-}
-
-var _ Column = (*BaseColumn)(nil)
-
-func (cd BaseColumn) GetName() string {
-	return cd.Name
-}
-
-func (cd BaseColumn) GetSQLType() string {
-	return cd.SQLType
-}
-
-func (cd BaseColumn) GetVarcharLen() int {
-	return cd.VarcharLen
-}
-
-func (cd BaseColumn) GetDefaultValue() string {
-	return cd.DefaultValue
-}
-
-func (cd BaseColumn) GetIsNullable() bool {
-	return cd.IsNullable
-}
-
-func (cd BaseColumn) GetIsAutoIncrement() bool {
-	return cd.IsAutoIncrement
-}
-
-func (cd BaseColumn) GetIsIdentity() bool {
-	return cd.IsIdentity
-}
-
-// AppendQuery appends full SQL data type.
-func (c *BaseColumn) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	b = append(b, c.SQLType...)
-	if c.VarcharLen == 0 {
-		return b, nil
-	}
-	b = append(b, "("...)
-	b = append(b, fmt.Sprint(c.VarcharLen)...)
-	b = append(b, ")"...)
-	return b, nil
-}
 
 type ForeignKey struct {
 	From ColumnReference
@@ -178,12 +106,6 @@ func (u Unique) Equals(other Unique) bool {
 	return u.Columns == other.Columns
 }
 
-// PrimaryKey represents a primary key constraint defined on 1 or more columns.
-type PrimaryKey struct {
-	Name    string
-	Columns Columns
-}
-
 type ColumnReference struct {
 	FQN    schema.FQN
 	Column Columns
@@ -191,8 +113,8 @@ type ColumnReference struct {
 
 func (ds DatabaseSchema) GetTables() []Table {
 	var tables []Table
-	for i := range ds.TableDefinitions {
-		tables = append(tables, ds.TableDefinitions[i])
+	for i := range ds.BaseTables {
+		tables = append(tables, ds.BaseTables[i])
 	}
 	return tables
 }
@@ -201,13 +123,13 @@ func (ds DatabaseSchema) GetForeignKeys() map[ForeignKey]string {
 	return ds.ForeignKeys
 }
 
-func (td TableDefinition) GetSchema() string {
+func (td BaseTable) GetSchema() string {
 	return td.Schema
 }
-func (td TableDefinition) GetName() string {
+func (td BaseTable) GetName() string {
 	return td.Name
 }
-func (td TableDefinition) GetColumns() []Column {
+func (td BaseTable) GetColumns() []Column {
 	var columns []Column
 	// FIXME: columns will be returned in a random order
 	for colName := range td.ColumnDefinitions {
@@ -215,13 +137,13 @@ func (td TableDefinition) GetColumns() []Column {
 	}
 	return columns
 }
-func (td TableDefinition) GetPrimaryKey() *PrimaryKey {
+func (td BaseTable) GetPrimaryKey() *PrimaryKey {
 	return td.PrimaryKey
 }
-func (td TableDefinition) GetUniqueConstraints() []Unique {
+func (td BaseTable) GetUniqueConstraints() []Unique {
 	return td.UniqueConstraints
 }
 
-func (t TableDefinition) GetFQN() schema.FQN {
+func (t BaseTable) GetFQN() schema.FQN {
 	return schema.FQN{Schema: t.Schema, Table: t.Name}
 }
