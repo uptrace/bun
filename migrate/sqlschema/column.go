@@ -20,7 +20,9 @@ type Column interface {
 var _ Column = (*BaseColumn)(nil)
 
 // BaseColumn is a base column definition that stores various attributes of a column.
-// It MUST only be used by dialects to implement the Column interface.
+//
+// Dialects and only dialects can use it to implement the Column interface.
+// Other packages must use the Column interface.
 type BaseColumn struct {
 	Name            string
 	SQLType         string

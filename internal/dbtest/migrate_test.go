@@ -215,17 +215,17 @@ func newAutoMigratorOrSkip(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigrat
 // inspectDbOrSkip returns a function to inspect the current state of the database.
 // The test will be *skipped* if the current dialect doesn't support database inpection
 // and fail if the inspector cannot successfully retrieve database state.
-func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.DatabaseSchema {
+func inspectDbOrSkip(tb testing.TB, db *bun.DB) func(context.Context) sqlschema.BaseDatabase {
 	tb.Helper()
 	// AutoMigrator excludes these tables by default, but here we need to do this explicitly.
 	inspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
 	if err != nil {
 		tb.Skip(err)
 	}
-	return func(ctx context.Context) sqlschema.DatabaseSchema {
+	return func(ctx context.Context) sqlschema.BaseDatabase {
 		state, err := inspector.Inspect(ctx)
 		require.NoError(tb, err)
-		return state.(sqlschema.DatabaseSchema)
+		return state.(sqlschema.BaseDatabase)
 	}
 }
 

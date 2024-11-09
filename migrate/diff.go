@@ -17,7 +17,7 @@ func (c *changeset) Add(op ...Operation) {
 
 // diff calculates the diff between the current database schema and the target state.
 // The changeset is not sorted -- the caller should resolve dependencies before applying the changes.
-func diff(got, want sqlschema.Schema, opts ...diffOption) *changeset {
+func diff(got, want sqlschema.Database, opts ...diffOption) *changeset {
 	d := newDetector(got, want, opts...)
 	return d.detectChanges()
 }
@@ -216,7 +216,7 @@ Drop:
 	}
 }
 
-func newDetector(got, want sqlschema.Schema, opts ...diffOption) *detector {
+func newDetector(got, want sqlschema.Database, opts ...diffOption) *detector {
 	cfg := &detectorConfig{
 		EqType: func(c1, c2 sqlschema.Column) bool {
 			return c1.GetSQLType() == c2.GetSQLType() && c1.GetVarcharLen() == c2.GetVarcharLen()
@@ -250,10 +250,10 @@ type detectorConfig struct {
 // detector may modify the passed database schemas, so it isn't safe to re-use them.
 type detector struct {
 	// current state represents the existing database schema.
-	current sqlschema.Schema
+	current sqlschema.Database
 
 	// target state represents the database schema defined in bun models.
-	target sqlschema.Schema
+	target sqlschema.Database
 
 	changes changeset
 	refMap  refMap
@@ -295,7 +295,7 @@ func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.C
 	return target
 }
 
-func (d *detector) mapNameToTable(s sqlschema.Schema) map[string]sqlschema.Table {
+func (d *detector) mapNameToTable(s sqlschema.Database) map[string]sqlschema.Table {
 	m := make(map[string]sqlschema.Table)
 	for _, t := range s.GetTables() {
 		m[t.GetName()] = t

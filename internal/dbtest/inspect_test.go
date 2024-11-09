@@ -260,7 +260,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 
 		// State.FKs store their database names, which differ from dialect to dialect.
 		// Because of that we compare FKs and Tables separately.
-		gotTables := got.(sqlschema.DatabaseSchema).Tables
+		gotTables := got.(sqlschema.BaseDatabase).Tables
 		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, gotTables)
 
 		var fks []sqlschema.ForeignKey

@@ -14,7 +14,9 @@ type Table interface {
 var _ Table = (*BaseTable)(nil)
 
 // BaseTable is a base table definition.
-// It MUST only be used by dialects to implement the Table interface.
+//
+// Dialects and only dialects can use it to implement the Table interface.
+// Other packages must use the Table interface.
 type BaseTable struct {
 	Schema string
 	Name   string

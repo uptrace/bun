@@ -22,14 +22,7 @@ type InspectorDialect interface {
 
 // Inspector reads schema state.
 type Inspector interface {
-	Inspect(ctx context.Context) (Schema, error)
-}
-
-// Schema is an abstract collection of database objects.
-type Schema interface {
-	GetTables() []Table
-	// TODO: this probably should be a list so we have keys order and stable query generation
-	GetForeignKeys() map[ForeignKey]string
+	Inspect(ctx context.Context) (Database, error)
 }
 
 // inspector is opaque pointer to a databse inspector.
@@ -64,7 +57,7 @@ func NewBunModelInspector(tables *schema.Tables) *BunModelInspector {
 
 // BunModelSchema is the schema state derived from bun table models.
 type BunModelSchema struct {
-	DatabaseSchema
+	BaseDatabase
 
 	ModelTables map[schema.FQN]*BunTable
 }
@@ -85,9 +78,9 @@ type BunTable struct {
 	Model interface{}
 }
 
-func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
+func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 	state := BunModelSchema{
-		DatabaseSchema: DatabaseSchema{
+		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
 		ModelTables: make(map[schema.FQN]*BunTable),

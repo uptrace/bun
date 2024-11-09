@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	Schema = sqlschema.DatabaseSchema
+	Schema = sqlschema.BaseDatabase
 	Table  = sqlschema.BaseTable
 	Column = sqlschema.BaseColumn
 )
@@ -30,7 +30,7 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
+func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	dbSchema := Schema{
 		Tables:      make(map[schema.FQN]sqlschema.Table),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),

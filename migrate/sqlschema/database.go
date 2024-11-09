@@ -7,15 +7,33 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-// DatabaseSchema provides a default implementation of the Schema interface.
-// Dialects which support schema inspection may return it directly from Inspect()
-// or embed it in their custom schema structs.
-type DatabaseSchema struct {
+type Database interface {
+	GetTables() []Table
+	GetForeignKeys() map[ForeignKey]string
+}
+
+var _ Database = (*BaseDatabase)(nil)
+
+// BaseDatabase is a base database definition.
+//
+// Dialects and only dialects can use it to implement the Database interface.
+// Other packages must use the Database interface.
+type BaseDatabase struct {
 	Tables      map[schema.FQN]Table
 	ForeignKeys map[ForeignKey]string
 }
 
-var _ Schema = (*DatabaseSchema)(nil)
+func (ds BaseDatabase) GetTables() []Table {
+	var tables []Table
+	for i := range ds.Tables {
+		tables = append(tables, ds.Tables[i])
+	}
+	return tables
+}
+
+func (ds BaseDatabase) GetForeignKeys() map[ForeignKey]string {
+	return ds.ForeignKeys
+}
 
 type ForeignKey struct {
 	From ColumnReference
@@ -109,16 +127,4 @@ func (u Unique) Equals(other Unique) bool {
 type ColumnReference struct {
 	FQN    schema.FQN
 	Column Columns
-}
-
-func (ds DatabaseSchema) GetTables() []Table {
-	var tables []Table
-	for i := range ds.Tables {
-		tables = append(tables, ds.Tables[i])
-	}
-	return tables
-}
-
-func (ds DatabaseSchema) GetForeignKeys() map[ForeignKey]string {
-	return ds.ForeignKeys
 }
