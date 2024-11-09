@@ -369,7 +369,7 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	tables := state.BaseTables
+	tables := state.Tables
 	require.Len(t, tables, 1)
 	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "changed"})
 }
@@ -398,7 +398,7 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	tables := state.BaseTables
+	tables := state.Tables
 	require.Len(t, tables, 1)
 	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "createme"})
 }
@@ -524,11 +524,11 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	require.Len(t, state.BaseTables, 2)
+	require.Len(t, state.Tables, 2)
 
-	var renamed, model2 sqlschema.BaseTable
-	for _, tbl := range state.BaseTables {
-		switch tbl.Name {
+	var renamed, model2 sqlschema.Table
+	for _, tbl := range state.Tables {
+		switch tbl.GetName() {
 		case "renamed":
 			renamed = tbl
 		case "models":
@@ -536,9 +536,9 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 		}
 	}
 
-	require.Contains(t, renamed.ColumnDefinitions, "count")
-	require.Contains(t, model2.ColumnDefinitions, "second_column")
-	require.Contains(t, model2.ColumnDefinitions, "do_not_rename")
+	require.Contains(t, renamed.GetColumns(), "count")
+	require.Contains(t, model2.GetColumns(), "second_column")
+	require.Contains(t, model2.GetColumns(), "do_not_rename")
 }
 
 // testChangeColumnType_AutoCast checks type changes which can be type-casted automatically,
@@ -568,35 +568,35 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "change_me_own_type"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "change_me_own_type"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_me_own_type",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"bigger_int": {
+			Columns: map[string]sqlschema.Column{
+				"bigger_int": &sqlschema.BaseColumn{
 					SQLType:    "bigint",
 					IsIdentity: true,
 				},
-				"ts": {
+				"ts": &sqlschema.BaseColumn{
 					SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
 					DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
 					IsNullable:   true,
 				},
-				"default_expr": {
+				"default_expr": &sqlschema.BaseColumn{
 					SQLType:      "varchar",
 					IsNullable:   true,
 					DefaultValue: "random()",
 				},
-				"empty_default": {
+				"empty_default": &sqlschema.BaseColumn{
 					SQLType:      "varchar",
 					IsNullable:   true,
 					DefaultValue: "", // NOT "''"
 				},
-				"not_null": {
+				"not_null": &sqlschema.BaseColumn{
 					SQLType:    "varchar",
 					IsNullable: false,
 				},
-				"type_override": {
+				"type_override": &sqlschema.BaseColumn{
 					SQLType:    "varchar",
 					IsNullable: true,
 					VarcharLen: 200,
@@ -619,7 +619,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 func testIdentity(t *testing.T, db *bun.DB) {
@@ -635,16 +635,16 @@ func testIdentity(t *testing.T, db *bun.DB) {
 		B             int64 `bun:",notnull,identity"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "bourne_identity"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "bourne_identity"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "bourne_identity",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"a": {
+			Columns: map[string]sqlschema.Column{
+				"a": &sqlschema.BaseColumn{
 					SQLType:    sqltype.BigInt,
 					IsIdentity: false, // <- drop IDENTITY
 				},
-				"b": {
+				"b": &sqlschema.BaseColumn{
 					SQLType:    sqltype.BigInt,
 					IsIdentity: true, // <- add IDENTITY
 				},
@@ -662,7 +662,7 @@ func testIdentity(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 func testAddDropColumn(t *testing.T, db *bun.DB) {
@@ -678,16 +678,16 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 		AddMe         bool   `bun:"addme"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "column_madness"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "column_madness"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "column_madness",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"do_not_touch": {
+			Columns: map[string]sqlschema.Column{
+				"do_not_touch": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"addme": {
+				"addme": &sqlschema.BaseColumn{
 					SQLType:    sqltype.Boolean,
 					IsNullable: true,
 				},
@@ -705,7 +705,7 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 func testUnique(t *testing.T, db *bun.DB) {
@@ -731,36 +731,36 @@ func testUnique(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed"` // shrink "pet" unique group
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "uniqlo_stores"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "uniqlo_stores"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "uniqlo_stores",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"first_name": {
+			Columns: map[string]sqlschema.Column{
+				"first_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"middle_name": {
+				"middle_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"last_name": {
+				"last_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"birthday": {
+				"birthday": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"email": {
+				"email": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"pet_name": {
+				"pet_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"pet_breed": {
+				"pet_breed": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
@@ -784,7 +784,7 @@ func testUnique(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
@@ -809,28 +809,28 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed,unique"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "after"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "after"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "after",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"first_name": {
+			Columns: map[string]sqlschema.Column{
+				"first_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"last_name": {
+				"last_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"birthday": {
+				"birthday": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"pet_name": {
+				"pet_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"pet_breed": {
+				"pet_breed": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
@@ -854,7 +854,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }
 
 func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
@@ -904,50 +904,50 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		LastName      string `bun:"last_name,pk"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.BaseTable{
-		{Schema: db.Dialect().DefaultSchema(), Table: "drop_your_pks"}: {
+	wantTables := map[schema.FQN]sqlschema.Table{
+		{Schema: db.Dialect().DefaultSchema(), Table: "drop_your_pks"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "drop_your_pks",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"first_name": {
+			Columns: map[string]sqlschema.Column{
+				"first_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
 				},
-				"last_name": {
+				"last_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
 				},
 			},
 		},
-		{Schema: db.Dialect().DefaultSchema(), Table: "add_new_pk"}: {
+		{Schema: db.Dialect().DefaultSchema(), Table: "add_new_pk"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "add_new_pk",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"new_id": {
+			Columns: map[string]sqlschema.Column{
+				"new_id": &sqlschema.BaseColumn{
 					SQLType:    sqltype.BigInt,
 					IsNullable: false,
 					IsIdentity: true,
 				},
-				"first_name": {
+				"first_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
-				"last_name": {
+				"last_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
 				},
 			},
 			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
 		},
-		{Schema: db.Dialect().DefaultSchema(), Table: "change_pk"}: {
+		{Schema: db.Dialect().DefaultSchema(), Table: "change_pk"}: &sqlschema.BaseTable{
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_pk",
-			ColumnDefinitions: map[string]sqlschema.BaseColumn{
-				"first_name": {
+			Columns: map[string]sqlschema.Column{
+				"first_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
 				},
-				"last_name": {
+				"last_name": &sqlschema.BaseColumn{
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
 				},
@@ -974,5 +974,5 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.BaseTables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
 }

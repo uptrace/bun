@@ -32,7 +32,7 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 
 func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 	dbSchema := Schema{
-		BaseTables:  make(map[schema.FQN]Table),
+		Tables:      make(map[schema.FQN]sqlschema.Table),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
@@ -59,7 +59,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 			return dbSchema, err
 		}
 
-		colDefs := make(map[string]*Column)
+		colDefs := make(map[string]sqlschema.Column)
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -102,10 +102,10 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 		}
 
 		fqn := schema.FQN{Schema: table.Schema, Table: table.Name}
-		dbSchema.BaseTables[fqn] = Table{
+		dbSchema.Tables[fqn] = &Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
-			ColumnDefinitions: colDefs,
+			Columns:           colDefs,
 			PrimaryKey:        pk,
 			UniqueConstraints: unique,
 		}

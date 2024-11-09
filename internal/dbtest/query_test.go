@@ -1618,7 +1618,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "add column with default value", operation: &migrate.AddColumnOp{
 			FQN:    fqn,
 			Column: "language",
-			ColDef: sqlschema.BaseColumn{
+			ColDef: &sqlschema.BaseColumn{
 				SQLType:      "varchar",
 				VarcharLen:   20,
 				IsNullable:   false,
@@ -1628,7 +1628,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "add column with identity", operation: &migrate.AddColumnOp{
 			FQN:    fqn,
 			Column: "n",
-			ColDef: sqlschema.BaseColumn{
+			ColDef: &sqlschema.BaseColumn{
 				SQLType:    sqltype.BigInt,
 				IsNullable: false,
 				IsIdentity: true,
@@ -1637,7 +1637,7 @@ func TestAlterTable(t *testing.T) {
 		{name: "drop column", operation: &migrate.DropColumnOp{
 			FQN:    fqn,
 			Column: "director",
-			ColDef: sqlschema.BaseColumn{
+			ColDef: &sqlschema.BaseColumn{
 				SQLType:    sqltype.VarChar,
 				IsNullable: false,
 			},
@@ -1659,50 +1659,50 @@ func TestAlterTable(t *testing.T) {
 		{name: "change column type int to bigint", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.BaseColumn{SQLType: sqltype.Integer},
-			To:     sqlschema.BaseColumn{SQLType: sqltype.BigInt},
+			From:   &sqlschema.BaseColumn{SQLType: sqltype.Integer},
+			To:     &sqlschema.BaseColumn{SQLType: sqltype.BigInt},
 		}},
 		{name: "add default", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.BaseColumn{DefaultValue: ""},
-			To:     sqlschema.BaseColumn{DefaultValue: "100"},
+			From:   &sqlschema.BaseColumn{DefaultValue: ""},
+			To:     &sqlschema.BaseColumn{DefaultValue: "100"},
 		}},
 		{name: "drop default", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.BaseColumn{DefaultValue: "100"},
-			To:     sqlschema.BaseColumn{DefaultValue: ""},
+			From:   &sqlschema.BaseColumn{DefaultValue: "100"},
+			To:     &sqlschema.BaseColumn{DefaultValue: ""},
 		}},
 		{name: "make nullable", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "director",
-			From:   sqlschema.BaseColumn{IsNullable: false},
-			To:     sqlschema.BaseColumn{IsNullable: true},
+			From:   &sqlschema.BaseColumn{IsNullable: false},
+			To:     &sqlschema.BaseColumn{IsNullable: true},
 		}},
 		{name: "add notnull", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "budget",
-			From:   sqlschema.BaseColumn{IsNullable: true},
-			To:     sqlschema.BaseColumn{IsNullable: false},
+			From:   &sqlschema.BaseColumn{IsNullable: true},
+			To:     &sqlschema.BaseColumn{IsNullable: false},
 		}},
 		{name: "increase varchar length", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "language",
-			From:   sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 20},
-			To:     sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 255},
+			From:   &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 20},
+			To:     &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 255},
 		}},
 		{name: "add identity", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "id",
-			From:   sqlschema.BaseColumn{IsIdentity: false},
-			To:     sqlschema.BaseColumn{IsIdentity: true},
+			From:   &sqlschema.BaseColumn{IsIdentity: false},
+			To:     &sqlschema.BaseColumn{IsIdentity: true},
 		}},
 		{name: "drop identity", operation: &migrate.ChangeColumnTypeOp{
 			FQN:    fqn,
 			Column: "id",
-			From:   sqlschema.BaseColumn{IsIdentity: true},
-			To:     sqlschema.BaseColumn{IsIdentity: false},
+			From:   &sqlschema.BaseColumn{IsIdentity: true},
+			To:     &sqlschema.BaseColumn{IsIdentity: false},
 		}},
 		{name: "add primary key", operation: &migrate.AddPrimaryKeyOp{
 			FQN: fqn,

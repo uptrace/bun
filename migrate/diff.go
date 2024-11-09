@@ -58,7 +58,7 @@ RenameCreate:
 
 		// If wantTable does not exist in the database and was not renamed
 		// then we need to create this table in the database.
-		additional := wantTable.(sqlschema.BunTable)
+		additional := wantTable.(*sqlschema.BunTable)
 		d.changes.Add(&CreateTableOp{
 			FQN:   wantTable.GetFQN(),
 			Model: additional.Model,

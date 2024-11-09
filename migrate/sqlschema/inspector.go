@@ -66,7 +66,7 @@ func NewBunModelInspector(tables *schema.Tables) *BunModelInspector {
 type BunModelSchema struct {
 	DatabaseSchema
 
-	ModelTables map[schema.FQN]BunTable
+	ModelTables map[schema.FQN]*BunTable
 }
 
 func (ms BunModelSchema) GetTables() []Table {
@@ -90,10 +90,10 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
 		DatabaseSchema: DatabaseSchema{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
-		ModelTables: make(map[schema.FQN]BunTable),
+		ModelTables: make(map[schema.FQN]*BunTable),
 	}
 	for _, t := range bmi.tables.All() {
-		columns := make(map[string]*BaseColumn)
+		columns := make(map[string]Column)
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
@@ -140,11 +140,11 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
 		}
 
 		fqn := schema.FQN{Schema: t.Schema, Table: t.Name}
-		state.ModelTables[fqn] = BunTable{
+		state.ModelTables[fqn] = &BunTable{
 			BaseTable: BaseTable{
 				Schema:            t.Schema,
 				Name:              t.Name,
-				ColumnDefinitions: columns,
+				Columns:           columns,
 				UniqueConstraints: unique,
 				PrimaryKey:        pk,
 			},

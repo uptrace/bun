@@ -11,7 +11,7 @@ import (
 // Dialects which support schema inspection may return it directly from Inspect()
 // or embed it in their custom schema structs.
 type DatabaseSchema struct {
-	BaseTables  map[schema.FQN]BaseTable
+	Tables      map[schema.FQN]Table
 	ForeignKeys map[ForeignKey]string
 }
 
@@ -113,37 +113,12 @@ type ColumnReference struct {
 
 func (ds DatabaseSchema) GetTables() []Table {
 	var tables []Table
-	for i := range ds.BaseTables {
-		tables = append(tables, ds.BaseTables[i])
+	for i := range ds.Tables {
+		tables = append(tables, ds.Tables[i])
 	}
 	return tables
 }
 
 func (ds DatabaseSchema) GetForeignKeys() map[ForeignKey]string {
 	return ds.ForeignKeys
-}
-
-func (td BaseTable) GetSchema() string {
-	return td.Schema
-}
-func (td BaseTable) GetName() string {
-	return td.Name
-}
-func (td BaseTable) GetColumns() []Column {
-	var columns []Column
-	// FIXME: columns will be returned in a random order
-	for colName := range td.ColumnDefinitions {
-		columns = append(columns, td.ColumnDefinitions[colName])
-	}
-	return columns
-}
-func (td BaseTable) GetPrimaryKey() *PrimaryKey {
-	return td.PrimaryKey
-}
-func (td BaseTable) GetUniqueConstraints() []Unique {
-	return td.UniqueConstraints
-}
-
-func (t BaseTable) GetFQN() schema.FQN {
-	return schema.FQN{Schema: t.Schema, Table: t.Name}
 }
