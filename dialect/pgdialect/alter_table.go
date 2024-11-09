@@ -91,11 +91,10 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 	b = fmter.AppendName(b, add.Column)
 	b = append(b, " "...)
 
-	colDef, ok := add.ColDef.(sqlschema.ColumnDefinition)
-	if !ok {
-		return nil, fmt.Errorf("column %q does not implement sqlschema.ColumnDefinition, got %T", add.ColDef.GetName(), add.ColDef)
+	b, err = add.ColDef.AppendQuery(fmter, b)
+	if err != nil {
+		return nil, err
 	}
-	b, _ = colDef.AppendQuery(fmter, b)
 
 	if add.ColDef.GetDefaultValue() != "" {
 		b = append(b, " DEFAULT "...)
@@ -201,14 +200,9 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 
 	inspector := m.db.Dialect().(sqlschema.InspectorDialect)
 	if !inspector.EquivalentType(want, got) {
-		colDef, ok := want.(sqlschema.ColumnDefinition)
-		if !ok {
-			return nil, fmt.Errorf("column %q does not implement sqlschema.ColumnDefinition, got %T", want.GetName(), want)
-		}
-
 		appendAlterColumn()
 		b = append(b, " SET DATA TYPE "...)
-		if b, err = colDef.AppendQuery(fmter, b); err != nil {
+		if b, err = want.AppendQuery(fmter, b); err != nil {
 			return b, err
 		}
 	}

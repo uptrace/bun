@@ -23,7 +23,7 @@ type TableDefinition struct {
 	Name   string
 
 	// ColumnDefinitions map each column name to the column definition.
-	ColumnDefinitions map[string]ColumnDefinition
+	ColumnDefinitions map[string]*BaseColumn
 
 	// PrimaryKey holds the primary key definition.
 	// A nil value means that no primary key is defined for the table.
@@ -35,8 +35,8 @@ type TableDefinition struct {
 
 var _ Table = (*TableDefinition)(nil)
 
-// ColumnDefinition stores attributes of a database column.
-type ColumnDefinition struct {
+// BaseColumn stores attributes of a database column.
+type BaseColumn struct {
 	Name            string
 	SQLType         string
 	VarcharLen      int
@@ -47,38 +47,38 @@ type ColumnDefinition struct {
 	// TODO: add Precision and Cardinality for timestamps/bit-strings/floats and arrays respectively.
 }
 
-var _ Column = (*ColumnDefinition)(nil)
+var _ Column = (*BaseColumn)(nil)
 
-func (cd ColumnDefinition) GetName() string {
+func (cd BaseColumn) GetName() string {
 	return cd.Name
 }
 
-func (cd ColumnDefinition) GetSQLType() string {
+func (cd BaseColumn) GetSQLType() string {
 	return cd.SQLType
 }
 
-func (cd ColumnDefinition) GetVarcharLen() int {
+func (cd BaseColumn) GetVarcharLen() int {
 	return cd.VarcharLen
 }
 
-func (cd ColumnDefinition) GetDefaultValue() string {
+func (cd BaseColumn) GetDefaultValue() string {
 	return cd.DefaultValue
 }
 
-func (cd ColumnDefinition) GetIsNullable() bool {
+func (cd BaseColumn) GetIsNullable() bool {
 	return cd.IsNullable
 }
 
-func (cd ColumnDefinition) GetIsAutoIncrement() bool {
+func (cd BaseColumn) GetIsAutoIncrement() bool {
 	return cd.IsAutoIncrement
 }
 
-func (cd ColumnDefinition) GetIsIdentity() bool {
+func (cd BaseColumn) GetIsIdentity() bool {
 	return cd.IsIdentity
 }
 
 // AppendQuery appends full SQL data type.
-func (c *ColumnDefinition) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (c *BaseColumn) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, c.SQLType...)
 	if c.VarcharLen == 0 {
 		return b, nil
@@ -209,8 +209,9 @@ func (td TableDefinition) GetName() string {
 }
 func (td TableDefinition) GetColumns() []Column {
 	var columns []Column
-	for i := range td.ColumnDefinitions {
-		columns = append(columns, td.ColumnDefinitions[i])
+	// FIXME: columns will be returned in a random order
+	for colName := range td.ColumnDefinitions {
+		columns = append(columns, td.ColumnDefinitions[colName])
 	}
 	return columns
 }

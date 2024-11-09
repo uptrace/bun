@@ -572,7 +572,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "change_me_own_type"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_me_own_type",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"bigger_int": {
 					SQLType:    "bigint",
 					IsIdentity: true,
@@ -639,7 +639,7 @@ func testIdentity(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "bourne_identity"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "bourne_identity",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"a": {
 					SQLType:    sqltype.BigInt,
 					IsIdentity: false, // <- drop IDENTITY
@@ -682,7 +682,7 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "column_madness"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "column_madness",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"do_not_touch": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -735,7 +735,7 @@ func testUnique(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "uniqlo_stores"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "uniqlo_stores",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -813,7 +813,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "after"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "after",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: true,
@@ -908,7 +908,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "drop_your_pks"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "drop_your_pks",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,
@@ -922,7 +922,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "add_new_pk"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "add_new_pk",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"new_id": {
 					SQLType:    sqltype.BigInt,
 					IsNullable: false,
@@ -942,7 +942,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		{Schema: db.Dialect().DefaultSchema(), Table: "change_pk"}: {
 			Schema: db.Dialect().DefaultSchema(),
 			Name:   "change_pk",
-			ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+			ColumnDefinitions: map[string]sqlschema.BaseColumn{
 				"first_name": {
 					SQLType:    sqltype.VarChar,
 					IsNullable: false,

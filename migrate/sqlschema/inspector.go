@@ -28,6 +28,7 @@ type Inspector interface {
 // Schema is an abstract collection of database objects.
 type Schema interface {
 	GetTables() []Table
+	// TODO: this probably should be a list so we have keys order and stable query generation
 	GetForeignKeys() map[ForeignKey]string
 }
 
@@ -48,6 +49,7 @@ type Column interface {
 	GetIsNullable() bool
 	GetIsAutoIncrement() bool
 	GetIsIdentity() bool
+	AppendQuery(schema.Formatter, []byte) ([]byte, error)
 }
 
 // inspector is opaque pointer to a databse inspector.
@@ -111,14 +113,14 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Schema, error) {
 		ModelTables: make(map[schema.FQN]BunTable),
 	}
 	for _, t := range bmi.tables.All() {
-		columns := make(map[string]ColumnDefinition)
+		columns := make(map[string]*BaseColumn)
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
 				return state, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
-			columns[f.Name] = ColumnDefinition{
+			columns[f.Name] = &BaseColumn{
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,

@@ -12,7 +12,7 @@ import (
 type (
 	Schema = sqlschema.DatabaseSchema
 	Table  = sqlschema.TableDefinition
-	Column = sqlschema.ColumnDefinition
+	Column = sqlschema.BaseColumn
 )
 
 func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) sqlschema.Inspector {
@@ -59,7 +59,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 			return dbSchema, err
 		}
 
-		colDefs := make(map[string]Column)
+		colDefs := make(map[string]*Column)
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -70,7 +70,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Schema, error) {
 				def = strings.ToLower(def)
 			}
 
-			colDefs[c.Name] = Column{
+			colDefs[c.Name] = &Column{
 				Name:            c.Name,
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
@@ -173,7 +173,7 @@ SELECT
 FROM information_schema.tables "t"
 	LEFT JOIN (
 		SELECT i.indrelid, "idx".relname AS "name", ARRAY_AGG("a".attname) AS "columns"
-		FROM pg_index i 
+		FROM pg_index i
 			JOIN pg_attribute "a"
 				ON "a".attrelid = i.indrelid
 				AND "a".attnum = ANY("i".indkey)
@@ -235,8 +235,8 @@ FROM (
 				"c".attidentity AS identity_type,
 				ARRAY_AGG(con.conname) FILTER (WHERE con.contype = 'u') AS "unique_groups",
 				ARRAY_AGG(con.contype) AS "constraint_type"
-			FROM ( 
-				SELECT 
+			FROM (
+				SELECT
 					conname,
 					contype,
 					connamespace,

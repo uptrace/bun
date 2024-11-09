@@ -97,7 +97,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			{Schema: "admin", Table: "offices"}: {
 				Schema: "admin",
 				Name:   "offices",
-				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.BaseColumn{
 					"office_name": {
 						SQLType: sqltype.VarChar,
 					},
@@ -115,7 +115,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			{Schema: defaultSchema, Table: "articles"}: {
 				Schema: defaultSchema,
 				Name:   "articles",
-				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.BaseColumn{
 					"isbn": {
 						SQLType:         "bigint",
 						IsNullable:      false,
@@ -174,7 +174,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			{Schema: defaultSchema, Table: "authors"}: {
 				Schema: defaultSchema,
 				Name:   "authors",
-				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.BaseColumn{
 					"author_id": {
 						SQLType:    "bigint",
 						IsIdentity: true,
@@ -198,7 +198,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			{Schema: defaultSchema, Table: "publisher_to_journalists"}: {
 				Schema: defaultSchema,
 				Name:   "publisher_to_journalists",
-				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.BaseColumn{
 					"publisher_id": {
 						SQLType: sqltype.VarChar,
 					},
@@ -211,7 +211,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			{Schema: defaultSchema, Table: "publishers"}: {
 				Schema: defaultSchema,
 				Name:   "publishers",
-				ColumnDefinitions: map[string]sqlschema.ColumnDefinition{
+				ColumnDefinitions: map[string]sqlschema.BaseColumn{
 					"publisher_id": {
 						SQLType:      sqltype.VarChar,
 						DefaultValue: "gen_random_uuid()",
@@ -315,7 +315,7 @@ func cmpTables(tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema
 }
 
 // cmpColumns compares that column definitions on the tables are
-func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, want, got map[string]sqlschema.ColumnDefinition) {
+func cmpColumns(tb testing.TB, d sqlschema.InspectorDialect, tableName string, want, got map[string]sqlschema.BaseColumn) {
 	tb.Helper()
 	var errs []string
 
@@ -399,7 +399,7 @@ func tableNames(tables map[schema.FQN]sqlschema.TableDefinition) (names []string
 	return
 }
 
-func formatType(c sqlschema.ColumnDefinition) string {
+func formatType(c sqlschema.BaseColumn) string {
 	if c.VarcharLen == 0 {
 		return c.SQLType
 	}
@@ -422,7 +422,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			want := map[string]sqlschema.ColumnDefinition{
+			want := map[string]sqlschema.BaseColumn{
 				"id": {
 					SQLType:      sqltype.VarChar,
 					DefaultValue: "random()",
@@ -455,7 +455,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			want := map[string]sqlschema.ColumnDefinition{
+			want := map[string]sqlschema.BaseColumn{
 				"id": {
 					SQLType: "text",
 				},

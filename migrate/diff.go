@@ -281,7 +281,7 @@ func (d detector) equalColumns(col1, col2 sqlschema.Column) bool {
 func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.Column {
 	// Avoid unneccessary type-change migrations if the types are equivalent.
 	if d.eqType(current, target) {
-		target = sqlschema.ColumnDefinition{
+		target = &sqlschema.BaseColumn{
 			Name:            target.GetName(),
 			DefaultValue:    target.GetDefaultValue(),
 			IsNullable:      target.GetIsNullable(),
@@ -326,14 +326,14 @@ type signature struct {
 
 	// underlying stores the number of occurences for each unique column type.
 	// It helps to account for the fact that a table might have multiple columns that have the same type.
-	underlying map[sqlschema.ColumnDefinition]int
+	underlying map[sqlschema.BaseColumn]int
 
 	eq TypeEquivalenceFunc
 }
 
 func newSignature(t sqlschema.Table, eq TypeEquivalenceFunc) signature {
 	s := signature{
-		underlying: make(map[sqlschema.ColumnDefinition]int),
+		underlying: make(map[sqlschema.BaseColumn]int),
 		eq:         eq,
 	}
 	s.scan(t)
@@ -343,12 +343,12 @@ func newSignature(t sqlschema.Table, eq TypeEquivalenceFunc) signature {
 // scan iterates over table's field and counts occurrences of each unique column definition.
 func (s *signature) scan(t sqlschema.Table) {
 	for _, icol := range t.GetColumns() {
-		scanCol := icol.(sqlschema.ColumnDefinition)
+		scanCol := icol.(*sqlschema.BaseColumn)
 		// This is slightly more expensive than if the columns could be compared directly
 		// and we always did s.underlying[col]++, but we get type-equivalence in return.
-		col, count := s.getCount(scanCol)
+		col, count := s.getCount(*scanCol)
 		if count == 0 {
-			s.underlying[scanCol] = 1
+			s.underlying[*scanCol] = 1
 		} else {
 			s.underlying[col]++
 		}
@@ -357,9 +357,9 @@ func (s *signature) scan(t sqlschema.Table) {
 
 // getCount uses TypeEquivalenceFunc to find a column with the same (equivalent) SQL type
 // and returns its count. Count 0 means there are no columns with of this type.
-func (s *signature) getCount(keyCol sqlschema.ColumnDefinition) (key sqlschema.ColumnDefinition, count int) {
+func (s *signature) getCount(keyCol sqlschema.BaseColumn) (key sqlschema.BaseColumn, count int) {
 	for col, cnt := range s.underlying {
-		if s.eq(col, keyCol) {
+		if s.eq(&col, &keyCol) {
 			return col, cnt
 		}
 	}
@@ -418,7 +418,7 @@ func (rm refMap) RenameColumn(table schema.FQN, column, newName string) {
 	}
 }
 
-// Deref returns copies of ForeignKey values to a map. 
+// Deref returns copies of ForeignKey values to a map.
 func (rm refMap) Deref() map[sqlschema.ForeignKey]string {
 	out := make(map[sqlschema.ForeignKey]string)
 	for fk, name := range rm {
