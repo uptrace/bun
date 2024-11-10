@@ -12,6 +12,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type Article struct {
@@ -93,144 +94,219 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 		defaultSchema := db.Dialect().DefaultSchema()
 
 		// Tables come sorted alphabetically by schema and table.
-		wantTables := map[schema.FQN]sqlschema.Table{
-			{Schema: "admin", Table: "offices"}: &sqlschema.BaseTable{
-				Schema: "admin",
-				Name:   "offices",
-				Columns: map[string]sqlschema.Column{
-					"office_name": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"publisher_id": &sqlschema.BaseColumn{
-						SQLType:    sqltype.VarChar,
-						IsNullable: true,
-					},
-					"publisher_name": &sqlschema.BaseColumn{
-						SQLType:    sqltype.VarChar,
-						IsNullable: true,
-					},
-				},
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
-			},
-			{Schema: defaultSchema, Table: "articles"}: &sqlschema.BaseTable{
-				Schema: defaultSchema,
-				Name:   "articles",
-				Columns: map[string]sqlschema.Column{
-					"isbn": &sqlschema.BaseColumn{
-						SQLType:         "bigint",
-						IsNullable:      false,
-						IsAutoIncrement: false,
-						IsIdentity:      true,
-						DefaultValue:    "",
-					},
-					"editor": &sqlschema.BaseColumn{
-						SQLType:         sqltype.VarChar,
-						IsNullable:      false,
-						IsAutoIncrement: false,
-						IsIdentity:      false,
-						DefaultValue:    "john doe",
-					},
-					"title": &sqlschema.BaseColumn{
-						SQLType:         sqltype.VarChar,
-						IsNullable:      false,
-						IsAutoIncrement: false,
-						IsIdentity:      false,
-						DefaultValue:    "",
-					},
-					"locale": &sqlschema.BaseColumn{
-						SQLType:         sqltype.VarChar,
-						VarcharLen:      5,
-						IsNullable:      true,
-						IsAutoIncrement: false,
-						IsIdentity:      false,
-						DefaultValue:    "en-GB",
-					},
-					"page_count": &sqlschema.BaseColumn{
-						SQLType:         "smallint",
-						IsNullable:      false,
-						IsAutoIncrement: false,
-						IsIdentity:      false,
-						DefaultValue:    "1",
-					},
-					"book_count": &sqlschema.BaseColumn{
-						SQLType:         "integer",
-						IsNullable:      false,
-						IsAutoIncrement: true,
-						IsIdentity:      false,
-						DefaultValue:    "",
-					},
-					"publisher_id": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"author_id": &sqlschema.BaseColumn{
-						SQLType: "bigint",
-					},
-				},
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
-				UniqueConstraints: []sqlschema.Unique{
-					{Columns: sqlschema.NewColumns("editor", "title")},
+		wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+			orderedmap.Pair[string, sqlschema.Table]{
+				Key: "offices",
+				Value: &sqlschema.BaseTable{
+					Schema: "admin",
+					Name:   "offices",
+					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "office_name",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType:    sqltype.VarChar,
+								IsNullable: true,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_name",
+							Value: &sqlschema.BaseColumn{
+								SQLType:    sqltype.VarChar,
+								IsNullable: true,
+							},
+						},
+					)),
+					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
 				},
 			},
-			{Schema: defaultSchema, Table: "authors"}: &sqlschema.BaseTable{
-				Schema: defaultSchema,
-				Name:   "authors",
-				Columns: map[string]sqlschema.Column{
-					"author_id": &sqlschema.BaseColumn{
-						SQLType:    "bigint",
-						IsIdentity: true,
+			orderedmap.Pair[string, sqlschema.Table]{
+				Key: "articles",
+				Value: &sqlschema.BaseTable{
+					Schema: defaultSchema,
+					Name:   "articles",
+					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "isbn",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         "bigint",
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      true,
+								DefaultValue:    "",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "editor",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         sqltype.VarChar,
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "john doe",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "title",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         sqltype.VarChar,
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "locale",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         sqltype.VarChar,
+								VarcharLen:      5,
+								IsNullable:      true,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "en-GB",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "page_count",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         "smallint",
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "1",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "book_count",
+							Value: &sqlschema.BaseColumn{
+								SQLType:         "integer",
+								IsNullable:      false,
+								IsAutoIncrement: true,
+								IsIdentity:      false,
+								DefaultValue:    "",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "author_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType: "bigint",
+							},
+						},
+					)),
+					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
+					UniqueConstraints: []sqlschema.Unique{
+						{Columns: sqlschema.NewColumns("editor", "title")},
 					},
-					"first_name": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"last_name": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"email": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-				},
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
-				UniqueConstraints: []sqlschema.Unique{
-					{Columns: sqlschema.NewColumns("first_name", "last_name")},
-					{Columns: sqlschema.NewColumns("email")},
 				},
 			},
-			{Schema: defaultSchema, Table: "publisher_to_journalists"}: &sqlschema.BaseTable{
-				Schema: defaultSchema,
-				Name:   "publisher_to_journalists",
-				Columns: map[string]sqlschema.Column{
-					"publisher_id": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"author_id": &sqlschema.BaseColumn{
-						SQLType: "bigint",
+			orderedmap.Pair[string, sqlschema.Table]{
+				Key: "authors",
+				Value: &sqlschema.BaseTable{
+					Schema: defaultSchema,
+					Name:   "authors",
+					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "author_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType:    "bigint",
+								IsIdentity: true,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "first_name",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "last_name",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "email",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+					)),
+					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
+					UniqueConstraints: []sqlschema.Unique{
+						{Columns: sqlschema.NewColumns("first_name", "last_name")},
+						{Columns: sqlschema.NewColumns("email")},
 					},
 				},
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
 			},
-			{Schema: defaultSchema, Table: "publishers"}: &sqlschema.BaseTable{
-				Schema: defaultSchema,
-				Name:   "publishers",
-				Columns: map[string]sqlschema.Column{
-					"publisher_id": &sqlschema.BaseColumn{
-						SQLType:      sqltype.VarChar,
-						DefaultValue: "gen_random_uuid()",
-					},
-					"publisher_name": &sqlschema.BaseColumn{
-						SQLType: sqltype.VarChar,
-					},
-					"created_at": &sqlschema.BaseColumn{
-						SQLType:      "timestamp",
-						DefaultValue: "current_timestamp",
-						IsNullable:   true,
-					},
-				},
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
-				UniqueConstraints: []sqlschema.Unique{
-					{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
+			orderedmap.Pair[string, sqlschema.Table]{
+				Key: "publisher_to_journalists",
+				Value: &sqlschema.BaseTable{
+					Schema: defaultSchema,
+					Name:   "publisher_to_journalists",
+					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "author_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType: "bigint",
+							},
+						},
+					)),
+					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
 				},
 			},
-		}
+			orderedmap.Pair[string, sqlschema.Table]{
+				Key: "publishers",
+				Value: &sqlschema.BaseTable{
+					Schema: defaultSchema,
+					Name:   "publishers",
+					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_id",
+							Value: &sqlschema.BaseColumn{
+								SQLType:      sqltype.VarChar,
+								DefaultValue: "gen_random_uuid()",
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "publisher_name",
+							Value: &sqlschema.BaseColumn{
+								SQLType: sqltype.VarChar,
+							},
+						},
+						orderedmap.Pair[string, sqlschema.Column]{
+							Key: "created_at",
+							Value: &sqlschema.BaseColumn{
+								SQLType:      "timestamp",
+								DefaultValue: "current_timestamp",
+								IsNullable:   true,
+							},
+						},
+					)),
+					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
+					UniqueConstraints: []sqlschema.Unique{
+						{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
+					},
+				},
+			},
+		))
 
 		wantFKs := []sqlschema.ForeignKey{
 			{
@@ -294,25 +370,20 @@ func mustCreateSchema(tb testing.TB, ctx context.Context, db *bun.DB, schema str
 // cmpTables compares table schemas using dialect-specific equivalence checks for column types
 // and reports the differences as t.Error().
 func cmpTables(
-	tb testing.TB, d sqlschema.InspectorDialect, want, got map[schema.FQN]sqlschema.Table,
+	tb testing.TB,
+	d sqlschema.InspectorDialect,
+	want, got *orderedmap.OrderedMap[string, sqlschema.Table],
 ) {
 	tb.Helper()
 
 	require.ElementsMatch(tb, tableNames(want), tableNames(got), "different set of tables")
 
 	// Now we are guaranteed to have the same tables.
-	for _, wantTable := range want {
-		// TODO(dyma): this will be simplified by map[string]Table
-		var gt sqlschema.Table
-		for i := range got {
-			if got[i].GetName() == wantTable.GetName() {
-				gt = got[i]
-				break
-			}
-		}
-
-		cmpColumns(tb, d, wantTable.GetName(), wantTable.(*sqlschema.BaseTable).Columns, gt.(*sqlschema.BaseTable).Columns)
-		cmpConstraints(tb, wantTable.(*sqlschema.BaseTable), gt.(*sqlschema.BaseTable))
+	for tableName, wantTable := range want.FromOldest() {
+		gotTable, ok := got.Get(tableName)
+		require.True(tb, ok)
+		cmpColumns(tb, d, wantTable.GetName(), wantTable.GetColumns(), gotTable.GetColumns())
+		cmpConstraints(tb, wantTable.(*sqlschema.BaseTable), gotTable.(*sqlschema.BaseTable))
 	}
 }
 
@@ -321,18 +392,18 @@ func cmpColumns(
 	tb testing.TB,
 	d sqlschema.InspectorDialect,
 	tableName string,
-	want, got map[string]sqlschema.Column,
+	want, got *orderedmap.OrderedMap[string, sqlschema.Column],
 ) {
 	tb.Helper()
 	var errs []string
 
 	var missing []string
-	for colName, wantCol := range want {
+	for colName, wantCol := range want.FromOldest() {
 		errorf := func(format string, args ...interface{}) {
 			errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
 		}
 		wantCol := wantCol.(*sqlschema.BaseColumn)
-		gotCol, ok := got[colName].(*sqlschema.BaseColumn)
+		gotCol, ok := got.Value(colName).(*sqlschema.BaseColumn)
 		if !ok {
 			missing = append(missing, colName)
 			continue
@@ -364,8 +435,8 @@ func cmpColumns(
 	}
 
 	var extra []string
-	for colName := range got {
-		if _, ok := want[colName]; !ok {
+	for colName := range got.FromOldest() {
+		if _, ok := want.Get(colName); !ok {
 			extra = append(extra, colName)
 		}
 	}
@@ -400,9 +471,9 @@ func cmpConstraints(tb testing.TB, want, got *sqlschema.BaseTable) {
 	require.ElementsMatch(tb, stripNames(want.UniqueConstraints), stripNames(got.UniqueConstraints), "table %q does not have expected unique constraints (listA=want, listB=got)", want.Name)
 }
 
-func tableNames(tables map[schema.FQN]sqlschema.Table) (names []string) {
-	for fqn := range tables {
-		names = append(names, fqn.Table)
+func tableNames(tables *orderedmap.OrderedMap[string, sqlschema.Table]) (names []string) {
+	for name := range tables.FromOldest() {
+		names = append(names, name)
 	}
 	return
 }
@@ -430,24 +501,30 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			want := map[string]sqlschema.Column{
-				"id": &sqlschema.BaseColumn{
-					SQLType:      sqltype.VarChar,
-					DefaultValue: "random()",
+			want := orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+				orderedmap.Pair[string, sqlschema.Column]{
+					Key: "id",
+					Value: &sqlschema.BaseColumn{
+						SQLType:      sqltype.VarChar,
+						DefaultValue: "random()",
+					},
 				},
-				"name": &sqlschema.BaseColumn{
-					SQLType:      sqltype.VarChar,
-					DefaultValue: "'John Doe'",
+				orderedmap.Pair[string, sqlschema.Column]{
+					Key: "name",
+					Value: &sqlschema.BaseColumn{
+						SQLType:      sqltype.VarChar,
+						DefaultValue: "'John Doe'",
+					},
 				},
-			}
+			))
 
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			gotTables := got.(sqlschema.BunModelSchema).ModelTables
-			require.Len(t, gotTables, 1)
-			for _, table := range gotTables {
-				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.Columns)
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.GetColumns())
 				return
 			}
 		})
@@ -463,27 +540,36 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			want := map[string]sqlschema.Column{
-				"id": &sqlschema.BaseColumn{
-					SQLType: "text",
+			want := orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+				orderedmap.Pair[string, sqlschema.Column]{
+					Key: "id",
+					Value: &sqlschema.BaseColumn{
+						SQLType: "text",
+					},
 				},
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    "character varying",
-					VarcharLen: 60,
+				orderedmap.Pair[string, sqlschema.Column]{
+					Key: "first_name",
+					Value: &sqlschema.BaseColumn{
+						SQLType:    "character varying",
+						VarcharLen: 60,
+					},
 				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    "varchar",
-					VarcharLen: 100,
+				orderedmap.Pair[string, sqlschema.Column]{
+					Key: "last_name",
+					Value: &sqlschema.BaseColumn{
+						SQLType:    "varchar",
+						VarcharLen: 100,
+					},
 				},
-			}
+			))
 
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			gotTables := got.(sqlschema.BunModelSchema).ModelTables
-			require.Len(t, gotTables, 1)
-			for _, table := range gotTables {
-				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.Columns)
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				cmpColumns(t, dialect.(sqlschema.InspectorDialect), "model", want, table.GetColumns())
 			}
 		})
 
@@ -509,10 +595,10 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			gotTables := got.(sqlschema.BunModelSchema).ModelTables
-			require.Len(t, gotTables, 1)
-			for _, table := range gotTables {
-				cmpConstraints(t, want, &table.BaseTable)
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				cmpConstraints(t, want, &table.(*sqlschema.BunTable).BaseTable)
 				return
 			}
 		})
@@ -531,11 +617,12 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
-			gotTables := got.(sqlschema.BunModelSchema).ModelTables
-			require.Len(t, gotTables, 1)
-			for _, table := range gotTables {
-				require.NotNilf(t, table.PrimaryKey, "did not register primary key, want (%s)", want)
-				require.Equal(t, want, table.PrimaryKey.Columns, "wrong primary key columns")
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				pk := table.GetPrimaryKey()
+				require.NotNilf(t, pk, "did not register primary key, want (%s)", want)
+				require.Equal(t, want, pk.Columns, "wrong primary key columns")
 				return
 			}
 		})

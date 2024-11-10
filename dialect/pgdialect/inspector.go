@@ -6,7 +6,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate/sqlschema"
-	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type (
@@ -32,7 +32,7 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 
 func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	dbSchema := Schema{
-		Tables:      make(map[schema.FQN]sqlschema.Table),
+		Tables:      orderedmap.New[string, sqlschema.Table](),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
@@ -59,7 +59,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 			return dbSchema, err
 		}
 
-		colDefs := make(map[string]sqlschema.Column)
+		colDefs := orderedmap.New[string, sqlschema.Column]()
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -70,7 +70,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 				def = strings.ToLower(def)
 			}
 
-			colDefs[c.Name] = &Column{
+			colDefs.Set(c.Name, &Column{
 				Name:            c.Name,
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
@@ -78,7 +78,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 				IsNullable:      c.IsNullable,
 				IsAutoIncrement: c.IsSerial,
 				IsIdentity:      c.IsIdentity,
-			}
+			})
 
 			for _, group := range c.UniqueGroups {
 				uniqueGroups[group] = append(uniqueGroups[group], c.Name)
@@ -101,14 +101,13 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 			}
 		}
 
-		fqn := schema.FQN{Schema: table.Schema, Table: table.Name}
-		dbSchema.Tables[fqn] = &Table{
+		dbSchema.Tables.Set(table.Name, &Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
 			Columns:           colDefs,
 			PrimaryKey:        pk,
 			UniqueConstraints: unique,
-		}
+		})
 	}
 
 	for _, fk := range fks {

@@ -1,11 +1,14 @@
 package sqlschema
 
-import "github.com/uptrace/bun/schema"
+import (
+	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
+)
 
 type Table interface {
 	GetSchema() string
 	GetName() string
-	GetColumns() []Column
+	GetColumns() *orderedmap.OrderedMap[string, Column]
 	GetPrimaryKey() *PrimaryKey
 	GetUniqueConstraints() []Unique
 	GetFQN() schema.FQN
@@ -22,8 +25,7 @@ type BaseTable struct {
 	Name   string
 
 	// ColumnDefinitions map each column name to the column definition.
-	// TODO: this must be an ordered map so the order of columns is preserved
-	Columns map[string]Column
+	Columns *orderedmap.OrderedMap[string, Column]
 
 	// PrimaryKey holds the primary key definition.
 	// A nil value means that no primary key is defined for the table.
@@ -47,13 +49,8 @@ func (td *BaseTable) GetName() string {
 	return td.Name
 }
 
-func (td *BaseTable) GetColumns() []Column {
-	var columns []Column
-	// FIXME: columns will be returned in a random order
-	for colName := range td.Columns {
-		columns = append(columns, td.Columns[colName])
-	}
-	return columns
+func (td *BaseTable) GetColumns() *orderedmap.OrderedMap[string, Column] {
+	return td.Columns
 }
 
 func (td *BaseTable) GetPrimaryKey() *PrimaryKey {

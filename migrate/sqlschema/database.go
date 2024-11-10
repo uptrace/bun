@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type Database interface {
-	GetTables() []Table
+	GetTables() *orderedmap.OrderedMap[string, Table]
 	GetForeignKeys() map[ForeignKey]string
 }
 
@@ -19,16 +20,12 @@ var _ Database = (*BaseDatabase)(nil)
 // Dialects and only dialects can use it to implement the Database interface.
 // Other packages must use the Database interface.
 type BaseDatabase struct {
-	Tables      map[schema.FQN]Table
+	Tables      *orderedmap.OrderedMap[string, Table]
 	ForeignKeys map[ForeignKey]string
 }
 
-func (ds BaseDatabase) GetTables() []Table {
-	var tables []Table
-	for i := range ds.Tables {
-		tables = append(tables, ds.Tables[i])
-	}
-	return tables
+func (ds BaseDatabase) GetTables() *orderedmap.OrderedMap[string, Table] {
+	return ds.Tables
 }
 
 func (ds BaseDatabase) GetForeignKeys() map[ForeignKey]string {

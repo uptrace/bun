@@ -8,6 +8,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type InspectorDialect interface {
@@ -59,15 +60,11 @@ func NewBunModelInspector(tables *schema.Tables) *BunModelInspector {
 type BunModelSchema struct {
 	BaseDatabase
 
-	ModelTables map[schema.FQN]*BunTable
+	Tables *orderedmap.OrderedMap[string, Table]
 }
 
-func (ms BunModelSchema) GetTables() []Table {
-	var tables []Table
-	for _, t := range ms.ModelTables {
-		tables = append(tables, t)
-	}
-	return tables
+func (ms BunModelSchema) GetTables() *orderedmap.OrderedMap[string, Table] {
+	return ms.Tables
 }
 
 // BunTable provides additional table metadata that is only accessible from scanning bun models.
@@ -83,17 +80,17 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
-		ModelTables: make(map[schema.FQN]*BunTable),
+		Tables: orderedmap.New[string, Table](),
 	}
 	for _, t := range bmi.tables.All() {
-		columns := make(map[string]Column)
+		columns := orderedmap.New[string, Column]()
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
-				return state, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
+				return nil, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
-			columns[f.Name] = &BaseColumn{
+			columns.Set(f.Name, &BaseColumn{
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
@@ -101,7 +98,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 				IsNullable:      !f.NotNull,
 				IsAutoIncrement: f.AutoIncrement,
 				IsIdentity:      f.Identity,
-			}
+			})
 		}
 
 		var unique []Unique
@@ -132,8 +129,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 			pk = &PrimaryKey{Columns: NewColumns(columns...)}
 		}
 
-		fqn := schema.FQN{Schema: t.Schema, Table: t.Name}
-		state.ModelTables[fqn] = &BunTable{
+		state.Tables.Set(t.Name, &BunTable{
 			BaseTable: BaseTable{
 				Schema:            t.Schema,
 				Name:              t.Name,
@@ -142,7 +138,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 				PrimaryKey:        pk,
 			},
 			Model: t.ZeroIface,
-		}
+		})
 
 		for _, rel := range t.Relations {
 			// These relations are nominal and do not need a foreign key to be declared in the current table.

@@ -14,7 +14,7 @@ import (
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
-	"github.com/uptrace/bun/schema"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 const (
@@ -370,8 +370,9 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 	// Assert
 	state := inspect(ctx)
 	tables := state.Tables
-	require.Len(t, tables, 1)
-	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "changed"})
+	require.Equal(t, 1, tables.Len())
+	_, found := tables.Get("changed")
+	require.True(t, found)
 }
 
 func testCreateDropTable(t *testing.T, db *bun.DB) {
@@ -399,8 +400,9 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 	// Assert
 	state := inspect(ctx)
 	tables := state.Tables
-	require.Len(t, tables, 1)
-	require.Contains(t, tables, schema.FQN{Schema: db.Dialect().DefaultSchema(), Table: "createme"})
+	require.Equal(t, 1, tables.Len())
+	_, found := tables.Get("createme")
+	require.True(t, found)
 }
 
 func testAlterForeignKeys(t *testing.T, db *bun.DB) {
@@ -524,10 +526,10 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	require.Len(t, state.Tables, 2)
+	require.Equal(t, 2, state.Tables.Len())
 
 	var renamed, model2 sqlschema.Table
-	for _, tbl := range state.Tables {
+	for _, tbl := range state.Tables.FromOldest() {
 		switch tbl.GetName() {
 		case "renamed":
 			renamed = tbl
@@ -536,9 +538,9 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 		}
 	}
 
-	require.Contains(t, renamed.GetColumns(), "count")
-	require.Contains(t, model2.GetColumns(), "second_column")
-	require.Contains(t, model2.GetColumns(), "do_not_rename")
+	require.NotNil(t, renamed.GetColumns().Value("count"))
+	require.NotNil(t, model2.GetColumns().Value("second_column"))
+	require.NotNil(t, model2.GetColumns().Value("do_not_rename"))
 }
 
 // testChangeColumnType_AutoCast checks type changes which can be type-casted automatically,
@@ -568,46 +570,70 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "change_me_own_type"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "change_me_own_type",
-			Columns: map[string]sqlschema.Column{
-				"bigger_int": &sqlschema.BaseColumn{
-					SQLType:    "bigint",
-					IsIdentity: true,
-				},
-				"ts": &sqlschema.BaseColumn{
-					SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
-					DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
-					IsNullable:   true,
-				},
-				"default_expr": &sqlschema.BaseColumn{
-					SQLType:      "varchar",
-					IsNullable:   true,
-					DefaultValue: "random()",
-				},
-				"empty_default": &sqlschema.BaseColumn{
-					SQLType:      "varchar",
-					IsNullable:   true,
-					DefaultValue: "", // NOT "''"
-				},
-				"not_null": &sqlschema.BaseColumn{
-					SQLType:    "varchar",
-					IsNullable: false,
-				},
-				"type_override": &sqlschema.BaseColumn{
-					SQLType:    "varchar",
-					IsNullable: true,
-					VarcharLen: 200,
-				},
-				// "many_values": {
-				// 	SQLType: "array",
-				// },
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "change_me_own_type",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "change_me_own_type",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "bigger_int",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    "bigint",
+							IsIdentity: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "ts",
+						Value: &sqlschema.BaseColumn{
+							SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
+							DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
+							IsNullable:   true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "default_expr",
+						Value: &sqlschema.BaseColumn{
+							SQLType:      "varchar",
+							IsNullable:   true,
+							DefaultValue: "random()",
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "empty_default",
+						Value: &sqlschema.BaseColumn{
+							SQLType:      "varchar",
+							IsNullable:   true,
+							DefaultValue: "", // NOT "''"
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "not_null",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    "varchar",
+							IsNullable: false,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "type_override",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    "varchar",
+							IsNullable: true,
+							VarcharLen: 200,
+						},
+					},
+					// orderedmap.Pair[string, sqlschema.Column]{
+					// 	Key: "many_values",
+					// 	Value: &sqlschema.BaseColumn{
+					// 		SQLType: "array",
+					// 	},
+					// },
+				)),
+				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("bigger_int")},
 			},
-			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("bigger_int")},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -619,7 +645,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testIdentity(t *testing.T, db *bun.DB) {
@@ -635,22 +661,31 @@ func testIdentity(t *testing.T, db *bun.DB) {
 		B             int64 `bun:",notnull,identity"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "bourne_identity"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "bourne_identity",
-			Columns: map[string]sqlschema.Column{
-				"a": &sqlschema.BaseColumn{
-					SQLType:    sqltype.BigInt,
-					IsIdentity: false, // <- drop IDENTITY
-				},
-				"b": &sqlschema.BaseColumn{
-					SQLType:    sqltype.BigInt,
-					IsIdentity: true, // <- add IDENTITY
-				},
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "bourne_identity",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "bourne_identity",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "a",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.BigInt,
+							IsIdentity: false, // <- drop IDENTITY
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "b",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.BigInt,
+							IsIdentity: true, // <- add IDENTITY
+						},
+					},
+				)),
 			},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -662,7 +697,7 @@ func testIdentity(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testAddDropColumn(t *testing.T, db *bun.DB) {
@@ -678,22 +713,31 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 		AddMe         bool   `bun:"addme"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "column_madness"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "column_madness",
-			Columns: map[string]sqlschema.Column{
-				"do_not_touch": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"addme": &sqlschema.BaseColumn{
-					SQLType:    sqltype.Boolean,
-					IsNullable: true,
-				},
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "column_madness",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "column_madness",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "do_not_touch",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "addme",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.Boolean,
+							IsNullable: true,
+						},
+					},
+				)),
 			},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -705,7 +749,7 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testUnique(t *testing.T, db *bun.DB) {
@@ -731,48 +775,72 @@ func testUnique(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed"` // shrink "pet" unique group
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "uniqlo_stores"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "uniqlo_stores",
-			Columns: map[string]sqlschema.Column{
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "uniqlo_stores",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "uniqlo_stores",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "first_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "middle_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "last_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "birthday",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "email",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "pet_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "pet_breed",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+				)),
+				UniqueConstraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewColumns("email")},
+					{Columns: sqlschema.NewColumns("pet_name")},
+					// We can only be sure of the user-defined index name
+					{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "middle_name", "last_name")},
 				},
-				"middle_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"birthday": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"email": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"pet_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"pet_breed": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-			},
-			UniqueConstraints: []sqlschema.Unique{
-				{Columns: sqlschema.NewColumns("email")},
-				{Columns: sqlschema.NewColumns("pet_name")},
-				// We can only be sure of the user-defined index name
-				{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "middle_name", "last_name")},
 			},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -784,7 +852,7 @@ func testUnique(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
@@ -809,39 +877,57 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed,unique"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "after"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "after",
-			Columns: map[string]sqlschema.Column{
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "after",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "after",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "first_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "last_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "birthday",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "pet_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "pet_breed",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+				)),
+				UniqueConstraints: []sqlschema.Unique{
+					{Columns: sqlschema.NewColumns("pet_name")},
+					{Columns: sqlschema.NewColumns("pet_breed")},
+					{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name", "birthday")},
 				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"birthday": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"pet_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"pet_breed": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-			},
-			UniqueConstraints: []sqlschema.Unique{
-				{Columns: sqlschema.NewColumns("pet_name")},
-				{Columns: sqlschema.NewColumns("pet_breed")},
-				{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name", "birthday")},
 			},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -904,57 +990,87 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		LastName      string `bun:"last_name,pk"`
 	}
 
-	wantTables := map[schema.FQN]sqlschema.Table{
-		{Schema: db.Dialect().DefaultSchema(), Table: "drop_your_pks"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "drop_your_pks",
-			Columns: map[string]sqlschema.Column{
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: false,
-				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: false,
-				},
+	wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "drop_your_pks",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "drop_your_pks",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "first_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: false,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "last_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: false,
+						},
+					},
+				)),
 			},
 		},
-		{Schema: db.Dialect().DefaultSchema(), Table: "add_new_pk"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "add_new_pk",
-			Columns: map[string]sqlschema.Column{
-				"new_id": &sqlschema.BaseColumn{
-					SQLType:    sqltype.BigInt,
-					IsNullable: false,
-					IsIdentity: true,
-				},
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: true,
-				},
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "add_new_pk",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "add_new_pk",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "new_id",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.BigInt,
+							IsNullable: false,
+							IsIdentity: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "first_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "last_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: true,
+						},
+					},
+				)),
+				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
 			},
-			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
 		},
-		{Schema: db.Dialect().DefaultSchema(), Table: "change_pk"}: &sqlschema.BaseTable{
-			Schema: db.Dialect().DefaultSchema(),
-			Name:   "change_pk",
-			Columns: map[string]sqlschema.Column{
-				"first_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: false,
-				},
-				"last_name": &sqlschema.BaseColumn{
-					SQLType:    sqltype.VarChar,
-					IsNullable: false,
-				},
+		orderedmap.Pair[string, sqlschema.Table]{
+			Key: "change_pk",
+			Value: &sqlschema.BaseTable{
+				Schema: db.Dialect().DefaultSchema(),
+				Name:   "change_pk",
+				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "first_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: false,
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Column]{
+						Key: "last_name",
+						Value: &sqlschema.BaseColumn{
+							SQLType:    sqltype.VarChar,
+							IsNullable: false,
+						},
+					},
+				)),
+				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("first_name", "last_name")},
 			},
-			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("first_name", "last_name")},
 		},
-	}
+	))
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
