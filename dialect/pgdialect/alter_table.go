@@ -26,7 +26,7 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 	fmter := m.db.Formatter()
 
 	// Append ALTER TABLE statement to the enclosed query bytes []byte.
-	appendAlterTable := func(query []byte, fqn schema.FQN) []byte {
+	appendAlterTable := func(query []byte, fqn sqlschema.FQN) []byte {
 		query = append(query, "ALTER TABLE "...)
 		query, _ = fqn.AppendQuery(fmter, query)
 		return append(query, " "...)

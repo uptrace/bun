@@ -2,7 +2,6 @@ package migrate
 
 import (
 	"github.com/uptrace/bun/migrate/sqlschema"
-	"github.com/uptrace/bun/schema"
 )
 
 // changeset is a set of changes to the database schema definition.
@@ -379,7 +378,7 @@ func newRefMap(fks map[sqlschema.ForeignKey]string) refMap {
 }
 
 // RenameT updates table name in all foreign key definions which depend on it.
-func (rm refMap) RenameTable(table schema.FQN, newName string) {
+func (rm refMap) RenameTable(table sqlschema.FQN, newName string) {
 	for fk := range rm {
 		switch table {
 		case fk.From.FQN:
@@ -391,7 +390,7 @@ func (rm refMap) RenameTable(table schema.FQN, newName string) {
 }
 
 // RenameColumn updates column name in all foreign key definions which depend on it.
-func (rm refMap) RenameColumn(table schema.FQN, column, newName string) {
+func (rm refMap) RenameColumn(table sqlschema.FQN, column, newName string) {
 	for fk := range rm {
 		if table == fk.From.FQN {
 			fk.From.Column.Replace(column, newName)

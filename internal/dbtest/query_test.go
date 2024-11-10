@@ -1593,7 +1593,7 @@ func TestAlterTable(t *testing.T) {
 		Genre         string
 	}
 
-	fqn := schema.FQN{Schema: "hobbies", Table: "movies"}
+	fqn := sqlschema.FQN{Schema: "hobbies", Table: "movies"}
 
 	tests := []struct {
 		name      string

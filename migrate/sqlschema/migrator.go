@@ -44,6 +44,6 @@ func (m *BaseMigrator) AppendCreateTable(b []byte, model interface{}) ([]byte, e
 	return m.db.NewCreateTable().Model(model).AppendQuery(m.db.Formatter(), b)
 }
 
-func (m *BaseMigrator) AppendDropTable(b []byte, fqn schema.FQN) ([]byte, error) {
+func (m *BaseMigrator) AppendDropTable(b []byte, fqn FQN) ([]byte, error) {
 	return m.db.NewDropTable().TableExpr(fqn.String()).AppendQuery(m.db.Formatter(), b)
 }

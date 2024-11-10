@@ -1,6 +1,8 @@
 package sqlschema
 
 import (
+	"fmt"
+
 	"github.com/uptrace/bun/schema"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
@@ -11,7 +13,7 @@ type Table interface {
 	GetColumns() *orderedmap.OrderedMap[string, Column]
 	GetPrimaryKey() *PrimaryKey
 	GetUniqueConstraints() []Unique
-	GetFQN() schema.FQN
+	GetFQN() FQN
 }
 
 var _ Table = (*BaseTable)(nil)
@@ -61,6 +63,23 @@ func (td *BaseTable) GetUniqueConstraints() []Unique {
 	return td.UniqueConstraints
 }
 
-func (t *BaseTable) GetFQN() schema.FQN {
-	return schema.FQN{Schema: t.Schema, Table: t.Name}
+func (t *BaseTable) GetFQN() FQN {
+	return FQN{Schema: t.Schema, Table: t.Name}
+}
+
+// FQN uniquely identifies a table in a multi-schema setup.
+type FQN struct {
+	Schema string
+	Table  string
+}
+
+var _ schema.QueryAppender = (*FQN)(nil)
+
+// AppendQuery appends a fully-qualified table name.
+func (fqn *FQN) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+	return fmter.AppendQuery(b, "?.?", schema.Ident(fqn.Schema), schema.Ident(fqn.Table)), nil
+}
+
+func (fqn *FQN) String() string {
+	return fmt.Sprintf("%s.%s", fqn.Schema, fqn.Table)
 }
