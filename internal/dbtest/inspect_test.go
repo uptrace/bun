@@ -626,5 +626,26 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				return
 			}
 		})
+
+		t.Run("separates schema and table name", func(t *testing.T) {
+			type Model struct {
+				bun.BaseModel `bun:"table:custom_schema.model"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Model)(nil))
+			inspector := sqlschema.NewBunModelInspector(tables)
+
+			got, err := inspector.Inspect(context.Background())
+			require.NoError(t, err)
+
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				require.Equal(t, "custom_schema", table.GetSchema(), "wrong schema name")
+				require.Equal(t, "model", table.GetName(), "wrong table name")
+				return
+			}
+		})
 	})
 }

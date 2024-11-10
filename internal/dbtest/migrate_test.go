@@ -857,7 +857,7 @@ func testUnique(t *testing.T, db *bun.DB) {
 
 func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	type TableBefore struct {
-		bun.BaseModel `bun:"table:before"`
+		bun.BaseModel `bun:"table:automigrate.before"`
 		FirstName     string `bun:"first_name,unique:full_name"`
 		LastName      string `bun:"last_name,unique:full_name"`
 		Birthday      string `bun:"birthday,unique"`
@@ -866,7 +866,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	}
 
 	type TableAfter struct {
-		bun.BaseModel `bun:"table:after"`
+		bun.BaseModel `bun:"table:automigrate.after"`
 		// Expand full_name unique group and rename it.
 		FirstName string `bun:"first_name,unique:birth_certificate"`
 		LastName  string `bun:"last_name,unique:birth_certificate"`
@@ -881,7 +881,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		orderedmap.Pair[string, sqlschema.Table]{
 			Key: "after",
 			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
+				Schema: "automigrate",
 				Name:   "after",
 				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
 					orderedmap.Pair[string, sqlschema.Column]{
@@ -931,6 +931,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
+	mustCreateSchema(t, ctx, db, "automigrate")
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*TableAfter)(nil))
 	m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*TableAfter)(nil)))
@@ -946,7 +947,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 	// Has a composite primary key.
 	type DropPKBefore struct {
-		bun.BaseModel `bun:"table:drop_your_pks"`
+		bun.BaseModel `bun:"table:please.drop_your_pks"`
 		FirstName     string `bun:"first_name,pk"`
 		LastName      string `bun:"last_name,pk"`
 	}
@@ -970,7 +971,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 
 	// Doesn't have any primary keys.
 	type DropPKAfter struct {
-		bun.BaseModel `bun:"table:drop_your_pks"`
+		bun.BaseModel `bun:"table:please.drop_your_pks"`
 		FirstName     string `bun:"first_name,notnull"`
 		LastName      string `bun:"last_name,notnull"`
 	}
@@ -994,7 +995,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		orderedmap.Pair[string, sqlschema.Table]{
 			Key: "drop_your_pks",
 			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
+				Schema: "please",
 				Name:   "drop_your_pks",
 				Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
 					orderedmap.Pair[string, sqlschema.Column]{
@@ -1074,6 +1075,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
+	mustCreateSchema(t, ctx, db, "please")
 	mustResetModel(t, ctx, db,
 		(*DropPKBefore)(nil),
 		(*AddNewPKBefore)(nil),

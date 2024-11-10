@@ -129,10 +129,17 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 			pk = &PrimaryKey{Columns: NewColumns(columns...)}
 		}
 
-		state.Tables.Set(t.Name, &BunTable{
+		// In cases where a table is defined in a non-default schema in the `bun:table` tag,
+		// schema.Table only extracts the name of the schema, but passes the entire tag value to t.Name
+		// for backwads-compatibility. For example, a bun model like this:
+		// 	type Model struct { bun.BaseModel `bun:"table:favourite.books` }
+		// produces
+		// 	schema.Table{ Schema: "favourite", Name: "favourite.books" }
+		tableName := strings.TrimPrefix(t.Name, t.Schema+".")
+		state.Tables.Set(tableName, &BunTable{
 			BaseTable: BaseTable{
 				Schema:            t.Schema,
-				Name:              t.Name,
+				Name:              tableName,
 				Columns:           columns,
 				UniqueConstraints: unique,
 				PrimaryKey:        pk,
