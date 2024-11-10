@@ -39,6 +39,7 @@ require (
 	github.com/uptrace/bun/driver/pgdriver v1.2.5
 	github.com/uptrace/bun/driver/sqliteshim v1.2.5
 	github.com/uptrace/bun/extra/bundebug v1.2.5
+	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240816141633-0a40785b4f41
 )
 
 require (
@@ -70,12 +71,11 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240816141633-0a40785b4f41 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
-	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 	modernc.org/gc/v3 v3.0.0-20241004144649-1aea3fae8852 // indirect

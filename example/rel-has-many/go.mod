@@ -1,8 +1,8 @@
 module github.com/uptrace/bun/example/rel-has-many
 
-go 1.22.0
+go 1.23
 
-toolchain go1.22.6
+toolchain go1.23.2
 
 replace github.com/uptrace/bun => ../..
 
@@ -34,8 +34,8 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20241004144649-1aea3fae8852 // indirect
 	modernc.org/libc v1.61.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
