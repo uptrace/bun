@@ -1593,32 +1593,33 @@ func TestAlterTable(t *testing.T) {
 		Genre         string
 	}
 
-	fqn := sqlschema.FQN{Schema: "hobbies", Table: "movies"}
+	schemaName := "hobbies"
+	tableName := "movies"
 
 	tests := []struct {
 		name      string
 		operation interface{}
 	}{
 		{name: "create table", operation: &migrate.CreateTableOp{
-			FQN:   fqn,
-			Model: (*Movie)(nil),
+			TableName: tableName,
+			Model:     (*Movie)(nil),
 		}},
 		{name: "drop table", operation: &migrate.DropTableOp{
-			FQN: fqn,
+			TableName: tableName,
 		}},
 		{name: "rename table", operation: &migrate.RenameTableOp{
-			FQN:     fqn,
-			NewName: "films",
+			TableName: tableName,
+			NewName:   "films",
 		}},
 		{name: "rename column", operation: &migrate.RenameColumnOp{
-			FQN:     fqn,
-			OldName: "has_oscar",
-			NewName: "has_awards",
+			TableName: tableName,
+			OldName:   "has_oscar",
+			NewName:   "has_awards",
 		}},
 		{name: "add column with default value", operation: &migrate.AddColumnOp{
-			FQN:    fqn,
-			Column: "language",
-			ColDef: &sqlschema.BaseColumn{
+			TableName:  tableName,
+			ColumnName: "language",
+			Column: &sqlschema.BaseColumn{
 				SQLType:      "varchar",
 				VarcharLen:   20,
 				IsNullable:   false,
@@ -1626,100 +1627,100 @@ func TestAlterTable(t *testing.T) {
 			},
 		}},
 		{name: "add column with identity", operation: &migrate.AddColumnOp{
-			FQN:    fqn,
-			Column: "n",
-			ColDef: &sqlschema.BaseColumn{
+			TableName:  tableName,
+			ColumnName: "n",
+			Column: &sqlschema.BaseColumn{
 				SQLType:    sqltype.BigInt,
 				IsNullable: false,
 				IsIdentity: true,
 			},
 		}},
 		{name: "drop column", operation: &migrate.DropColumnOp{
-			FQN:    fqn,
-			Column: "director",
-			ColDef: &sqlschema.BaseColumn{
+			TableName:  tableName,
+			ColumnName: "director",
+			Column: &sqlschema.BaseColumn{
 				SQLType:    sqltype.VarChar,
 				IsNullable: false,
 			},
 		}},
 		{name: "add unique constraint", operation: &migrate.AddUniqueConstraintOp{
-			FQN: fqn,
+			TableName: tableName,
 			Unique: sqlschema.Unique{
 				Name:    "one_genre_per_director",
 				Columns: sqlschema.NewColumns("genre", "director"),
 			},
 		}},
 		{name: "drop unique constraint", operation: &migrate.DropUniqueConstraintOp{
-			FQN: fqn,
+			TableName: tableName,
 			Unique: sqlschema.Unique{
 				Name:    "one_genre_per_director",
 				Columns: sqlschema.NewColumns("genre", "director"),
 			},
 		}},
 		{name: "change column type int to bigint", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "budget",
-			From:   &sqlschema.BaseColumn{SQLType: sqltype.Integer},
-			To:     &sqlschema.BaseColumn{SQLType: sqltype.BigInt},
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{SQLType: sqltype.Integer},
+			To:        &sqlschema.BaseColumn{SQLType: sqltype.BigInt},
 		}},
 		{name: "add default", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "budget",
-			From:   &sqlschema.BaseColumn{DefaultValue: ""},
-			To:     &sqlschema.BaseColumn{DefaultValue: "100"},
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{DefaultValue: ""},
+			To:        &sqlschema.BaseColumn{DefaultValue: "100"},
 		}},
 		{name: "drop default", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "budget",
-			From:   &sqlschema.BaseColumn{DefaultValue: "100"},
-			To:     &sqlschema.BaseColumn{DefaultValue: ""},
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{DefaultValue: "100"},
+			To:        &sqlschema.BaseColumn{DefaultValue: ""},
 		}},
 		{name: "make nullable", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "director",
-			From:   &sqlschema.BaseColumn{IsNullable: false},
-			To:     &sqlschema.BaseColumn{IsNullable: true},
+			TableName: tableName,
+			Column:    "director",
+			From:      &sqlschema.BaseColumn{IsNullable: false},
+			To:        &sqlschema.BaseColumn{IsNullable: true},
 		}},
 		{name: "add notnull", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "budget",
-			From:   &sqlschema.BaseColumn{IsNullable: true},
-			To:     &sqlschema.BaseColumn{IsNullable: false},
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{IsNullable: true},
+			To:        &sqlschema.BaseColumn{IsNullable: false},
 		}},
 		{name: "increase varchar length", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "language",
-			From:   &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 20},
-			To:     &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 255},
+			TableName: tableName,
+			Column:    "language",
+			From:      &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 20},
+			To:        &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 255},
 		}},
 		{name: "add identity", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "id",
-			From:   &sqlschema.BaseColumn{IsIdentity: false},
-			To:     &sqlschema.BaseColumn{IsIdentity: true},
+			TableName: tableName,
+			Column:    "id",
+			From:      &sqlschema.BaseColumn{IsIdentity: false},
+			To:        &sqlschema.BaseColumn{IsIdentity: true},
 		}},
 		{name: "drop identity", operation: &migrate.ChangeColumnTypeOp{
-			FQN:    fqn,
-			Column: "id",
-			From:   &sqlschema.BaseColumn{IsIdentity: true},
-			To:     &sqlschema.BaseColumn{IsIdentity: false},
+			TableName: tableName,
+			Column:    "id",
+			From:      &sqlschema.BaseColumn{IsIdentity: true},
+			To:        &sqlschema.BaseColumn{IsIdentity: false},
 		}},
 		{name: "add primary key", operation: &migrate.AddPrimaryKeyOp{
-			FQN: fqn,
+			TableName: tableName,
 			PrimaryKey: sqlschema.PrimaryKey{
 				Name:    "new_pk",
 				Columns: sqlschema.NewColumns("id"),
 			},
 		}},
 		{name: "drop primary key", operation: &migrate.DropPrimaryKeyOp{
-			FQN: fqn,
+			TableName: tableName,
 			PrimaryKey: sqlschema.PrimaryKey{
 				Name:    "new_pk",
 				Columns: sqlschema.NewColumns("id"),
 			},
 		}},
 		{name: "change primary key", operation: &migrate.ChangePrimaryKeyOp{
-			FQN: fqn,
+			TableName: tableName,
 			Old: sqlschema.PrimaryKey{
 				Name:    "old_pk",
 				Columns: sqlschema.NewColumns("id"),
@@ -1732,21 +1733,21 @@ func TestAlterTable(t *testing.T) {
 		{name: "add foreign key", operation: &migrate.AddForeignKeyOp{
 			ConstraintName: "genre_description",
 			ForeignKey: sqlschema.ForeignKey{
-				From: sqlschema.NewColumnReference("hobbies", "movies", "genre"),
-				To:   sqlschema.NewColumnReference("wiki", "film_genres", "id"),
+				From: sqlschema.NewColumnReference("movies", "genre"),
+				To:   sqlschema.NewColumnReference("film_genres", "id"),
 			},
 		}},
 		{name: "drop foreign key", operation: &migrate.DropForeignKeyOp{
 			ConstraintName: "genre_description",
 			ForeignKey: sqlschema.ForeignKey{
-				From: sqlschema.NewColumnReference("hobbies", "movies", "genre"),
-				To:   sqlschema.NewColumnReference("wiki", "film_genres", "id"),
+				From: sqlschema.NewColumnReference("movies", "genre"),
+				To:   sqlschema.NewColumnReference("film_genres", "id"),
 			},
 		}},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		migrator, err := sqlschema.NewMigrator(db)
+		migrator, err := sqlschema.NewMigrator(db, schemaName)
 		if err != nil {
 			t.Skip(err)
 		}

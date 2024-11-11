@@ -272,20 +272,20 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				)),
 				wantFKs: []sqlschema.ForeignKey{
 					{
-						From: sqlschema.NewColumnReference(defaultSchema, "articles", "publisher_id"),
-						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
+						From: sqlschema.NewColumnReference("articles", "publisher_id"),
+						To:   sqlschema.NewColumnReference("publishers", "publisher_id"),
 					},
 					{
-						From: sqlschema.NewColumnReference(defaultSchema, "articles", "author_id"),
-						To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
+						From: sqlschema.NewColumnReference("articles", "author_id"),
+						To:   sqlschema.NewColumnReference("authors", "author_id"),
 					},
 					{
-						From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "publisher_id"),
-						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
+						From: sqlschema.NewColumnReference("publisher_to_journalists", "publisher_id"),
+						To:   sqlschema.NewColumnReference("publishers", "publisher_id"),
 					},
 					{
-						From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "author_id"),
-						To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
+						From: sqlschema.NewColumnReference("publisher_to_journalists", "author_id"),
+						To:   sqlschema.NewColumnReference("authors", "author_id"),
 					},
 				},
 			},
@@ -326,8 +326,8 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				)),
 				wantFKs: []sqlschema.ForeignKey{
 					{
-						From: sqlschema.NewColumnReference("admin", "offices", "publisher_name", "publisher_id"),
-						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_name", "publisher_id"),
+						From: sqlschema.NewColumnReference("offices", "publisher_name", "publisher_id"),
+						To:   sqlschema.NewColumnReference("publishers", "publisher_name", "publisher_id"),
 					},
 				},
 			},

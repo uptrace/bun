@@ -112,8 +112,8 @@ func (in *Inspector) Inspect(ctx context.Context, schemaName string) (sqlschema.
 
 	for _, fk := range fks {
 		dbSchema.ForeignKeys[sqlschema.ForeignKey{
-			From: sqlschema.NewColumnReference(fk.SourceSchema, fk.SourceTable, fk.SourceColumns...),
-			To:   sqlschema.NewColumnReference(fk.TargetSchema, fk.TargetTable, fk.TargetColumns...),
+			From: sqlschema.NewColumnReference(fk.SourceTable, fk.SourceColumns...),
+			To:   sqlschema.NewColumnReference(fk.TargetTable, fk.TargetColumns...),
 		}] = fk.ConstraintName
 	}
 	return dbSchema, nil

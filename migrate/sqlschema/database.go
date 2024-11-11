@@ -37,19 +37,19 @@ type ForeignKey struct {
 	To   ColumnReference
 }
 
-func NewColumnReference(schemaName, tableName string, columns ...string) ColumnReference {
+func NewColumnReference(tableName string, columns ...string) ColumnReference {
 	return ColumnReference{
-		FQN:    FQN{Schema: schemaName, Table: tableName},
-		Column: NewColumns(columns...),
+		TableName: tableName,
+		Column:    NewColumns(columns...),
 	}
 }
 
-func (fk ForeignKey) DependsOnTable(fqn FQN) bool {
-	return fk.From.FQN == fqn || fk.To.FQN == fqn
+func (fk ForeignKey) DependsOnTable(tableName string) bool {
+	return fk.From.TableName == tableName || fk.To.TableName == tableName
 }
 
-func (fk ForeignKey) DependsOnColumn(fqn FQN, column string) bool {
-	return fk.DependsOnTable(fqn) &&
+func (fk ForeignKey) DependsOnColumn(tableName string, column string) bool {
+	return fk.DependsOnTable(tableName) &&
 		(fk.From.Column.Contains(column) || fk.To.Column.Contains(column))
 }
 
@@ -122,6 +122,6 @@ func (u Unique) Equals(other Unique) bool {
 }
 
 type ColumnReference struct {
-	FQN    FQN
-	Column Columns
+	TableName string
+	Column    Columns
 }

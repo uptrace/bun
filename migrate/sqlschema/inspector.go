@@ -169,8 +169,8 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context, schemaName string) (D
 
 			target := rel.JoinTable
 			state.ForeignKeys[ForeignKey{
-				From: NewColumnReference(t.Schema, t.Name, fromCols...),
-				To:   NewColumnReference(target.Schema, target.Name, toCols...),
+				From: NewColumnReference(t.Name, fromCols...),
+				To:   NewColumnReference(target.Name, toCols...),
 			}] = ""
 		}
 	}

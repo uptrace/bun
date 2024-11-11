@@ -155,7 +155,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 	am.dbInspector = dbInspector
 	am.diffOpts = append(am.diffOpts, withTypeEquivalenceFunc(db.Dialect().(sqlschema.InspectorDialect).EquivalentType))
 
-	dbMigrator, err := sqlschema.NewMigrator(db)
+	dbMigrator, err := sqlschema.NewMigrator(db, am.schemaName)
 	if err != nil {
 		return nil, err
 	}

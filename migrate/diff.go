@@ -41,10 +41,10 @@ RenameCreate:
 		for haveName, haveTable := range currentTables.FromOldest() {
 			if _, exists := targetTables.Get(haveName); !exists && d.canRename(haveTable, wantTable) {
 				d.changes.Add(&RenameTableOp{
-					FQN:     haveTable.GetFQN(),
-					NewName: wantName,
+					TableName: haveTable.GetName(),
+					NewName:   wantName,
 				})
-				d.refMap.RenameTable(haveTable.GetFQN(), wantName)
+				d.refMap.RenameTable(haveTable.GetName(), wantName)
 
 				// Find renamed columns, if any, and check if constraints (PK, UNIQUE) have been updated.
 				// We need not check wantTable any further.
@@ -59,8 +59,8 @@ RenameCreate:
 		// then we need to create this table in the database.
 		additional := wantTable.(*sqlschema.BunTable)
 		d.changes.Add(&CreateTableOp{
-			FQN:   wantTable.GetFQN(),
-			Model: additional.Model,
+			TableName: wantTable.GetName(),
+			Model:     additional.Model,
 		})
 	}
 
@@ -68,7 +68,7 @@ RenameCreate:
 	for name, table := range currentTables.FromOldest() {
 		if _, keep := targetTables.Get(name); !keep {
 			d.changes.Add(&DropTableOp{
-				FQN: table.GetFQN(),
+				TableName: table.GetName(),
 			})
 		}
 	}
@@ -111,10 +111,10 @@ ChangeRename:
 		if cCol, ok := currentColumns.Get(tName); ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnTypeOp{
-					FQN:    target.GetFQN(),
-					Column: tName,
-					From:   cCol,
-					To:     d.makeTargetColDef(cCol, tCol),
+					TableName: target.GetName(),
+					Column:    tName,
+					From:      cCol,
+					To:        d.makeTargetColDef(cCol, tCol),
 				})
 			}
 			continue
@@ -128,11 +128,11 @@ ChangeRename:
 				continue
 			}
 			d.changes.Add(&RenameColumnOp{
-				FQN:     target.GetFQN(),
-				OldName: cName,
-				NewName: tName,
+				TableName: target.GetName(),
+				OldName:   cName,
+				NewName:   tName,
 			})
-			d.refMap.RenameColumn(target.GetFQN(), cName, tName)
+			d.refMap.RenameColumn(target.GetName(), cName, tName)
 			currentColumns.Delete(cName) // no need to check this column again
 
 			// Update primary key definition to avoid superficially recreating the constraint.
@@ -142,9 +142,9 @@ ChangeRename:
 		}
 
 		d.changes.Add(&AddColumnOp{
-			FQN:    target.GetFQN(),
-			Column: tName,
-			ColDef: tCol,
+			TableName:  target.GetName(),
+			ColumnName: tName,
+			Column:     tCol,
 		})
 	}
 
@@ -152,9 +152,9 @@ ChangeRename:
 	for cName, cCol := range currentColumns.FromOldest() {
 		if _, keep := targetColumns.Get(cName); !keep {
 			d.changes.Add(&DropColumnOp{
-				FQN:    target.GetFQN(),
-				Column: cName,
-				ColDef: cCol,
+				TableName:  target.GetName(),
+				ColumnName: cName,
+				Column:     cCol,
 			})
 		}
 	}
@@ -169,8 +169,8 @@ Add:
 			}
 		}
 		d.changes.Add(&AddUniqueConstraintOp{
-			FQN:    target.GetFQN(),
-			Unique: want,
+			TableName: target.GetName(),
+			Unique:    want,
 		})
 	}
 
@@ -183,8 +183,8 @@ Drop:
 		}
 
 		d.changes.Add(&DropUniqueConstraintOp{
-			FQN:    target.GetFQN(),
-			Unique: got,
+			TableName: target.GetName(),
+			Unique:    got,
 		})
 	}
 
@@ -198,19 +198,19 @@ Drop:
 	switch {
 	case targetPK == nil && currentPK != nil:
 		d.changes.Add(&DropPrimaryKeyOp{
-			FQN:        target.GetFQN(),
+			TableName:  target.GetName(),
 			PrimaryKey: *currentPK,
 		})
 	case currentPK == nil && targetPK != nil:
 		d.changes.Add(&AddPrimaryKeyOp{
-			FQN:        target.GetFQN(),
+			TableName:  target.GetName(),
 			PrimaryKey: *targetPK,
 		})
 	case targetPK.Columns != currentPK.Columns:
 		d.changes.Add(&ChangePrimaryKeyOp{
-			FQN: target.GetFQN(),
-			Old: *currentPK,
-			New: *targetPK,
+			TableName: target.GetName(),
+			Old:       *currentPK,
+			New:       *targetPK,
 		})
 	}
 }
@@ -378,24 +378,24 @@ func newRefMap(fks map[sqlschema.ForeignKey]string) refMap {
 }
 
 // RenameT updates table name in all foreign key definions which depend on it.
-func (rm refMap) RenameTable(table sqlschema.FQN, newName string) {
+func (rm refMap) RenameTable(tableName string, newName string) {
 	for fk := range rm {
-		switch table {
-		case fk.From.FQN:
-			fk.From.FQN.Table = newName
-		case fk.To.FQN:
-			fk.To.FQN.Table = newName
+		switch tableName {
+		case fk.From.TableName:
+			fk.From.TableName = newName
+		case fk.To.TableName:
+			fk.To.TableName = newName
 		}
 	}
 }
 
 // RenameColumn updates column name in all foreign key definions which depend on it.
-func (rm refMap) RenameColumn(table sqlschema.FQN, column, newName string) {
+func (rm refMap) RenameColumn(tableName string, column, newName string) {
 	for fk := range rm {
-		if table == fk.From.FQN {
+		if tableName == fk.From.TableName {
 			fk.From.Column.Replace(column, newName)
 		}
-		if table == fk.To.FQN {
+		if tableName == fk.To.TableName {
 			fk.To.Column.Replace(column, newName)
 		}
 	}

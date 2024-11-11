@@ -10,14 +10,15 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func (d *Dialect) Migrator(db *bun.DB) sqlschema.Migrator {
-	return &migrator{db: db, BaseMigrator: sqlschema.NewBaseMigrator(db)}
+func (d *Dialect) Migrator(db *bun.DB, schemaName string) sqlschema.Migrator {
+	return &migrator{db: db, schemaName: schemaName, BaseMigrator: sqlschema.NewBaseMigrator(db)}
 }
 
 type migrator struct {
 	*sqlschema.BaseMigrator
 
-	db *bun.DB
+	db         *bun.DB
+	schemaName string
 }
 
 var _ sqlschema.Migrator = (*migrator)(nil)
@@ -26,9 +27,9 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 	fmter := m.db.Formatter()
 
 	// Append ALTER TABLE statement to the enclosed query bytes []byte.
-	appendAlterTable := func(query []byte, fqn sqlschema.FQN) []byte {
+	appendAlterTable := func(query []byte, tableName string) []byte {
 		query = append(query, "ALTER TABLE "...)
-		query, _ = fqn.AppendQuery(fmter, query)
+		query = m.appendFQN(fmter, query, tableName)
 		return append(query, " "...)
 	}
 
@@ -36,31 +37,31 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 	case *migrate.CreateTableOp:
 		return m.AppendCreateTable(b, change.Model)
 	case *migrate.DropTableOp:
-		return m.AppendDropTable(b, change.FQN)
+		return m.AppendDropTable(b, m.schemaName, change.TableName)
 	case *migrate.RenameTableOp:
-		b, err = m.renameTable(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.renameTable(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.RenameColumnOp:
-		b, err = m.renameColumn(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.renameColumn(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.AddColumnOp:
-		b, err = m.addColumn(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.addColumn(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.DropColumnOp:
-		b, err = m.dropColumn(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.dropColumn(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.AddPrimaryKeyOp:
-		b, err = m.addPrimaryKey(fmter, appendAlterTable(b, change.FQN), change.PrimaryKey)
+		b, err = m.addPrimaryKey(fmter, appendAlterTable(b, change.TableName), change.PrimaryKey)
 	case *migrate.ChangePrimaryKeyOp:
-		b, err = m.changePrimaryKey(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.changePrimaryKey(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.DropPrimaryKeyOp:
-		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.PrimaryKey.Name)
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.TableName), change.PrimaryKey.Name)
 	case *migrate.AddUniqueConstraintOp:
-		b, err = m.addUnique(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.addUnique(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.DropUniqueConstraintOp:
-		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN), change.Unique.Name)
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.TableName), change.Unique.Name)
 	case *migrate.ChangeColumnTypeOp:
-		b, err = m.changeColumnType(fmter, appendAlterTable(b, change.FQN), change)
+		b, err = m.changeColumnType(fmter, appendAlterTable(b, change.TableName), change)
 	case *migrate.AddForeignKeyOp:
-		b, err = m.addForeignKey(fmter, appendAlterTable(b, change.FQN()), change)
+		b, err = m.addForeignKey(fmter, appendAlterTable(b, change.TableName()), change)
 	case *migrate.DropForeignKeyOp:
-		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.FQN()), change.ConstraintName)
+		b, err = m.dropConstraint(fmter, appendAlterTable(b, change.TableName()), change.ConstraintName)
 	default:
 		return nil, fmt.Errorf("append sql: unknown operation %T", change)
 	}
@@ -68,6 +69,10 @@ func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err err
 		return nil, fmt.Errorf("append sql: %w", err)
 	}
 	return b, nil
+}
+
+func (m *migrator) appendFQN(fmter schema.Formatter, b []byte, tableName string) []byte {
+	return fmter.AppendQuery(b, "?.?", bun.Ident(m.schemaName), bun.Ident(tableName))
 }
 
 func (m *migrator) renameTable(fmter schema.Formatter, b []byte, rename *migrate.RenameTableOp) (_ []byte, err error) {
@@ -88,21 +93,21 @@ func (m *migrator) renameColumn(fmter schema.Formatter, b []byte, rename *migrat
 
 func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddColumnOp) (_ []byte, err error) {
 	b = append(b, "ADD COLUMN "...)
-	b = fmter.AppendName(b, add.Column)
+	b = fmter.AppendName(b, add.ColumnName)
 	b = append(b, " "...)
 
-	b, err = add.ColDef.AppendQuery(fmter, b)
+	b, err = add.Column.AppendQuery(fmter, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if add.ColDef.GetDefaultValue() != "" {
+	if add.Column.GetDefaultValue() != "" {
 		b = append(b, " DEFAULT "...)
-		b = append(b, add.ColDef.GetDefaultValue()...)
+		b = append(b, add.Column.GetDefaultValue()...)
 		b = append(b, " "...)
 	}
 
-	if add.ColDef.GetIsIdentity() {
+	if add.Column.GetIsIdentity() {
 		b = appendGeneratedAsIdentity(b)
 	}
 
@@ -111,7 +116,7 @@ func (m *migrator) addColumn(fmter schema.Formatter, b []byte, add *migrate.AddC
 
 func (m *migrator) dropColumn(fmter schema.Formatter, b []byte, drop *migrate.DropColumnOp) (_ []byte, err error) {
 	b = append(b, "DROP COLUMN "...)
-	b = fmter.AppendName(b, drop.Column)
+	b = fmter.AppendName(b, drop.ColumnName)
 
 	return b, nil
 }
@@ -137,7 +142,7 @@ func (m *migrator) addUnique(fmter schema.Formatter, b []byte, change *migrate.A
 		b = fmter.AppendName(b, change.Unique.Name)
 	} else {
 		// Default naming scheme for unique constraints in Postgres is <table>_<column>_key
-		b = fmter.AppendName(b, fmt.Sprintf("%s_%s_key", change.FQN.Table, change.Unique.Columns))
+		b = fmter.AppendName(b, fmt.Sprintf("%s_%s_key", change.TableName, change.Unique.Columns))
 	}
 	b = append(b, " UNIQUE ("...)
 	b, _ = change.Unique.Columns.AppendQuery(fmter, b)
@@ -160,7 +165,7 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 	if name == "" {
 		colRef := add.ForeignKey.From
 		columns := strings.Join(colRef.Column.Split(), "_")
-		name = fmt.Sprintf("%s_%s_fkey", colRef.FQN.Table, columns)
+		name = fmt.Sprintf("%s_%s_fkey", colRef.TableName, columns)
 	}
 	b = fmter.AppendName(b, name)
 
@@ -171,9 +176,7 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 	b = append(b, ")"...)
 
 	b = append(b, " REFERENCES "...)
-	if b, err = add.ForeignKey.To.FQN.AppendQuery(fmter, b); err != nil {
-		return b, err
-	}
+	b = m.appendFQN(fmter, b, add.ForeignKey.To.TableName)
 
 	b = append(b, " ("...)
 	if b, err = add.ForeignKey.To.Column.AppendQuery(fmter, b); err != nil {

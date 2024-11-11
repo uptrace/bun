@@ -1,1 +1,1 @@
-DROP TABLE hobbies.movies
+DROP TABLE "hobbies"."movies"
