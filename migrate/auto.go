@@ -33,6 +33,13 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 	}
 }
 
+// WithSchemaName changes the default database schema to migrate objects in.
+func WithSchemaName(schemaName string) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.schemaName = schemaName
+	}
+}
+
 // WithTableNameAuto overrides default migrations table name.
 func WithTableNameAuto(table string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
@@ -109,6 +116,9 @@ type AutoMigrator struct {
 	table      string // Migrations table (excluded from database inspection)
 	locksTable string // Migration locks table (excluded from database inspection)
 
+	// schemaName is the database schema considered for migration.
+	schemaName string
+
 	// includeModels define the migration scope.
 	includeModels []interface{}
 
@@ -130,6 +140,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 		db:         db,
 		table:      defaultTable,
 		locksTable: defaultLocksTable,
+		schemaName: db.Dialect().DefaultSchema(),
 	}
 
 	for _, opt := range opts {
@@ -160,12 +171,12 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 	var err error
 
-	got, err := am.dbInspector.Inspect(ctx)
+	got, err := am.dbInspector.Inspect(ctx, am.schemaName)
 	if err != nil {
 		return nil, err
 	}
 
-	want, err := am.modelInspector.Inspect(ctx)
+	want, err := am.modelInspector.Inspect(ctx, am.schemaName)
 	if err != nil {
 		return nil, err
 	}

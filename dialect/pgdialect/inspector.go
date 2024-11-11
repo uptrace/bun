@@ -30,7 +30,7 @@ func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
 	return &Inspector{db: db, excludeTables: excludeTables}
 }
 
-func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
+func (in *Inspector) Inspect(ctx context.Context, schemaName string) (sqlschema.Database, error) {
 	dbSchema := Schema{
 		Tables:      orderedmap.New[string, sqlschema.Table](),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
@@ -43,12 +43,12 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	}
 
 	var tables []*InformationSchemaTable
-	if err := in.db.NewRaw(sqlInspectTables, bun.In(exclude)).Scan(ctx, &tables); err != nil {
+	if err := in.db.NewRaw(sqlInspectTables, schemaName, bun.In(exclude)).Scan(ctx, &tables); err != nil {
 		return dbSchema, err
 	}
 
 	var fks []*ForeignKey
-	if err := in.db.NewRaw(sqlInspectForeignKeys, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
+	if err := in.db.NewRaw(sqlInspectForeignKeys, schemaName, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
 		return dbSchema, err
 	}
 	dbSchema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
@@ -160,8 +160,7 @@ type PrimaryKey struct {
 }
 
 const (
-	// sqlInspectTables retrieves all user-defined tables across all schemas.
-	// It excludes relations from Postgres's reserved "pg_" schemas and views from the "information_schema".
+	// sqlInspectTables retrieves all user-defined tables in the selected schema.
 	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
 	sqlInspectTables = `
 SELECT
@@ -182,7 +181,7 @@ FROM information_schema.tables "t"
 	) pk
 	ON ("t".table_schema || '.' || "t".table_name)::regclass = pk.indrelid
 WHERE table_type = 'BASE TABLE'
-	AND "t".table_schema <> 'information_schema'
+	AND "t".table_schema = ?
 	AND "t".table_schema NOT LIKE 'pg_%'
 	AND "table_name" NOT IN (?)
 ORDER BY "t".table_schema, "t".table_name
@@ -289,6 +288,7 @@ FROM pg_constraint co
 WHERE co.contype = 'f'
 	AND co.conrelid IN (SELECT oid FROM pg_class WHERE relkind = 'r')
 	AND ARRAY_POSITION(co.conkey, sc.attnum) = ARRAY_POSITION(co.confkey, tc.attnum)
+	AND ss.nspname = ?
 	AND s.relname NOT IN (?) AND "t".relname NOT IN (?)
 GROUP BY "constraint_name", "schema_name", "table_name", target_schema, target_table
 `

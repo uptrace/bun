@@ -74,276 +74,300 @@ type Journalist struct {
 
 func TestDatabaseInspector_Inspect(t *testing.T) {
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
-		db.RegisterModel((*PublisherToJournalist)(nil))
-
-		dbInspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
-		if err != nil {
-			t.Skip(err)
-		}
-
-		ctx := context.Background()
-		mustCreateSchema(t, ctx, db, "admin")
-		mustCreateTableWithFKs(t, ctx, db,
-			// Order of creation matters:
-			(*Journalist)(nil),            // does not reference other tables
-			(*Publisher)(nil),             // does not reference other tables
-			(*Office)(nil),                // references Publisher
-			(*PublisherToJournalist)(nil), // references Journalist and Publisher
-			(*Article)(nil),               // references Journalist and Publisher
-		)
 		defaultSchema := db.Dialect().DefaultSchema()
 
-		// Tables come sorted alphabetically by schema and table.
-		wantTables := orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
-			orderedmap.Pair[string, sqlschema.Table]{
-				Key: "offices",
-				Value: &sqlschema.BaseTable{
-					Schema: "admin",
-					Name:   "offices",
-					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "office_name",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
+		for _, tt := range []struct {
+			name       string
+			schemaName string
+			wantTables *orderedmap.OrderedMap[string, sqlschema.Table]
+			wantFKs    []sqlschema.ForeignKey
+		}{
+			{
+				name:       "inspect default schema",
+				schemaName: defaultSchema,
+				// Tables come sorted alphabetically by schema and table.
+				wantTables: orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+					// admin.offices should not be fetched, because it doesn't belong to the default schema.
+					orderedmap.Pair[string, sqlschema.Table]{
+						Key: "articles",
+						Value: &sqlschema.BaseTable{
+							Schema: defaultSchema,
+							Name:   "articles",
+							Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "isbn",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         "bigint",
+										IsNullable:      false,
+										IsAutoIncrement: false,
+										IsIdentity:      true,
+										DefaultValue:    "",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "editor",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         sqltype.VarChar,
+										IsNullable:      false,
+										IsAutoIncrement: false,
+										IsIdentity:      false,
+										DefaultValue:    "john doe",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "title",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         sqltype.VarChar,
+										IsNullable:      false,
+										IsAutoIncrement: false,
+										IsIdentity:      false,
+										DefaultValue:    "",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "locale",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         sqltype.VarChar,
+										VarcharLen:      5,
+										IsNullable:      true,
+										IsAutoIncrement: false,
+										IsIdentity:      false,
+										DefaultValue:    "en-GB",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "page_count",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         "smallint",
+										IsNullable:      false,
+										IsAutoIncrement: false,
+										IsIdentity:      false,
+										DefaultValue:    "1",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "book_count",
+									Value: &sqlschema.BaseColumn{
+										SQLType:         "integer",
+										IsNullable:      false,
+										IsAutoIncrement: true,
+										IsIdentity:      false,
+										DefaultValue:    "",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "author_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType: "bigint",
+									},
+								},
+							)),
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
+							UniqueConstraints: []sqlschema.Unique{
+								{Columns: sqlschema.NewColumns("editor", "title")},
 							},
 						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType:    sqltype.VarChar,
-								IsNullable: true,
+					},
+					orderedmap.Pair[string, sqlschema.Table]{
+						Key: "authors",
+						Value: &sqlschema.BaseTable{
+							Schema: defaultSchema,
+							Name:   "authors",
+							Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "author_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType:    "bigint",
+										IsIdentity: true,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "first_name",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "last_name",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "email",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+							)),
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
+							UniqueConstraints: []sqlschema.Unique{
+								{Columns: sqlschema.NewColumns("first_name", "last_name")},
+								{Columns: sqlschema.NewColumns("email")},
 							},
 						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_name",
-							Value: &sqlschema.BaseColumn{
-								SQLType:    sqltype.VarChar,
-								IsNullable: true,
+					},
+					orderedmap.Pair[string, sqlschema.Table]{
+						Key: "publisher_to_journalists",
+						Value: &sqlschema.BaseTable{
+							Schema: defaultSchema,
+							Name:   "publisher_to_journalists",
+							Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "author_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType: "bigint",
+									},
+								},
+							)),
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
+						},
+					},
+					orderedmap.Pair[string, sqlschema.Table]{
+						Key: "publishers",
+						Value: &sqlschema.BaseTable{
+							Schema: defaultSchema,
+							Name:   "publishers",
+							Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType:      sqltype.VarChar,
+										DefaultValue: "gen_random_uuid()",
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_name",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "created_at",
+									Value: &sqlschema.BaseColumn{
+										SQLType:      "timestamp",
+										DefaultValue: "current_timestamp",
+										IsNullable:   true,
+									},
+								},
+							)),
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
+							UniqueConstraints: []sqlschema.Unique{
+								{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
 							},
 						},
-					)),
-					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
-				},
-			},
-			orderedmap.Pair[string, sqlschema.Table]{
-				Key: "articles",
-				Value: &sqlschema.BaseTable{
-					Schema: defaultSchema,
-					Name:   "articles",
-					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "isbn",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         "bigint",
-								IsNullable:      false,
-								IsAutoIncrement: false,
-								IsIdentity:      true,
-								DefaultValue:    "",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "editor",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         sqltype.VarChar,
-								IsNullable:      false,
-								IsAutoIncrement: false,
-								IsIdentity:      false,
-								DefaultValue:    "john doe",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "title",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         sqltype.VarChar,
-								IsNullable:      false,
-								IsAutoIncrement: false,
-								IsIdentity:      false,
-								DefaultValue:    "",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "locale",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         sqltype.VarChar,
-								VarcharLen:      5,
-								IsNullable:      true,
-								IsAutoIncrement: false,
-								IsIdentity:      false,
-								DefaultValue:    "en-GB",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "page_count",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         "smallint",
-								IsNullable:      false,
-								IsAutoIncrement: false,
-								IsIdentity:      false,
-								DefaultValue:    "1",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "book_count",
-							Value: &sqlschema.BaseColumn{
-								SQLType:         "integer",
-								IsNullable:      false,
-								IsAutoIncrement: true,
-								IsIdentity:      false,
-								DefaultValue:    "",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "author_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType: "bigint",
-							},
-						},
-					)),
-					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
-					UniqueConstraints: []sqlschema.Unique{
-						{Columns: sqlschema.NewColumns("editor", "title")},
+					},
+				)),
+				wantFKs: []sqlschema.ForeignKey{
+					{
+						From: sqlschema.NewColumnReference(defaultSchema, "articles", "publisher_id"),
+						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
+					},
+					{
+						From: sqlschema.NewColumnReference(defaultSchema, "articles", "author_id"),
+						To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
+					},
+					{
+						From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "publisher_id"),
+						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
+					},
+					{
+						From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "author_id"),
+						To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
 					},
 				},
 			},
-			orderedmap.Pair[string, sqlschema.Table]{
-				Key: "authors",
-				Value: &sqlschema.BaseTable{
-					Schema: defaultSchema,
-					Name:   "authors",
-					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "author_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType:    "bigint",
-								IsIdentity: true,
-							},
+			{
+				name:       "inspect admin schema",
+				schemaName: "admin",
+				wantTables: orderedmap.New[string, sqlschema.Table](orderedmap.WithInitialData(
+					orderedmap.Pair[string, sqlschema.Table]{
+						Key: "offices",
+						Value: &sqlschema.BaseTable{
+							Schema: "admin",
+							Name:   "offices",
+							Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "office_name",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType:    sqltype.VarChar,
+										IsNullable: true,
+									},
+								},
+								orderedmap.Pair[string, sqlschema.Column]{
+									Key: "publisher_name",
+									Value: &sqlschema.BaseColumn{
+										SQLType:    sqltype.VarChar,
+										IsNullable: true,
+									},
+								},
+							)),
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
 						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "first_name",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "last_name",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "email",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-					)),
-					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
-					UniqueConstraints: []sqlschema.Unique{
-						{Columns: sqlschema.NewColumns("first_name", "last_name")},
-						{Columns: sqlschema.NewColumns("email")},
+					},
+				)),
+				wantFKs: []sqlschema.ForeignKey{
+					{
+						From: sqlschema.NewColumnReference("admin", "offices", "publisher_name", "publisher_id"),
+						To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_name", "publisher_id"),
 					},
 				},
 			},
-			orderedmap.Pair[string, sqlschema.Table]{
-				Key: "publisher_to_journalists",
-				Value: &sqlschema.BaseTable{
-					Schema: defaultSchema,
-					Name:   "publisher_to_journalists",
-					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "author_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType: "bigint",
-							},
-						},
-					)),
-					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
-				},
-			},
-			orderedmap.Pair[string, sqlschema.Table]{
-				Key: "publishers",
-				Value: &sqlschema.BaseTable{
-					Schema: defaultSchema,
-					Name:   "publishers",
-					Columns: orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_id",
-							Value: &sqlschema.BaseColumn{
-								SQLType:      sqltype.VarChar,
-								DefaultValue: "gen_random_uuid()",
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "publisher_name",
-							Value: &sqlschema.BaseColumn{
-								SQLType: sqltype.VarChar,
-							},
-						},
-						orderedmap.Pair[string, sqlschema.Column]{
-							Key: "created_at",
-							Value: &sqlschema.BaseColumn{
-								SQLType:      "timestamp",
-								DefaultValue: "current_timestamp",
-								IsNullable:   true,
-							},
-						},
-					)),
-					PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
-					UniqueConstraints: []sqlschema.Unique{
-						{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
-					},
-				},
-			},
-		))
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				db.RegisterModel((*PublisherToJournalist)(nil))
 
-		wantFKs := []sqlschema.ForeignKey{
-			{
-				From: sqlschema.NewColumnReference(defaultSchema, "articles", "publisher_id"),
-				To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
-			},
-			{
-				From: sqlschema.NewColumnReference(defaultSchema, "articles", "author_id"),
-				To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
-			},
-			{
-				From: sqlschema.NewColumnReference("admin", "offices", "publisher_name", "publisher_id"),
-				To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_name", "publisher_id"),
-			},
-			{
-				From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "publisher_id"),
-				To:   sqlschema.NewColumnReference(defaultSchema, "publishers", "publisher_id"),
-			},
-			{
-				From: sqlschema.NewColumnReference(defaultSchema, "publisher_to_journalists", "author_id"),
-				To:   sqlschema.NewColumnReference(defaultSchema, "authors", "author_id"),
-			},
+				dbInspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
+				if err != nil {
+					t.Skip(err)
+				}
+
+				ctx := context.Background()
+
+				// Always create admin schema to test filtration is done correctly.
+				mustCreateSchema(t, ctx, db, "admin")
+				mustCreateTableWithFKs(t, ctx, db,
+					// Order of creation matters:
+					(*Journalist)(nil),            // does not reference other tables
+					(*Publisher)(nil),             // does not reference other tables
+					(*Office)(nil),                // references Publisher
+					(*PublisherToJournalist)(nil), // references Journalist and Publisher
+					(*Article)(nil),               // references Journalist and Publisher
+				)
+
+				got, err := dbInspector.Inspect(ctx, tt.schemaName)
+				require.NoError(t, err)
+
+				// State.FKs store their database names, which differ from dialect to dialect.
+				// Because of that we compare FKs and Tables separately.
+				gotTables := got.(sqlschema.BaseDatabase).Tables
+				cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), tt.wantTables, gotTables)
+
+				var fks []sqlschema.ForeignKey
+				for fk := range got.GetForeignKeys() {
+					fks = append(fks, fk)
+				}
+				require.ElementsMatch(t, tt.wantFKs, fks, "foreign keys differ: expected=listA, got=listB")
+			})
 		}
-
-		got, err := dbInspector.Inspect(ctx)
-		require.NoError(t, err)
-
-		// State.FKs store their database names, which differ from dialect to dialect.
-		// Because of that we compare FKs and Tables separately.
-		gotTables := got.(sqlschema.BaseDatabase).Tables
-		cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, gotTables)
-
-		var fks []sqlschema.ForeignKey
-		for fk := range got.GetForeignKeys() {
-			fks = append(fks, fk)
-		}
-		require.ElementsMatch(t, wantFKs, fks)
 	})
 }
 
@@ -518,7 +542,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			))
 
-			got, err := inspector.Inspect(context.Background())
+			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -563,7 +587,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			))
 
-			got, err := inspector.Inspect(context.Background())
+			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -592,7 +616,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			}
 
-			got, err := inspector.Inspect(context.Background())
+			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -614,7 +638,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			inspector := sqlschema.NewBunModelInspector(tables)
 			want := sqlschema.NewColumns("id", "email")
 
-			got, err := inspector.Inspect(context.Background())
+			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -636,7 +660,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables)
 
-			got, err := inspector.Inspect(context.Background())
+			got, err := inspector.Inspect(context.Background(), "custom_schema")
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -644,6 +668,31 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			for _, table := range gotTables.FromOldest() {
 				require.Equal(t, "custom_schema", table.GetSchema(), "wrong schema name")
 				require.Equal(t, "model", table.GetName(), "wrong table name")
+				return
+			}
+		})
+
+		t.Run("filters tables by schema", func(t *testing.T) {
+			type KeepMe struct {
+				bun.BaseModel `bun:"table:want.keep_me"`
+			}
+
+			type LoseMe struct {
+				bun.BaseModel `bun:"table:lose_me"`
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*KeepMe)(nil), (*LoseMe)(nil))
+			inspector := sqlschema.NewBunModelInspector(tables)
+
+			got, err := inspector.Inspect(context.Background(), "want")
+			require.NoError(t, err)
+
+			gotTables := got.GetTables()
+			require.Equal(t, 1, gotTables.Len())
+			for _, table := range gotTables.FromOldest() {
+				require.Equal(t, "want", table.GetSchema(), "wrong schema name")
+				require.Equal(t, "keep_me", table.GetName(), "wrong table name")
 				return
 			}
 		})

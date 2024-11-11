@@ -23,7 +23,7 @@ type InspectorDialect interface {
 
 // Inspector reads schema state.
 type Inspector interface {
-	Inspect(ctx context.Context) (Database, error)
+	Inspect(ctx context.Context, schemaName string) (Database, error)
 }
 
 // inspector is opaque pointer to a databse inspector.
@@ -75,7 +75,7 @@ type BunTable struct {
 	Model interface{}
 }
 
-func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
+func (bmi *BunModelInspector) Inspect(ctx context.Context, schemaName string) (Database, error) {
 	state := BunModelSchema{
 		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
@@ -83,6 +83,10 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		Tables: orderedmap.New[string, Table](),
 	}
 	for _, t := range bmi.tables.All() {
+		if t.Schema != schemaName {
+			continue
+		}
+
 		columns := orderedmap.New[string, Column]()
 		for _, f := range t.Fields {
 
