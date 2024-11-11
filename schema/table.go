@@ -174,6 +174,10 @@ func (t *Table) processFields(typ reflect.Type, canAddr bool) {
 				}
 			}
 
+			if subtable.Unique != nil && t.Unique == nil {
+				t.Unique = subtable.Unique
+			}
+
 			continue
 		}
 
