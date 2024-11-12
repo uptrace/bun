@@ -326,16 +326,16 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 	tests := []struct {
 		fn func(t *testing.T, db *bun.DB)
 	}{
-		// {testRenameTable},
-		// {testRenamedColumns},
-		// {testCreateDropTable},
+		{testRenameTable},
+		{testRenamedColumns},
+		{testCreateDropTable},
 		{testAlterForeignKeys},
-		// {testChangeColumnType_AutoCast},
-		// {testIdentity},
-		// {testAddDropColumn},
-		// {testUnique},
-		// {testUniqueRenamedTable},
-		// {testUpdatePrimaryKeys},
+		{testChangeColumnType_AutoCast},
+		{testIdentity},
+		{testAddDropColumn},
+		{testUnique},
+		{testUniqueRenamedTable},
+		{testUpdatePrimaryKeys},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
