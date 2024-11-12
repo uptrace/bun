@@ -229,13 +229,13 @@ func (am *AutoMigrator) createSQLMigrations(ctx context.Context, transactional b
 		return nil, nil, fmt.Errorf("create sql migrations: %w", err)
 	}
 
-	name, _ := genMigrationName("auto")
+	name, _ := genMigrationName(am.schemaName + "_auto")
 	migrations := NewMigrations(am.migrationsOpts...)
 	migrations.Add(Migration{
 		Name:    name,
 		Up:      changes.Up(am.dbMigrator),
 		Down:    changes.Down(am.dbMigrator),
-		Comment: "Changes detected by bun.migrate.AutoMigrator",
+		Comment: "Changes detected by bun.AutoMigrator",
 	})
 
 	// Append .tx.up.sql or .up.sql to migration name, dependin if it should be transactional.
