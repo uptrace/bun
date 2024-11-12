@@ -79,3 +79,9 @@ func indirectNil(v reflect.Value) reflect.Value {
 	}
 	return v
 }
+
+// MakeQueryBytes returns zero-length byte slice with capacity of 4096.
+func MakeQueryBytes() []byte {
+	// TODO: make this configurable?
+	return make([]byte, 0, 4096)
+}

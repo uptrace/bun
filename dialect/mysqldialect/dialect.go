@@ -208,6 +208,10 @@ func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []b
 	return append(b, " AUTO_INCREMENT"...)
 }
 
+func (d *Dialect) DefaultSchema() string {
+	return "mydb"
+}
+
 func sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType

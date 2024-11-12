@@ -1,0 +1,1 @@
+ALTER TABLE "hobbies"."movies" DROP CONSTRAINT "genre_description"

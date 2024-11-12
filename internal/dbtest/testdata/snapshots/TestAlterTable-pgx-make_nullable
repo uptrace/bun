@@ -1,0 +1,1 @@
+ALTER TABLE "hobbies"."movies" ALTER COLUMN "director" DROP NOT NULL

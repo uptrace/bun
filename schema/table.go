@@ -45,6 +45,7 @@ type Table struct {
 	TypeName  string
 	ModelName string
 
+	Schema            string
 	Name              string
 	SQLName           Safe
 	SQLNameForSelects Safe
@@ -85,6 +86,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 	table.setName(tableName)
 	table.Alias = table.ModelName
 	table.SQLAlias = table.quoteIdent(table.ModelName)
+	table.Schema = dialect.DefaultSchema()
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
@@ -371,10 +373,18 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if tag.Name != "" {
+		schema, _ := t.schemaFromTagName(tag.Name)
+		t.Schema = schema
+
+		// Eventually, we should only assign the "table" portion as the table name,
+		// which will also require a change in how the table name is appended to queries.
+		// Until that is done, set table name to tag.Name.
 		t.setName(tag.Name)
 	}
 
 	if s, ok := tag.Option("table"); ok {
+		schema, _ := t.schemaFromTagName(s)
+		t.Schema = schema
 		t.setName(s)
 	}
 
@@ -386,6 +396,17 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.Alias = s
 		t.SQLAlias = t.quoteIdent(s)
 	}
+}
+
+// schemaFromTagName splits the bun.BaseModel tag name into schema and table name
+// in case it is specified in the "schema"."table" format.
+// Assume default schema if one isn't explicitly specified.
+func (t *Table) schemaFromTagName(name string) (string, string) {
+	schema, table := t.dialect.DefaultSchema(), name
+	if schemaTable := strings.Split(name, "."); len(schemaTable) == 2 {
+		schema, table = schemaTable[0], schemaTable[1]
+	}
+	return schema, table
 }
 
 // nolint
@@ -1036,3 +1057,5 @@ func makeIndex(a, b []int) []int {
 	dest = append(dest, b...)
 	return dest
 }
+
+
