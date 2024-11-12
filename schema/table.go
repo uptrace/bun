@@ -246,6 +246,31 @@ func (t *Table) processFields(typ reflect.Type, canAddr bool) {
 			subfield.SQLName = t.quoteIdent(subfield.Name)
 		}
 		t.addField(subfield)
+		if v, ok := subfield.Tag.Options["unique"]; ok {
+			t.addUnique(subfield, embfield.prefix, v)
+		}
+	}
+}
+
+func (t *Table) addUnique(field *Field, prefix string, tagOptions []string) {
+	var names []string
+	if len(tagOptions) == 1 {
+		// Split the value by comma, this will allow multiple names to be specified.
+		// We can use this to create multiple named unique constraints where a single column
+		// might be included in multiple constraints.
+		names = strings.Split(tagOptions[0], ",")
+	} else {
+		names = tagOptions
+	}
+
+	for _, uname := range names {
+		if t.Unique == nil {
+			t.Unique = make(map[string][]*Field)
+		}
+		if uname != "" && prefix != "" {
+			uname = prefix + uname
+		}
+		t.Unique[uname] = append(t.Unique[uname], field)
 	}
 }
 
@@ -460,22 +485,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 
 	if v, ok := tag.Options["unique"]; ok {
-		var names []string
-		if len(v) == 1 {
-			// Split the value by comma, this will allow multiple names to be specified.
-			// We can use this to create multiple named unique constraints where a single column
-			// might be included in multiple constraints.
-			names = strings.Split(v[0], ",")
-		} else {
-			names = v
-		}
-
-		for _, uniqueName := range names {
-			if t.Unique == nil {
-				t.Unique = make(map[string][]*Field)
-			}
-			t.Unique[uniqueName] = append(t.Unique[uniqueName], field)
-		}
+		t.addUnique(field, "", v)
 	}
 	if s, ok := tag.Option("default"); ok {
 		field.SQLDefault = s
@@ -1057,5 +1067,3 @@ func makeIndex(a, b []int) []int {
 	dest = append(dest, b...)
 	return dest
 }
-
-
