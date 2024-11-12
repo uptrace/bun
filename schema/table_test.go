@@ -112,6 +112,41 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{1, 0}, barView.Index)
 	})
 
+	t.Run("embedWithUnique", func(t *testing.T) {
+		type Perms struct {
+			View          bool
+			Create        bool
+			UniqueID      int `bun:",unique"`
+			UniqueGroupID int `bun:",unique:groupa"`
+		}
+
+		type Role struct {
+			Foo Perms `bun:"embed:foo_"`
+			Perms
+		}
+
+		table := tables.Get(reflect.TypeOf((*Role)(nil)))
+		require.Nil(t, table.StructMap["foo"])
+		require.Nil(t, table.StructMap["bar"])
+
+		fooView, ok := table.FieldMap["foo_view"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 0}, fooView.Index)
+
+		barView, ok := table.FieldMap["view"]
+		require.True(t, ok)
+		require.Equal(t, []int{1, 0}, barView.Index)
+
+		require.Equal(t, 3, len(table.Unique))
+		require.Equal(t, 2, len(table.Unique[""]))
+		require.Equal(t, "foo_unique_id", table.Unique[""][0].Name)
+		require.Equal(t, "unique_id", table.Unique[""][1].Name)
+		require.Equal(t, 1, len(table.Unique["groupa"]))
+		require.Equal(t, "unique_group_id", table.Unique["groupa"][0].Name)
+		require.Equal(t, 1, len(table.Unique["foo_groupa"]))
+		require.Equal(t, "foo_unique_group_id", table.Unique["foo_groupa"][0].Name)
+	})
+
 	t.Run("embed scanonly", func(t *testing.T) {
 		type Model1 struct {
 			Foo string
