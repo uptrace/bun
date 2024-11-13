@@ -21,10 +21,10 @@ type InspectorDialect interface {
 	// Use ApplyInspectorOptions to reduce boilerplate.
 	NewInspector(db *bun.DB, options ...InspectorOption) Inspector
 
-	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
+	// CompareType returns true if col1 and co2 SQL types are equivalent,
 	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
 	// or specify the same VARCHAR length differently (VARCHAR(255) ~ VARCHAR).
-	EquivalentType(Column, Column) bool
+	CompareType(Column, Column) bool
 }
 
 // InspectorConfig controls the scope of migration by limiting the objects Inspector should return.

@@ -125,7 +125,7 @@ var (
 	timestampTz = newAliases(sqltype.Timestamp, pgTypeTimestampTz, pgTypeTimestampWithTz)
 )
 
-func (d *Dialect) EquivalentType(col1, col2 sqlschema.Column) bool {
+func (d *Dialect) CompareType(col1, col2 sqlschema.Column) bool {
 	typ1, typ2 := strings.ToUpper(col1.GetSQLType()), strings.ToUpper(col2.GetSQLType())
 
 	if typ1 == typ2 {

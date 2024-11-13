@@ -433,7 +433,7 @@ func cmpColumns(
 			continue
 		}
 
-		if !d.EquivalentType(wantCol, gotCol) {
+		if !d.CompareType(wantCol, gotCol) {
 			errorf("sql types are not equivalent:\n\t(+want)\t%s\n\t(-got)\t%s", formatType(wantCol), formatType(gotCol))
 		}
 
