@@ -15,40 +15,42 @@ type (
 	Column = sqlschema.BaseColumn
 )
 
-func (d *Dialect) Inspector(db *bun.DB, excludeTables ...string) sqlschema.Inspector {
-	return newInspector(db, excludeTables...)
+func (d *Dialect) Inspector(db *bun.DB, options ...sqlschema.InspectorOption) sqlschema.Inspector {
+	return newInspector(db, options...)
 }
 
 type Inspector struct {
-	db            *bun.DB
-	excludeTables []string
+	sqlschema.InspectorConfig
+	db *bun.DB
 }
 
 var _ sqlschema.Inspector = (*Inspector)(nil)
 
-func newInspector(db *bun.DB, excludeTables ...string) *Inspector {
-	return &Inspector{db: db, excludeTables: excludeTables}
+func newInspector(db *bun.DB, options ...sqlschema.InspectorOption) *Inspector {
+	i := &Inspector{db: db}
+	sqlschema.ApplyInspectorOptions(&i.InspectorConfig, options...)
+	return i
 }
 
-func (in *Inspector) Inspect(ctx context.Context, schemaName string) (sqlschema.Database, error) {
+func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	dbSchema := Schema{
 		Tables:      orderedmap.New[string, sqlschema.Table](),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
-	exclude := in.excludeTables
+	exclude := in.ExcludeTables
 	if len(exclude) == 0 {
 		// Avoid getting NOT IN (NULL) if bun.In() is called with an empty slice.
 		exclude = []string{""}
 	}
 
 	var tables []*InformationSchemaTable
-	if err := in.db.NewRaw(sqlInspectTables, schemaName, bun.In(exclude)).Scan(ctx, &tables); err != nil {
+	if err := in.db.NewRaw(sqlInspectTables, in.SchemaName, bun.In(exclude)).Scan(ctx, &tables); err != nil {
 		return dbSchema, err
 	}
 
 	var fks []*ForeignKey
-	if err := in.db.NewRaw(sqlInspectForeignKeys, schemaName, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
+	if err := in.db.NewRaw(sqlInspectForeignKeys, in.SchemaName, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
 		return dbSchema, err
 	}
 	dbSchema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
