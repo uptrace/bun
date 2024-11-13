@@ -10,7 +10,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func (d *Dialect) Migrator(db *bun.DB, schemaName string) sqlschema.Migrator {
+func (d *Dialect) NewMigrator(db *bun.DB, schemaName string) sqlschema.Migrator {
 	return &migrator{db: db, schemaName: schemaName, BaseMigrator: sqlschema.NewBaseMigrator(db)}
 }
 

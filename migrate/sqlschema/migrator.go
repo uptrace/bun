@@ -9,7 +9,7 @@ import (
 
 type MigratorDialect interface {
 	schema.Dialect
-	Migrator(db *bun.DB, schemaName string) Migrator
+	NewMigrator(db *bun.DB, schemaName string) Migrator
 }
 
 type Migrator interface {
@@ -27,7 +27,7 @@ func NewMigrator(db *bun.DB, schemaName string) (Migrator, error) {
 		return nil, fmt.Errorf("%q dialect does not implement sqlschema.Migrator", db.Dialect().Name())
 	}
 	return &migrator{
-		Migrator: md.Migrator(db, schemaName),
+		Migrator: md.NewMigrator(db, schemaName),
 	}, nil
 }
 

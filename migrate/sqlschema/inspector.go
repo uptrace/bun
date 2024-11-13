@@ -19,7 +19,7 @@ type InspectorDialect interface {
 	// but MUST apply InspectorOptions to ensure they can be overriden.
 	//
 	// Use ApplyInspectorOptions to reduce boilerplate.
-	Inspector(db *bun.DB, options ...InspectorOption) Inspector
+	NewInspector(db *bun.DB, options ...InspectorOption) Inspector
 
 	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
 	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
@@ -63,7 +63,7 @@ func NewInspector(db *bun.DB, options ...InspectorOption) (Inspector, error) {
 		return nil, fmt.Errorf("%s does not implement sqlschema.Inspector", db.Dialect().Name())
 	}
 	return &inspector{
-		Inspector: dialect.Inspector(db, options...),
+		Inspector: dialect.NewInspector(db, options...),
 	}, nil
 }
 

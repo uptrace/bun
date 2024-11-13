@@ -15,7 +15,7 @@ type (
 	Column = sqlschema.BaseColumn
 )
 
-func (d *Dialect) Inspector(db *bun.DB, options ...sqlschema.InspectorOption) sqlschema.Inspector {
+func (d *Dialect) NewInspector(db *bun.DB, options ...sqlschema.InspectorOption) sqlschema.Inspector {
 	return newInspector(db, options...)
 }
 
