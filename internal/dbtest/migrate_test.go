@@ -217,19 +217,21 @@ func newAutoMigratorOrSkip(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigrat
 // and fail if the inspector cannot successfully retrieve database state.
 func inspectDbOrSkip(tb testing.TB, db *bun.DB, schemaName ...string) func(context.Context) sqlschema.BaseDatabase {
 	tb.Helper()
-	// AutoMigrator excludes these tables by default, but here we need to do this explicitly.
-	inspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
-	if err != nil {
-		tb.Skip(err)
-	}
 
 	// For convenience, schemaName is an optional parameter in this function.
 	inspectSchema := db.Dialect().DefaultSchema()
 	if len(schemaName) > 0 {
 		inspectSchema = schemaName[0]
 	}
+
+	// AutoMigrator excludes these tables by default, but here we need to do this explicitly.
+	inspector, err := sqlschema.NewInspector(db, sqlschema.WithSchemaName(inspectSchema), sqlschema.WithExcludeTables(migrationsTable, migrationLocksTable))
+	if err != nil {
+		tb.Skip(err)
+	}
+
 	return func(ctx context.Context) sqlschema.BaseDatabase {
-		state, err := inspector.Inspect(ctx, inspectSchema)
+		state, err := inspector.Inspect(ctx)
 		require.NoError(tb, err)
 		return state.(sqlschema.BaseDatabase)
 	}

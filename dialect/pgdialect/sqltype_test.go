@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
-func TestInspectorDialect_EquivalentType(t *testing.T) {
+func TestInspectorDialect_CompareType(t *testing.T) {
 	d := New()
 
 	t.Run("common types", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestInspectorDialect_EquivalentType(t *testing.T) {
 				eq = " !~ "
 			}
 			t.Run(tt.typ1+eq+tt.typ2, func(t *testing.T) {
-				got := d.EquivalentType(
+				got := d.CompareType(
 					&sqlschema.BaseColumn{SQLType: tt.typ1},
 					&sqlschema.BaseColumn{SQLType: tt.typ2},
 				)
@@ -77,7 +77,7 @@ func TestInspectorDialect_EquivalentType(t *testing.T) {
 			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
-				got := d.EquivalentType(&tt.col1, &tt.col2)
+				got := d.CompareType(&tt.col1, &tt.col2)
 				require.Equal(t, tt.want, got)
 			})
 		}

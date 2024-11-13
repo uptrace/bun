@@ -335,7 +335,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				db.RegisterModel((*PublisherToJournalist)(nil))
 
-				dbInspector, err := sqlschema.NewInspector(db, migrationsTable, migrationLocksTable)
+				dbInspector, err := sqlschema.NewInspector(db, sqlschema.WithSchemaName(tt.schemaName), sqlschema.WithExcludeTables(migrationsTable, migrationLocksTable))
 				if err != nil {
 					t.Skip(err)
 				}
@@ -353,7 +353,7 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					(*Article)(nil),               // references Journalist and Publisher
 				)
 
-				got, err := dbInspector.Inspect(ctx, tt.schemaName)
+				got, err := dbInspector.Inspect(ctx)
 				require.NoError(t, err)
 
 				// State.FKs store their database names, which differ from dialect to dialect.
@@ -433,7 +433,7 @@ func cmpColumns(
 			continue
 		}
 
-		if !d.EquivalentType(wantCol, gotCol) {
+		if !d.CompareType(wantCol, gotCol) {
 			errorf("sql types are not equivalent:\n\t(+want)\t%s\n\t(-got)\t%s", formatType(wantCol), formatType(gotCol))
 		}
 
@@ -523,7 +523,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 
 			want := orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
 				orderedmap.Pair[string, sqlschema.Column]{
@@ -542,7 +542,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			))
 
-			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -562,7 +562,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 
 			want := orderedmap.New[string, sqlschema.Column](orderedmap.WithInitialData(
 				orderedmap.Pair[string, sqlschema.Column]{
@@ -587,7 +587,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			))
 
-			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -606,7 +606,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 
 			want := &sqlschema.BaseTable{
 				Name: "models",
@@ -616,7 +616,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				},
 			}
 
-			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -635,10 +635,10 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 			want := sqlschema.NewColumns("id", "email")
 
-			got, err := inspector.Inspect(context.Background(), dialect.DefaultSchema())
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -658,9 +658,9 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*Model)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName("custom_schema"))
 
-			got, err := inspector.Inspect(context.Background(), "custom_schema")
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()
@@ -683,9 +683,9 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 
 			tables := schema.NewTables(dialect)
 			tables.Register((*KeepMe)(nil), (*LoseMe)(nil))
-			inspector := sqlschema.NewBunModelInspector(tables)
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName("want"))
 
-			got, err := inspector.Inspect(context.Background(), "want")
+			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
 
 			gotTables := got.GetTables()

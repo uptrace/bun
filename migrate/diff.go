@@ -217,7 +217,7 @@ Drop:
 
 func newDetector(got, want sqlschema.Database, opts ...diffOption) *detector {
 	cfg := &detectorConfig{
-		EqType: func(c1, c2 sqlschema.Column) bool {
+		cmpType: func(c1, c2 sqlschema.Column) bool {
 			return c1.GetSQLType() == c2.GetSQLType() && c1.GetVarcharLen() == c2.GetVarcharLen()
 		},
 	}
@@ -229,21 +229,21 @@ func newDetector(got, want sqlschema.Database, opts ...diffOption) *detector {
 		current: got,
 		target:  want,
 		refMap:  newRefMap(got.GetForeignKeys()),
-		eqType:  cfg.EqType,
+		cmpType: cfg.cmpType,
 	}
 }
 
 type diffOption func(*detectorConfig)
 
-func withTypeEquivalenceFunc(f TypeEquivalenceFunc) diffOption {
+func withCompareTypeFunc(f CompareTypeFunc) diffOption {
 	return func(cfg *detectorConfig) {
-		cfg.EqType = f
+		cfg.cmpType = f
 	}
 }
 
 // detectorConfig controls how differences in the model states are resolved.
 type detectorConfig struct {
-	EqType TypeEquivalenceFunc
+	cmpType CompareTypeFunc
 }
 
 // detector may modify the passed database schemas, so it isn't safe to re-use them.
@@ -257,11 +257,11 @@ type detector struct {
 	changes changeset
 	refMap  refMap
 
-	// eqType determines column type equivalence.
+	// cmpType determines column type equivalence.
 	// Default is direct comparison with '==' operator, which is inaccurate
 	// due to the existence of dialect-specific type aliases. The caller
 	// should pass a concrete InspectorDialect.EquuivalentType for robust comparison.
-	eqType TypeEquivalenceFunc
+	cmpType CompareTypeFunc
 }
 
 // canRename checks if t1 can be renamed to t2.
@@ -270,7 +270,7 @@ func (d detector) canRename(t1, t2 sqlschema.Table) bool {
 }
 
 func (d detector) equalColumns(col1, col2 sqlschema.Column) bool {
-	return d.eqType(col1, col2) &&
+	return d.cmpType(col1, col2) &&
 		col1.GetDefaultValue() == col2.GetDefaultValue() &&
 		col1.GetIsNullable() == col2.GetIsNullable() &&
 		col1.GetIsAutoIncrement() == col2.GetIsAutoIncrement() &&
@@ -279,7 +279,7 @@ func (d detector) equalColumns(col1, col2 sqlschema.Column) bool {
 
 func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.Column {
 	// Avoid unneccessary type-change migrations if the types are equivalent.
-	if d.eqType(current, target) {
+	if d.cmpType(current, target) {
 		target = &sqlschema.BaseColumn{
 			Name:            target.GetName(),
 			DefaultValue:    target.GetDefaultValue(),
@@ -294,10 +294,10 @@ func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.C
 	return target
 }
 
-type TypeEquivalenceFunc func(sqlschema.Column, sqlschema.Column) bool
+type CompareTypeFunc func(sqlschema.Column, sqlschema.Column) bool
 
 // equalSignatures determines if two tables have the same "signature".
-func equalSignatures(t1, t2 sqlschema.Table, eq TypeEquivalenceFunc) bool {
+func equalSignatures(t1, t2 sqlschema.Table, eq CompareTypeFunc) bool {
 	sig1 := newSignature(t1, eq)
 	sig2 := newSignature(t2, eq)
 	return sig1.Equals(sig2)
@@ -311,10 +311,10 @@ type signature struct {
 	// It helps to account for the fact that a table might have multiple columns that have the same type.
 	underlying map[sqlschema.BaseColumn]int
 
-	eq TypeEquivalenceFunc
+	eq CompareTypeFunc
 }
 
-func newSignature(t sqlschema.Table, eq TypeEquivalenceFunc) signature {
+func newSignature(t sqlschema.Table, eq CompareTypeFunc) signature {
 	s := signature{
 		underlying: make(map[sqlschema.BaseColumn]int),
 		eq:         eq,
@@ -338,7 +338,7 @@ func (s *signature) scan(t sqlschema.Table) {
 	}
 }
 
-// getCount uses TypeEquivalenceFunc to find a column with the same (equivalent) SQL type
+// getCount uses CompareTypeFunc to find a column with the same (equivalent) SQL type
 // and returns its count. Count 0 means there are no columns with of this type.
 func (s *signature) getCount(keyCol sqlschema.BaseColumn) (key sqlschema.BaseColumn, count int) {
 	for col, cnt := range s.underlying {

@@ -10,7 +10,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func (d *Dialect) Migrator(db *bun.DB, schemaName string) sqlschema.Migrator {
+func (d *Dialect) NewMigrator(db *bun.DB, schemaName string) sqlschema.Migrator {
 	return &migrator{db: db, schemaName: schemaName, BaseMigrator: sqlschema.NewBaseMigrator(db)}
 }
 
@@ -202,7 +202,7 @@ func (m *migrator) changeColumnType(fmter schema.Formatter, b []byte, colDef *mi
 	got, want := colDef.From, colDef.To
 
 	inspector := m.db.Dialect().(sqlschema.InspectorDialect)
-	if !inspector.EquivalentType(want, got) {
+	if !inspector.CompareType(want, got) {
 		appendAlterColumn()
 		b = append(b, " SET DATA TYPE "...)
 		if b, err = want.AppendQuery(fmter, b); err != nil {

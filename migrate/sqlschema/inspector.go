@@ -13,69 +13,91 @@ import (
 
 type InspectorDialect interface {
 	schema.Dialect
-	Inspector(db *bun.DB, excludeTables ...string) Inspector
 
-	// EquivalentType returns true if col1 and co2 SQL types are equivalent,
+	// Inspector returns a new instance of Inspector for the dialect.
+	// Dialects MAY set their default InspectorConfig values in constructor
+	// but MUST apply InspectorOptions to ensure they can be overriden.
+	//
+	// Use ApplyInspectorOptions to reduce boilerplate.
+	NewInspector(db *bun.DB, options ...InspectorOption) Inspector
+
+	// CompareType returns true if col1 and co2 SQL types are equivalent,
 	// i.e. they might use dialect-specifc type aliases (SERIAL ~ SMALLINT)
 	// or specify the same VARCHAR length differently (VARCHAR(255) ~ VARCHAR).
-	EquivalentType(Column, Column) bool
+	CompareType(Column, Column) bool
+}
+
+// InspectorConfig controls the scope of migration by limiting the objects Inspector should return.
+// Inspectors SHOULD use the configuration directly instead of copying it, or MAY choose to embed it,
+// to make sure options are always applied correctly.
+type InspectorConfig struct {
+	// SchemaName limits inspection to tables in a particular schema.
+	SchemaName string
+
+	// ExcludeTables from inspection.
+	ExcludeTables []string
 }
 
 // Inspector reads schema state.
 type Inspector interface {
-	Inspect(ctx context.Context, schemaName string) (Database, error)
+	Inspect(ctx context.Context) (Database, error)
 }
 
-// inspector is opaque pointer to a databse inspector.
-type inspector struct {
-	Inspector
+func WithSchemaName(schemaName string) InspectorOption {
+	return func(cfg *InspectorConfig) {
+		cfg.SchemaName = schemaName
+	}
+}
+
+// WithExcludeTables works in append-only mode, i.e. tables cannot be re-included.
+func WithExcludeTables(tables ...string) InspectorOption {
+	return func(cfg *InspectorConfig) {
+		cfg.ExcludeTables = append(cfg.ExcludeTables, tables...)
+	}
 }
 
 // NewInspector creates a new database inspector, if the dialect supports it.
-func NewInspector(db *bun.DB, excludeTables ...string) (Inspector, error) {
+func NewInspector(db *bun.DB, options ...InspectorOption) (Inspector, error) {
 	dialect, ok := (db.Dialect()).(InspectorDialect)
 	if !ok {
 		return nil, fmt.Errorf("%s does not implement sqlschema.Inspector", db.Dialect().Name())
 	}
 	return &inspector{
-		Inspector: dialect.Inspector(db, excludeTables...),
+		Inspector: dialect.NewInspector(db, options...),
 	}, nil
+}
+
+func NewBunModelInspector(tables *schema.Tables, options ...InspectorOption) *BunModelInspector {
+	bmi := &BunModelInspector{
+		tables: tables,
+	}
+	ApplyInspectorOptions(&bmi.InspectorConfig, options...)
+	return bmi
+}
+
+type InspectorOption func(*InspectorConfig)
+
+func ApplyInspectorOptions(cfg *InspectorConfig, options ...InspectorOption) {
+	for _, opt := range options {
+		opt(cfg)
+	}
+}
+
+// inspector is opaque pointer to a database inspector.
+type inspector struct {
+	Inspector
 }
 
 // BunModelInspector creates the current project state from the passed bun.Models.
 // Do not recycle BunModelInspector for different sets of models, as older models will not be de-registerred before the next run.
 type BunModelInspector struct {
+	InspectorConfig
 	tables *schema.Tables
 }
 
 var _ Inspector = (*BunModelInspector)(nil)
 
-func NewBunModelInspector(tables *schema.Tables) *BunModelInspector {
-	return &BunModelInspector{
-		tables: tables,
-	}
-}
-
-// BunModelSchema is the schema state derived from bun table models.
-type BunModelSchema struct {
-	BaseDatabase
-
-	Tables *orderedmap.OrderedMap[string, Table]
-}
-
-func (ms BunModelSchema) GetTables() *orderedmap.OrderedMap[string, Table] {
-	return ms.Tables
-}
-
-// BunTable provides additional table metadata that is only accessible from scanning bun models.
-type BunTable struct {
-	BaseTable
-
-	// Model stores the zero interface to the underlying Go struct.
-	Model interface{}
-}
-
-func (bmi *BunModelInspector) Inspect(ctx context.Context, schemaName string) (Database, error) {
+func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 	state := BunModelSchema{
 		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
@@ -83,7 +105,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context, schemaName string) (D
 		Tables: orderedmap.New[string, Table](),
 	}
 	for _, t := range bmi.tables.All() {
-		if t.Schema != schemaName {
+		if t.Schema != bmi.SchemaName {
 			continue
 		}
 
@@ -197,4 +219,23 @@ func exprToLower(s string) string {
 		return s
 	}
 	return strings.ToLower(s)
+}
+
+// BunModelSchema is the schema state derived from bun table models.
+type BunModelSchema struct {
+	BaseDatabase
+
+	Tables *orderedmap.OrderedMap[string, Table]
+}
+
+func (ms BunModelSchema) GetTables() *orderedmap.OrderedMap[string, Table] {
+	return ms.Tables
+}
+
+// BunTable provides additional table metadata that is only accessible from scanning bun models.
+type BunTable struct {
+	BaseTable
+
+	// Model stores the zero interface to the underlying Go struct.
+	Model interface{}
 }

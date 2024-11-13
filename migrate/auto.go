@@ -27,6 +27,8 @@ func WithModel(models ...interface{}) AutoMigratorOption {
 // WithExcludeTable tells the AutoMigrator to ignore a table in the database.
 // This prevents AutoMigrator from dropping tables which may exist in the schema
 // but which are not used by the application.
+//
+// Do not exclude tables included via WithModel, as BunModelInspector ignores this setting.
 func WithExcludeTable(tables ...string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.excludeTables = append(m.excludeTables, tables...)
@@ -148,12 +150,12 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 	}
 	am.excludeTables = append(am.excludeTables, am.table, am.locksTable)
 
-	dbInspector, err := sqlschema.NewInspector(db, am.excludeTables...)
+	dbInspector, err := sqlschema.NewInspector(db, sqlschema.WithSchemaName(am.schemaName), sqlschema.WithExcludeTables(am.excludeTables...))
 	if err != nil {
 		return nil, err
 	}
 	am.dbInspector = dbInspector
-	am.diffOpts = append(am.diffOpts, withTypeEquivalenceFunc(db.Dialect().(sqlschema.InspectorDialect).EquivalentType))
+	am.diffOpts = append(am.diffOpts, withCompareTypeFunc(db.Dialect().(sqlschema.InspectorDialect).CompareType))
 
 	dbMigrator, err := sqlschema.NewMigrator(db, am.schemaName)
 	if err != nil {
@@ -163,7 +165,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 
 	tables := schema.NewTables(db.Dialect())
 	tables.Register(am.includeModels...)
-	am.modelInspector = sqlschema.NewBunModelInspector(tables)
+	am.modelInspector = sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(am.schemaName))
 
 	return am, nil
 }
@@ -171,12 +173,12 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 	var err error
 
-	got, err := am.dbInspector.Inspect(ctx, am.schemaName)
+	got, err := am.dbInspector.Inspect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	want, err := am.modelInspector.Inspect(ctx, am.schemaName)
+	want, err := am.modelInspector.Inspect(ctx)
 	if err != nil {
 		return nil, err
 	}
