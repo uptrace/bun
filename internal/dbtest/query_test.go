@@ -1590,6 +1590,12 @@ func TestQuery(t *testing.T) {
 				return db.NewUpdate().Model(new(Story)).Set("name = ?", "new-name").WherePK().Order("id").Limit(1)
 			},
 		},
+		{
+			id: 172,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDelete().Model(&Model{}).WherePK().Returning("*")
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

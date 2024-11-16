@@ -40,7 +40,8 @@ func New() *Dialect {
 		feature.TableNotExists |
 		feature.SelectExists |
 		feature.AutoIncrement |
-		feature.CompositeIn
+		feature.CompositeIn |
+		feature.DeleteReturning
 	return d
 }
 
