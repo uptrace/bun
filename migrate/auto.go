@@ -217,7 +217,7 @@ func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*
 // CreateSQLMigration writes required changes to a new migration file.
 // Use migrate.Migrator to apply the generated migrations.
 func (am *AutoMigrator) CreateSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
-	_, files, err := am.createSQLMigrations(ctx, true)
+	_, files, err := am.createSQLMigrations(ctx, false)
 	if err == errNothingToMigrate {
 		return files, nil
 	}
@@ -227,7 +227,7 @@ func (am *AutoMigrator) CreateSQLMigrations(ctx context.Context) ([]*MigrationFi
 // CreateTxSQLMigration writes required changes to a new migration file making sure they will be executed
 // in a transaction when applied. Use migrate.Migrator to apply the generated migrations.
 func (am *AutoMigrator) CreateTxSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
-	_, files, err := am.createSQLMigrations(ctx, false)
+	_, files, err := am.createSQLMigrations(ctx, true)
 	if err == errNothingToMigrate {
 		return files, nil
 	}
