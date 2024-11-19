@@ -254,8 +254,8 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 
 			require.Len(t, migrations, 2, "expected up/down migration pair")
 			require.DirExists(t, migrationsDir)
-			checkMigrationFileContains(t, ".up.sql", "CREATE TABLE")
-			checkMigrationFileContains(t, ".down.sql", "DROP TABLE")
+			checkMigrationFileContains(t, "_auto.up.sql", "CREATE TABLE")
+			checkMigrationFileContains(t, "_auto.down.sql", "DROP TABLE")
 		})
 
 		t.Run("transactional", func(t *testing.T) {
@@ -264,8 +264,8 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 
 			require.Len(t, migrations, 2, "expected up/down migration pair")
 			require.DirExists(t, migrationsDir)
-			checkMigrationFileContains(t, "tx.up.sql", "CREATE TABLE", "SET statement_timeout = 0")
-			checkMigrationFileContains(t, "tx.down.sql", "DROP TABLE", "SET statement_timeout = 0")
+			checkMigrationFileContains(t, "_auto.tx.up.sql", "CREATE TABLE", "SET statement_timeout = 0")
+			checkMigrationFileContains(t, "_auto.tx.down.sql", "DROP TABLE", "SET statement_timeout = 0")
 		})
 
 	})
@@ -291,7 +291,7 @@ func checkMigrationFileContains(t *testing.T, fileSuffix string, snippets ...str
 	t.Errorf("no *%s file in migrations directory (%s)", fileSuffix, migrationsDir)
 }
 
-// checkMigrationFilesExist makes sure both up- and down- SQL migration files were created.
+// checkMigrationFilesExist checks both up- and down- SQL migration files were created.
 func checkMigrationFilesExist(t *testing.T) {
 	t.Helper()
 
@@ -315,6 +315,7 @@ func checkMigrationFilesExist(t *testing.T) {
 	}
 }
 
+// runMigrations is a test helper to run AutoMigrator.Migrate(), check that it completed without error and migration files were created.
 func runMigrations(t *testing.T, m *migrate.AutoMigrator) {
 	t.Helper()
 
@@ -338,6 +339,7 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 		{testUnique},
 		{testUniqueRenamedTable},
 		{testUpdatePrimaryKeys},
+		{testNothingToMigrate},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1102,4 +1104,25 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 	// Assert
 	state := inspect(ctx)
 	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+}
+
+func testNothingToMigrate(t *testing.T, db *bun.DB) {
+	type BoringThing struct {
+		AlwaysBlue string `bun:"colour,default:'blue'"`
+	}
+
+	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*BoringThing)(nil))
+	m := newAutoMigratorOrSkip(t, db,
+		migrate.WithModel((*BoringThing)(nil)),
+	)
+
+	// Act
+	_, err := m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created
+	require.NoError(t, err, "auto migration failed")
+
+	migrator := migrate.NewMigrator(db, migrate.NewMigrations(), migrate.WithTableName(migrationsTable))
+	applied, err := migrator.AppliedMigrations(ctx)
+	require.NoError(t, err, "fetch applied migrations")
+	require.Empty(t, applied, "nothing to migrate, AppliedMigrations not empty")
 }
