@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path"
 	"plugin"
 	"strings"
 
@@ -21,20 +23,23 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const defaultMigrationsDirectory = "./migrations/"
+const (
+	defaultMigrationsDirectory = "./migrations"
+	pluginName                 = "plugin.so"
+)
 
 var (
-	supportedDrivers = []string{"postgres", "sqlserver", "mysql", "oci8", "file"}
-
-	// TODO: build automatically based on the migrationsPath
-	pluginPath string
-
-	// Migrator options
-	migratorOptions  []migrate.MigratorOption
-	migrationOptions []migrate.MigrationOption
+	supportedDrivers    = []string{"postgres", "sqlserver", "mysql", "oci8", "file"}
+	migrationsDirectory string
 
 	// AutoMigrator options
 	autoMigratorOptions []migrate.AutoMigratorOption
+)
+
+var (
+	cleanup = &cli.BoolFlag{
+		Name: "cleanup",
+	}
 )
 
 var app = &cli.App{
@@ -63,13 +68,10 @@ var app = &cli.App{
 							Name: "driver",
 						},
 						&cli.StringFlag{
-							Name:        "plugin",
-							Destination: &pluginPath,
-							Required:    true,
-						},
-						&cli.StringFlag{
-							Name:    "d",
-							Aliases: []string{"migrations-directory"},
+							Name:        "d",
+							Aliases:     []string{"migrations-directory"},
+							Destination: &migrationsDirectory,
+							Value:       defaultMigrationsDirectory,
 							Action: func(ctx *cli.Context, dir string) error {
 								autoMigratorOptions = append(autoMigratorOptions, migrate.WithMigrationsDirectoryAuto(dir))
 								return nil
@@ -106,8 +108,20 @@ var app = &cli.App{
 								return nil
 							},
 						},
+						&cli.BoolFlag{
+							Name: "rebuild",
+						},
+						cleanup,
 					},
 					Action: func(ctx *cli.Context) error {
+						if err := buildPlugin(ctx.Bool("rebuild")); err != nil {
+							return err
+						}
+
+						if cleanup.Get(ctx) {
+							defer deletePlugin()
+						}
+
 						db, err := connect(ctx.String("uri"), ctx.String("driver"), !ctx.IsSet("driver"))
 						if err != nil {
 							return err
@@ -131,12 +145,34 @@ var app = &cli.App{
 							log.Print("ok, nothing to migrate")
 						}
 						return nil
-
 					},
 				},
 			},
 		},
 	},
+}
+
+func pluginPath() string {
+	return path.Join(migrationsDirectory, pluginName)
+}
+
+func buildPlugin(force bool) error {
+	if force {
+		if err := deletePlugin(); err != nil {
+			return err
+		}
+	}
+
+	cmd := exec.Command("go", "build", "-C", migrationsDirectory, "-buildmode", "plugin", "-o", pluginName)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("build %s plugin: %w", pluginPath(), err)
+	}
+	return nil
+}
+
+func deletePlugin() error {
+	return os.RemoveAll(pluginPath())
 }
 
 // connect to the database under the URI. A driver must be one of the supported drivers.
@@ -153,7 +189,7 @@ func connect(uri, driverName string, guessDriver bool) (*bun.DB, error) {
 	if guessDriver {
 		driver, _, found := strings.Cut(uri, ":")
 		if !found {
-			return nil, fmt.Errorf("driver cannot be guessed from connection string; pass --driver option explicitly")
+			return nil, fmt.Errorf("driver cannot be guessed from connection string; pass -driver option explicitly")
 		}
 		driverName = driver
 	}
@@ -175,7 +211,7 @@ func connect(uri, driverName string, guessDriver bool) (*bun.DB, error) {
 		sqldb, err = sql.Open(driverName, uri)
 		dialect = oracledialect.New()
 	default:
-		err = fmt.Errorf("driver %q not recognized, supported drivers are %v", driverName, supportedDrivers)
+		err = fmt.Errorf("driver %q not recognized, supported drivers are %+v", driverName, supportedDrivers)
 	}
 
 	if err != nil {
@@ -207,7 +243,7 @@ func automigrator(db *bun.DB) (*migrate.AutoMigrator, error) {
 
 // lookup a symbol from user's migrations plugin.
 func lookup(symbol string) (plugin.Symbol, error) {
-	p, err := plugin.Open(pluginPath)
+	p, err := plugin.Open(pluginPath())
 	if err != nil {
 		return nil, err
 	}
