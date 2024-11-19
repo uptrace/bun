@@ -120,7 +120,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
-				DefaultValue:    exprToLower(f.SQLDefault),
+				DefaultValue:    exprOrLiteral(f.SQLDefault),
 				IsNullable:      !f.NotNull,
 				IsAutoIncrement: f.AutoIncrement,
 				IsIdentity:      f.Identity,
@@ -211,12 +211,13 @@ func parseLen(typ string) (string, int, error) {
 	return typ[:paren], length, nil
 }
 
-// exprToLower converts string to lowercase, if it does not contain a string literal 'lit'.
+// exprOrLiteral converts string to lowercase, if it does not contain a string literal 'lit'
+// and trims the surrounding '' otherwise.
 // Use it to ensure that user-defined default values in the models are always comparable
 // to those returned by the database inspector, regardless of the case convention in individual drivers.
-func exprToLower(s string) string {
+func exprOrLiteral(s string) string {
 	if strings.HasPrefix(s, "'") && strings.HasSuffix(s, "'") {
-		return s
+		return strings.Trim(s, "'")
 	}
 	return strings.ToLower(s)
 }
