@@ -1,3 +1,52 @@
+## [1.2.6](https://github.com/uptrace/bun/compare/v1.2.5...v1.2.6) (2024-11-20)
+
+
+### Bug Fixes
+
+* append IDENTITY to ADD COLUMN statement if needed ([694f873](https://github.com/uptrace/bun/commit/694f873d61ed8d2f09032ae0c0dbec4b71c3719e))
+* **ci:** prune stale should be executed at 3 AM every day ([0cedcb0](https://github.com/uptrace/bun/commit/0cedcb068229b63041a4f48de12bb767c8454048))
+* cleanup after testUniqueRenamedTable ([b1ae32e](https://github.com/uptrace/bun/commit/b1ae32e9e9f45ff2a66e50bfd13bedcf6653d874))
+* fix go.mod of oracledialect ([89e21ea](https://github.com/uptrace/bun/commit/89e21eab362c60511cca00890ae29551a2ba7c46))
+* has many relationship with multiple columns ([1664b2c](https://github.com/uptrace/bun/commit/1664b2c07a5f6cfd3b6730e5005373686e9830a6))
+* ignore case for type equivalence ([c3253a5](https://github.com/uptrace/bun/commit/c3253a5c59b078607db9e216ddc11afdef546e05))
+* implement DefaultSchema for Oracle dialect ([d08fa40](https://github.com/uptrace/bun/commit/d08fa40cc87d67296a83a77448ea511531fc8cdd))
+* **oracledialect:** add go.mod file so the dialect is released properly ([#1043](https://github.com/uptrace/bun/issues/1043)) ([1bb5597](https://github.com/uptrace/bun/commit/1bb5597f1a32f5d693101ef4a62e25d99f5b9db5))
+* **oracledialect:** update go.mod by go mod tidy to fix tests ([7f90a15](https://github.com/uptrace/bun/commit/7f90a15c51a2482dda94226dd13b913d6b470a29))
+* **pgdialect:** array value quoting ([892c416](https://github.com/uptrace/bun/commit/892c416272a8428c592896d65d3ad51a6f2356d8))
+* remove schema name from t.Name during bun-schema inspection ([31ed582](https://github.com/uptrace/bun/commit/31ed58254ad08143d88684672acd33ce044ea5a9))
+* rename column only if the name does not exist in 'target' ([fed6012](https://github.com/uptrace/bun/commit/fed6012d177e55b8320b31ef37fc02a0cbf0b9f5))
+* support embed with tag Unique ([3acd6dd](https://github.com/uptrace/bun/commit/3acd6dd8546118d7b867ca796a5e56311edad070))
+* update oracledialect/version.go in release.sh ([bcd070f](https://github.com/uptrace/bun/commit/bcd070f48a75d0092a5620261658c9c5994f0bf6))
+* update schema.Field names ([9b810de](https://github.com/uptrace/bun/commit/9b810dee4b1a721efb82c913099f39f52c44eb57))
+
+
+### Features
+
+* add and drop columns ([3fdd5b8](https://github.com/uptrace/bun/commit/3fdd5b8f635f849a74e78c665274609f75245b19))
+* add and drop IDENTITY ([dd83779](https://github.com/uptrace/bun/commit/dd837795c31490fd8816eec0e9833e79fafdda32))
+* add support type for net/netip.addr and net/netip.prefix ([#1028](https://github.com/uptrace/bun/issues/1028)) ([95c4a8e](https://github.com/uptrace/bun/commit/95c4a8ebd634e1e99114727a7b157eeeb9297ee9))
+* **automigrate:** detect renamed tables ([c03938f](https://github.com/uptrace/bun/commit/c03938ff5e9fa2f653e4c60668b1368357d2de10))
+* change column type ([3cfd8c6](https://github.com/uptrace/bun/commit/3cfd8c62125786aaf6f493acc5b39f4d3db3d628))
+* **ci:** support release on osx ([435510b](https://github.com/uptrace/bun/commit/435510b0a73b0d9e6d06e3e3c3f0fa4379e9ed8c))
+* create sql migrations and apply them ([1bf7cfd](https://github.com/uptrace/bun/commit/1bf7cfd067e0e26ae212b0f7421e5abc6f67fb4f))
+* create transactional migration files ([c3320f6](https://github.com/uptrace/bun/commit/c3320f624830dc2fe99af2c7cbe492b2a83f9e4a))
+* detect Create/Drop table ([408859f](https://github.com/uptrace/bun/commit/408859f07be38236b39a00909cdce55d49f6f824))
+* detect modified relations ([a918dc4](https://github.com/uptrace/bun/commit/a918dc472a33dd24c5fffd4d048bcf49f2e07a42))
+* detect renamed columns ([886d0a5](https://github.com/uptrace/bun/commit/886d0a5b18aba272f1c86af2a2cf68ce4c8879f2))
+* detect renamed tables ([8857bab](https://github.com/uptrace/bun/commit/8857bab54b94170d218633f3b210d379e4e51a21))
+* enhance Apply method to accept multiple functions ([7823f2f](https://github.com/uptrace/bun/commit/7823f2f24c814e104dc59475156255c7b3b26144))
+* implement fmt.Stringer queries ([5060e47](https://github.com/uptrace/bun/commit/5060e47db13451a982e48d0f14055a58ba60b472))
+* improve FK handling ([a822fc5](https://github.com/uptrace/bun/commit/a822fc5f8ae547b7cd41e1ca35609d519d78598b))
+* include target schema name in migration name ([ac8d221](https://github.com/uptrace/bun/commit/ac8d221e6443b469e794314c5fc189250fa542d5))
+* **mariadb:** support RETURNING clause in DELETE statement ([b8dec9d](https://github.com/uptrace/bun/commit/b8dec9d9a06124696bd5ee2abbf33f19087174b6))
+* migrate FKs ([4c1dfdb](https://github.com/uptrace/bun/commit/4c1dfdbe99c73d0c0f2d7b1f8b11adf30c6a41f7))
+* **mysql:** support ORDER BY and LIMIT clauses in UPDATE and DELETE statements ([de71bed](https://github.com/uptrace/bun/commit/de71bed9252980648269af85b7a51cbc464ce710))
+* support modifying primary keys ([a734629](https://github.com/uptrace/bun/commit/a734629fa285406038cbe4a50798626b5ac08539))
+* support UNIQUE constraints ([3c4d5d2](https://github.com/uptrace/bun/commit/3c4d5d2c47be4652fb9b5cf1c6bd7b6c0a437287))
+* use *bun.DB in MigratorDialect ([a8788bf](https://github.com/uptrace/bun/commit/a8788bf62cbcc954a08532c299c774262de7a81d))
+
+
+
 ## [1.2.5](https://github.com/uptrace/bun/compare/v1.2.3...v1.2.5) (2024-10-26)
 
 

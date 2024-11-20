@@ -7,7 +7,7 @@ toolchain go1.23.2
 replace github.com/uptrace/bun => ../
 
 require (
-	github.com/uptrace/bun v1.2.5
+	github.com/uptrace/bun v1.2.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
