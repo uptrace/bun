@@ -58,6 +58,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
     sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mssqldialect/version.go
     sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/pgdialect/version.go
     sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/sqlitedialect/version.go
+    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/oracledialect/version.go
     sed -i "" "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 else
     for dir in $PACKAGE_DIRS
@@ -71,6 +72,7 @@ else
     sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mssqldialect/version.go
     sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/pgdialect/version.go
     sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/sqlitedialect/version.go
+    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/oracledialect/version.go
     sed --in-place "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 fi
 
