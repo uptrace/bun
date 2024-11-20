@@ -8,7 +8,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.2.5
+	github.com/uptrace/bun v1.2.6
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240816141633-0a40785b4f41
 )
 

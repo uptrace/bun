@@ -30,15 +30,15 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/stretchr/testify v1.8.1
-	github.com/uptrace/bun v1.2.5
-	github.com/uptrace/bun/dbfixture v1.2.5
-	github.com/uptrace/bun/dialect/mssqldialect v1.2.5
-	github.com/uptrace/bun/dialect/mysqldialect v1.2.5
-	github.com/uptrace/bun/dialect/pgdialect v1.2.5
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.5
-	github.com/uptrace/bun/driver/pgdriver v1.2.5
-	github.com/uptrace/bun/driver/sqliteshim v1.2.5
-	github.com/uptrace/bun/extra/bundebug v1.2.5
+	github.com/uptrace/bun v1.2.6
+	github.com/uptrace/bun/dbfixture v1.2.6
+	github.com/uptrace/bun/dialect/mssqldialect v1.2.6
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.6
+	github.com/uptrace/bun/dialect/pgdialect v1.2.6
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.6
+	github.com/uptrace/bun/driver/pgdriver v1.2.6
+	github.com/uptrace/bun/driver/sqliteshim v1.2.6
+	github.com/uptrace/bun/extra/bundebug v1.2.6
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240816141633-0a40785b4f41
 )
 
@@ -79,10 +79,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 	modernc.org/gc/v3 v3.0.0-20241004144649-1aea3fae8852 // indirect
-	modernc.org/libc v1.61.0 // indirect
+	modernc.org/libc v1.61.2 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.33.1 // indirect
+	modernc.org/sqlite v1.34.1 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
