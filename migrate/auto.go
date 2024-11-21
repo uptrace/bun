@@ -196,6 +196,9 @@ func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	migrations, _, err := am.createSQLMigrations(ctx, false)
 	if err != nil {
+		if err == errNothingToMigrate {
+			return new(MigrationGroup), nil
+		}
 		return nil, fmt.Errorf("auto migrate: %w", err)
 	}
 
@@ -214,21 +217,35 @@ func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*
 // CreateSQLMigration writes required changes to a new migration file.
 // Use migrate.Migrator to apply the generated migrations.
 func (am *AutoMigrator) CreateSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
-	_, files, err := am.createSQLMigrations(ctx, true)
+	_, files, err := am.createSQLMigrations(ctx, false)
+	if err == errNothingToMigrate {
+		return files, nil
+	}
 	return files, err
 }
 
 // CreateTxSQLMigration writes required changes to a new migration file making sure they will be executed
 // in a transaction when applied. Use migrate.Migrator to apply the generated migrations.
 func (am *AutoMigrator) CreateTxSQLMigrations(ctx context.Context) ([]*MigrationFile, error) {
-	_, files, err := am.createSQLMigrations(ctx, false)
+	_, files, err := am.createSQLMigrations(ctx, true)
+	if err == errNothingToMigrate {
+		return files, nil
+	}
 	return files, err
 }
+
+// errNothingToMigrate is a sentinel error which means the database is already in a desired state.
+// Should not be returned to the user -- return a nil-error instead.
+var errNothingToMigrate = errors.New("nothing to migrate")
 
 func (am *AutoMigrator) createSQLMigrations(ctx context.Context, transactional bool) (*Migrations, []*MigrationFile, error) {
 	changes, err := am.plan(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create sql migrations: %w", err)
+	}
+
+	if changes.Len() == 0 {
+		return nil, nil, errNothingToMigrate
 	}
 
 	name, _ := genMigrationName(am.schemaName + "_auto")
@@ -280,6 +297,10 @@ func (am *AutoMigrator) createSQL(_ context.Context, migrations *Migrations, fna
 		Content: string(content),
 	}
 	return mf, nil
+}
+
+func (c *changeset) Len() int {
+	return len(c.operations)
 }
 
 // Func creates a MigrationFunc that applies all operations all the changeset.

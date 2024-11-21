@@ -537,7 +537,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 					Key: "name",
 					Value: &sqlschema.BaseColumn{
 						SQLType:      sqltype.VarChar,
-						DefaultValue: "'John Doe'",
+						DefaultValue: "John Doe",
 					},
 				},
 			))
