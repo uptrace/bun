@@ -53,13 +53,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
           "s/uptrace\/bun\([^ ]*\) v.*/uptrace\/bun\1 ${TAG}/" "${dir}/go.mod"
     done
 
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./version.go
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mysqldialect/version.go
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mssqldialect/version.go
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/pgdialect/version.go
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/sqlitedialect/version.go
-    sed -i "" "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/oracledialect/version.go
+    for file in $(find . -type f -name 'version.go')
+    do
+        sed -i "" "/func Version() string/{n;s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/;}" ${file}
+    done
     sed -i "" "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
+
 else
     for dir in $PACKAGE_DIRS
     do
@@ -67,12 +66,10 @@ else
           "s/uptrace\/bun\([^ ]*\) v.*/uptrace\/bun\1 ${TAG}/" "${dir}/go.mod"
     done
 
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./version.go
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mysqldialect/version.go
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/mssqldialect/version.go
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/pgdialect/version.go
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/sqlitedialect/version.go
-    sed --in-place "s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./dialect/oracledialect/version.go
+    for file in $(find . -type f -name 'version.go')
+    do
+        sed --in-place "/func Version() string/{n;s/\(return \)\"[^\"]*\"/\1\"${TAG#v}\"/;}" ${file}
+    done
     sed --in-place "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 fi
 
