@@ -110,7 +110,7 @@ func (q *TruncateTableQuery) AppendQuery(
 		return nil, err
 	}
 
-	if q.db.features.Has(feature.TableIdentity) {
+	if q.db.HasFeature(feature.TableIdentity) {
 		if q.continueIdentity {
 			b = append(b, " CONTINUE IDENTITY"...)
 		} else {

@@ -63,7 +63,7 @@ func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 
 	var where []byte
 
-	if q.db.dialect.Features().Has(feature.CompositeIn) {
+	if q.db.HasFeature(feature.CompositeIn) {
 		return j.manyQueryCompositeIn(where, q)
 	}
 	return j.manyQueryMulti(where, q)

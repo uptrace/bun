@@ -145,7 +145,7 @@ func (q *ValuesQuery) appendQuery(
 	fields []*schema.Field,
 ) (_ []byte, err error) {
 	b = append(b, "VALUES "...)
-	if q.db.features.Has(feature.ValuesRow) {
+	if q.db.HasFeature(feature.ValuesRow) {
 		b = append(b, "ROW("...)
 	} else {
 		b = append(b, '(')
@@ -168,7 +168,7 @@ func (q *ValuesQuery) appendQuery(
 		for i := 0; i < sliceLen; i++ {
 			if i > 0 {
 				b = append(b, "), "...)
-				if q.db.features.Has(feature.ValuesRow) {
+				if q.db.HasFeature(feature.ValuesRow) {
 					b = append(b, "ROW("...)
 				} else {
 					b = append(b, '(')

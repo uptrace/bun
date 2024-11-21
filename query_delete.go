@@ -201,7 +201,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return upd.AppendQuery(fmter, b)
 	}
 
-	withAlias := q.db.features.Has(feature.DeleteTableAlias)
+	withAlias := q.db.HasFeature(feature.DeleteTableAlias)
 
 	b, err = q.appendWith(fmter, b)
 	if err != nil {

@@ -201,7 +201,7 @@ func (q *baseQuery) beforeAppendModel(ctx context.Context, query Query) error {
 }
 
 func (q *baseQuery) hasFeature(feature feature.Feature) bool {
-	return q.db.features.Has(feature)
+	return q.db.HasFeature(feature)
 }
 
 //------------------------------------------------------------------------------
