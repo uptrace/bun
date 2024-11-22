@@ -65,14 +65,14 @@ jobs:
         image: ghcr.io/uptrace/mssql:latest
         env:
           ACCEPT_EULA: Y
-          MYSQL_SA_PASSWORD: passWORD1
+          MSSQL_SA_PASSWORD: passWORD1
           MSSQL_DB: test
           MSSQL_USER: sa
           MSSQL_PASSWORD: passWORD1
         ports:
           - 1433:1433
         options: >-
-          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S tcp:localhost,1433;TrustServerCertificate=yes -U sa -P passWORD1 -Q
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P passWORD1 -Q
           'select 1' -b -o /dev/null" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
