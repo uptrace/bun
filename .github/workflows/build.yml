@@ -62,10 +62,10 @@ jobs:
           --health-cmd="mariadb-admin ping" --health-interval=10s --health-timeout=5s
           --health-retries=5
       mssql2019:
-        image: mcmoe/mssqldocker:v2019.CU4.0
+        image: ghcr.io/uptrace/mssql:latest
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: passWORD1
+          MYSQL_SA_PASSWORD: passWORD1
           MSSQL_DB: test
           MSSQL_USER: sa
           MSSQL_PASSWORD: passWORD1
