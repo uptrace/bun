@@ -1,13 +1,13 @@
 package sqlschema
 
 import (
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/uptrace/bun/internal/ordered"
 )
 
 type Table interface {
 	GetSchema() string
 	GetName() string
-	GetColumns() *orderedmap.OrderedMap[string, Column]
+	GetColumns() *ordered.Map[string, Column]
 	GetPrimaryKey() *PrimaryKey
 	GetUniqueConstraints() []Unique
 }
@@ -23,7 +23,7 @@ type BaseTable struct {
 	Name   string
 
 	// ColumnDefinitions map each column name to the column definition.
-	Columns *orderedmap.OrderedMap[string, Column]
+	Columns *ordered.Map[string, Column]
 
 	// PrimaryKey holds the primary key definition.
 	// A nil value means that no primary key is defined for the table.
@@ -47,7 +47,7 @@ func (td *BaseTable) GetName() string {
 	return td.Name
 }
 
-func (td *BaseTable) GetColumns() *orderedmap.OrderedMap[string, Column] {
+func (td *BaseTable) GetColumns() *ordered.Map[string, Column] {
 	return td.Columns
 }
 
