@@ -11,12 +11,12 @@ i=0
 
 while [[ $DBSTATUS -ne 0 ]] && [[ $i -lt 60 ]] && [[ $ERRCODE -ne 0 ]]; do
 	i=$i+1
-	DBSTATUS=$(/opt/mssql-tools18/bin/sqlcmd -h -1 -t 1 -U sa -P "$MYSQL_SA_PASSWORD" -Q "SET NOCOUNT ON; Select SUM(state) from sys.databases")
+	DBSTATUS=$(/opt/mssql-tools18/bin/sqlcmd -h -1 -t 1 -U sa -P "$MYSQL_SA_PASSWORD" -Q "SET NOCOUNT ON; Select SUM(state) from sys.databases" -C TrustServerCertificate=yes)
 	ERRCODE=$?
 	sleep 1
 done
 
-if [ $DBSTATUS -ne 0 ] OR [ $ERRCODE -ne 0 ]; then 
+if [[ $DBSTATUS -ne 0 ]] || [[ $ERRCODE -ne 0 ]]; then 
 	echo "SQL Server took more than 60 seconds to start up or one or more databases are not in an ONLINE state"
 	exit 1
 fi
