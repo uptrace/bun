@@ -26,20 +26,21 @@ func (d *detector) detectChanges() *changeset {
 	targetTables := d.target.GetTables()
 
 RenameCreate:
-	for wantName, wantTable := range targetTables.FromOldest() {
-
+	for _, wantPair := range targetTables.Pairs() {
+		wantName, wantTable := wantPair.Key, wantPair.Value
 		// A table with this name exists in the database. We assume that schema objects won't
 		// be renamed to an already existing name, nor do we support such cases.
 		// Simply check if the table definition has changed.
-		if haveTable, ok := currentTables.Get(wantName); ok {
+		if haveTable, ok := currentTables.Load(wantName); ok {
 			d.detectColumnChanges(haveTable, wantTable, true)
 			d.detectConstraintChanges(haveTable, wantTable)
 			continue
 		}
 
 		// Find all renamed tables. We assume that renamed tables have the same signature.
-		for haveName, haveTable := range currentTables.FromOldest() {
-			if _, exists := targetTables.Get(haveName); !exists && d.canRename(haveTable, wantTable) {
+		for _, havePair := range currentTables.Pairs() {
+			haveName, haveTable := havePair.Key, havePair.Value
+			if _, exists := targetTables.Load(haveName); !exists && d.canRename(haveTable, wantTable) {
 				d.changes.Add(&RenameTableOp{
 					TableName: haveTable.GetName(),
 					NewName:   wantName,
@@ -65,8 +66,9 @@ RenameCreate:
 	}
 
 	// Drop any remaining "current" tables which do not have a model.
-	for name, table := range currentTables.FromOldest() {
-		if _, keep := targetTables.Get(name); !keep {
+	for _, tPair := range currentTables.Pairs() {
+		name, table := tPair.Key, tPair.Value
+		if _, keep := targetTables.Load(name); !keep {
 			d.changes.Add(&DropTableOp{
 				TableName: table.GetName(),
 			})
@@ -103,12 +105,13 @@ func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkTyp
 	targetColumns := target.GetColumns()
 
 ChangeRename:
-	for tName, tCol := range targetColumns.FromOldest() {
+	for _, tPair := range targetColumns.Pairs() {
+		tName, tCol := tPair.Key, tPair.Value
 
 		// This column exists in the database, so it hasn't been renamed, dropped, or added.
 		// Still, we should not delete(columns, thisColumn), because later we will need to
 		// check that we do not try to rename a column to an already a name that already exists.
-		if cCol, ok := currentColumns.Get(tName); ok {
+		if cCol, ok := currentColumns.Load(tName); ok {
 			if checkType && !d.equalColumns(cCol, tCol) {
 				d.changes.Add(&ChangeColumnTypeOp{
 					TableName: target.GetName(),
@@ -122,9 +125,10 @@ ChangeRename:
 
 		// Column tName does not exist in the database -- it's been either renamed or added.
 		// Find renamed columns first.
-		for cName, cCol := range currentColumns.FromOldest() {
+		for _, cPair := range currentColumns.Pairs() {
+			cName, cCol := cPair.Key, cPair.Value
 			// Cannot rename if a column with this name already exists or the types differ.
-			if _, exists := targetColumns.Get(cName); exists || !d.equalColumns(tCol, cCol) {
+			if _, exists := targetColumns.Load(cName); exists || !d.equalColumns(tCol, cCol) {
 				continue
 			}
 			d.changes.Add(&RenameColumnOp{
@@ -149,8 +153,9 @@ ChangeRename:
 	}
 
 	// Drop columns which do not exist in the target schema and were not renamed.
-	for cName, cCol := range currentColumns.FromOldest() {
-		if _, keep := targetColumns.Get(cName); !keep {
+	for _, cPair := range currentColumns.Pairs() {
+		cName, cCol := cPair.Key, cPair.Value
+		if _, keep := targetColumns.Load(cName); !keep {
 			d.changes.Add(&DropColumnOp{
 				TableName:  target.GetName(),
 				ColumnName: cName,
@@ -325,7 +330,7 @@ func newSignature(t sqlschema.Table, eq CompareTypeFunc) signature {
 
 // scan iterates over table's field and counts occurrences of each unique column definition.
 func (s *signature) scan(t sqlschema.Table) {
-	for _, icol := range t.GetColumns().FromOldest() {
+	for _, icol := range t.GetColumns().Values() {
 		scanCol := icol.(*sqlschema.BaseColumn)
 		// This is slightly more expensive than if the columns could be compared directly
 		// and we always did s.underlying[col]++, but we get type-equivalence in return.

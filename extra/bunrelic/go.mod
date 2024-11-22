@@ -1,8 +1,6 @@
 module github.com/uptrace/bun/extra/bunrelic
 
-go 1.23
-
-toolchain go1.23.2
+go 1.22.7 // required by google.golang.org/grpc v1.68.0
 
 replace github.com/uptrace/bun => ../..
 

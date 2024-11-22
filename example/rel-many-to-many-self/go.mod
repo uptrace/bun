@@ -1,8 +1,6 @@
 module github.com/uptrace/bun/example/rel-many-to-many-self
 
-go 1.23
-
-toolchain go1.23.2
+go 1.22.0
 
 replace github.com/uptrace/bun => ../..
 

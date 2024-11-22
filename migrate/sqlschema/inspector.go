@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/schema"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type InspectorDialect interface {
@@ -102,21 +102,21 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
-		Tables: orderedmap.New[string, Table](),
+		Tables: ordered.NewMap[string, Table](),
 	}
 	for _, t := range bmi.tables.All() {
 		if t.Schema != bmi.SchemaName {
 			continue
 		}
 
-		columns := orderedmap.New[string, Column]()
+		columns := ordered.NewMap[string, Column]()
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
 				return nil, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
-			columns.Set(f.Name, &BaseColumn{
+			columns.Store(f.Name, &BaseColumn{
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,
@@ -162,7 +162,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		// produces
 		// 	schema.Table{ Schema: "favourite", Name: "favourite.books" }
 		tableName := strings.TrimPrefix(t.Name, t.Schema+".")
-		state.Tables.Set(tableName, &BunTable{
+		state.Tables.Store(tableName, &BunTable{
 			BaseTable: BaseTable{
 				Schema:            t.Schema,
 				Name:              tableName,
@@ -226,10 +226,10 @@ func exprOrLiteral(s string) string {
 type BunModelSchema struct {
 	BaseDatabase
 
-	Tables *orderedmap.OrderedMap[string, Table]
+	Tables *ordered.Map[string, Table]
 }
 
-func (ms BunModelSchema) GetTables() *orderedmap.OrderedMap[string, Table] {
+func (ms BunModelSchema) GetTables() *ordered.Map[string, Table] {
 	return ms.Tables
 }
 
