@@ -9,17 +9,17 @@ DBSTATUS=1
 ERRCODE=1
 i=0
 
-while [[ $DBSTATUS -ne 0 ]] && [[ $i -lt 60 ]] && [[ $ERRCODE -ne 0 ]]; do
+while [[ $DBSTATUS -ne 0 ]] && [[ $i -lt 30 ]] && [[ $ERRCODE -ne 0 ]]; do
 	i=$i+1
-	DBSTATUS=$(/opt/mssql-tools18/bin/sqlcmd -h -1 -t 1 -U sa -P "$MYSQL_SA_PASSWORD" -Q "SET NOCOUNT ON; Select SUM(state) from sys.databases" -C TrustServerCertificate=yes)
+	DBSTATUS=$(/opt/mssql-tools18/bin/sqlcmd -h -1 -t 1 -S "tcp:localhost,1433;TrustServerCertificate=yes" -U sa -P "$MYSQL_SA_PASSWORD" -Q "SET NOCOUNT ON; Select SUM(state) from sys.databases")
 	ERRCODE=$?
 	sleep 1
 done
 
 if [[ $DBSTATUS -ne 0 ]] || [[ $ERRCODE -ne 0 ]]; then 
-	echo "SQL Server took more than 60 seconds to start up or one or more databases are not in an ONLINE state"
+	echo "SQL Server took more than 30 seconds to start up or one or more databases are not in an ONLINE state"
 	exit 1
 fi
 
 # Run the setup script to create the DB and the schema in the DB
-/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MYSQL_SA_PASSWORD" -d master -i setup.sql
+/opt/mssql-tools18/bin/sqlcmd -S "tcp:localhost,1433;TrustServerCertificate=yes" -U sa -P "$MYSQL_SA_PASSWORD" -d master -i setup.sql

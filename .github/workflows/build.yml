@@ -72,7 +72,7 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S tcp:localhost,1433 -U sa -P passWORD1 -Q
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S tcp:localhost,1433;TrustServerCertificate=yes -U sa -P passWORD1 -Q
           'select 1' -b -o /dev/null" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
