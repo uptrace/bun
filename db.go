@@ -35,8 +35,7 @@ func WithDiscardUnknownColumns() DBOption {
 type DB struct {
 	*sql.DB
 
-	dialect  schema.Dialect
-	features feature.Feature
+	dialect schema.Dialect
 
 	queryHooks []QueryHook
 
@@ -50,10 +49,9 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	dialect.Init(sqldb)
 
 	db := &DB{
-		DB:       sqldb,
-		dialect:  dialect,
-		features: dialect.Features(),
-		fmter:    schema.NewFormatter(dialect),
+		DB:      sqldb,
+		dialect: dialect,
+		fmter:   schema.NewFormatter(dialect),
 	}
 
 	for _, opt := range opts {
@@ -231,7 +229,7 @@ func (db *DB) UpdateFQN(alias, column string) Ident {
 
 // HasFeature uses feature package to report whether the underlying DBMS supports this feature.
 func (db *DB) HasFeature(feat feature.Feature) bool {
-	return db.fmter.HasFeature(feat)
+	return db.dialect.Features().Has(feat)
 }
 
 //------------------------------------------------------------------------------
@@ -513,7 +511,7 @@ func (tx Tx) commitTX() error {
 }
 
 func (tx Tx) commitSP() error {
-	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+	if tx.db.HasFeature(feature.MSSavepoint) {
 		return nil
 	}
 	query := "RELEASE SAVEPOINT " + tx.name
@@ -537,7 +535,7 @@ func (tx Tx) rollbackTX() error {
 
 func (tx Tx) rollbackSP() error {
 	query := "ROLLBACK TO SAVEPOINT " + tx.name
-	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+	if tx.db.HasFeature(feature.MSSavepoint) {
 		query = "ROLLBACK TRANSACTION " + tx.name
 	}
 	_, err := tx.ExecContext(tx.ctx, query)
@@ -601,7 +599,7 @@ func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
 
 	qName := "SP_" + hex.EncodeToString(sp)
 	query := "SAVEPOINT " + qName
-	if tx.Dialect().Features().Has(feature.MSSavepoint) {
+	if tx.db.HasFeature(feature.MSSavepoint) {
 		query = "SAVE TRANSACTION " + qName
 	}
 	_, err = tx.ExecContext(ctx, query)

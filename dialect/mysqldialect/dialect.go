@@ -27,8 +27,6 @@ func init() {
 	}
 }
 
-type DialectOption func(d *Dialect)
-
 type Dialect struct {
 	schema.BaseDialect
 
@@ -60,6 +58,8 @@ func New(opts ...DialectOption) *Dialect {
 	return d
 }
 
+type DialectOption func(d *Dialect)
+
 func WithTimeLocation(loc string) DialectOption {
 	return func(d *Dialect) {
 		location, err := time.LoadLocation(loc)
@@ -67,6 +67,12 @@ func WithTimeLocation(loc string) DialectOption {
 			panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
 		}
 		d.loc = location
+	}
+}
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
 	}
 }
 

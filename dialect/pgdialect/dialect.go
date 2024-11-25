@@ -34,7 +34,7 @@ var _ schema.Dialect = (*Dialect)(nil)
 var _ sqlschema.InspectorDialect = (*Dialect)(nil)
 var _ sqlschema.MigratorDialect = (*Dialect)(nil)
 
-func New() *Dialect {
+func New(opts ...DialectOption) *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
@@ -55,7 +55,20 @@ func New() *Dialect {
 		feature.GeneratedIdentity |
 		feature.CompositeIn |
 		feature.DeleteReturning
+
+	for _, opt := range opts {
+		opt(d)
+	}
+
 	return d
+}
+
+type DialectOption func(d *Dialect)
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
+	}
 }
 
 func (d *Dialect) Init(*sql.DB) {}

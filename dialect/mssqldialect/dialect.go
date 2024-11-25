@@ -39,7 +39,7 @@ type Dialect struct {
 	features feature.Feature
 }
 
-func New() *Dialect {
+func New(opts ...DialectOption) *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
@@ -49,7 +49,19 @@ func New() *Dialect {
 		feature.OffsetFetch |
 		feature.UpdateFromTable |
 		feature.MSSavepoint
+
+	for _, opt := range opts {
+		opt(d)
+	}
 	return d
+}
+
+type DialectOption func(d *Dialect)
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
+	}
 }
 
 func (d *Dialect) Init(db *sql.DB) {
