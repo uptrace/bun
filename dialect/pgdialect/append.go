@@ -67,9 +67,9 @@ func appendMapStringString(b []byte, m map[string]string) []byte {
 	b = append(b, '\'')
 
 	for key, value := range m {
-		b = arrayAppendString(b, key)
+		b = appendStringElem(b, key)
 		b = append(b, '=', '>')
-		b = arrayAppendString(b, value)
+		b = appendStringElem(b, value)
 		b = append(b, ',')
 	}
 	if len(m) > 0 {

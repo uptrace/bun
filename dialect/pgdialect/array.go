@@ -3,13 +3,11 @@ package pgdialect
 import (
 	"database/sql"
 	"database/sql/driver"
-	"encoding/hex"
 	"fmt"
 	"math"
 	"reflect"
 	"strconv"
 	"time"
-	"unicode/utf8"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
@@ -146,44 +144,21 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 	}
 	switch typ.Kind() {
 	case reflect.String:
-		return arrayAppendStringValue
+		return appendStringElemValue
 	case reflect.Slice:
 		if typ.Elem().Kind() == reflect.Uint8 {
-			return arrayAppendBytesValue
+			return appendBytesElemValue
 		}
 	}
 	return schema.Appender(d, typ)
 }
 
-func arrayAppend(fmter schema.Formatter, b []byte, v interface{}) []byte {
-	switch v := v.(type) {
-	case int64:
-		return strconv.AppendInt(b, v, 10)
-	case float64:
-		return arrayAppendFloat64(b, v)
-	case bool:
-		return dialect.AppendBool(b, v)
-	case []byte:
-		return arrayAppendBytes(b, v)
-	case string:
-		return arrayAppendString(b, v)
-	case time.Time:
-		b = append(b, '"')
-		b = appendTime(b, v)
-		b = append(b, '"')
-		return b
-	default:
-		err := fmt.Errorf("pgdialect: can't append %T", v)
-		return dialect.AppendError(b, err)
-	}
+func appendStringElemValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return appendStringElem(b, v.String())
 }
 
-func arrayAppendStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-	return arrayAppendString(b, v.String())
-}
-
-func arrayAppendBytesValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
-	return arrayAppendBytes(b, v.Bytes())
+func appendBytesElemValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return appendBytesElem(b, v.Bytes())
 }
 
 func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -191,7 +166,7 @@ func arrayAppendDriverValue(fmter schema.Formatter, b []byte, v reflect.Value) [
 	if err != nil {
 		return dialect.AppendError(b, err)
 	}
-	return arrayAppend(fmter, b, iface)
+	return appendElem(b, iface)
 }
 
 func appendStringSliceValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
@@ -208,7 +183,7 @@ func appendStringSlice(b []byte, ss []string) []byte {
 
 	b = append(b, '{')
 	for _, s := range ss {
-		b = arrayAppendString(b, s)
+		b = appendStringElem(b, s)
 		b = append(b, ',')
 	}
 	if len(ss) > 0 {
@@ -616,51 +591,4 @@ func toBytes(src interface{}) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("pgdialect: got %T, wanted []byte or string", src)
 	}
-}
-
-//------------------------------------------------------------------------------
-
-func arrayAppendBytes(b []byte, bs []byte) []byte {
-	if bs == nil {
-		return dialect.AppendNull(b)
-	}
-
-	b = append(b, `"\\x`...)
-
-	s := len(b)
-	b = append(b, make([]byte, hex.EncodedLen(len(bs)))...)
-	hex.Encode(b[s:], bs)
-
-	b = append(b, '"')
-
-	return b
-}
-
-func arrayAppendString(b []byte, s string) []byte {
-	b = append(b, '"')
-	for _, r := range s {
-		switch r {
-		case 0:
-			// ignore
-		case '\'':
-			b = append(b, "''"...)
-		case '"':
-			b = append(b, '\\', '"')
-		case '\\':
-			b = append(b, '\\', '\\')
-		default:
-			if r < utf8.RuneSelf {
-				b = append(b, byte(r))
-				break
-			}
-			l := len(b)
-			if cap(b)-l < utf8.UTFMax {
-				b = append(b, make([]byte, utf8.UTFMax)...)
-			}
-			n := utf8.EncodeRune(b[l:l+utf8.UTFMax], r)
-			b = b[:l+n]
-		}
-	}
-	b = append(b, '"')
-	return b
 }
