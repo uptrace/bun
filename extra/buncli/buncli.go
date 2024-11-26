@@ -1,14 +1,10 @@
 /*
 TODO:
-	- Commands:
-		- init - Create migration+locks tables [--cmd to add cmd/ folder structure]
-		- migrate - Apply database migrations
-		- rollback - Rollback the last migration group
-		- create - Create template SQL migration filex [--go | --sql | --transactional]
-		- unlock - Unlock locks table
-	- provide NewCommand() *cli.Command intead of the cli.App, so that buncli could be embeded in the existing CLIs
-	- configure logging and verbosity
-	- (experimental, low prio) add FromPlugin() to read config from plugin and use from cmd/bundb.
+  - Commands:
+  	- init - Create migration+locks tables [--no-cmd to omit cmd/ folder]
+  - provide NewCommand() *cli.Command intead of the cli.App, so that buncli could be embeded in the existing CLIs
+  - configure logging and verbosity
+  - (experimental, low prio) add FromPlugin() to read config from plugin and use from cmd/bundb.
 */
 package buncli
 
@@ -29,7 +25,11 @@ var bunApp = &cli.App{
 // New creates a new CLI application for managing bun migrations.
 func New(c *Config) *App {
 	bunApp.Commands = cli.Commands{
+		CmdMigrate(c),
+		CmdRollback(c),
+		CmdCreate(c),
 		CmdAuto(c),
+		CmdUnlock(c),
 	}
 	return &App{
 		App: bunApp,
@@ -37,8 +37,11 @@ func New(c *Config) *App {
 }
 
 type Config struct {
-	DB           *bun.DB
-	AutoMigrator *migrate.AutoMigrator
+	DB                 *bun.DB
+	AutoMigrator       *migrate.AutoMigrator
+	Migrations         *migrate.Migrations
+	MigrateOptions     []migrate.MigrationOption
+	GoMigrationOptions []migrate.GoMigrationOption
 }
 
 // Run calls cli.App.Run and returns its error.

@@ -4,6 +4,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// CmdAuto creates the auto command hierarchy.
 func CmdAuto(c *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "auto",
@@ -16,36 +17,26 @@ func CmdAuto(c *Config) *cli.Command {
 					flagTx,
 				},
 				Action: func(ctx *cli.Context) error {
-					return autoCreate(ctx, c)
+					return runAutoCreate(ctx, c)
 				},
 			},
 			&cli.Command{
 				Name:  "migrate",
 				Usage: "Generate SQL migrations and apply them right away",
 				Action: func(ctx *cli.Context) error {
-					return autoMigrate(ctx, c)
+					return runAutoMigrate(ctx, c)
 				},
 			},
 		},
 	}
 }
 
-var (
-	// flagTx adds --transactional flag.
-	flagTx = &cli.BoolFlag{
-		Name:    "tx",
-		Aliases: []string{"transactional"},
-		Usage: "write migrations to .tx.(up|down).sql file, they will be marked as transactional",
-		Value:   false,
-	}
-)
-
-func autoMigrate(ctx *cli.Context, c *Config) error {
-	_, err := c.AutoMigrator.Migrate(ctx.Context)
+func runAutoMigrate(ctx *cli.Context, c *Config) error {
+	_, err := c.AutoMigrator.Migrate(ctx.Context, c.MigrateOptions...)
 	return err
 }
 
-func autoCreate(ctx *cli.Context, c *Config) error {
+func runAutoCreate(ctx *cli.Context, c *Config) error {
 	var err error
 	if flagTx.Get(ctx) {
 		_, err = c.AutoMigrator.CreateTxSQLMigrations(ctx.Context)

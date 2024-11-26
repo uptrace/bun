@@ -35,5 +35,6 @@ func main() {
 	log.SetPrefix("bundb: ")
 	// TODO: use buncli.New(buncli.FromPlugin()) to read config from plugin
 	if err := buncli.Run(os.Args, nil); err != nil {
+		log.Fatal(err)
 	}
 }
