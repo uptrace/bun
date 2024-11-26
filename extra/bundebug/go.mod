@@ -1,12 +1,12 @@
 module github.com/uptrace/bun/extra/bundebug
 
-go 1.22
+go 1.22.0
 
 replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/uptrace/bun v1.2.5
+	github.com/uptrace/bun v1.2.6
 )
 
 require (
@@ -17,5 +17,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 )

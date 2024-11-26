@@ -27,8 +27,6 @@ func init() {
 	}
 }
 
-type DialectOption func(d *Dialect)
-
 type Dialect struct {
 	schema.BaseDialect
 
@@ -60,6 +58,8 @@ func New(opts ...DialectOption) *Dialect {
 	return d
 }
 
+type DialectOption func(d *Dialect)
+
 func WithTimeLocation(loc string) DialectOption {
 	return func(d *Dialect) {
 		location, err := time.LoadLocation(loc)
@@ -67,6 +67,12 @@ func WithTimeLocation(loc string) DialectOption {
 			panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
 		}
 		d.loc = location
+	}
+}
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
 	}
 }
 
@@ -79,6 +85,9 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	if strings.Contains(version, "MariaDB") {
 		version = semver.MajorMinor("v" + cleanupVersion(version))
+		if semver.Compare(version, "v10.0.5") >= 0 {
+			d.features |= feature.DeleteReturning
+		}
 		if semver.Compare(version, "v10.5.0") >= 0 {
 			d.features |= feature.InsertReturning
 		}
@@ -206,6 +215,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " AUTO_INCREMENT"...)
+}
+
+func (d *Dialect) DefaultSchema() string {
+	return "mydb"
 }
 
 func sqlType(field *schema.Field) string {

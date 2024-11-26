@@ -45,6 +45,7 @@ type Table struct {
 	TypeName  string
 	ModelName string
 
+	Schema            string
 	Name              string
 	SQLName           Safe
 	SQLNameForSelects Safe
@@ -85,6 +86,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 	table.setName(tableName)
 	table.Alias = table.ModelName
 	table.SQLAlias = table.quoteIdent(table.ModelName)
+	table.Schema = dialect.DefaultSchema()
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
@@ -244,6 +246,31 @@ func (t *Table) processFields(typ reflect.Type, canAddr bool) {
 			subfield.SQLName = t.quoteIdent(subfield.Name)
 		}
 		t.addField(subfield)
+		if v, ok := subfield.Tag.Options["unique"]; ok {
+			t.addUnique(subfield, embfield.prefix, v)
+		}
+	}
+}
+
+func (t *Table) addUnique(field *Field, prefix string, tagOptions []string) {
+	var names []string
+	if len(tagOptions) == 1 {
+		// Split the value by comma, this will allow multiple names to be specified.
+		// We can use this to create multiple named unique constraints where a single column
+		// might be included in multiple constraints.
+		names = strings.Split(tagOptions[0], ",")
+	} else {
+		names = tagOptions
+	}
+
+	for _, uname := range names {
+		if t.Unique == nil {
+			t.Unique = make(map[string][]*Field)
+		}
+		if uname != "" && prefix != "" {
+			uname = prefix + uname
+		}
+		t.Unique[uname] = append(t.Unique[uname], field)
 	}
 }
 
@@ -371,10 +398,18 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if tag.Name != "" {
+		schema, _ := t.schemaFromTagName(tag.Name)
+		t.Schema = schema
+
+		// Eventually, we should only assign the "table" portion as the table name,
+		// which will also require a change in how the table name is appended to queries.
+		// Until that is done, set table name to tag.Name.
 		t.setName(tag.Name)
 	}
 
 	if s, ok := tag.Option("table"); ok {
+		schema, _ := t.schemaFromTagName(s)
+		t.Schema = schema
 		t.setName(s)
 	}
 
@@ -386,6 +421,17 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.Alias = s
 		t.SQLAlias = t.quoteIdent(s)
 	}
+}
+
+// schemaFromTagName splits the bun.BaseModel tag name into schema and table name
+// in case it is specified in the "schema"."table" format.
+// Assume default schema if one isn't explicitly specified.
+func (t *Table) schemaFromTagName(name string) (string, string) {
+	schema, table := t.dialect.DefaultSchema(), name
+	if schemaTable := strings.Split(name, "."); len(schemaTable) == 2 {
+		schema, table = schemaTable[0], schemaTable[1]
+	}
+	return schema, table
 }
 
 // nolint
@@ -439,22 +485,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 
 	if v, ok := tag.Options["unique"]; ok {
-		var names []string
-		if len(v) == 1 {
-			// Split the value by comma, this will allow multiple names to be specified.
-			// We can use this to create multiple named unique constraints where a single column
-			// might be included in multiple constraints.
-			names = strings.Split(v[0], ",")
-		} else {
-			names = v
-		}
-
-		for _, uniqueName := range names {
-			if t.Unique == nil {
-				t.Unique = make(map[string][]*Field)
-			}
-			t.Unique[uniqueName] = append(t.Unique[uniqueName], field)
-		}
+		t.addUnique(field, "", v)
 	}
 	if s, ok := tag.Option("default"); ok {
 		field.SQLDefault = s

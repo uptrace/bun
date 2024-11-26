@@ -24,6 +24,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
+	"github.com/uptrace/bun/schema"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
@@ -51,6 +52,13 @@ var allDBs = map[string]func(tb testing.TB) *bun.DB{
 	mariadbName:   mariadb,
 	sqliteName:    sqlite,
 	mssql2019Name: mssql2019,
+}
+
+var allDialects = []func() schema.Dialect{
+	func() schema.Dialect { return pgdialect.New() },
+	func() schema.Dialect { return mysqldialect.New() },
+	func() schema.Dialect { return sqlitedialect.New() },
+	func() schema.Dialect { return mssqldialect.New() },
 }
 
 func pg(tb testing.TB) *bun.DB {
@@ -212,6 +220,17 @@ func testEachDB(t *testing.T, f func(t *testing.T, dbName string, db *bun.DB)) {
 	for dbName, newDB := range allDBs {
 		t.Run(dbName, func(t *testing.T) {
 			f(t, dbName, newDB(t))
+		})
+	}
+}
+
+// testEachDialect allows testing dialect-specific functionality that does not require database interactions.
+func testEachDialect(t *testing.T, f func(t *testing.T, dialectName string, dialect schema.Dialect)) {
+	for _, newDialect := range allDialects {
+		d := newDialect()
+		name := d.Name().String()
+		t.Run(name, func(t *testing.T) {
+			f(t, name, d)
 		})
 	}
 }
@@ -1549,6 +1568,27 @@ func testEmbedModelPointer(t *testing.T, db *bun.DB) {
 	require.Equal(t, *m1, m2)
 }
 
+func testEmbedTypeField(t *testing.T, db *bun.DB) {
+	type Embed string
+	type Model struct {
+		Embed
+	}
+
+	ctx := context.Background()
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	m1 := &Model{
+		Embed: Embed("foo"),
+	}
+	_, err := db.NewInsert().Model(m1).Exec(ctx)
+	require.NoError(t, err)
+
+	var m2 Model
+	err = db.NewSelect().Model(&m2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *m1, m2)
+}
+
 type JSONField struct {
 	Foo string `json:"foo"`
 }
@@ -1744,7 +1784,7 @@ func mustResetModel(tb testing.TB, ctx context.Context, db *bun.DB, models ...in
 func mustDropTableOnCleanup(tb testing.TB, ctx context.Context, db *bun.DB, models ...interface{}) {
 	tb.Cleanup(func() {
 		for _, model := range models {
-			drop := db.NewDropTable().IfExists().Model(model)
+			drop := db.NewDropTable().IfExists().Cascade().Model(model)
 			_, err := drop.Exec(ctx)
 			require.NoError(tb, err, "must drop table: %q", drop.GetTableName())
 		}

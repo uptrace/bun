@@ -12,14 +12,21 @@ import (
 	"github.com/uptrace/bun"
 )
 
+const (
+	defaultTable      = "bun_migrations"
+	defaultLocksTable = "bun_migration_locks"
+)
+
 type MigratorOption func(m *Migrator)
 
+// WithTableName overrides default migrations table name.
 func WithTableName(table string) MigratorOption {
 	return func(m *Migrator) {
 		m.table = table
 	}
 }
 
+// WithLocksTableName overrides default migration locks table name.
 func WithLocksTableName(table string) MigratorOption {
 	return func(m *Migrator) {
 		m.locksTable = table
@@ -27,7 +34,7 @@ func WithLocksTableName(table string) MigratorOption {
 }
 
 // WithMarkAppliedOnSuccess sets the migrator to only mark migrations as applied/unapplied
-// when their up/down is successful
+// when their up/down is successful.
 func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 	return func(m *Migrator) {
 		m.markAppliedOnSuccess = enabled
@@ -52,8 +59,8 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 
 		ms: migrations.ms,
 
-		table:      "bun_migrations",
-		locksTable: "bun_migration_locks",
+		table:      defaultTable,
+		locksTable: defaultLocksTable,
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -246,7 +253,7 @@ func (m *Migrator) CreateGoMigration(
 		opt(cfg)
 	}
 
-	name, err := m.genMigrationName(name)
+	name, err := genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +276,7 @@ func (m *Migrator) CreateGoMigration(
 
 // CreateTxSQLMigration creates transactional up and down SQL migration files.
 func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := m.genMigrationName(name)
+	name, err := genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +296,7 @@ func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*M
 
 // CreateSQLMigrations creates up and down SQL migration files.
 func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := m.genMigrationName(name)
+	name, err := genMigrationName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +314,7 @@ func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*Mig
 	return []*MigrationFile{up, down}, nil
 }
 
-func (m *Migrator) createSQL(ctx context.Context, fname string, transactional bool) (*MigrationFile, error) {
+func (m *Migrator) createSQL(_ context.Context, fname string, transactional bool) (*MigrationFile, error) {
 	fpath := filepath.Join(m.migrations.getDirectory(), fname)
 
 	template := sqlTemplate
@@ -329,7 +336,7 @@ func (m *Migrator) createSQL(ctx context.Context, fname string, transactional bo
 
 var nameRE = regexp.MustCompile(`^[0-9a-z_\-]+$`)
 
-func (m *Migrator) genMigrationName(name string) (string, error) {
+func genMigrationName(name string) (string, error) {
 	const timeFormat = "20060102150405"
 
 	if name == "" {

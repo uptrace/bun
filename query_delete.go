@@ -163,6 +163,11 @@ func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery {
+	if !q.hasFeature(feature.DeleteReturning) {
+		q.err = errors.New("bun: returning is not supported for current dialect")
+		return q
+	}
+
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
@@ -196,7 +201,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return upd.AppendQuery(fmter, b)
 	}
 
-	withAlias := q.db.features.Has(feature.DeleteTableAlias)
+	withAlias := q.db.HasFeature(feature.DeleteTableAlias)
 
 	b, err = q.appendWith(fmter, b)
 	if err != nil {
@@ -249,7 +254,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, err
 	}
 
-	if q.hasFeature(feature.Returning) && q.hasReturning() {
+	if q.hasFeature(feature.DeleteReturning) && q.hasReturning() {
 		b = append(b, " RETURNING "...)
 		b, err = q.appendReturning(fmter, b)
 		if err != nil {
@@ -311,7 +316,7 @@ func (q *DeleteQuery) scanOrExec(
 		return nil, err
 	}
 
-	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.Returning|feature.Output))
+	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.DeleteReturning|feature.Output))
 	var model Model
 
 	if useScan {

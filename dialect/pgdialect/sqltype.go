@@ -5,18 +5,22 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"strings"
 
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
 const (
 	// Date / Time
-	pgTypeTimestampTz = "TIMESTAMPTZ"         // Timestamp with a time zone
-	pgTypeDate        = "DATE"                // Date
-	pgTypeTime        = "TIME"                // Time without a time zone
-	pgTypeTimeTz      = "TIME WITH TIME ZONE" // Time with a time zone
-	pgTypeInterval    = "INTERVAL"            // Time Interval
+	pgTypeTimestamp       = "TIMESTAMP"                // Timestamp
+	pgTypeTimestampWithTz = "TIMESTAMP WITH TIME ZONE" // Timestamp with a time zone
+	pgTypeTimestampTz     = "TIMESTAMPTZ"              // Timestamp with a time zone (alias)
+	pgTypeDate            = "DATE"                     // Date
+	pgTypeTime            = "TIME"                     // Time without a time zone
+	pgTypeTimeTz          = "TIME WITH TIME ZONE"      // Time with a time zone
+	pgTypeInterval        = "INTERVAL"                 // Time interval
 
 	// Network Addresses
 	pgTypeInet    = "INET"    // IPv4 or IPv6 hosts and networks
@@ -27,6 +31,13 @@ const (
 	pgTypeSmallSerial = "SMALLSERIAL" // 2 byte autoincrementing integer
 	pgTypeSerial      = "SERIAL"      // 4 byte autoincrementing integer
 	pgTypeBigSerial   = "BIGSERIAL"   // 8 byte autoincrementing integer
+
+	// Character Types
+	pgTypeChar             = "CHAR"              // fixed length string (blank padded)
+	pgTypeCharacter        = "CHARACTER"         // alias for CHAR
+	pgTypeText             = "TEXT"              // variable length string without limit
+	pgTypeVarchar          = "VARCHAR"           // variable length string with optional limit
+	pgTypeCharacterVarying = "CHARACTER VARYING" // alias for VARCHAR
 
 	// Binary Data Types
 	pgTypeBytea = "BYTEA" // binary string
@@ -41,6 +52,10 @@ var (
 
 func (d *Dialect) DefaultVarcharLen() int {
 	return 0
+}
+
+func (d *Dialect) DefaultSchema() string {
+	return "public"
 }
 
 func fieldSQLType(field *schema.Field) string {
@@ -102,4 +117,63 @@ func sqlType(typ reflect.Type) string {
 	}
 
 	return sqlType
+}
+
+var (
+	char        = newAliases(pgTypeChar, pgTypeCharacter)
+	varchar     = newAliases(pgTypeVarchar, pgTypeCharacterVarying)
+	timestampTz = newAliases(sqltype.Timestamp, pgTypeTimestampTz, pgTypeTimestampWithTz)
+)
+
+func (d *Dialect) CompareType(col1, col2 sqlschema.Column) bool {
+	typ1, typ2 := strings.ToUpper(col1.GetSQLType()), strings.ToUpper(col2.GetSQLType())
+
+	if typ1 == typ2 {
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
+	}
+
+	switch {
+	case char.IsAlias(typ1) && char.IsAlias(typ2):
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
+	case varchar.IsAlias(typ1) && varchar.IsAlias(typ2):
+		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
+	case timestampTz.IsAlias(typ1) && timestampTz.IsAlias(typ2):
+		return true
+	}
+	return false
+}
+
+// checkVarcharLen returns true if columns have the same VarcharLen, or,
+// if one specifies no VarcharLen and the other one has the default lenght for pgdialect.
+// We assume that the types are otherwise equivalent and that any non-character column
+// would have VarcharLen == 0;
+func checkVarcharLen(col1, col2 sqlschema.Column, defaultLen int) bool {
+	vl1, vl2 := col1.GetVarcharLen(), col2.GetVarcharLen()
+
+	if vl1 == vl2 {
+		return true
+	}
+
+	if (vl1 == 0 && vl2 == defaultLen) || (vl1 == defaultLen && vl2 == 0) {
+		return true
+	}
+	return false
+}
+
+// typeAlias defines aliases for common data types. It is a lightweight string set implementation.
+type typeAlias map[string]struct{}
+
+// IsAlias checks if typ1 and typ2 are aliases of the same data type.
+func (t typeAlias) IsAlias(typ string) bool {
+	_, ok := t[typ]
+	return ok
+}
+
+// newAliases creates a set of aliases.
+func newAliases(aliases ...string) typeAlias {
+	types := make(typeAlias)
+	for _, a := range aliases {
+		types[a] = struct{}{}
+	}
+	return types
 }
