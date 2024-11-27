@@ -59,6 +59,7 @@ type Config struct {
 	DB                 *bun.DB
 	AutoMigrator       *migrate.AutoMigrator
 	Migrations         *migrate.Migrations
+	MigratorOptions    []migrate.MigratorOption
 	MigrateOptions     []migrate.MigrationOption
 	GoMigrationOptions []migrate.GoMigrationOption
 }

@@ -17,7 +17,7 @@ func CmdMigrate(c *Config) *cli.Command {
 }
 
 func runMigrate(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations)
+	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
 	_, err := m.Migrate(ctx.Context, c.MigrateOptions...)
 	return err
 }
@@ -34,7 +34,7 @@ func CmdRollback(c *Config) *cli.Command {
 }
 
 func runRollback(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations)
+	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
 	_, err := m.Rollback(ctx.Context, c.MigrateOptions...)
 	return err
 }
@@ -90,7 +90,7 @@ var (
 
 func runCreate(ctx *cli.Context, c *Config) error {
 	var err error
-	m := migrate.NewMigrator(c.DB, c.Migrations)
+	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
 	name := ctx.Args().First()
 
 	if createGo {
@@ -118,6 +118,6 @@ func CmdUnlock(c *Config) *cli.Command {
 }
 
 func runUnlock(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations)
+	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
 	return m.Unlock(ctx.Context)
 }

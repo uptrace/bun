@@ -30,6 +30,8 @@ func CmdInit() *cli.Command {
 		Flags: []cli.Flag{
 			flagDSN,
 			flagDriver,
+			flagTable,
+			flagLocks,
 			flagBinary,
 			flagMigrations,
 			flagPluginMode,
@@ -63,32 +65,45 @@ var (
 
 	flagDriver = &cli.StringFlag{
 		Name:  "driver",
-		Usage: "database driver",
+		Usage: strings.Join(supportedDrivers, ", "),
 	}
 
-	flagPluginMode = &cli.BoolFlag{
-		Name:    "p",
-		Aliases: []string{"plugin"},
-		Usage:   "create a 'main' package to be used as a plugin",
+	flagTable = &cli.StringFlag{
+		Name:  "table",
+		Usage: "override migrations table name",
+		Value: migrate.DefaultTable,
+	}
+
+	flagLocks = &cli.StringFlag{
+		Name:  "locks",
+		Usage: "override locks table name",
+		Value: migrate.DefaultLocksTable,
 	}
 
 	flagBinary = &cli.StringFlag{
 		Name:    "b",
 		Aliases: []string{"binary"},
-		Usage:   "name of the cmd/ binary",
+		Usage:   "override cmd/ `ENTRYPOINT` name",
 		Value:   defaultBin,
 	}
 
 	flagMigrations = &cli.StringFlag{
 		Name:    "m",
-		Aliases: []string{"migrations-package"},
-		Usage:   "name of the migrations package",
+		Aliases: []string{"migrations-directory"},
+		Usage:   "override migrations `DIR`",
 		Value:   defaultMigrations,
+	}
+
+	flagPluginMode = &cli.BoolFlag{
+		Name:               "P",
+		Aliases:            []string{"plugin"},
+		Usage:              "create a 'main' package to be used as a plugin",
+		DisableDefaultText: true,
 	}
 )
 
 func runInit(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations)
+	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
 	if err := m.Init(ctx.Context); err != nil {
 		return err
 	}
@@ -96,13 +111,14 @@ func runInit(ctx *cli.Context, c *Config) error {
 	loc := ctx.Args().Get(0)
 	binName := flagBinary.Get(ctx)
 	migrationsDir := flagMigrations.Get(ctx)
+	migratorOpts := stringNonDefaultMigratorOptions(ctx)
 
 	var b interface{ Bootstrap() error }
 	switch {
 	default:
-		b = &normalMode{Loc: loc, Binary: binName, Migrations: migrationsDir}
+		b = &normalMode{Loc: loc, Binary: binName, Migrations: migrationsDir, MigratorOptions: migratorOpts}
 	case flagPluginMode.Get(ctx):
-		b = &pluginMode{Loc: loc, Migrations: migrationsDir}
+		b = &pluginMode{Loc: loc, Migrations: migrationsDir, MigratorOptions: migratorOpts}
 	}
 
 	return b.Bootstrap()
@@ -118,13 +134,26 @@ func fromCLI(ctx *cli.Context) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Config{DB: db, Migrations: migrate.NewMigrations()}, nil
+	return &Config{
+		DB:              db,
+		MigratorOptions: addNonDefaultMigratorOptions(ctx),
+		Migrations:      migrate.NewMigrations(),
+	}, nil
 }
 
+// normalMode creates the default migrations directory and a cmd/ entrypoint.
+//
+//	.
+//	└── cmd
+//	    └── bun
+//	        ├── main.go
+//	        └── migrations
+//	            └── main.go
 type normalMode struct {
-	Loc        string
-	Binary     string
-	Migrations string
+	Loc             string
+	Binary          string
+	Migrations      string
+	MigratorOptions []string
 }
 
 const entrypointTemplate = `package main
@@ -146,14 +175,15 @@ func main() {
 	// TODO: configure AutoMigrator
 	var _ /* auto */ migrate.AutoMigrator
 
-	cfg := buncli.Config{
+	cfg := &buncli.Config{
 		RootName: %q,
 		// DB: db,
 		// AutoMigrator: auto,
-		Migrations: migrations.Migrations,
+		Migrations:			migrations.Migrations,
+		MigratorOptions:	[]migrate.MigratorOption{%s},
 	}
 
-	if err := buncli.Run(os.Args, &cfg); err != nil {
+	if err := buncli.Run(os.Args, cfg); err != nil {
 		panic(err)
 	}
 }
@@ -175,11 +205,13 @@ func init() {
 func (n *normalMode) Bootstrap() error {
 	// Create cmd/bun/main.go entrypoint
 	binDir := path.Join(n.Loc, "cmd", n.Binary)
-	modPath, err := n.pkgMigrations(binDir)
+	modPath, err := n.migrationsImportPath(binDir)
 	if err != nil {
 		return err
 	}
-	if err := writef(binDir, maingo, entrypointTemplate, modPath, n.Binary); err != nil {
+
+	migratorOpts := strings.Join(n.MigratorOptions, ", ")
+	if err := writef(binDir, maingo, entrypointTemplate, modPath, n.Binary, migratorOpts); err != nil {
 		return err
 	}
 
@@ -191,7 +223,7 @@ func (n *normalMode) Bootstrap() error {
 	return nil
 }
 
-func (n *normalMode) pkgMigrations(binDir string) (string, error) {
+func (n *normalMode) migrationsImportPath(binDir string) (string, error) {
 	modPath, err := getModPath()
 	if err != nil {
 		return "", err
@@ -199,9 +231,15 @@ func (n *normalMode) pkgMigrations(binDir string) (string, error) {
 	return path.Join(modPath, strings.TrimLeft(binDir, "."), n.Migrations), nil
 }
 
+// pluginMode creates a layout of a project that can be compiled and imported as a plugin.
+//
+//	.
+//	└── migrations
+//	    └── main.go
 type pluginMode struct {
-	Loc        string
-	Migrations string
+	Loc             string
+	Migrations      string
+	MigratorOptions []string
 }
 
 var pluginTemplate = `package main
@@ -229,14 +267,16 @@ func init() {
 	Config = &buncli.Config{
 		// DB: db,
 		// AutoMigrator: auto,
-		Migrations: migrations,
+		Migrations:	 		migrations,
+		MigratorOptions:	[]migrate.MigratorOption{%s},
 	}
 }
 `
 
 func (p *pluginMode) Bootstrap() error {
 	binDir := path.Join(p.Loc, p.Migrations)
-	if err := writef(binDir, maingo, pluginTemplate); err != nil {
+	migratorOpts := strings.Join(p.MigratorOptions, ", ")
+	if err := writef(binDir, maingo, pluginTemplate, migratorOpts); err != nil {
 		return err
 	}
 	return nil
@@ -320,4 +360,33 @@ func newDB(ctx *cli.Context) (*bun.DB, error) {
 	}
 
 	return bun.NewDB(sqlDB, dialect), nil
+}
+
+// addNonDefaultMigratorOptions collects migrate.MigratorOption for every value overriden by a command-line flag.
+func addNonDefaultMigratorOptions(ctx *cli.Context) []migrate.MigratorOption {
+	var opts []migrate.MigratorOption
+
+	if t := flagTable.Get(ctx); ctx.IsSet(flagTable.Name) {
+		opts = append(opts, migrate.WithTableName(t))
+	}
+
+	if l := flagLocks.Get(ctx); ctx.IsSet(flagLocks.Name) {
+		opts = append(opts, migrate.WithLocksTableName(l))
+	}
+	return opts
+}
+
+// stringNonDefaultMigratorOptions is like addNonDefaultMigratorOptions, but stringifies options so they can be written to a file.
+func stringNonDefaultMigratorOptions(ctx *cli.Context) []string {
+	var opts []string
+
+	if t := flagTable.Get(ctx); ctx.IsSet(flagTable.Name) {
+		opts = append(opts, fmt.Sprintf("migrate.WithTableName(%q)", t))
+	}
+
+	if l := flagLocks.Get(ctx); ctx.IsSet(flagLocks.Name) {
+		opts = append(opts, fmt.Sprintf("migrate.WithLocksTableName(%q)", l))
+	}
+
+	return opts
 }

@@ -140,8 +140,8 @@ type AutoMigrator struct {
 func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, error) {
 	am := &AutoMigrator{
 		db:         db,
-		table:      defaultTable,
-		locksTable: defaultLocksTable,
+		table:      DefaultTable,
+		locksTable: DefaultLocksTable,
 		schemaName: db.Dialect().DefaultSchema(),
 	}
 
