@@ -3,7 +3,6 @@ package buncli
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -31,7 +30,9 @@ func CmdInit() *cli.Command {
 		Flags: []cli.Flag{
 			flagDSN,
 			flagDriver,
-			flagNoCmd,
+			flagBinary,
+			flagMigrations,
+			flagPluginMode,
 		},
 		Action: func(ctx *cli.Context) error {
 			c, err := fromCLI(ctx)
@@ -44,9 +45,9 @@ func CmdInit() *cli.Command {
 }
 
 const (
-	defaultLoc           = "."
-	defaultBin           = "bun"
-	defaultMigrationsDir = "migrations"
+	maingo            = "main.go"
+	defaultBin        = "bun"
+	defaultMigrations = "migrations"
 )
 
 var (
@@ -65,10 +66,24 @@ var (
 		Usage: "database driver",
 	}
 
-	flagNoCmd = &cli.BoolFlag{
-		Name:  "no-cmd",
-		Usage: "don't create a CLI entrypoint in cmd/ directory",
-		Value: false,
+	flagPluginMode = &cli.BoolFlag{
+		Name:    "p",
+		Aliases: []string{"plugin"},
+		Usage:   "create a 'main' package to be used as a plugin",
+	}
+
+	flagBinary = &cli.StringFlag{
+		Name:    "b",
+		Aliases: []string{"binary"},
+		Usage:   "name of the cmd/ binary",
+		Value:   defaultBin,
+	}
+
+	flagMigrations = &cli.StringFlag{
+		Name:    "m",
+		Aliases: []string{"migrations-package"},
+		Usage:   "name of the migrations package",
+		Value:   defaultMigrations,
 	}
 )
 
@@ -79,32 +94,37 @@ func runInit(ctx *cli.Context, c *Config) error {
 	}
 
 	loc := ctx.Args().Get(0)
-	migrationsDir := loc
+	binName := flagBinary.Get(ctx)
+	migrationsDir := flagMigrations.Get(ctx)
 
-	if loc == "" {
-		loc = defaultLoc
+	var b interface{ Bootstrap() error }
+	switch {
+	default:
+		b = &normalMode{Loc: loc, Binary: binName, Migrations: migrationsDir}
+	case flagPluginMode.Get(ctx):
+		b = &pluginMode{Loc: loc, Migrations: migrationsDir}
 	}
 
-	if loc == defaultLoc {
-		migrationsDir = defaultMigrationsDir
-	}
+	return b.Bootstrap()
+}
 
-	log.Print("loc-0: " + loc)
-	loc = path.Join(loc, "cmd", defaultBin)
-	log.Print("loc: " + loc)
-
-	if withCmd := !flagNoCmd.Get(ctx); withCmd {
-		migrationsDir = path.Join(loc, migrationsDir)
-		if err := initCmd(loc, migrationsDir); err != nil {
-			return err
-		}
+// fromCLI creates minimal Config from command line arguments.
+// It is inteded to be used exclusively by Init command, as it creates
+// the default project structure and the user has no other way of configuring buncli.
+//
+// DB and Migrations are the only valid fields in the created config, other objects are nil.
+func fromCLI(ctx *cli.Context) (*Config, error) {
+	db, err := newDB(ctx)
+	if err != nil {
+		return nil, err
 	}
-	log.Print("migrationsDir: " + migrationsDir)
+	return &Config{DB: db, Migrations: migrate.NewMigrations()}, nil
+}
 
-	if err := initMigrationsPackage(migrationsDir); err != nil {
-		return err
-	}
-	return nil
+type normalMode struct {
+	Loc        string
+	Binary     string
+	Migrations string
 }
 
 const entrypointTemplate = `package main
@@ -126,48 +146,18 @@ func main() {
 	// TODO: configure AutoMigrator
 	var _ /* auto */ migrate.AutoMigrator
 
-	if err := buncli.Run(os.Args, &buncli.Config{
+	cfg := buncli.Config{
 		RootName: %q,
 		// DB: db,
 		// AutoMigrator: auto,
 		Migrations: migrations.Migrations,
-	}); err != nil {
+	}
+
+	if err := buncli.Run(os.Args, &cfg); err != nil {
 		panic(err)
 	}
 }
 `
-
-func initCmd(binDir string, migrationsDir string) error {
-	if err := os.MkdirAll(binDir, 0755); err != nil {
-		return err
-	}
-
-	log.Print("binDir: ", binDir)
-	f, err := os.OpenFile(path.Join(binDir, "main.go"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-	if err != nil {
-		if os.IsExist(err) {
-			// TODO: log the fact that we haven't modified an existing main.go
-			return nil
-		}
-		return err
-	}
-	defer f.Close()
-
-	modPath, err := getModPath()
-	if err != nil {
-		return err
-	}
-	log.Print("go.mod path: ", modPath)
-
-	pkgMigrations := path.Join(modPath, strings.TrimLeft(migrationsDir, "."))
-	log.Print("pkgMigrations: ", pkgMigrations)
-	if _, err := fmt.Fprintf(f, entrypointTemplate, pkgMigrations, defaultBin); err != nil {
-		log.Print("here!")
-		return err
-	}
-
-	return nil
-}
 
 var migrationsTemplate = `package migrations
 
@@ -182,12 +172,97 @@ func init() {
 }
 `
 
-func initMigrationsPackage(dir string) error {
+func (n *normalMode) Bootstrap() error {
+	// Create cmd/bun/main.go entrypoint
+	binDir := path.Join(n.Loc, "cmd", n.Binary)
+	modPath, err := n.pkgMigrations(binDir)
+	if err != nil {
+		return err
+	}
+	if err := writef(binDir, maingo, entrypointTemplate, modPath, n.Binary); err != nil {
+		return err
+	}
+
+	// Create migrations/main.go template
+	migrationsDir := path.Join(binDir, n.Migrations)
+	if err := writef(migrationsDir, maingo, migrationsTemplate); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *normalMode) pkgMigrations(binDir string) (string, error) {
+	modPath, err := getModPath()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(modPath, strings.TrimLeft(binDir, "."), n.Migrations), nil
+}
+
+type pluginMode struct {
+	Loc        string
+	Migrations string
+}
+
+var pluginTemplate = `package main
+
+import (
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/extra/buncli"
+	"github.com/uptrace/bun/migrate"
+)
+
+var Config *buncli.Config
+
+func init() {
+	migrations := migrate.NewMigrations()
+	if err := migrations.DiscoverCaller(); err != nil {
+		panic(err)
+	}
+
+	// TODO: connect to db
+	var _ /* db */ *bun.DB
+	
+	// TODO: configure AutoMigrator
+	var _ /* auto */ migrate.AutoMigrator
+
+	Config = &buncli.Config{
+		// DB: db,
+		// AutoMigrator: auto,
+		Migrations: migrations,
+	}
+}
+`
+
+func (p *pluginMode) Bootstrap() error {
+	binDir := path.Join(p.Loc, p.Migrations)
+	if err := writef(binDir, maingo, pluginTemplate); err != nil {
+		return err
+	}
+	return nil
+}
+
+// getModPath parses the ./go.mod file in the current directory and returns the declared module path.
+func getModPath() (string, error) {
+	f, err := os.ReadFile("go.mod")
+	if err != nil {
+		return "", err
+	}
+
+	gomod, err := modfile.Parse("go.mod", f, nil)
+	if err != nil {
+		return "", err
+	}
+	return gomod.Module.Mod.Path, nil
+}
+
+// TODO: document
+func writef(dir string, file string, format string, args ...interface{}) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(path.Join(dir, "main.go"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	f, err := os.OpenFile(path.Join(dir, file), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		if os.IsExist(err) {
 			// TODO: log the fact that we haven't modified an existing main.go
@@ -197,23 +272,10 @@ func initMigrationsPackage(dir string) error {
 	}
 	defer f.Close()
 
-	if _, err := fmt.Fprint(f, migrationsTemplate); err != nil {
+	if _, err := fmt.Fprintf(f, format, args...); err != nil {
 		return err
 	}
 	return nil
-}
-
-// fromCLI creates minimal Config from command line arguments.
-// It is inteded to be used exclusively by Init command, as it creates
-// the default project structure and the user has no other way of configuring buncli.
-//
-// DB and Migrations are the only valid fields in the created config, other objects are nil.
-func fromCLI(ctx *cli.Context) (*Config, error) {
-	db, err := newDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &Config{DB: db, Migrations: migrate.NewMigrations()}, nil
 }
 
 // newDB connects to the database specified by the DSN.
@@ -258,18 +320,4 @@ func newDB(ctx *cli.Context) (*bun.DB, error) {
 	}
 
 	return bun.NewDB(sqlDB, dialect), nil
-}
-
-// getModPath parses the ./go.mod file in the current directory and returns the declared module path.
-func getModPath() (string, error) {
-	f, err := os.ReadFile("go.mod")
-	if err != nil {
-		return "", err
-	}
-
-	gomod, err := modfile.Parse("go.mod", f, nil)
-	if err != nil {
-		return "", err
-	}
-	return gomod.Module.Mod.Path, nil
 }

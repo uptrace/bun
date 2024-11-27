@@ -68,7 +68,7 @@ func Run(args []string, c *Config) error {
 	return New(c).Run(args)
 }
 
-// RunCtx calls cli.App.RunContexta and returns its error.
+// RunContext calls cli.App.RunContext and returns its error.
 func RunContext(ctx context.Context, args []string, c *Config) error {
 	return New(c).RunContext(ctx, args)
 }

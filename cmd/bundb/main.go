@@ -14,13 +14,6 @@ i.e. same_thing.up.tx.sql should overwrite same_thing.up.sql.
 - Store configured options to env variables? E.g. after 'bundb init --create-directory=db-migrations/'
 set BUNDB_MIGRATIONS=db-migrations, so that subsequent commands can be run without additional parameters.
 Although... this way we are moving towards a .bundb.config or something.
-
-- Allow defining components in the plugin, rather than passing config for them. Specifically:
- 1. func DB() *bun.DB to return a database connection
-    Handy in avoiding having to provide options for all the dialect-specific options here + potentially
-    let's users re-use their existing "ConnectToDB" function.
- 2. func AutoMigrator() *migrate.AutoMigrator to return a pre-configured AutoMigrator.
- 3. ???
 */
 package main
 
