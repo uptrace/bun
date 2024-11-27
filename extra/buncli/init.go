@@ -127,6 +127,7 @@ func main() {
 	var _ /* auto */ migrate.AutoMigrator
 
 	if err := buncli.Run(os.Args, &buncli.Config{
+		RootName: %q,
 		// DB: db,
 		// AutoMigrator: auto,
 		Migrations: migrations.Migrations,
@@ -160,7 +161,7 @@ func initCmd(binDir string, migrationsDir string) error {
 
 	pkgMigrations := path.Join(modPath, strings.TrimLeft(migrationsDir, "."))
 	log.Print("pkgMigrations: ", pkgMigrations)
-	if _, err := fmt.Fprintf(f, entrypointTemplate, pkgMigrations); err != nil {
+	if _, err := fmt.Fprintf(f, entrypointTemplate, pkgMigrations, defaultBin); err != nil {
 		log.Print("here!")
 		return err
 	}
@@ -259,6 +260,7 @@ func newDB(ctx *cli.Context) (*bun.DB, error) {
 	return bun.NewDB(sqlDB, dialect), nil
 }
 
+// getModPath parses the ./go.mod file in the current directory and returns the declared module path.
 func getModPath() (string, error) {
 	f, err := os.ReadFile("go.mod")
 	if err != nil {

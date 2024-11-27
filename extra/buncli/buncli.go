@@ -24,8 +24,10 @@ var bunApp = &cli.App{
 
 // New creates a new CLI application for managing bun migrations.
 func New(c *Config) *App {
+	if c.RootName != "" {
+		bunApp.Name = c.RootName
+	}
 	bunApp.Commands = cli.Commands{
-		CmdInit(),
 		CmdMigrate(c),
 		CmdRollback(c),
 		CmdCreate(c),
@@ -37,7 +39,23 @@ func New(c *Config) *App {
 	}
 }
 
+// NewStandalone create a new CLI application to be distributed as a standalone binary.
+// It's intended to be used in the cmb/bund and does not require any prior setup from the user:
+// the app only includes the Init command and reads all its configuration from command line.
+//
+// Prefer using New(*Config) in your custom entrypoint.
+func NewStandalone(name string) *App {
+	bunApp.Name = name
+	bunApp.Commands = cli.Commands{
+		CmdInit(),
+	}
+	return &App{
+		App: bunApp,
+	}
+}
+
 type Config struct {
+	RootName           string
 	DB                 *bun.DB
 	AutoMigrator       *migrate.AutoMigrator
 	Migrations         *migrate.Migrations
