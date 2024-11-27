@@ -5,7 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// CmdMigrate creates a migrate command.
+// CmdMigrate creates migrate command.
 func CmdMigrate(c *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "migrate",
@@ -22,7 +22,7 @@ func runMigrate(ctx *cli.Context, c *Config) error {
 	return err
 }
 
-// CmdRollback creates a rollback command.
+// CmdRollback creates rollback command.
 func CmdRollback(c *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "rollback",
@@ -39,6 +39,7 @@ func runRollback(ctx *cli.Context, c *Config) error {
 	return err
 }
 
+// CmdCreate creates create command.
 func CmdCreate(c *Config) *cli.Command {
 	return &cli.Command{
 		Name:  "create",

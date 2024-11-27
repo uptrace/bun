@@ -1,7 +1,7 @@
 /*
 TODO:
   - Commands:
-  	- init - Create migration+locks tables [--no-cmd to omit cmd/ folder]
+  - init - Create migration+locks tables [--no-cmd to omit cmd/ folder]
   - provide NewCommand() *cli.Command intead of the cli.App, so that buncli could be embeded in the existing CLIs
   - configure logging and verbosity
   - (experimental, low prio) add FromPlugin() to read config from plugin and use from cmd/bundb.
@@ -25,6 +25,7 @@ var bunApp = &cli.App{
 // New creates a new CLI application for managing bun migrations.
 func New(c *Config) *App {
 	bunApp.Commands = cli.Commands{
+		CmdInit(),
 		CmdMigrate(c),
 		CmdRollback(c),
 		CmdCreate(c),
