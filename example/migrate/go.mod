@@ -12,8 +12,8 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/uptrace/bun v1.2.6
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.6
-	github.com/uptrace/bun/driver/sqliteshim v1.2.6
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.7-0.20241126124946-928d0779110e
+	github.com/uptrace/bun/driver/sqliteshim v1.2.7-0.20241126124946-928d0779110e
 	github.com/uptrace/bun/extra/bundebug v1.2.6
 	github.com/urfave/cli/v2 v2.27.5
 )
