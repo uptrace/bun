@@ -113,13 +113,6 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 }
 
 func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
-	if src == nil {
-		if fv, ok := fieldByIndex(strct, f.Index); ok {
-			return f.ScanWithCheck(fv, src)
-		}
-		return nil
-	}
-
 	fv := internal.FieldByIndexAlloc(strct, f.Index)
 	return f.ScanWithCheck(fv, src)
 }
