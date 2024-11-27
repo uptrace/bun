@@ -18,8 +18,9 @@ import (
 
 // bunApp is the root-level bundb app that all other commands attach to.
 var bunApp = &cli.App{
-	Name:  "bundb",
-	Usage: "Database migration tool for uptrace/bun",
+	Name:    "bundb",
+	Usage:   "Database migration tool for uptrace/bun",
+	Suggest: true,
 }
 
 // New creates a new CLI application for managing bun migrations.
@@ -40,7 +41,7 @@ func New(c *Config) *App {
 }
 
 // NewStandalone create a new CLI application to be distributed as a standalone binary.
-// It's intended to be used in the cmb/bund and does not require any prior setup from the user:
+// It's intended to be used in the cmb/bundb and does not require any prior setup from the user:
 // the app only includes the Init command and reads all its configuration from command line.
 //
 // Prefer using New(*Config) in your custom entrypoint.
@@ -49,6 +50,9 @@ func NewStandalone(name string) *App {
 	bunApp.Commands = cli.Commands{
 		CmdInit(),
 	}
+
+	// NOTE: use `-tags experimental` to enable/disable this feature?
+	addCommandGroup(bunApp, "EXPERIMENTAL", pluginCommands()...)
 	return &App{
 		App: bunApp,
 	}
@@ -77,4 +81,25 @@ func RunContext(ctx context.Context, args []string, c *Config) error {
 // App is a wrapper around cli.App that extends it with bun-specific features.
 type App struct {
 	*cli.App
+}
+
+var _ OptionsConfig = (*Config)(nil)
+var _ MigratorConfig = (*Config)(nil)
+var _ AutoConfig = (*Config)(nil)
+
+func (c *Config) NewMigrator() *migrate.Migrator {
+	return migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
+}
+
+func (c *Config) Auto() *migrate.AutoMigrator                        { return c.AutoMigrator }
+func (c *Config) GetMigratorOptions() []migrate.MigratorOption       { return c.MigratorOptions }
+func (c *Config) GetMigrateOptions() []migrate.MigrationOption       { return c.MigrateOptions }
+func (c *Config) GetGoMigrationOptions() []migrate.GoMigrationOption { return c.GoMigrationOptions }
+
+// addCommandGroup groups commands into one category.
+func addCommandGroup(app *cli.App, group string, commands ...*cli.Command) {
+	for _, cmd := range commands {
+		cmd.Category = group
+	}
+	app.Commands = append(app.Commands, commands...)
 }

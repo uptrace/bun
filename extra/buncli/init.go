@@ -46,6 +46,12 @@ func CmdInit() *cli.Command {
 	}
 }
 
+type OptionsConfig interface {
+	GetMigratorOptions() []migrate.MigratorOption
+	GetMigrateOptions() []migrate.MigrationOption
+	GetGoMigrationOptions() []migrate.GoMigrationOption
+}
+
 const (
 	maingo            = "main.go"
 	defaultBin        = "bun"
@@ -102,8 +108,8 @@ var (
 	}
 )
 
-func runInit(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
+func runInit(ctx *cli.Context, c MigratorConfig) error {
+	m := c.NewMigrator()
 	if err := m.Init(ctx.Context); err != nil {
 		return err
 	}
@@ -209,17 +215,19 @@ func (n *normalMode) Bootstrap() error {
 	if err != nil {
 		return err
 	}
-
+	
 	migratorOpts := strings.Join(n.MigratorOptions, ", ")
 	if err := writef(binDir, maingo, entrypointTemplate, modPath, n.Binary, migratorOpts); err != nil {
 		return err
 	}
-
+	
 	// Create migrations/main.go template
 	migrationsDir := path.Join(binDir, n.Migrations)
 	if err := writef(migrationsDir, maingo, migrationsTemplate); err != nil {
 		return err
 	}
+
+
 	return nil
 }
 
@@ -274,11 +282,15 @@ func init() {
 `
 
 func (p *pluginMode) Bootstrap() error {
-	binDir := path.Join(p.Loc, p.Migrations)
+	migrationsDir := path.Join(p.Loc, p.Migrations)
 	migratorOpts := strings.Join(p.MigratorOptions, ", ")
-	if err := writef(binDir, maingo, pluginTemplate, migratorOpts); err != nil {
+	if err := writef(migrationsDir, maingo, pluginTemplate, migratorOpts); err != nil {
 		return err
 	}
+
+	// TODO: run go mod init <modPath> in migrations/ directory so that it'd be a standalone package
+	// TODO: run go mod init in migrations/ directory
+
 	return nil
 }
 

@@ -6,7 +6,7 @@ import (
 )
 
 // CmdMigrate creates migrate command.
-func CmdMigrate(c *Config) *cli.Command {
+func CmdMigrate(c MigratorConfig) *cli.Command {
 	return &cli.Command{
 		Name:  "migrate",
 		Usage: "Apply database migrations",
@@ -16,14 +16,20 @@ func CmdMigrate(c *Config) *cli.Command {
 	}
 }
 
-func runMigrate(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
-	_, err := m.Migrate(ctx.Context, c.MigrateOptions...)
+// MigratorConfig provides configuration related to conventional migrations.
+type MigratorConfig interface {
+	OptionsConfig
+	NewMigrator() *migrate.Migrator
+}
+
+func runMigrate(ctx *cli.Context, c MigratorConfig) error {
+	m := c.NewMigrator()
+	_, err := m.Migrate(ctx.Context, c.GetMigrateOptions()...)
 	return err
 }
 
 // CmdRollback creates rollback command.
-func CmdRollback(c *Config) *cli.Command {
+func CmdRollback(c MigratorConfig) *cli.Command {
 	return &cli.Command{
 		Name:  "rollback",
 		Usage: "Rollback the last migration group",
@@ -33,14 +39,14 @@ func CmdRollback(c *Config) *cli.Command {
 	}
 }
 
-func runRollback(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
-	_, err := m.Rollback(ctx.Context, c.MigrateOptions...)
+func runRollback(ctx *cli.Context, c MigratorConfig) error {
+	m := c.NewMigrator()
+	_, err := m.Rollback(ctx.Context, c.GetMigrateOptions()...)
 	return err
 }
 
 // CmdCreate creates create command.
-func CmdCreate(c *Config) *cli.Command {
+func CmdCreate(c MigratorConfig) *cli.Command {
 	return &cli.Command{
 		Name:  "create",
 		Usage: "Create a new migration file template",
@@ -88,13 +94,13 @@ var (
 	}
 )
 
-func runCreate(ctx *cli.Context, c *Config) error {
+func runCreate(ctx *cli.Context, c MigratorConfig) error {
 	var err error
-	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
+	m := c.NewMigrator()
 	name := ctx.Args().First()
 
 	if createGo {
-		_, err = m.CreateGoMigration(ctx.Context, name, c.GoMigrationOptions...)
+		_, err = m.CreateGoMigration(ctx.Context, name, c.GetGoMigrationOptions()...)
 		return err
 	}
 
@@ -107,7 +113,7 @@ func runCreate(ctx *cli.Context, c *Config) error {
 }
 
 // CmdUnlock creates an unlock command.
-func CmdUnlock(c *Config) *cli.Command {
+func CmdUnlock(c MigratorConfig) *cli.Command {
 	return &cli.Command{
 		Name:  "unlock",
 		Usage: "Unlock migration locks table",
@@ -117,7 +123,7 @@ func CmdUnlock(c *Config) *cli.Command {
 	}
 }
 
-func runUnlock(ctx *cli.Context, c *Config) error {
-	m := migrate.NewMigrator(c.DB, c.Migrations, c.MigratorOptions...)
+func runUnlock(ctx *cli.Context, c MigratorConfig) error {
+	m := c.NewMigrator()
 	return m.Unlock(ctx.Context)
 }
