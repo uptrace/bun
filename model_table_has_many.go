@@ -3,6 +3,7 @@ package bun
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 
@@ -152,7 +153,13 @@ func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []
 // The value is then used as a map key.
 func indirectFieldValue(field reflect.Value) interface{} {
 	if field.Kind() != reflect.Ptr {
-		return field.Interface()
+		i := field.Interface()
+		if valuer, ok := i.(driver.Valuer); ok {
+			if v, err := valuer.Value(); err == nil {
+				return v
+			}
+		}
+		return i
 	}
 	if field.IsNil() {
 		return nil
