@@ -72,7 +72,7 @@ func (t *Tables) InProgress(typ reflect.Type) *Table {
 
 	table := new(Table)
 	t.inProgress[typ] = table
-	table.init(t.dialect, typ, false)
+	table.init(t.dialect, typ)
 
 	return table
 }

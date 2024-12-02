@@ -75,7 +75,7 @@ type structField struct {
 	Table *Table
 }
 
-func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
+func (table *Table) init(dialect Dialect, typ reflect.Type) {
 	table.dialect = dialect
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()
@@ -90,7 +90,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
-	table.processFields(typ, canAddr)
+	table.processFields(typ)
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -110,7 +110,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type, canAddr bool) {
 	}
 }
 
-func (t *Table) processFields(typ reflect.Type, canAddr bool) {
+func (t *Table) processFields(typ reflect.Type) {
 	type embeddedField struct {
 		prefix     string
 		index      []int
