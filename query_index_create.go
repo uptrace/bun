@@ -20,6 +20,7 @@ type CreateIndexQuery struct {
 	index   schema.QueryWithArgs
 	using   schema.QueryWithArgs
 	include []schema.QueryWithArgs
+	comment string
 }
 
 var _ Query = (*CreateIndexQuery)(nil)
@@ -149,6 +150,14 @@ func (q *CreateIndexQuery) WhereOr(query string, args ...interface{}) *CreateInd
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *CreateIndexQuery) Comment(comment string) *CreateIndexQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *CreateIndexQuery) Operation() string {
 	return "CREATE INDEX"
 }
@@ -157,6 +166,8 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	b = append(b, "CREATE "...)
 

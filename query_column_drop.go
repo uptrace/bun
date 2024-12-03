@@ -11,6 +11,8 @@ import (
 
 type DropColumnQuery struct {
 	baseQuery
+
+	comment string
 }
 
 var _ Query = (*DropColumnQuery)(nil)
@@ -85,6 +87,14 @@ func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropCol
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *DropColumnQuery) Comment(comment string) *DropColumnQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *DropColumnQuery) Operation() string {
 	return "DROP COLUMN"
 }
@@ -93,6 +103,9 @@ func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
+
 	if len(q.columns) != 1 {
 		return nil, fmt.Errorf("bun: DropColumnQuery requires exactly one column")
 	}

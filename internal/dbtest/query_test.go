@@ -1596,6 +1596,148 @@ func TestQuery(t *testing.T) {
 				return db.NewDelete().Model(&Model{}).WherePK().Returning("*")
 			},
 		},
+		{
+			id: 173,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewAddColumn().
+					Model(&Model{}).
+					Comment("test").
+					ColumnExpr("column_name VARCHAR(123)")
+			},
+		},
+		{
+			id: 174,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropColumn().
+					Model(&Model{}).
+					Comment("test").
+					Column("column_name")
+			},
+		},
+		{
+			id: 175,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDelete().
+					Model(&Model{}).
+					WherePK().
+					Comment("test")
+			},
+		},
+		{
+			id: 176,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewCreateIndex().
+					Model(&Model{}).
+					Unique().
+					Index("index_name").
+					Comment("test").
+					Column("column_name")
+			},
+		},
+		{
+			id: 177,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropIndex().
+					Model(&Model{}).
+					Comment("test").
+					Index("index_name").
+					Comment("test")
+			},
+		},
+		{
+			id: 178,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewInsert().
+					Model(&Model{}).
+					Comment("test").
+					Value("column_name", "value")
+			},
+		},
+		{
+			id: 179,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					ID    int64 `bun:",pk,autoincrement"`
+					Name  string
+					Value string
+				}
+
+				newModels := []*Model{
+					{Name: "A", Value: "world"},
+					{Name: "B", Value: "test"},
+				}
+
+				return db.NewMerge().
+					Model(new(Model)).
+					With("_data", db.NewValues(&newModels)).
+					Using("_data").
+					On("?TableAlias.name = _data.name").
+					WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+						return q.Set("value = _data.value")
+					}).
+					WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+						return q.Value("name", "_data.name").Value("value", "_data.value")
+					}).
+					Comment("test").
+					Returning("$action")
+
+			},
+		},
+		{
+			id: 180,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewRaw("SELECT 1").Comment("test")
+			},
+		},
+		{
+			id: 181,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 182,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewCreateTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 183,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 184,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewTruncateTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 185,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewUpdate().
+					Model(&Model{}).
+					Comment("test").
+					Set("name = ?", "new-name").
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 186,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewValues(&[]Model{{1, "hello"}}).
+					Comment("test")
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
