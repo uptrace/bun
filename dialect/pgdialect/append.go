@@ -11,22 +11,22 @@ import (
 )
 
 var (
-	driverValuerType = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+	driverValuerType = reflect.TypeFor[driver.Valuer]()
 
-	stringType      = reflect.TypeOf((*string)(nil)).Elem()
-	sliceStringType = reflect.TypeOf([]string(nil))
+	stringType      = reflect.TypeFor[string]()
+	sliceStringType = reflect.TypeFor[[]string]()
 
-	intType      = reflect.TypeOf((*int)(nil)).Elem()
-	sliceIntType = reflect.TypeOf([]int(nil))
+	intType      = reflect.TypeFor[int]()
+	sliceIntType = reflect.TypeFor[[]int]()
 
-	int64Type      = reflect.TypeOf((*int64)(nil)).Elem()
-	sliceInt64Type = reflect.TypeOf([]int64(nil))
+	int64Type      = reflect.TypeFor[int64]()
+	sliceInt64Type = reflect.TypeFor[[]int64]()
 
-	float64Type      = reflect.TypeOf((*float64)(nil)).Elem()
-	sliceFloat64Type = reflect.TypeOf([]float64(nil))
+	float64Type      = reflect.TypeFor[float64]()
+	sliceFloat64Type = reflect.TypeFor[[]float64]()
 
-	timeType      = reflect.TypeOf((*time.Time)(nil)).Elem()
-	sliceTimeType = reflect.TypeOf([]time.Time(nil))
+	timeType      = reflect.TypeFor[time.Time]()
+	sliceTimeType = reflect.TypeFor[[]time.Time]()
 )
 
 func appendTime(buf []byte, tm time.Time) []byte {

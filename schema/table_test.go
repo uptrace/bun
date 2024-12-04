@@ -18,7 +18,7 @@ func TestTable(t *testing.T) {
 			Bar string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 
 		require.Len(t, table.allFields, 3)
 		require.Len(t, table.Fields, 3)
@@ -37,7 +37,7 @@ func TestTable(t *testing.T) {
 			Foo string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model1)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model1]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -54,7 +54,7 @@ func TestTable(t *testing.T) {
 			Model
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -70,7 +70,7 @@ func TestTable(t *testing.T) {
 			BaseModel `bun:"custom_name,alias:custom_alias"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 		require.Equal(t, "custom_name", table.Name)
 		require.Equal(t, "custom_alias", table.Alias)
 	})
@@ -83,7 +83,7 @@ func TestTable(t *testing.T) {
 			Model1 `bun:",extend"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Equal(t, "custom_name", table.Name)
 		require.Equal(t, "custom_alias", table.Alias)
 	})
@@ -99,7 +99,7 @@ func TestTable(t *testing.T) {
 			Bar Perms `bun:"embed:bar_"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Role)(nil)))
+		table := tables.Get(reflect.TypeFor[*Role]())
 		require.Nil(t, table.StructMap["foo"])
 		require.Nil(t, table.StructMap["bar"])
 
@@ -125,7 +125,7 @@ func TestTable(t *testing.T) {
 			Perms
 		}
 
-		table := tables.Get(reflect.TypeOf((*Role)(nil)))
+		table := tables.Get(reflect.TypeFor[*Role]())
 		require.Nil(t, table.StructMap["foo"])
 		require.Nil(t, table.StructMap["bar"])
 
@@ -157,7 +157,7 @@ func TestTable(t *testing.T) {
 			Model1
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Len(t, table.FieldMap, 2)
 
 		foo, ok := table.FieldMap["foo"]
@@ -179,7 +179,7 @@ func TestTable(t *testing.T) {
 			Baz Model1 `bun:"embed:baz_"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Len(t, table.FieldMap, 2)
 
 		foo, ok := table.FieldMap["baz_foo"]
@@ -202,7 +202,7 @@ func TestTable(t *testing.T) {
 			Baz string `bun:",scanonly"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 
 		require.Len(t, table.StructMap, 1)
 		require.NotNil(t, table.StructMap["xxx"])
@@ -229,7 +229,7 @@ func TestTable(t *testing.T) {
 			Bar string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -247,7 +247,7 @@ func TestTable(t *testing.T) {
 			Item   *Item `bun:"rel:belongs-to,join:item_id=id"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Item)(nil)))
+		table := tables.Get(reflect.TypeFor[*Item]())
 
 		rel, ok := table.Relations["Item"]
 		require.True(t, ok)
@@ -268,7 +268,7 @@ func TestTable(t *testing.T) {
 			Foo string `bun:"alt:alt_name"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*ModelTest)(nil)))
+		table := tables.Get(reflect.TypeFor[*ModelTest]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)

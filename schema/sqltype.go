@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	bunNullTimeType = reflect.TypeOf((*NullTime)(nil)).Elem()
-	nullTimeType    = reflect.TypeOf((*sql.NullTime)(nil)).Elem()
-	nullBoolType    = reflect.TypeOf((*sql.NullBool)(nil)).Elem()
-	nullFloatType   = reflect.TypeOf((*sql.NullFloat64)(nil)).Elem()
-	nullIntType     = reflect.TypeOf((*sql.NullInt64)(nil)).Elem()
-	nullStringType  = reflect.TypeOf((*sql.NullString)(nil)).Elem()
+	bunNullTimeType = reflect.TypeFor[NullTime]()
+	nullTimeType    = reflect.TypeFor[sql.NullTime]()
+	nullBoolType    = reflect.TypeFor[sql.NullBool]()
+	nullFloatType   = reflect.TypeFor[sql.NullFloat64]()
+	nullIntType     = reflect.TypeFor[sql.NullInt64]()
+	nullStringType  = reflect.TypeFor[sql.NullString]()
 )
 
 var sqlTypes = []string{

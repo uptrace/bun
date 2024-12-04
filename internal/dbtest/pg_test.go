@@ -140,7 +140,7 @@ func TestPostgresMultiTenant(t *testing.T) {
 	db := pg(t)
 
 	db = db.WithNamedArg("tenant", bun.Safe("public"))
-	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())
+	_ = db.Table(reflect.TypeFor[IngredientRecipe]())
 
 	models := []interface{}{
 		(*Recipe)(nil),

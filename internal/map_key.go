@@ -2,7 +2,7 @@ package internal
 
 import "reflect"
 
-var ifaceType = reflect.TypeOf((*interface{})(nil)).Elem()
+var ifaceType = reflect.TypeFor[interface{}]()
 
 type MapKey struct {
 	iface interface{}
