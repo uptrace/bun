@@ -40,29 +40,38 @@ func WithReadOnlyReplica(replica *sql.DB) DBOption {
 }
 
 type DB struct {
+	// Must be a pointer so we copy the state, not the state fields.
+	*noCopyState
+
+	queryHooks []QueryHook
+
+	fmter schema.Formatter
+	stats DBStats
+}
+
+// noCopyState contains DB fields that must not be copied on clone(),
+// for example, it is forbidden to copy atomic.Pointer.
+type noCopyState struct {
 	*sql.DB
+	dialect schema.Dialect
 
 	replicas        []*sql.DB
 	healthyReplicas atomic.Pointer[[]*sql.DB]
 	nextReplica     atomic.Int64
 
-	dialect    schema.Dialect
-	queryHooks []QueryHook
-
-	fmter  schema.Formatter
 	flags  internal.Flag
 	closed atomic.Bool
-
-	stats DBStats
 }
 
 func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	dialect.Init(sqldb)
 
 	db := &DB{
-		DB:      sqldb,
-		dialect: dialect,
-		fmter:   schema.NewFormatter(dialect),
+		noCopyState: &noCopyState{
+			DB:      sqldb,
+			dialect: dialect,
+		},
+		fmter: schema.NewFormatter(dialect),
 	}
 
 	for _, opt := range opts {

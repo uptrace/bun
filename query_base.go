@@ -147,10 +147,8 @@ func (q *baseQuery) GetTableName() string {
 	}
 
 	for _, wq := range q.with {
-		if v, ok := wq.query.(Query); ok {
-			if model := v.GetModel(); model != nil {
-				return v.GetTableName()
-			}
+		if model := wq.query.GetModel(); model != nil {
+			return wq.query.GetTableName()
 		}
 	}
 

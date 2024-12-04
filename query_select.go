@@ -748,7 +748,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	query := internal.String(queryBytes)
 
 	ctx, event := q.db.beforeQuery(ctx, q, query, nil, query, q.model)
-	rows, err := q.conn.QueryContext(ctx, query)
+	rows, err := q.resolveConn(q).QueryContext(ctx, query)
 	q.db.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
@@ -876,7 +876,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
 
 	var num int
-	err = q.conn.QueryRowContext(ctx, query).Scan(&num)
+	err = q.resolveConn(q).QueryRowContext(ctx, query).Scan(&num)
 
 	q.db.afterQuery(ctx, event, nil, err)
 
@@ -894,13 +894,15 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (in
 			return int(n), nil
 		}
 	}
-	if _, ok := q.conn.(*DB); ok {
-		return q.scanAndCountConc(ctx, dest...)
+	if q.conn == nil {
+		return q.scanAndCountConcurrently(ctx, dest...)
 	}
 	return q.scanAndCountSeq(ctx, dest...)
 }
 
-func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{}) (int, error) {
+func (q *SelectQuery) scanAndCountConcurrently(
+	ctx context.Context, dest ...interface{},
+) (int, error) {
 	var count int
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -978,7 +980,7 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
 
 	var exists bool
-	err = q.conn.QueryRowContext(ctx, query).Scan(&exists)
+	err = q.resolveConn(q).QueryRowContext(ctx, query).Scan(&exists)
 
 	q.db.afterQuery(ctx, event, nil, err)
 
