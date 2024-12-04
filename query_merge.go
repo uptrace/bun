@@ -25,8 +25,7 @@ var _ Query = (*MergeQuery)(nil)
 func NewMergeQuery(db *DB) *MergeQuery {
 	q := &MergeQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	if q.db.dialect.Name() != dialect.MSSQL && q.db.dialect.Name() != dialect.PG {
@@ -60,12 +59,12 @@ func (q *MergeQuery) Apply(fns ...func(*MergeQuery) *MergeQuery) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) With(name string, query schema.QueryAppender) *MergeQuery {
+func (q *MergeQuery) With(name string, query Query) *MergeQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *MergeQuery) WithRecursive(name string, query schema.QueryAppender) *MergeQuery {
+func (q *MergeQuery) WithRecursive(name string, query Query) *MergeQuery {
 	q.addWith(name, query, true)
 	return q
 }

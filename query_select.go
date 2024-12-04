@@ -40,8 +40,7 @@ func NewSelectQuery(db *DB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
@@ -72,12 +71,12 @@ func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery
 	return q
 }
 
-func (q *SelectQuery) With(name string, query schema.QueryAppender) *SelectQuery {
+func (q *SelectQuery) With(name string, query Query) *SelectQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *SelectQuery) WithRecursive(name string, query schema.QueryAppender) *SelectQuery {
+func (q *SelectQuery) WithRecursive(name string, query Query) *SelectQuery {
 	q.addWith(name, query, true)
 	return q
 }
