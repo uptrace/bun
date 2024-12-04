@@ -28,7 +28,7 @@ func TestHStoreAppender(t *testing.T) {
 		{map[string]string{"{1}": "{2}", "{3}": "{4}"}, []string{`'"{1}"=>"{2}","{3}"=>"{4}"'`, `'"{3}"=>"{4}","{1}"=>"{2}"'`}},
 	}
 
-	appendFunc := pgDialect.hstoreAppender(reflect.TypeOf(map[string]string{}))
+	appendFunc := pgDialect.hstoreAppender(reflect.TypeFor[map[string]string]())
 
 	for i, test := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {

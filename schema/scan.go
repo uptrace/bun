@@ -18,7 +18,7 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+var scannerType = reflect.TypeFor[sql.Scanner]()
 
 type ScannerFunc func(dest reflect.Value, src interface{}) error
 

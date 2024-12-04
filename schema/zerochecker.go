@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-var isZeroerType = reflect.TypeOf((*isZeroer)(nil)).Elem()
+var isZeroerType = reflect.TypeFor[isZeroer]()
 
 type isZeroer interface {
 	IsZero() bool

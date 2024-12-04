@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	baseModelType      = reflect.TypeOf((*BaseModel)(nil)).Elem()
+	baseModelType      = reflect.TypeFor[BaseModel]()
 	tableNameInflector = inflection.Plural
 )
 

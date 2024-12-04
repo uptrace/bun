@@ -14,8 +14,8 @@ import (
 var errNilModel = errors.New("bun: Model(nil)")
 
 var (
-	timeType  = reflect.TypeOf((*time.Time)(nil)).Elem()
-	bytesType = reflect.TypeOf((*[]byte)(nil)).Elem()
+	timeType  = reflect.TypeFor[time.Time]()
+	bytesType = reflect.TypeFor[[]byte]()
 )
 
 type Model = schema.Model

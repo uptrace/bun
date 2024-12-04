@@ -44,10 +44,10 @@ const (
 )
 
 var (
-	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
-	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
-	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
-	nullStringType     = reflect.TypeOf((*sql.NullString)(nil)).Elem()
+	ipType             = reflect.TypeFor[net.IP]()
+	ipNetType          = reflect.TypeFor[net.IPNet]()
+	jsonRawMessageType = reflect.TypeFor[json.RawMessage]()
+	nullStringType     = reflect.TypeFor[sql.NullString]()
 )
 
 func (d *Dialect) DefaultVarcharLen() int {
