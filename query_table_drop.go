@@ -20,8 +20,7 @@ var _ Query = (*DropTableQuery)(nil)
 func NewDropTableQuery(db *DB) *DropTableQuery {
 	q := &DropTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	return q
