@@ -15,9 +15,10 @@ type MergeQuery struct {
 	baseQuery
 	returningQuery
 
-	using schema.QueryWithArgs
-	on    schema.QueryWithArgs
-	when  []schema.QueryAppender
+	using   schema.QueryWithArgs
+	on      schema.QueryWithArgs
+	when    []schema.QueryAppender
+	comment string
 }
 
 var _ Query = (*MergeQuery)(nil)
@@ -150,6 +151,14 @@ func (q *MergeQuery) When(expr string, args ...interface{}) *MergeQuery {
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *MergeQuery) Comment(comment string) *MergeQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *MergeQuery) Operation() string {
 	return "MERGE"
 }
@@ -158,6 +167,8 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	fmter = formatterWithModel(fmter, q)
 

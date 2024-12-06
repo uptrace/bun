@@ -1,0 +1,1 @@
+/* test */ ALTER TABLE "models" DROP COLUMN "column_name"

@@ -1,0 +1,1 @@
+/* test */ UPDATE `models` AS `model` SET name = 'new-name' WHERE (id = 1)

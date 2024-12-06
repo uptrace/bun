@@ -1,0 +1,1 @@
+/* test */ WITH "_data" AS (SELECT * FROM (VALUES (NULL, N'A', N'world'), (NULL, N'B', N'test')) AS t ("id", "name", "value")) MERGE "models" AS "model" USING _data ON "model".name = _data.name WHEN MATCHED THEN UPDATE SET value = _data.value WHEN NOT MATCHED THEN INSERT ("name", "value") VALUES (_data.name, _data.value) OUTPUT $action;

@@ -23,6 +23,7 @@ type UpdateQuery struct {
 
 	joins    []joinQuery
 	omitZero bool
+	comment  string
 }
 
 var _ Query = (*UpdateQuery)(nil)
@@ -243,6 +244,14 @@ func (q *UpdateQuery) Returning(query string, args ...interface{}) *UpdateQuery 
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *UpdateQuery) Comment(comment string) *UpdateQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *UpdateQuery) Operation() string {
 	return "UPDATE"
 }
@@ -251,6 +260,8 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	fmter = formatterWithModel(fmter, q)
 
