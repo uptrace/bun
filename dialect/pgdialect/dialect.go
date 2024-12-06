@@ -3,7 +3,6 @@ package pgdialect
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/uptrace/bun"
@@ -126,14 +125,6 @@ func (d *Dialect) onField(field *schema.Field) {
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'
-}
-
-func (d *Dialect) AppendUint32(b []byte, n uint32) []byte {
-	return strconv.AppendInt(b, int64(int32(n)), 10)
-}
-
-func (d *Dialect) AppendUint64(b []byte, n uint64) []byte {
-	return strconv.AppendInt(b, int64(n), 10)
 }
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
