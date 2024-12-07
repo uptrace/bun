@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	defaultTable      = "bun_migrations"
-	defaultLocksTable = "bun_migration_locks"
+	DefaultTable      = "bun_migrations"
+	DefaultLocksTable = "bun_migration_locks"
 )
 
 type MigratorOption func(m *Migrator)
@@ -59,8 +59,8 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 
 		ms: migrations.ms,
 
-		table:      defaultTable,
-		locksTable: defaultLocksTable,
+		table:      DefaultTable,
+		locksTable: DefaultLocksTable,
 	}
 	for _, opt := range opts {
 		opt(m)
