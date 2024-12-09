@@ -1,0 +1,1 @@
+/* test */ CREATE UNIQUE INDEX `index_name` ON `models` (`column_name`)

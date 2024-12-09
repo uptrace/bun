@@ -1,0 +1,1 @@
+/* test */ CREATE TABLE `models` (`id` BIGINT NOT NULL AUTO_INCREMENT, `str` VARCHAR(255), PRIMARY KEY (`id`))

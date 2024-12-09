@@ -1,0 +1,1 @@
+/* test */ WITH "_data" ("id", "name", "value") AS (VALUES (NULL::BIGINT, 'A'::VARCHAR, 'world'::VARCHAR), (NULL::BIGINT, 'B'::VARCHAR, 'test'::VARCHAR)) MERGE INTO "models" AS "model" USING _data ON "model".name = _data.name WHEN MATCHED THEN UPDATE SET value = _data.value WHEN NOT MATCHED THEN INSERT ("id", "name", "value") VALUES (DEFAULT, _data.name, _data.value);
