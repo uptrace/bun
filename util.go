@@ -76,6 +76,12 @@ func appendComment(b []byte, name string) []byte {
 	if name == "" {
 		return b
 	}
+	name = strings.Map(func(r rune) rune {
+		if r == '\x00' {
+			return -1
+		}
+		return r
+	}, name)
 	name = strings.ReplaceAll(name, `/*`, `/\*`)
 	name = strings.ReplaceAll(name, `*/`, `*\/`)
 	return append(b, fmt.Sprintf("/* %s */ ", name)...)

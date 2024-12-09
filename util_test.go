@@ -38,4 +38,12 @@ func Test_appendComment(t *testing.T) {
 		s := appendComment(res, c)
 		require.Equal(t, "/* /\\* comment *\\/ */ ", string(s))
 	})
+
+	t.Run("zero bytes", func(t *testing.T) {
+		var res []byte
+		c := string([]byte{'*', 0, 0, 0, 0, 0, '/'})
+
+		s := appendComment(res, c)
+		require.Equal(t, "/* *\\/ */ ", string(s))
+	})
 }
