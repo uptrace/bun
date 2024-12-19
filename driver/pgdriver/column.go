@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/uptrace/bun/internal"
 )
 
 const (
@@ -84,7 +86,7 @@ func readIntCol(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseInt(bytesToString(tmp), 10, bitSize)
+	return strconv.ParseInt(internal.String(tmp), 10, bitSize)
 }
 
 func readFloatCol(rd *reader, n int, bitSize int) (interface{}, error) {
@@ -97,7 +99,7 @@ func readFloatCol(rd *reader, n int, bitSize int) (interface{}, error) {
 		return 0, err
 	}
 
-	return strconv.ParseFloat(bytesToString(tmp), bitSize)
+	return strconv.ParseFloat(internal.String(tmp), bitSize)
 }
 
 func readStringCol(rd *reader, n int) (interface{}, error) {
@@ -111,7 +113,7 @@ func readStringCol(rd *reader, n int) (interface{}, error) {
 		return nil, err
 	}
 
-	return bytesToString(b), nil
+	return internal.String(b), nil
 }
 
 func readBytesCol(rd *reader, n int) (interface{}, error) {
@@ -146,7 +148,7 @@ func readTimeCol(rd *reader, n int) (interface{}, error) {
 		return time.Time{}, err
 	}
 
-	tm, err := ParseTime(bytesToString(tmp))
+	tm, err := ParseTime(internal.String(tmp))
 	if err != nil {
 		return time.Time{}, err
 	}

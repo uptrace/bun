@@ -16,6 +16,7 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 )
@@ -169,7 +170,7 @@ func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 func unformattedQuery(event *bun.QueryEvent) string {
 	if event.IQuery != nil {
 		if b, err := event.IQuery.AppendQuery(schema.NewNopFormatter(), nil); err == nil {
-			return bytesToString(b)
+			return internal.String(b)
 		}
 	}
 	return string(event.QueryTemplate)
