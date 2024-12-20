@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/uptrace/bun/internal"
 )
 
 func init() {
@@ -515,7 +517,7 @@ func parseResult(b []byte) (driver.RowsAffected, error) {
 	}
 
 	b = b[i+1 : len(b)-1]
-	affected, err := strconv.ParseUint(bytesToString(b), 10, 64)
+	affected, err := strconv.ParseUint(internal.String(b), 10, 64)
 	if err != nil {
 		return 0, nil
 	}
