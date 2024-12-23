@@ -14,6 +14,7 @@ type ValuesQuery struct {
 	customValueQuery
 
 	withOrder bool
+	comment   string
 }
 
 var (
@@ -61,6 +62,12 @@ func (q *ValuesQuery) Value(column string, expr string, args ...interface{}) *Va
 
 func (q *ValuesQuery) WithOrder() *ValuesQuery {
 	q.withOrder = true
+	return q
+}
+
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *ValuesQuery) Comment(comment string) *ValuesQuery {
+	q.comment = comment
 	return q
 }
 
@@ -120,6 +127,8 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.model == nil {
 		return nil, errNilModel
 	}
+
+	b = appendComment(b, q.comment)
 
 	fmter = formatterWithModel(fmter, q)
 

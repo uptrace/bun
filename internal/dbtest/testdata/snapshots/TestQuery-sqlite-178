@@ -1,0 +1,1 @@
+/* test */ INSERT INTO "models" ("str", "column_name") VALUES ('', value) RETURNING "id"

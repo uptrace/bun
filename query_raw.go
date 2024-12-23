@@ -10,8 +10,9 @@ import (
 type RawQuery struct {
 	baseQuery
 
-	query string
-	args  []interface{}
+	query   string
+	args    []interface{}
+	comment string
 }
 
 // Deprecated: Use NewRaw instead. When add it to IDB, it conflicts with the sql.Conn#Raw
@@ -56,6 +57,12 @@ func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	return err
 }
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *RawQuery) Comment(comment string) *RawQuery {
+	q.comment = comment
+	return q
+}
+
 func (q *RawQuery) scanOrExec(
 	ctx context.Context, dest []interface{}, hasDest bool,
 ) (sql.Result, error) {
@@ -90,6 +97,8 @@ func (q *RawQuery) scanOrExec(
 }
 
 func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+	b = appendComment(b, q.comment)
+
 	return fmter.AppendQuery(b, q.query, q.args...), nil
 }
 
