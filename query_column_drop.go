@@ -18,8 +18,7 @@ var _ Query = (*DropColumnQuery)(nil)
 func NewDropColumnQuery(db *DB) *DropColumnQuery {
 	q := &DropColumnQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	return q
