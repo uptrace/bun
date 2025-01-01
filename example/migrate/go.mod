@@ -11,15 +11,15 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.2.6
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.6
-	github.com/uptrace/bun/driver/sqliteshim v1.2.6
-	github.com/uptrace/bun/extra/bundebug v1.2.6
+	github.com/uptrace/bun v1.2.7
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.7
+	github.com/uptrace/bun/driver/sqliteshim v1.2.7
+	github.com/uptrace/bun/extra/bundebug v1.2.7
 	github.com/urfave/cli/v2 v2.27.5
 )
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -36,13 +36,13 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	modernc.org/gc/v3 v3.0.0-20241004144649-1aea3fae8852 // indirect
-	modernc.org/libc v1.61.2 // indirect
-	modernc.org/mathutil v1.6.0 // indirect
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	modernc.org/gc/v3 v3.0.0-20241223112719-96e2e1e4408d // indirect
+	modernc.org/libc v1.61.6 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.34.1 // indirect
-	modernc.org/strutil v1.2.0 // indirect
+	modernc.org/sqlite v1.34.4 // indirect
+	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
