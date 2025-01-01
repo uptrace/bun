@@ -1,3 +1,25 @@
+## [1.2.7](https://github.com/uptrace/bun/compare/v1.2.6...v1.2.7) (2025-01-01)
+
+
+### Bug Fixes
+
+* do not create new migrations if nothing to migrate ([5cc961d](https://github.com/uptrace/bun/commit/5cc961d6cc461ad3534728fc4d3cae12bf8b736e))
+* has many relation with driver.Valuer ([cb8c42c](https://github.com/uptrace/bun/commit/cb8c42cd3f65d95865c76a594abad815eea1df3c))
+* improve range type to support driver.Valuer and sql.Scanner ([856e12b](https://github.com/uptrace/bun/commit/856e12b0d37275a6aa247370f6a8231fd89ca3e7))
+* pass correct 'transactional' parameter ([ebdef1b](https://github.com/uptrace/bun/commit/ebdef1b0e9d33a5ca475ab4c2ec2fb44d11d4595))
+* **pgdialect:** remove unsigned integer conversion ([ab3c679](https://github.com/uptrace/bun/commit/ab3c679d529dd20d44e789dc6f1d89f9510bde0b)), closes [uptrace/bun#624](https://github.com/uptrace/bun/issues/624)
+* remove unused param on table.go and tables.go: canAddr ([d563e2d](https://github.com/uptrace/bun/commit/d563e2dbe95caeb0e00ad1b3e82283431747fe7b))
+* replace the link to docs repo in CONTRIBUTING.md ([e120096](https://github.com/uptrace/bun/commit/e12009662ae1ddefcc1337cc5e32e73d77c7def0))
+* trim surrounding '' in string literal in DEFAULT clause ([a0dff72](https://github.com/uptrace/bun/commit/a0dff72b6ab0ca24d00c96c923046200dd6112ed))
+
+
+### Features
+
+* add an ordered map to remove unnecessary dependencies ([9fea143](https://github.com/uptrace/bun/commit/9fea1437d8344d836670e802fd12d3476e8cad86))
+* support disable dialect's feature ([5343bd7](https://github.com/uptrace/bun/commit/5343bd7fc4ceda866a7d607388ebb7a89f7f5823))
+
+
+
 ## [1.2.6](https://github.com/uptrace/bun/compare/v1.2.5...v1.2.6) (2024-11-20)
 
 
