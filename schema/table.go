@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +25,13 @@ const (
 var (
 	baseModelType      = reflect.TypeFor[BaseModel]()
 	tableNameInflector = inflection.Plural
+
+	// https://github.com/uptrace/bun/issues/1095
+	// < v1.2, all fields follow the order corresponding to the struct
+	// >= v1.2, < v1.2.8, fields of nested structs have been moved to the end.
+	// >= v1.2.8, The default behavior remains the same as initially,
+	// but we allow users to control this behavior through this parameter.
+	DisableSortFieldsByStruct = false
 )
 
 type BaseModel struct{}
@@ -250,6 +258,26 @@ func (t *Table) processFields(typ reflect.Type) {
 			t.addUnique(subfield, embfield.prefix, v)
 		}
 	}
+
+	if len(embedded) > 0 && !DisableSortFieldsByStruct {
+		sortFieldsByStruct(t.allFields)
+		sortFieldsByStruct(t.Fields)
+		sortFieldsByStruct(t.PKs)
+		sortFieldsByStruct(t.DataFields)
+	}
+}
+
+func sortFieldsByStruct(fields []*Field) {
+	sort.Slice(fields, func(i, j int) bool {
+		left, right := fields[i], fields[j]
+		for k := 0; k < len(left.Index) && k < len(right.Index); k++ {
+			if left.Index[k] != right.Index[k] {
+				return left.Index[k] < right.Index[k]
+			}
+		}
+		// NOTE: should not reach
+		return true
+	})
 }
 
 func (t *Table) addUnique(field *Field, prefix string, tagOptions []string) {
