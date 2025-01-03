@@ -838,6 +838,14 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...interface{}) (sql.
 	if err != nil {
 		return nil, err
 	}
+	if len(dest) > 0 && q.tableModel != nil && len(q.tableModel.getJoins()) > 0 {
+		for _, j := range q.tableModel.getJoins() {
+			switch j.Relation.Type {
+			case schema.HasManyRelation, schema.ManyToManyRelation:
+				return nil, fmt.Errorf("When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.")
+			}
+		}
+	}
 
 	if q.table != nil {
 		if err := q.beforeSelectHook(ctx); err != nil {
