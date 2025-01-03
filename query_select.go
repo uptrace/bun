@@ -381,6 +381,43 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
+	q.applyToRelation(join, apply...)
+
+	return q
+}
+
+type RelationOpts struct {
+	// Apply applies additional options to the relation.
+	Apply func(*SelectQuery) *SelectQuery
+	// AdditionalJoinOnConditions adds additional conditions to the JOIN ON clause.
+	AdditionalJoinOnConditions []schema.QueryWithArgs
+}
+
+// RelationWithOpts adds a relation to the query with additional options.
+func (q *SelectQuery) RelationWithOpts(name string, opts RelationOpts) *SelectQuery {
+	if q.tableModel == nil {
+		q.setErr(errNilModel)
+		return q
+	}
+
+	join := q.tableModel.join(name)
+	if join == nil {
+		q.setErr(fmt.Errorf("%s does not have relation=%q", q.table, name))
+		return q
+	}
+
+	if opts.Apply != nil {
+		q.applyToRelation(join, opts.Apply)
+	}
+
+	if len(opts.AdditionalJoinOnConditions) > 0 {
+		join.additionalJoinOnConditions = opts.AdditionalJoinOnConditions
+	}
+
+	return q
+}
+
+func (q *SelectQuery) applyToRelation(join *relationJoin, apply ...func(*SelectQuery) *SelectQuery) {
 	var apply1, apply2 func(*SelectQuery) *SelectQuery
 
 	if len(join.Relation.Condition) > 0 {
@@ -407,8 +444,6 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 
 		return q
 	}
-
-	return q
 }
 
 func (q *SelectQuery) forEachInlineRelJoin(fn func(*relationJoin) error) error {
