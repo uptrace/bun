@@ -1,0 +1,1 @@
+/* test */ TRUNCATE TABLE "models" RESTART IDENTITY

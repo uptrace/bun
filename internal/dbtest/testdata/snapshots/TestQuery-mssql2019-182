@@ -1,0 +1,1 @@
+/* test */ CREATE TABLE "models" ("id" BIGINT NOT NULL IDENTITY, "str" VARCHAR(255), PRIMARY KEY ("id"))

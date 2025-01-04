@@ -32,6 +32,7 @@ type CreateTableQuery struct {
 	fks         []schema.QueryWithArgs
 	partitionBy schema.QueryWithArgs
 	tablespace  schema.QueryWithArgs
+	comment     string
 }
 
 var _ Query = (*CreateTableQuery)(nil)
@@ -129,6 +130,14 @@ func (q *CreateTableQuery) WithForeignKeys() *CreateTableQuery {
 	return q
 }
 
+//------------------------------------------------------------------------------
+
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *CreateTableQuery) Comment(comment string) *CreateTableQuery {
+	q.comment = comment
+	return q
+}
+
 // ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Operation() string {
@@ -139,6 +148,9 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
+
 	if q.table == nil {
 		return nil, errNilModel
 	}

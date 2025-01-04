@@ -31,7 +31,8 @@ type SelectQuery struct {
 	having     []schema.QueryWithArgs
 	selFor     schema.QueryWithArgs
 
-	union []union
+	union   []union
+	comment string
 }
 
 var _ Query = (*SelectQuery)(nil)
@@ -495,11 +496,21 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *SelectQuery) Comment(comment string) *SelectQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *SelectQuery) Operation() string {
 	return "SELECT"
 }
 
 func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	b = appendComment(b, q.comment)
+
 	return q.appendQuery(fmter, b, false)
 }
 

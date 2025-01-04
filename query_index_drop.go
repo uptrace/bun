@@ -15,7 +15,8 @@ type DropIndexQuery struct {
 	concurrently bool
 	ifExists     bool
 
-	index schema.QueryWithArgs
+	index   schema.QueryWithArgs
+	comment string
 }
 
 var _ Query = (*DropIndexQuery)(nil)
@@ -74,6 +75,14 @@ func (q *DropIndexQuery) Index(query string, args ...interface{}) *DropIndexQuer
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *DropIndexQuery) Comment(comment string) *DropIndexQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *DropIndexQuery) Operation() string {
 	return "DROP INDEX"
 }
@@ -82,6 +91,8 @@ func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	b = append(b, "DROP INDEX "...)
 

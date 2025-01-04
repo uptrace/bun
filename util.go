@@ -1,6 +1,10 @@
 package bun
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 func indirect(v reflect.Value) reflect.Value {
 	switch v.Kind() {
@@ -65,4 +69,20 @@ func sliceElemType(v reflect.Value) reflect.Type {
 		return indirect(v.Index(0).Elem()).Type()
 	}
 	return indirectType(elemType)
+}
+
+// appendComment adds comment in the header of the query into buffer
+func appendComment(b []byte, name string) []byte {
+	if name == "" {
+		return b
+	}
+	name = strings.Map(func(r rune) rune {
+		if r == '\x00' {
+			return -1
+		}
+		return r
+	}, name)
+	name = strings.ReplaceAll(name, `/*`, `/\*`)
+	name = strings.ReplaceAll(name, `*/`, `*\/`)
+	return append(b, fmt.Sprintf("/* %s */ ", name)...)
 }
