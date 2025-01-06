@@ -103,7 +103,7 @@ func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
 			if err := field.Scan(dest, src); err != nil {
 				return err
 			}
-			m.structKey = append(m.structKey, dest.Interface())
+			m.structKey = append(m.structKey, indirectFieldValue(dest))
 			break
 		}
 	}
