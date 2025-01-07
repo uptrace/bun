@@ -39,6 +39,18 @@ func WithWriter(w io.Writer) Option {
 	}
 }
 
+// WithQueryConvertFunc sets a custom function to transform query strings
+// before they are logged.
+//
+// This function allows users to define how query strings should be modified
+// for logging purposes. For example, it can be used to truncate long queries,
+// mask sensitive information, or format queries for better readability.
+func WithQueryConvertFunc(queryConvertFunc func(query string) string) Option {
+	return func(h *QueryHook) {
+		h.queryConvertFunc = queryConvertFunc
+	}
+}
+
 // FromEnv configures the hook using the environment variable value.
 // For example, WithEnv("BUNDEBUG"):
 //   - BUNDEBUG=0 - disables the hook.
@@ -62,7 +74,11 @@ func FromEnv(keys ...string) Option {
 type QueryHook struct {
 	enabled bool
 	verbose bool
-	writer  io.Writer
+	// queryConvertFunc is an optional function that transforms the query string
+	// before it is logged. For example, this can be used to truncate long queries,
+	// mask sensitive data, or apply custom formatting.
+	queryConvertFunc func(query string) string
+	writer           io.Writer
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -99,12 +115,17 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	now := time.Now()
 	dur := now.Sub(event.StartTime)
 
+	query := event.Query
+	if h.queryConvertFunc != nil {
+		query = h.queryConvertFunc(query)
+	}
+
 	args := []interface{}{
 		"[bun]",
 		now.Format(" 15:04:05.000 "),
 		formatOperation(event),
 		fmt.Sprintf(" %10s ", dur.Round(time.Microsecond)),
-		event.Query,
+		query,
 	}
 
 	if event.Err != nil {
