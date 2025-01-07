@@ -537,6 +537,13 @@ func (q *SelectQuery) appendQuery(
 		return nil, err
 	}
 
+	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
+		j.applyTo(q)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
 	b = append(b, "SELECT "...)
 
 	if len(q.distinctOn) > 0 {
@@ -730,8 +737,6 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 func (q *SelectQuery) appendInlineRelColumns(
 	fmter schema.Formatter, b []byte, join *relationJoin,
 ) (_ []byte, err error) {
-	join.applyTo(q)
-
 	if join.columns != nil {
 		table := join.JoinModel.Table()
 		for i, col := range join.columns {
