@@ -128,7 +128,7 @@ func (q *DeleteQuery) WhereAllWithDeleted() *DeleteQuery {
 
 func (q *DeleteQuery) Order(orders ...string) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = errors.New("bun: order is not supported for current dialect")
+		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
 		return q
 	}
 	q.addOrder(orders...)
@@ -137,7 +137,7 @@ func (q *DeleteQuery) Order(orders ...string) *DeleteQuery {
 
 func (q *DeleteQuery) OrderExpr(query string, args ...interface{}) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = errors.New("bun: order is not supported for current dialect")
+		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
 		return q
 	}
 	q.addOrderExpr(query, args...)
@@ -152,7 +152,7 @@ func (q *DeleteQuery) ForceDelete() *DeleteQuery {
 // ------------------------------------------------------------------------------
 func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = errors.New("bun: limit is not supported for current dialect")
+		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
 		return q
 	}
 	q.setLimit(n)
@@ -166,7 +166,7 @@ func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteReturning) {
-		q.err = errors.New("bun: returning is not supported for current dialect")
+		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
 		return q
 	}
 
