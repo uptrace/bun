@@ -94,7 +94,7 @@ func (m *hasManyModel) Scan(src interface{}) error {
 
 	for i, f := range m.rel.JoinPKs {
 		if f.Name == column {
-			m.structKey[i] = indirectFieldValue(field.Value(m.strct))
+			m.structKey[i] = indirectAsKey(field.Value(m.strct))
 			break
 		}
 	}
@@ -144,19 +144,27 @@ func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]
 
 func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []interface{} {
 	for _, f := range fields {
-		key = append(key, indirectFieldValue(f.Value(strct)))
+		key = append(key, indirectAsKey(f.Value(strct)))
 	}
 	return key
 }
 
-// indirectFieldValue return the field value dereferencing the pointer if necessary.
+// indirectAsKey return the field value dereferencing the pointer if necessary.
 // The value is then used as a map key.
-func indirectFieldValue(field reflect.Value) interface{} {
+func indirectAsKey(field reflect.Value) interface{} {
 	if field.Kind() != reflect.Ptr {
 		i := field.Interface()
 		if valuer, ok := i.(driver.Valuer); ok {
 			if v, err := valuer.Value(); err == nil {
-				return v
+				switch reflect.TypeOf(v).Kind() {
+				case reflect.Array, reflect.Chan, reflect.Func,
+					reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+					// NOTE #1107, these types cannot be used as map key,
+					// let us use original logic.
+					return i
+				default:
+					return v
+				}
 			}
 		}
 		return i
