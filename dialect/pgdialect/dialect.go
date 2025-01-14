@@ -53,7 +53,8 @@ func New(opts ...DialectOption) *Dialect {
 		feature.SelectExists |
 		feature.GeneratedIdentity |
 		feature.CompositeIn |
-		feature.DeleteReturning
+		feature.DeleteReturning |
+		feature.AlterColumnExists
 
 	for _, opt := range opts {
 		opt(d)
