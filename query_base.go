@@ -118,23 +118,12 @@ func (q *baseQuery) resolveConn(query Query) IConn {
 	if q.conn != nil {
 		return q.conn
 	}
-	if len(q.db.replicas) == 0 || !isReadOnlyQuery(query) {
-		return q.db.DB
-	}
-	return q.db.healthyReplica()
-}
-
-func isReadOnlyQuery(query Query) bool {
-	sel, ok := query.(*SelectQuery)
-	if !ok {
-		return false
-	}
-	for _, el := range sel.with {
-		if !isReadOnlyQuery(el.query) {
-			return false
+	if q.db.resolver != nil {
+		if conn := q.db.resolver.ResolveConn(query); conn != nil {
+			return conn
 		}
 	}
-	return true
+	return q.db.DB
 }
 
 func (q *baseQuery) GetModel() Model {
