@@ -771,9 +771,9 @@ func NewReadWriteConnResolver(opts ...ReadWriteConnResolverOption) *ReadWriteCon
 
 type ReadWriteConnResolverOption func(r *ReadWriteConnResolver)
 
-func WithReadOnlyReplica(db *sql.DB) ReadWriteConnResolverOption {
+func WithReadOnlyReplica(dbs ...*sql.DB) ReadWriteConnResolverOption {
 	return func(r *ReadWriteConnResolver) {
-		r.replicas = append(r.replicas, db)
+		r.replicas = append(r.replicas, dbs...)
 	}
 }
 
