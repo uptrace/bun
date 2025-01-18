@@ -15,23 +15,10 @@ type RawQuery struct {
 	comment string
 }
 
-// Deprecated: Use NewRaw instead. When add it to IDB, it conflicts with the sql.Conn#Raw
-func (db *DB) Raw(query string, args ...interface{}) *RawQuery {
-	return &RawQuery{
-		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
-		},
-		query: query,
-		args:  args,
-	}
-}
-
 func NewRawQuery(db *DB, query string, args ...interface{}) *RawQuery {
 	return &RawQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 		query: query,
 		args:  args,

@@ -40,8 +40,7 @@ var _ Query = (*CreateTableQuery)(nil)
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 		varchar: db.Dialect().DefaultVarcharLen(),
 	}

@@ -1845,3 +1845,35 @@ func mustDropTableOnCleanup(tb testing.TB, ctx context.Context, db *bun.DB, mode
 		}
 	})
 }
+
+func TestConnResolver(t *testing.T) {
+	dsn := os.Getenv("PG")
+	if dsn == "" {
+		dsn = "postgres://postgres:postgres@localhost:5432/test?sslmode=disable"
+	}
+
+	rwdb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	t.Cleanup(func() {
+		require.NoError(t, rwdb.Close())
+	})
+
+	rodb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
+	t.Cleanup(func() {
+		require.NoError(t, rodb.Close())
+	})
+
+	resolver := bun.NewReadWriteConnResolver(bun.WithReadOnlyReplica(rodb))
+
+	db := bun.NewDB(rwdb, pgdialect.New(), bun.WithConnResolver(resolver))
+	db.AddQueryHook(bundebug.NewQueryHook(
+		bundebug.WithEnabled(false),
+		bundebug.FromEnv(),
+	))
+
+	var num int
+	err := db.NewSelect().ColumnExpr("1").Scan(ctx, &num)
+	require.NoError(t, err)
+	require.Equal(t, 1, num)
+	require.GreaterOrEqual(t, rodb.Stats().OpenConnections, 1)
+	require.Equal(t, 0, rwdb.Stats().OpenConnections)
+}

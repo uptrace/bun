@@ -25,8 +25,7 @@ func NewDeleteQuery(db *DB) *DeleteQuery {
 	q := &DeleteQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
@@ -58,12 +57,12 @@ func (q *DeleteQuery) Apply(fns ...func(*DeleteQuery) *DeleteQuery) *DeleteQuery
 	return q
 }
 
-func (q *DeleteQuery) With(name string, query schema.QueryAppender) *DeleteQuery {
+func (q *DeleteQuery) With(name string, query Query) *DeleteQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *DeleteQuery) WithRecursive(name string, query schema.QueryAppender) *DeleteQuery {
+func (q *DeleteQuery) WithRecursive(name string, query Query) *DeleteQuery {
 	q.addWith(name, query, true)
 	return q
 }

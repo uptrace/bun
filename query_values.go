@@ -25,8 +25,7 @@ var (
 func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	q.setModel(model)
