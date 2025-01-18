@@ -27,6 +27,14 @@ type DBStats struct {
 
 type DBOption func(db *DB)
 
+func WithOptions(opts ...DBOption) DBOption {
+	return func(db *DB) {
+		for _, opt := range opts {
+			opt(db)
+		}
+	}
+}
+
 func WithDiscardUnknownColumns() DBOption {
 	return func(db *DB) {
 		db.flags = db.flags.Set(discardUnknownColumns)
