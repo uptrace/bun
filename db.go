@@ -762,8 +762,10 @@ func NewReadWriteConnResolver(opts ...ReadWriteConnResolverOption) *ReadWriteCon
 	}
 
 	if len(r.replicas) > 0 {
+		r.healthyReplicas.Store(&r.replicas)
 		go r.monitor()
 	}
+
 	return r
 }
 

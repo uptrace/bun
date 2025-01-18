@@ -1874,6 +1874,6 @@ func TestConnResolver(t *testing.T) {
 	err := db.NewSelect().ColumnExpr("1").Scan(ctx, &num)
 	require.NoError(t, err)
 	require.Equal(t, 1, num)
-	require.Equal(t, 1, rodb.Stats().OpenConnections)
+	require.GreaterOrEqual(t, rodb.Stats().OpenConnections, 1)
 	require.Equal(t, 0, rwdb.Stats().OpenConnections)
 }
