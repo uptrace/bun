@@ -737,11 +737,16 @@ func (db *DB) makeQueryBytes() []byte {
 
 //------------------------------------------------------------------------------
 
+// ConnResolver enables routing queries to multiple databases.
 type ConnResolver interface {
 	ResolveConn(query Query) IConn
 	Close() error
 }
 
+// TODO:
+//   - make monitoring interval configurable
+//   - make ping timeout configutable
+//   - allow adding read/write replicas for multi-master replication
 type ReadWriteConnResolver struct {
 	replicas        []*sql.DB // read-only replicas
 	healthyReplicas atomic.Pointer[[]*sql.DB]
