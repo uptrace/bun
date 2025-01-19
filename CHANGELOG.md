@@ -1,3 +1,44 @@
+## [1.2.8](https://github.com/uptrace/bun/compare/v1.2.7...v1.2.8) (2025-01-06)
+
+
+### Bug Fixes
+
+* comment string zero bytes filtering ([34dfd68](https://github.com/uptrace/bun/commit/34dfd684e371c24b9f59e9b13ef57660931f0bde))
+* get m2m table's structKey with driver.Valuer ([f107314](https://github.com/uptrace/bun/commit/f1073147dc73d01dcf8a6ee9252d354ff06a1062)), closes [#1100](https://github.com/uptrace/bun/issues/1100)
+* return error when use dest with has-many/many-to-many ([8296774](https://github.com/uptrace/bun/commit/829677486b502e6d5d2ae37814488ae9f2c7386e)), closes [#606](https://github.com/uptrace/bun/issues/606)
+* support scan float32 to float32/float64 ([a52e733](https://github.com/uptrace/bun/commit/a52e7339a93f84468878dcaffc42536faa44efae)), closes [#1087](https://github.com/uptrace/bun/issues/1087)
+
+
+### Features
+
+* add RelationWithOpts method to SelectQuery ([dd3ef52](https://github.com/uptrace/bun/commit/dd3ef522c8a9c656958b73ee5d546854fb7c6edf))
+* enhance debugging by adding query comments in headers ([1376d18](https://github.com/uptrace/bun/commit/1376d1870bfe3d89e3630203787f1e87c503d5df))
+* sort fields by struct ([5edb672](https://github.com/uptrace/bun/commit/5edb672e320be9b210f06d25c4f4b9e761c1c526)), closes [#1095](https://github.com/uptrace/bun/issues/1095)
+
+
+
+## [1.2.7](https://github.com/uptrace/bun/compare/v1.2.6...v1.2.7) (2025-01-01)
+
+
+### Bug Fixes
+
+* do not create new migrations if nothing to migrate ([5cc961d](https://github.com/uptrace/bun/commit/5cc961d6cc461ad3534728fc4d3cae12bf8b736e))
+* has many relation with driver.Valuer ([cb8c42c](https://github.com/uptrace/bun/commit/cb8c42cd3f65d95865c76a594abad815eea1df3c))
+* improve range type to support driver.Valuer and sql.Scanner ([856e12b](https://github.com/uptrace/bun/commit/856e12b0d37275a6aa247370f6a8231fd89ca3e7))
+* pass correct 'transactional' parameter ([ebdef1b](https://github.com/uptrace/bun/commit/ebdef1b0e9d33a5ca475ab4c2ec2fb44d11d4595))
+* **pgdialect:** remove unsigned integer conversion ([ab3c679](https://github.com/uptrace/bun/commit/ab3c679d529dd20d44e789dc6f1d89f9510bde0b)), closes [uptrace/bun#624](https://github.com/uptrace/bun/issues/624)
+* remove unused param on table.go and tables.go: canAddr ([d563e2d](https://github.com/uptrace/bun/commit/d563e2dbe95caeb0e00ad1b3e82283431747fe7b))
+* replace the link to docs repo in CONTRIBUTING.md ([e120096](https://github.com/uptrace/bun/commit/e12009662ae1ddefcc1337cc5e32e73d77c7def0))
+* trim surrounding '' in string literal in DEFAULT clause ([a0dff72](https://github.com/uptrace/bun/commit/a0dff72b6ab0ca24d00c96c923046200dd6112ed))
+
+
+### Features
+
+* add an ordered map to remove unnecessary dependencies ([9fea143](https://github.com/uptrace/bun/commit/9fea1437d8344d836670e802fd12d3476e8cad86))
+* support disable dialect's feature ([5343bd7](https://github.com/uptrace/bun/commit/5343bd7fc4ceda866a7d607388ebb7a89f7f5823))
+
+
+
 ## [1.2.6](https://github.com/uptrace/bun/compare/v1.2.5...v1.2.6) (2024-11-20)
 
 

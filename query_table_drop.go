@@ -13,6 +13,7 @@ type DropTableQuery struct {
 	cascadeQuery
 
 	ifExists bool
+	comment  string
 }
 
 var _ Query = (*DropTableQuery)(nil)
@@ -79,6 +80,14 @@ func (q *DropTableQuery) Restrict() *DropTableQuery {
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *DropTableQuery) Comment(comment string) *DropTableQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *DropTableQuery) Operation() string {
 	return "DROP TABLE"
 }
@@ -87,6 +96,8 @@ func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	b = append(b, "DROP TABLE "...)
 	if q.ifExists {

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/uptrace/bun/internal"
 )
 
 func formatQueryArgs(query string, args []interface{}) (string, error) {
@@ -56,7 +58,7 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 		}
 	}
 
-	return bytesToString(dst), nil
+	return internal.String(dst), nil
 }
 
 func appendArg(b []byte, v interface{}) ([]byte, error) {
@@ -137,7 +139,7 @@ type parser struct {
 
 func newParser(s string) *parser {
 	return &parser{
-		b: stringToBytes(s),
+		b: internal.Bytes(s),
 	}
 }
 
@@ -166,7 +168,7 @@ func (p *parser) Number() (int, bool) {
 	p.i = end
 	b := p.b[start:end]
 
-	n, err := strconv.Atoi(bytesToString(b))
+	n, err := strconv.Atoi(internal.String(b))
 	if err != nil {
 		return 0, false
 	}

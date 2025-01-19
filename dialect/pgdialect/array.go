@@ -471,7 +471,7 @@ func decodeIntSlice(src interface{}) ([]int, error) {
 			continue
 		}
 
-		n, err := strconv.Atoi(bytesToString(elem))
+		n, err := strconv.Atoi(internal.String(elem))
 		if err != nil {
 			return nil, err
 		}
@@ -520,7 +520,7 @@ func decodeInt64Slice(src interface{}) ([]int64, error) {
 			continue
 		}
 
-		n, err := strconv.ParseInt(bytesToString(elem), 10, 64)
+		n, err := strconv.ParseInt(internal.String(elem), 10, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -569,7 +569,7 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 			continue
 		}
 
-		n, err := strconv.ParseFloat(bytesToString(elem), 64)
+		n, err := strconv.ParseFloat(internal.String(elem), 64)
 		if err != nil {
 			return nil, err
 		}
@@ -585,7 +585,7 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 func toBytes(src interface{}) ([]byte, error) {
 	switch src := src.(type) {
 	case string:
-		return stringToBytes(src), nil
+		return internal.Bytes(src), nil
 	case []byte:
 		return src, nil
 	default:

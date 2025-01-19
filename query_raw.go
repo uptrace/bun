@@ -10,8 +10,9 @@ import (
 type RawQuery struct {
 	baseQuery
 
-	query string
-	args  []interface{}
+	query   string
+	args    []interface{}
+	comment string
 }
 
 func NewRawQuery(db *DB, query string, args ...interface{}) *RawQuery {
@@ -41,6 +42,12 @@ func (q *RawQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, e
 func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
+}
+
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *RawQuery) Comment(comment string) *RawQuery {
+	q.comment = comment
+	return q
 }
 
 func (q *RawQuery) scanOrExec(
@@ -77,6 +84,8 @@ func (q *RawQuery) scanOrExec(
 }
 
 func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+	b = appendComment(b, q.comment)
+
 	return fmter.AppendQuery(b, q.query, q.args...), nil
 }
 

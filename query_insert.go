@@ -22,6 +22,7 @@ type InsertQuery struct {
 
 	ignore  bool
 	replace bool
+	comment string
 }
 
 var _ Query = (*InsertQuery)(nil)
@@ -163,6 +164,14 @@ func (q *InsertQuery) Replace() *InsertQuery {
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *InsertQuery) Comment(comment string) *InsertQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
 func (q *InsertQuery) Operation() string {
 	return "INSERT"
 }
@@ -171,6 +180,8 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
 
 	fmter = formatterWithModel(fmter, q)
 
