@@ -95,7 +95,9 @@ func (db *DB) String() string {
 }
 
 func (db *DB) Close() error {
-	db.closed.Store(true)
+	if db.closed.Swap(true) {
+		return nil
+	}
 
 	firstErr := db.DB.Close()
 
@@ -786,7 +788,9 @@ func WithReadOnlyReplica(dbs ...*sql.DB) ReadWriteConnResolverOption {
 }
 
 func (r *ReadWriteConnResolver) Close() error {
-	r.closed.Store(true)
+	if r.closed.Swap(true) {
+		return nil
+	}
 
 	var firstErr error
 	for _, db := range r.replicas {
