@@ -837,13 +837,14 @@ func (r *ReadWriteConnResolver) loadHealthyReplicas() []*sql.DB {
 func (r *ReadWriteConnResolver) monitor() {
 	const interval = 5 * time.Second
 	for !r.closed.Load() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-
 		healthy := make([]*sql.DB, 0, len(r.replicas))
 
 		for _, replica := range r.replicas {
-			if err := replica.PingContext(ctx); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			err := replica.PingContext(ctx)
+			cancel()
+
+			if err == nil {
 				healthy = append(healthy, replica)
 			}
 		}
