@@ -95,7 +95,9 @@ func (db *DB) String() string {
 }
 
 func (db *DB) Close() error {
-	db.closed.Store(true)
+	if db.closed.Swap(true) {
+		return nil
+	}
 
 	firstErr := db.DB.Close()
 
