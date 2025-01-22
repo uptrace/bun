@@ -3,6 +3,7 @@ package pgdialect
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/uptrace/bun"
@@ -25,8 +26,9 @@ func init() {
 type Dialect struct {
 	schema.BaseDialect
 
-	tables   *schema.Tables
-	features feature.Feature
+	tables    *schema.Tables
+	features  feature.Feature
+	uintAsInt bool
 }
 
 var _ schema.Dialect = (*Dialect)(nil)
@@ -68,6 +70,12 @@ type DialectOption func(d *Dialect)
 func WithoutFeature(other feature.Feature) DialectOption {
 	return func(d *Dialect) {
 		d.features = d.features.Remove(other)
+	}
+}
+
+func WithAppendUintAsInt(on bool) DialectOption {
+	return func(d *Dialect) {
+		d.uintAsInt = on
 	}
 }
 
@@ -126,6 +134,20 @@ func (d *Dialect) onField(field *schema.Field) {
 
 func (d *Dialect) IdentQuote() byte {
 	return '"'
+}
+
+func (d *Dialect) AppendUint32(b []byte, n uint32) []byte {
+	if d.uintAsInt {
+		return strconv.AppendInt(b, int64(int32(n)), 10)
+	}
+	return strconv.AppendUint(b, uint64(n), 10)
+}
+
+func (d *Dialect) AppendUint64(b []byte, n uint64) []byte {
+	if d.uintAsInt {
+		return strconv.AppendInt(b, int64(n), 10)
+	}
+	return strconv.AppendUint(b, n, 10)
 }
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {

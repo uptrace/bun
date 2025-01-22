@@ -42,7 +42,8 @@ type Config struct {
 	// Timeout for socket writes. If reached, commands fail with a timeout instead of blocking.
 	WriteTimeout time.Duration
 
-	// ResetSessionFunc is called prior to executing a query on a connection that has been used before.
+	// ResetSessionFunc is called prior to executing a query on a connection
+	// that has been used before.
 	ResetSessionFunc func(context.Context, *Conn) error
 }
 
