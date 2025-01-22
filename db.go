@@ -788,7 +788,9 @@ func WithReadOnlyReplica(dbs ...*sql.DB) ReadWriteConnResolverOption {
 }
 
 func (r *ReadWriteConnResolver) Close() error {
-	r.closed.Store(true)
+	if r.closed.Swap(true) {
+		return nil
+	}
 
 	var firstErr error
 	for _, db := range r.replicas {
