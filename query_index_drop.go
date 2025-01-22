@@ -24,8 +24,7 @@ var _ Query = (*DropIndexQuery)(nil)
 func NewDropIndexQuery(db *DB) *DropIndexQuery {
 	q := &DropIndexQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 	}
 	return q

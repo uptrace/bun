@@ -31,8 +31,7 @@ func NewInsertQuery(db *DB) *InsertQuery {
 	q := &InsertQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
@@ -64,12 +63,12 @@ func (q *InsertQuery) Apply(fns ...func(*InsertQuery) *InsertQuery) *InsertQuery
 	return q
 }
 
-func (q *InsertQuery) With(name string, query schema.QueryAppender) *InsertQuery {
+func (q *InsertQuery) With(name string, query Query) *InsertQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *InsertQuery) WithRecursive(name string, query schema.QueryAppender) *InsertQuery {
+func (q *InsertQuery) WithRecursive(name string, query Query) *InsertQuery {
 	q.addWith(name, query, true)
 	return q
 }

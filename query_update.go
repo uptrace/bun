@@ -32,8 +32,7 @@ func NewUpdateQuery(db *DB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
@@ -65,12 +64,12 @@ func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery
 	return q
 }
 
-func (q *UpdateQuery) With(name string, query schema.QueryAppender) *UpdateQuery {
+func (q *UpdateQuery) With(name string, query Query) *UpdateQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *UpdateQuery) WithRecursive(name string, query schema.QueryAppender) *UpdateQuery {
+func (q *UpdateQuery) WithRecursive(name string, query Query) *UpdateQuery {
 	q.addWith(name, query, true)
 	return q
 }
