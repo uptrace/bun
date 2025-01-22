@@ -5,15 +5,16 @@ go 1.22.0
 replace github.com/uptrace/bun => ../..
 
 require (
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.10.0
 	github.com/uptrace/bun v1.2.8
+	go.opentelemetry.io/otel v1.34.0
+	go.opentelemetry.io/otel/trace v1.34.0
 	mellium.im/sasl v0.3.2
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/kr/text v0.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.4.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
