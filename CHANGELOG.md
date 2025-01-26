@@ -1,3 +1,26 @@
+## [1.2.9](https://github.com/uptrace/bun/compare/v1.2.8...v1.2.9) (2025-01-26)
+
+
+### Bug Fixes
+
+* apply join condition to select with count ([e77b9e7](https://github.com/uptrace/bun/commit/e77b9e72fa5ae8e173d506a4e154ba64214c4aff)), closes [#597](https://github.com/uptrace/bun/issues/597)
+* build ([702e525](https://github.com/uptrace/bun/commit/702e525e30ec93b6d4611359518e1008b67744af))
+* individual replica timeout ([9f5e8b1](https://github.com/uptrace/bun/commit/9f5e8b1c46673bd1779bd4309a28db33dcd695bf))
+* test ([dfc4059](https://github.com/uptrace/bun/commit/dfc405901907419d043bb6ced3ad20c131c1b972))
+
+
+### Features
+
+* add feature flag AlterColumnExists ([fc35e12](https://github.com/uptrace/bun/commit/fc35e1222242b3d581f0b7496a9021aadfc50b07)), closes [#704](https://github.com/uptrace/bun/issues/704)
+* add Options ([815e11a](https://github.com/uptrace/bun/commit/815e11a023d2babf65d528a20ddffc7628636e7e))
+* allow to specify read-only replica for SELECTs ([cbbe1e9](https://github.com/uptrace/bun/commit/cbbe1e94fd0c72d1870395a663c8053d7e8c6ace))
+* downgrade to use the field in has-many-relation ([91e0d27](https://github.com/uptrace/bun/commit/91e0d2719a5a20b3208cea0232e2dbcb452d6c23)), closes [#1107](https://github.com/uptrace/bun/issues/1107)
+* make WithReadOnlyReplica variadic ([4cbb15a](https://github.com/uptrace/bun/commit/4cbb15a53e566e03284253aa46be372338968954))
+* **pgdialect:** allow to convert uint to int ([7d22ddd](https://github.com/uptrace/bun/commit/7d22ddd263b28b9fd6e172e0208c124b7c56f111))
+* **pgdriver:** improve otel instrumentation ([c40e4f3](https://github.com/uptrace/bun/commit/c40e4f3c50c710903236dc89b56a843a0351a21a))
+
+
+
 ## [1.2.8](https://github.com/uptrace/bun/compare/v1.2.7...v1.2.8) (2025-01-06)
 
 

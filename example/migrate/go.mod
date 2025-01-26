@@ -11,10 +11,10 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.2.8
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.8
-	github.com/uptrace/bun/driver/sqliteshim v1.2.8
-	github.com/uptrace/bun/extra/bundebug v1.2.8
+	github.com/uptrace/bun v1.2.9
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.9
+	github.com/uptrace/bun/driver/sqliteshim v1.2.9
+	github.com/uptrace/bun/extra/bundebug v1.2.9
 	github.com/urfave/cli/v2 v2.27.5
 )
 
@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/puzpuzpuz/xsync/v3 v3.4.1 // indirect
+	github.com/puzpuzpuz/xsync/v3 v3.5.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
