@@ -149,6 +149,8 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return appendBytesElemValue
 		}
+	case reflect.Ptr:
+		return schema.PtrAppender(d.arrayElemAppender(typ.Elem()))
 	}
 	return schema.Appender(d, typ)
 }
