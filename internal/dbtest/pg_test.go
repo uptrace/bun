@@ -922,6 +922,7 @@ func TestPostgresJSONB(t *testing.T) {
 		ItemPtr   *Item    `bun:",type:jsonb"`
 		Items     []Item   `bun:",type:jsonb"`
 		ItemsP    []*Item  `bun:",type:jsonb"`
+		ItemsNull []*Item  `bun:",type:jsonb"`
 		TextItemA []UserID `bun:"type:text[]"`
 	}
 
@@ -939,6 +940,7 @@ func TestPostgresJSONB(t *testing.T) {
 		ItemPtr:   &item2,
 		Items:     []Item{item1, item2},
 		ItemsP:    []*Item{&item1, &item2},
+		ItemsNull: nil,
 		TextItemA: []UserID{uid1, uid2},
 	}
 	_, err := db.NewInsert().Model(model1).Exec(ctx)
@@ -962,4 +964,9 @@ func TestPostgresJSONB(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []Item{item1, item2}, items)
 
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("items_null").
+		Scan(ctx, pgdialect.Array(&items))
+	require.NoError(t, err)
+	require.Equal(t, []Item{}, items)
 }

@@ -18,6 +18,11 @@ type arrayParser struct {
 func newArrayParser(b []byte) *arrayParser {
 	p := new(arrayParser)
 
+	if b[0] == 'n' {
+		p.p.Reset(nil)
+		return p
+	}
+
 	if len(b) < 2 || (b[0] != '{' && b[0] != '[') || (b[len(b)-1] != '}' && b[len(b)-1] != ']') {
 		p.err = fmt.Errorf("pgdialect: can't parse array: %q", b)
 		return p
