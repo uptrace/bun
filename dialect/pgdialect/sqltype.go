@@ -86,6 +86,10 @@ func fieldSQLType(field *schema.Field) string {
 }
 
 func sqlType(typ reflect.Type) string {
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
 	switch typ {
 	case nullStringType: // typ.Kind() == reflect.Struct, test for exact match
 		return sqltype.VarChar

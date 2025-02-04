@@ -24,6 +24,10 @@ func TestArrayParser(t *testing.T) {
 		{`{"1","2"}`, []string{"1", "2"}},
 		{`{"{1}","{2}"}`, []string{"{1}", "{2}"}},
 		{`{[1,2),[3,4)}`, []string{"[1,2)", "[3,4)"}},
+
+		{`[]`, []string{}},
+		{`[{"'\"[]"}]`, []string{`{"'\"[]"}`}},
+		{`[{"id": 1}, {"id":2, "name":"bob"}]`, []string{"{\"id\": 1}", "{\"id\":2, \"name\":\"bob\"}"}},
 	}
 
 	for i, test := range tests {

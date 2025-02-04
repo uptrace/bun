@@ -105,3 +105,39 @@ func (p *pgparser) ReadRange(ch byte) ([]byte, error) {
 
 	return p.buf, nil
 }
+
+func (p *pgparser) ReadJSON() ([]byte, error) {
+	p.Unread()
+
+	c, err := p.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+
+	p.buf = p.buf[:0]
+
+	depth := 0
+	for {
+		switch c {
+		case '{':
+			depth++
+		case '}':
+			depth--
+		}
+
+		p.buf = append(p.buf, c)
+
+		if depth == 0 {
+			break
+		}
+
+		next, err := p.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+
+		c = next
+	}
+
+	return p.buf, nil
+}
