@@ -2,5 +2,5 @@ package sqlitedialect
 
 // Version is the current release version.
 func Version() string {
-	return "1.2.8"
+	return "1.2.9"
 }
