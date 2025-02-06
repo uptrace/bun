@@ -358,6 +358,9 @@ func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.R
 		return nil, err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
