@@ -586,6 +586,9 @@ func (q *InsertQuery) scanOrExec(
 		return nil, err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	// Generate the query before checking hasReturning.
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
