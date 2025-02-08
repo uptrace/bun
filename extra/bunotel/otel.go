@@ -22,11 +22,12 @@ import (
 )
 
 type QueryHook struct {
-	attrs          []attribute.KeyValue
-	formatQueries  bool
-	tracer         trace.Tracer
-	meter          metric.Meter
-	queryHistogram metric.Int64Histogram
+	attrs             []attribute.KeyValue
+	formatQueries     bool
+	tracer            trace.Tracer
+	meter             metric.Meter
+	queryHistogram    metric.Int64Histogram
+	spanNameFormatter func(*bun.QueryEvent) string
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -86,7 +87,11 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		return
 	}
 
-	span.SetName(operation)
+	name := operation
+	if h.spanNameFormatter != nil {
+		name = h.spanNameFormatter(event)
+	}
+	span.SetName(name)
 	defer span.End()
 
 	query := h.eventQuery(event)
