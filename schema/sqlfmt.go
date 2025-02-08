@@ -50,6 +50,7 @@ func (s Ident) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
+// NOTE: It should not be modified after creation.
 type QueryWithArgs struct {
 	Query string
 	Args  []interface{}
