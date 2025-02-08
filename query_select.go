@@ -967,27 +967,27 @@ func (q *SelectQuery) scanAndCountConcurrently(
 	var mu sync.Mutex
 	var firstErr error
 
-	if q.limit >= 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	countQuery := q.Clone()
 
-			if err := q.Scan(ctx, dest...); err != nil {
-				mu.Lock()
-				if firstErr == nil {
-					firstErr = err
-				}
-				mu.Unlock()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if err := q.Scan(ctx, dest...); err != nil {
+			mu.Lock()
+			if firstErr == nil {
+				firstErr = err
 			}
-		}()
-	}
+			mu.Unlock()
+		}
+	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
 		var err error
-		count, err = q.Count(ctx)
+		count, err = countQuery.Count(ctx)
 		if err != nil {
 			mu.Lock()
 			if firstErr == nil {
@@ -1075,6 +1075,120 @@ func (q *SelectQuery) String() string {
 	}
 
 	return string(buf)
+}
+
+func (q *SelectQuery) Clone() *SelectQuery {
+	if q == nil {
+		return nil
+	}
+
+	cloneArgs := func(args []schema.QueryWithArgs) []schema.QueryWithArgs {
+		if len(args) == 0 {
+			return nil
+		}
+		clone := make([]schema.QueryWithArgs, len(args))
+		copy(clone, args)
+		return clone
+	}
+	cloneHints := func(hints *indexHints) *indexHints {
+		if hints == nil {
+			return nil
+		}
+		return &indexHints{
+			names:      cloneArgs(hints.names),
+			forJoin:    cloneArgs(hints.forJoin),
+			forOrderBy: cloneArgs(hints.forOrderBy),
+			forGroupBy: cloneArgs(hints.forGroupBy),
+		}
+	}
+
+	clone := &SelectQuery{
+		whereBaseQuery: whereBaseQuery{
+			baseQuery: baseQuery{
+				db:             q.db,
+				table:          q.table,
+				model:          q.model,
+				tableModel:     q.tableModel,
+				with:           make([]withQuery, len(q.with)),
+				tables:         cloneArgs(q.tables),
+				columns:        cloneArgs(q.columns),
+				modelTableName: q.modelTableName,
+			},
+			where: make([]schema.QueryWithSep, len(q.where)),
+		},
+
+		idxHintsQuery: idxHintsQuery{
+			use:    cloneHints(q.idxHintsQuery.use),
+			ignore: cloneHints(q.idxHintsQuery.ignore),
+			force:  cloneHints(q.idxHintsQuery.force),
+		},
+
+		orderLimitOffsetQuery: orderLimitOffsetQuery{
+			order:  cloneArgs(q.order),
+			limit:  q.limit,
+			offset: q.offset,
+		},
+
+		distinctOn: cloneArgs(q.distinctOn),
+		joins:      make([]joinQuery, len(q.joins)),
+		group:      cloneArgs(q.group),
+		having:     cloneArgs(q.having),
+		union:      make([]union, len(q.union)),
+		comment:    q.comment,
+	}
+
+	for i, w := range q.with {
+		clone.with[i] = withQuery{
+			name:      w.name,
+			recursive: w.recursive,
+			query:     w.query, // TODO: maybe clone is need
+		}
+	}
+
+	if !q.modelTableName.IsZero() {
+		clone.modelTableName = schema.SafeQuery(
+			q.modelTableName.Query,
+			append([]any(nil), q.modelTableName.Args...),
+		)
+	}
+
+	for i, w := range q.where {
+		clone.where[i] = schema.SafeQueryWithSep(
+			w.Query,
+			append([]any(nil), w.Args...),
+			w.Sep,
+		)
+	}
+
+	for i, j := range q.joins {
+		clone.joins[i] = joinQuery{
+			join: schema.SafeQuery(j.join.Query, append([]any(nil), j.join.Args...)),
+			on:   make([]schema.QueryWithSep, len(j.on)),
+		}
+		for k, on := range j.on {
+			clone.joins[i].on[k] = schema.SafeQueryWithSep(
+				on.Query,
+				append([]any(nil), on.Args...),
+				on.Sep,
+			)
+		}
+	}
+
+	for i, u := range q.union {
+		clone.union[i] = union{
+			expr:  u.expr,
+			query: u.query.Clone(),
+		}
+	}
+
+	if !q.selFor.IsZero() {
+		clone.selFor = schema.SafeQuery(
+			q.selFor.Query,
+			append([]any(nil), q.selFor.Args...),
+		)
+	}
+
+	return clone
 }
 
 //------------------------------------------------------------------------------
