@@ -106,9 +106,8 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		attrs = append(attrs, sys)
 	}
 	if event.Result != nil {
-		if n, _ := event.Result.RowsAffected(); n > 0 {
-			attrs = append(attrs, attribute.Int64("db.rows_affected", n))
-		}
+		rows, _ := event.Result.RowsAffected()
+		attrs = append(attrs, attribute.Int64("db.rows_affected", rows))
 	}
 
 	switch event.Err {
