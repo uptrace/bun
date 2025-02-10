@@ -2,10 +2,11 @@ package bun
 
 import (
 	"context"
-	"crypto/rand"
+	cryptorand "crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"math/rand/v2"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -633,7 +634,7 @@ func (tx Tx) Begin() (Tx, error) {
 func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
 	// mssql savepoint names are limited to 32 characters
 	sp := make([]byte, 14)
-	_, err := rand.Read(sp)
+	_, err := cryptorand.Read(sp)
 	if err != nil {
 		return Tx{}, err
 	}
@@ -753,13 +754,19 @@ type ConnResolver interface {
 	Close() error
 }
 
+type DBReplica interface {
+	IConn
+	PingContext(context.Context) error
+	Close() error
+}
+
 // TODO:
 //   - make monitoring interval configurable
 //   - make ping timeout configutable
 //   - allow adding read/write replicas for multi-master replication
 type ReadWriteConnResolver struct {
-	replicas        []*sql.DB // read-only replicas
-	healthyReplicas atomic.Pointer[[]*sql.DB]
+	replicas        []DBReplica // read-only replicas
+	healthyReplicas atomic.Pointer[[]DBReplica]
 	nextReplica     atomic.Int64
 	closed          atomic.Bool
 }
@@ -774,6 +781,10 @@ func NewReadWriteConnResolver(opts ...ReadWriteConnResolverOption) *ReadWriteCon
 	if len(r.replicas) > 0 {
 		r.healthyReplicas.Store(&r.replicas)
 		go r.monitor()
+
+		// Start with a random replica.
+		rnd := rand.IntN(len(r.replicas))
+		r.nextReplica.Store(int64(rnd))
 	}
 
 	return r
@@ -781,7 +792,7 @@ func NewReadWriteConnResolver(opts ...ReadWriteConnResolverOption) *ReadWriteCon
 
 type ReadWriteConnResolverOption func(r *ReadWriteConnResolver)
 
-func WithReadOnlyReplica(dbs ...*sql.DB) ReadWriteConnResolverOption {
+func WithReadOnlyReplica(dbs ...DBReplica) ReadWriteConnResolverOption {
 	return func(r *ReadWriteConnResolver) {
 		r.replicas = append(r.replicas, dbs...)
 	}
@@ -831,7 +842,7 @@ func isReadOnlyQuery(query Query) bool {
 	return true
 }
 
-func (r *ReadWriteConnResolver) loadHealthyReplicas() []*sql.DB {
+func (r *ReadWriteConnResolver) loadHealthyReplicas() []DBReplica {
 	if ptr := r.healthyReplicas.Load(); ptr != nil {
 		return *ptr
 	}
@@ -841,7 +852,7 @@ func (r *ReadWriteConnResolver) loadHealthyReplicas() []*sql.DB {
 func (r *ReadWriteConnResolver) monitor() {
 	const interval = 5 * time.Second
 	for !r.closed.Load() {
-		healthy := make([]*sql.DB, 0, len(r.replicas))
+		healthy := make([]DBReplica, 0, len(r.replicas))
 
 		for _, replica := range r.replicas {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
