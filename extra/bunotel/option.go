@@ -1,6 +1,7 @@
 package bunotel
 
 import (
+	"github.com/uptrace/bun"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -30,6 +31,14 @@ func WithDBName(name string) Option {
 func WithFormattedQueries(format bool) Option {
 	return func(h *QueryHook) {
 		h.formatQueries = format
+	}
+}
+
+// WithSpanNameFormatter takes a function that determines the span name
+// for a given query event.
+func WithSpanNameFormatter(f func(*bun.QueryEvent) string) Option {
+	return func(h *QueryHook) {
+		h.spanNameFormatter = f
 	}
 }
 
