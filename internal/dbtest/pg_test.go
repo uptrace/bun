@@ -467,6 +467,7 @@ func TestPostgresTimeArray(t *testing.T) {
 		Array1 []time.Time  `bun:",array"`
 		Array2 *[]time.Time `bun:",array"`
 		Array3 *[]time.Time `bun:",array"`
+		Array4 []*time.Time `bun:",array"`
 	}
 
 	db := pg(t)
@@ -482,6 +483,7 @@ func TestPostgresTimeArray(t *testing.T) {
 		ID:     123,
 		Array1: []time.Time{time1, time2, time3},
 		Array2: &[]time.Time{time1, time2, time3},
+		Array4: []*time.Time{&time1, &time2, &time3},
 	}
 	_, err := db.NewInsert().Model(model1).Exec(ctx)
 	require.NoError(t, err)
@@ -509,6 +511,12 @@ func TestPostgresTimeArray(t *testing.T) {
 		Scan(ctx, pgdialect.Array(&times))
 	require.NoError(t, err)
 	require.Nil(t, times)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array4").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(model1.Array4))
 }
 
 func TestPostgresOnConflictDoUpdate(t *testing.T) {
