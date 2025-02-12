@@ -142,6 +142,10 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 	if typ.Implements(driverValuerType) {
 		return arrayAppendDriverValue
 	}
+	if typ == timeType {
+		return appendTimeElemValue
+	}
+
 	switch typ.Kind() {
 	case reflect.String:
 		return appendStringElemValue
@@ -149,8 +153,18 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return appendBytesElemValue
 		}
+	case reflect.Ptr:
+		return schema.PtrAppender(d.arrayElemAppender(typ.Elem()))
 	}
 	return schema.Appender(d, typ)
+}
+
+func appendTimeElemValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	ts := v.Convert(timeType).Interface().(time.Time)
+
+	b = append(b, '"')
+	b = appendTime(b, ts)
+	return append(b, '"')
 }
 
 func appendStringElemValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {

@@ -11,15 +11,23 @@ type arrayParser struct {
 
 	elem []byte
 	err  error
+
+	isJson bool
 }
 
 func newArrayParser(b []byte) *arrayParser {
 	p := new(arrayParser)
 
-	if len(b) < 2 || b[0] != '{' || b[len(b)-1] != '}' {
+	if b[0] == 'n' {
+		p.p.Reset(nil)
+		return p
+	}
+
+	if len(b) < 2 || (b[0] != '{' && b[0] != '[') || (b[len(b)-1] != '}' && b[len(b)-1] != ']') {
 		p.err = fmt.Errorf("pgdialect: can't parse array: %q", b)
 		return p
 	}
+	p.isJson = b[0] == '['
 
 	p.p.Reset(b[1 : len(b)-1])
 	return p
@@ -51,7 +59,7 @@ func (p *arrayParser) readNext() error {
 	}
 
 	switch ch {
-	case '}':
+	case '}', ']':
 		return io.EOF
 	case '"':
 		b, err := p.p.ReadSubstring(ch)
@@ -78,16 +86,34 @@ func (p *arrayParser) readNext() error {
 		p.elem = rng
 		return nil
 	default:
-		lit := p.p.ReadLiteral(ch)
-		if bytes.Equal(lit, []byte("NULL")) {
-			lit = nil
-		}
+		if ch == '{' && p.isJson {
+			json, err := p.p.ReadJSON()
+			if err != nil {
+				return err
+			}
 
-		if p.p.Peek() == ',' {
-			p.p.Advance()
-		}
+			for {
+				if p.p.Peek() == ',' || p.p.Peek() == ' ' {
+					p.p.Advance()
+				} else {
+					break
+				}
+			}
 
-		p.elem = lit
-		return nil
+			p.elem = json
+			return nil
+		} else {
+			lit := p.p.ReadLiteral(ch)
+			if bytes.Equal(lit, []byte("NULL")) {
+				lit = nil
+			}
+
+			if p.p.Peek() == ',' {
+				p.p.Advance()
+			}
+
+			p.elem = lit
+			return nil
+		}
 	}
 }
