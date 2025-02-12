@@ -791,6 +791,9 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 		return nil, err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
@@ -811,6 +814,9 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 	if err := q.beforeAppendModel(ctx, q); err != nil {
 		return nil, err
 	}
+
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
@@ -872,6 +878,9 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...interface{}) (sql.
 		return nil, err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
@@ -923,6 +932,9 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	if q.err != nil {
 		return 0, q.err
 	}
+
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
 
 	qq := countQuery{q}
 
@@ -1028,6 +1040,9 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 }
 
 func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	qq := selectExistsQuery{q}
 
 	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
@@ -1047,6 +1062,9 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 }
 
 func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	qq := whereExistsQuery{q}
 
 	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
