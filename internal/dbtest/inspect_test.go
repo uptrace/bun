@@ -34,20 +34,23 @@ type Article struct {
 
 type Office struct {
 	bun.BaseModel `bun:"table:admin.offices"`
-	Name          string `bun:"office_name,pk"`
-	TennantID     string `bun:"publisher_id"`
-	TennantName   string `bun:"publisher_name"`
+	ID            string `bun:"office_id,pk"`
+	Name          string `bun:"office_name,notnull"`
 
-	Tennant *Publisher `bun:"rel:has-one,join:publisher_id=publisher_id,join:publisher_name=publisher_name"`
+	Tennant *Publisher `bun:"rel:has-one,join:office_id=office_id"`
 }
 
 type Publisher struct {
-	ID        string    `bun:"publisher_id,pk,default:gen_random_uuid(),unique:office_fk"`
-	Name      string    `bun:"publisher_name,notnull,unique:office_fk"`
+	ID        string    `bun:"publisher_id,pk,default:gen_random_uuid(),unique:publisher_id_publisher_name"`
+	Name      string    `bun:"publisher_name,notnull,unique:publisher_id_publisher_name"`
+	OfficeID  string    `bun:"office_id,notnull"`
 	CreatedAt time.Time `bun:"created_at,default:current_timestamp"`
 
 	// Writers write articles for this publisher.
 	Writers []Journalist `bun:"m2m:publisher_to_journalists,join:Publisher=Author"`
+
+	// Offices that this publisher has.
+	Office *Office `bun:"rel:belongs-to,join:office_id=office_id"`
 }
 
 // PublisherToJournalist describes which journalist work with each publisher.
@@ -255,6 +258,12 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 									},
 								},
 								ordered.Pair[string, sqlschema.Column]{
+									Key: "office_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType: sqltype.VarChar,
+									},
+								},
+								ordered.Pair[string, sqlschema.Column]{
 									Key: "created_at",
 									Value: &sqlschema.BaseColumn{
 										SQLType:      "timestamp",
@@ -284,6 +293,10 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 						To:   sqlschema.NewColumnReference("publishers", "publisher_id"),
 					},
 					{
+						From: sqlschema.NewColumnReference("publishers", "office_id"),
+						To:   sqlschema.NewColumnReference("offices", "office_id"),
+					},
+					{
 						From: sqlschema.NewColumnReference("publisher_to_journalists", "author_id"),
 						To:   sqlschema.NewColumnReference("authors", "author_id"),
 					},
@@ -300,36 +313,24 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 							Name:   "offices",
 							Columns: ordered.NewMap[string, sqlschema.Column](
 								ordered.Pair[string, sqlschema.Column]{
+									Key: "office_id",
+									Value: &sqlschema.BaseColumn{
+										SQLType:    sqltype.VarChar,
+										IsNullable: false,
+									},
+								},
+								ordered.Pair[string, sqlschema.Column]{
 									Key: "office_name",
 									Value: &sqlschema.BaseColumn{
 										SQLType: sqltype.VarChar,
 									},
 								},
-								ordered.Pair[string, sqlschema.Column]{
-									Key: "publisher_id",
-									Value: &sqlschema.BaseColumn{
-										SQLType:    sqltype.VarChar,
-										IsNullable: true,
-									},
-								},
-								ordered.Pair[string, sqlschema.Column]{
-									Key: "publisher_name",
-									Value: &sqlschema.BaseColumn{
-										SQLType:    sqltype.VarChar,
-										IsNullable: true,
-									},
-								},
 							),
-							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
+							PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_id")},
 						},
 					},
 				),
-				wantFKs: []sqlschema.ForeignKey{
-					{
-						From: sqlschema.NewColumnReference("offices", "publisher_name", "publisher_id"),
-						To:   sqlschema.NewColumnReference("publishers", "publisher_name", "publisher_id"),
-					},
-				},
+				wantFKs: []sqlschema.ForeignKey{},
 			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
@@ -347,8 +348,8 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 				mustCreateTableWithFKs(t, ctx, db,
 					// Order of creation matters:
 					(*Journalist)(nil),            // does not reference other tables
-					(*Publisher)(nil),             // does not reference other tables
 					(*Office)(nil),                // references Publisher
+					(*Publisher)(nil),             // does not reference other tables
 					(*PublisherToJournalist)(nil), // references Journalist and Publisher
 					(*Article)(nil),               // references Journalist and Publisher
 				)
