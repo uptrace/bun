@@ -35,9 +35,9 @@ type Relation struct {
 }
 
 // References returns true if the table to which the Relation belongs needs to declare a foreign key constraint to create the relation.
-// For other relations, the constraint is created in either the referencing table (1:N, 'has-many' relations) or a mapping table (N:N, 'm2m' relations).
+// For other relations, the constraint is created in either the referencing table (1:N, 'has-many' relations or 1:1, 'has-one' relations) or a mapping table (N:N, 'm2m' relations).
 func (r *Relation) References() bool {
-	return r.Type == HasOneRelation || r.Type == BelongsToRelation
+	return r.Type == BelongsToRelation
 }
 
 func (r *Relation) String() string {
