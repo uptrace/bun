@@ -6,11 +6,9 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"math/rand/v2"
 	"reflect"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
@@ -40,6 +38,12 @@ func WithDiscardUnknownColumns() DBOption {
 	return func(db *DB) {
 		db.flags = db.flags.Set(discardUnknownColumns)
 	}
+}
+
+// ConnResolver enables routing queries to multiple databases.
+type ConnResolver interface {
+	ResolveConn(query Query) IConn
+	Close() error
 }
 
 func WithConnResolver(resolver ConnResolver) DBOption {
@@ -740,131 +744,6 @@ func (tx Tx) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(tx.db).Conn(tx)
 }
 
-//------------------------------------------------------------------------------
-
 func (db *DB) makeQueryBytes() []byte {
 	return internal.MakeQueryBytes()
-}
-
-//------------------------------------------------------------------------------
-
-// ConnResolver enables routing queries to multiple databases.
-type ConnResolver interface {
-	ResolveConn(query Query) IConn
-	Close() error
-}
-
-type DBReplica interface {
-	IConn
-	PingContext(context.Context) error
-	Close() error
-}
-
-// TODO:
-//   - make monitoring interval configurable
-//   - make ping timeout configutable
-//   - allow adding read/write replicas for multi-master replication
-type ReadWriteConnResolver struct {
-	replicas        []DBReplica // read-only replicas
-	healthyReplicas atomic.Pointer[[]DBReplica]
-	nextReplica     atomic.Int64
-	closed          atomic.Bool
-}
-
-func NewReadWriteConnResolver(opts ...ReadWriteConnResolverOption) *ReadWriteConnResolver {
-	r := new(ReadWriteConnResolver)
-
-	for _, opt := range opts {
-		opt(r)
-	}
-
-	if len(r.replicas) > 0 {
-		r.healthyReplicas.Store(&r.replicas)
-		go r.monitor()
-
-		// Start with a random replica.
-		rnd := rand.IntN(len(r.replicas))
-		r.nextReplica.Store(int64(rnd))
-	}
-
-	return r
-}
-
-type ReadWriteConnResolverOption func(r *ReadWriteConnResolver)
-
-func WithReadOnlyReplica(dbs ...DBReplica) ReadWriteConnResolverOption {
-	return func(r *ReadWriteConnResolver) {
-		r.replicas = append(r.replicas, dbs...)
-	}
-}
-
-func (r *ReadWriteConnResolver) Close() error {
-	if r.closed.Swap(true) {
-		return nil
-	}
-
-	var firstErr error
-	for _, db := range r.replicas {
-		if err := db.Close(); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-	return firstErr
-}
-
-// healthyReplica returns a random healthy replica.
-func (r *ReadWriteConnResolver) ResolveConn(query Query) IConn {
-	if len(r.replicas) == 0 || !isReadOnlyQuery(query) {
-		return nil
-	}
-
-	replicas := r.loadHealthyReplicas()
-	if len(replicas) == 0 {
-		return nil
-	}
-	if len(replicas) == 1 {
-		return replicas[0]
-	}
-	i := r.nextReplica.Add(1)
-	return replicas[int(i)%len(replicas)]
-}
-
-func isReadOnlyQuery(query Query) bool {
-	sel, ok := query.(*SelectQuery)
-	if !ok {
-		return false
-	}
-	for _, el := range sel.with {
-		if !isReadOnlyQuery(el.query) {
-			return false
-		}
-	}
-	return true
-}
-
-func (r *ReadWriteConnResolver) loadHealthyReplicas() []DBReplica {
-	if ptr := r.healthyReplicas.Load(); ptr != nil {
-		return *ptr
-	}
-	return nil
-}
-
-func (r *ReadWriteConnResolver) monitor() {
-	const interval = 5 * time.Second
-	for !r.closed.Load() {
-		healthy := make([]DBReplica, 0, len(r.replicas))
-
-		for _, replica := range r.replicas {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			err := replica.PingContext(ctx)
-			cancel()
-
-			if err == nil {
-				healthy = append(healthy, replica)
-			}
-		}
-
-		r.healthyReplicas.Store(&healthy)
-		time.Sleep(interval)
-	}
 }

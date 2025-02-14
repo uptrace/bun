@@ -1475,3 +1475,16 @@ func (q *orderLimitOffsetQuery) appendLimitOffset(fmter schema.Formatter, b []by
 
 	return b, nil
 }
+
+func IsReadOnlyQuery(query Query) bool {
+	sel, ok := query.(*SelectQuery)
+	if !ok {
+		return false
+	}
+	for _, el := range sel.with {
+		if !IsReadOnlyQuery(el.query) {
+			return false
+		}
+	}
+	return true
+}
