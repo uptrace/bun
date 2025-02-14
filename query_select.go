@@ -354,7 +354,7 @@ func (q *SelectQuery) JoinOnOr(cond string, args ...interface{}) *SelectQuery {
 
 func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *SelectQuery {
 	if len(q.joins) == 0 {
-		q.err = errors.New("bun: query has no joins")
+		q.setErr(errors.New("bun: query has no joins"))
 		return q
 	}
 	j := &q.joins[len(q.joins)-1]

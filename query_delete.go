@@ -127,7 +127,7 @@ func (q *DeleteQuery) WhereAllWithDeleted() *DeleteQuery {
 
 func (q *DeleteQuery) Order(orders ...string) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
 	}
 	q.addOrder(orders...)
@@ -136,7 +136,7 @@ func (q *DeleteQuery) Order(orders ...string) *DeleteQuery {
 
 func (q *DeleteQuery) OrderExpr(query string, args ...interface{}) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
 	}
 	q.addOrderExpr(query, args...)
@@ -151,7 +151,7 @@ func (q *DeleteQuery) ForceDelete() *DeleteQuery {
 // ------------------------------------------------------------------------------
 func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
 	}
 	q.setLimit(n)
@@ -165,7 +165,7 @@ func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteReturning) {
-		q.err = feature.NewNotSupportError(feature.DeleteOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
 	}
 

@@ -123,7 +123,7 @@ func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}
 // Value overwrites model value for the column.
 func (q *UpdateQuery) Value(column string, query string, args ...interface{}) *UpdateQuery {
 	if q.table == nil {
-		q.err = errNilModel
+		q.setErr(errNilModel)
 		return q
 	}
 	q.addValue(q.table, column, query, args)
@@ -154,7 +154,7 @@ func (q *UpdateQuery) JoinOnOr(cond string, args ...interface{}) *UpdateQuery {
 
 func (q *UpdateQuery) joinOn(cond string, args []interface{}, sep string) *UpdateQuery {
 	if len(q.joins) == 0 {
-		q.err = errors.New("bun: query has no joins")
+		q.setErr(errors.New("bun: query has no joins"))
 		return q
 	}
 	j := &q.joins[len(q.joins)-1]
@@ -206,7 +206,7 @@ func (q *UpdateQuery) WhereAllWithDeleted() *UpdateQuery {
 // ------------------------------------------------------------------------------
 func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.UpdateOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
 		return q
 	}
 	q.addOrder(orders...)
@@ -215,7 +215,7 @@ func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
 
 func (q *UpdateQuery) OrderExpr(query string, args ...interface{}) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.UpdateOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
 		return q
 	}
 	q.addOrderExpr(query, args...)
@@ -224,7 +224,7 @@ func (q *UpdateQuery) OrderExpr(query string, args ...interface{}) *UpdateQuery 
 
 func (q *UpdateQuery) Limit(n int) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
-		q.err = feature.NewNotSupportError(feature.UpdateOrderLimit)
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
 		return q
 	}
 	q.setLimit(n)
