@@ -24,6 +24,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 
 	_ "github.com/denisenkom/go-mssqldb"
@@ -299,6 +300,7 @@ func TestDB(t *testing.T) {
 		{testRunInTxAndSavepoint},
 		{testDriverValuerReturnsItself},
 		{testNoPanicWhenReturningNullColumns},
+		{testNoForeignKeyForPrimaryKey},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1828,6 +1830,59 @@ func testNoPanicWhenReturningNullColumns(t *testing.T, db *bun.DB) {
 	require.NotPanics(t, func() {
 		db.NewInsert().Model(&modelSlice).Exec(ctx)
 	})
+}
+
+func testNoForeignKeyForPrimaryKey(t *testing.T, db *bun.DB) {
+	inspect := inspectDbOrSkip(t, db)
+
+	for _, tt := range []struct {
+		name     string
+		model    interface{}
+		dontWant sqlschema.ForeignKey
+	}{
+		{name: "has-one relation", model: (*struct {
+			bun.BaseModel `bun:"table:users"`
+			ID            string `bun:",pk"`
+
+			Profile *struct {
+				bun.BaseModel `bun:"table:profiles"`
+				ID            string `bun:",pk"`
+				UserID        string
+			} `bun:"rel:belongs-to,join:id=user_id"`
+		})(nil), dontWant: sqlschema.ForeignKey{
+			From: sqlschema.NewColumnReference("users", "id"),
+			To:   sqlschema.NewColumnReference("profiles", "user_id"),
+		}},
+
+		{name: "belongs-to relation", model: (*struct {
+			bun.BaseModel `bun:"table:profiles"`
+			ID            string `bun:",pk"`
+
+			User *struct {
+				bun.BaseModel `bun:"table:users"`
+				ID            string `bun:",pk"`
+				ProfileID     string
+			} `bun:"rel:belongs-to,join:id=profile_id"`
+		})(nil), dontWant: sqlschema.ForeignKey{
+			From: sqlschema.NewColumnReference("profiles", "id"),
+			To:   sqlschema.NewColumnReference("users", "profile_id"),
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			mustDropTableOnCleanup(t, ctx, db, tt.model)
+
+			_, err := db.NewCreateTable().Model(tt.model).WithForeignKeys().Exec(ctx)
+			require.NoError(t, err, "create table")
+
+			state := inspect(ctx)
+			require.NotContainsf(t, state.ForeignKeys, tt.dontWant,
+				"%s.%s -> %s.%s is not inteded",
+				tt.dontWant.From.TableName, tt.dontWant.From.Column,
+				tt.dontWant.To.TableName, tt.dontWant.To.Column,
+			)
+		})
+	}
 }
 
 func mustResetModel(tb testing.TB, ctx context.Context, db *bun.DB, models ...interface{}) {
