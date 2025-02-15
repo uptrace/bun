@@ -62,8 +62,9 @@ type Table struct {
 	FieldMap  map[string]*Field
 	StructMap map[string]*structField
 
-	Relations map[string]*Relation
-	Unique    map[string][]*Field
+	IsM2MTable bool // If true, this table is the "junction table" of an m2m relation.
+	Relations  map[string]*Relation
+	Unique     map[string][]*Field
 
 	SoftDeleteField       *Field
 	UpdateSoftDeleteField func(fv reflect.Value, tm time.Time) error
@@ -483,6 +484,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 
 	field := &Field{
+		Table:       t,
 		StructField: sf,
 		IsPtr:       sf.Type.Kind() == reflect.Ptr,
 
@@ -862,6 +864,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 		M2MTable:  m2mTable,
 	}
+	m2mTable.markM2M()
 
 	if field.Tag.HasOption("join_on") {
 		rel.Condition = field.Tag.Options["join_on"]
@@ -905,6 +908,10 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	rel.M2MJoinPKs = rightRel.BasePKs
 
 	return rel
+}
+
+func (t *Table) markM2M() {
+	t.IsM2MTable = true
 }
 
 //------------------------------------------------------------------------------
