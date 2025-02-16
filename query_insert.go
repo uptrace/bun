@@ -114,7 +114,7 @@ func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
 // Value overwrites model value for the column.
 func (q *InsertQuery) Value(column string, expr string, args ...interface{}) *InsertQuery {
 	if q.table == nil {
-		q.err = errNilModel
+		q.setErr(errNilModel)
 		return q
 	}
 	q.addValue(q.table, column, expr, args)

@@ -52,7 +52,7 @@ func (q *ValuesQuery) Column(columns ...string) *ValuesQuery {
 // Value overwrites model value for the column.
 func (q *ValuesQuery) Value(column string, expr string, args ...interface{}) *ValuesQuery {
 	if q.table == nil {
-		q.err = errNilModel
+		q.setErr(errNilModel)
 		return q
 	}
 	q.addValue(q.table, column, expr, args)
