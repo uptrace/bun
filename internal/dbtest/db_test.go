@@ -25,6 +25,7 @@ import (
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
 	"github.com/uptrace/bun/migrate/sqlschema"
+	"github.com/uptrace/bun/extra/bunexp"
 	"github.com/uptrace/bun/schema"
 
 	_ "github.com/denisenkom/go-mssqldb"
@@ -1917,7 +1918,9 @@ func TestConnResolver(t *testing.T) {
 		require.NoError(t, rodb.Close())
 	})
 
-	resolver := bun.NewReadWriteConnResolver(bun.WithReadOnlyReplica(rodb))
+	resolver := bunexp.NewReadWriteConnResolver(
+		bunexp.WithDBReplica(rodb, bunexp.DBReplicaReadOnly),
+	)
 
 	db := bun.NewDB(rwdb, pgdialect.New(), bun.WithConnResolver(resolver))
 	db.AddQueryHook(bundebug.NewQueryHook(
