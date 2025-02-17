@@ -122,6 +122,7 @@ func (t *Table) processFields(typ reflect.Type) {
 
 	names := make(map[string]struct{})
 	embedded := make([]embeddedField, 0, 10)
+	ebdStructs := make(map[string]*structField, 0)
 
 	for i, n := 0, typ.NumField(); i < n; i++ {
 		sf := typ.Field(i)
@@ -163,6 +164,17 @@ func (t *Table) processFields(typ reflect.Type) {
 					subfield:   subfield,
 				})
 			}
+			if len(subtable.StructMap) > 0 {
+				for k, v := range subtable.StructMap {
+					// NOTE: conflict Struct name
+					if _, ok := ebdStructs[k]; !ok {
+						ebdStructs[k] = &structField{
+							Index: makeIndex(sf.Index, v.Index),
+							Table: subtable,
+						}
+					}
+				}
+			}
 
 			if tagstr != "" {
 				tag := tagparser.Parse(tagstr)
@@ -196,6 +208,18 @@ func (t *Table) processFields(typ reflect.Type) {
 					subtable:   subtable,
 					subfield:   subfield,
 				})
+			}
+			if len(subtable.StructMap) > 0 {
+				for k, v := range subtable.StructMap {
+					// NOTE: conflict Struct name
+					k = prefix + k
+					if _, ok := ebdStructs[k]; !ok {
+						ebdStructs[k] = &structField{
+							Index: makeIndex(sf.Index, v.Index),
+							Table: subtable,
+						}
+					}
+				}
 			}
 			continue
 		}
@@ -249,6 +273,15 @@ func (t *Table) processFields(typ reflect.Type) {
 		t.addField(subfield)
 		if v, ok := subfield.Tag.Options["unique"]; ok {
 			t.addUnique(subfield, embfield.prefix, v)
+		}
+	}
+
+	if len(ebdStructs) > 0 && t.StructMap == nil {
+		t.StructMap = make(map[string]*structField)
+	}
+	for name, sfield := range ebdStructs {
+		if _, ok := t.StructMap[name]; !ok {
+			t.StructMap[name] = sfield
 		}
 	}
 
