@@ -10,6 +10,7 @@ import (
 )
 
 type Field struct {
+	Table       *Table // Contains this field
 	StructField reflect.StructField
 	IsPtr       bool
 
