@@ -1849,7 +1849,7 @@ func testNoForeignKeyForPrimaryKey(t *testing.T, db *bun.DB) {
 				bun.BaseModel `bun:"table:profiles"`
 				ID            string `bun:",pk"`
 				UserID        string
-			} `bun:"rel:belongs-to,join:id=user_id"`
+			} `bun:"rel:has-one,join:id=user_id"`
 		})(nil), dontWant: sqlschema.ForeignKey{
 			From: sqlschema.NewColumnReference("users", "id"),
 			To:   sqlschema.NewColumnReference("profiles", "user_id"),
