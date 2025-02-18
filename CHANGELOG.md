@@ -1,3 +1,25 @@
+## [1.2.10](https://github.com/uptrace/bun/compare/v1.2.9...v1.2.10) (2025-02-18)
+
+
+### Bug Fixes
+
+* clone query in scanAndCountConcurrently to avoid data race ([66fdc39](https://github.com/uptrace/bun/commit/66fdc39b33a482534920578ed8c7f88c3f142a3d)), closes [#1117](https://github.com/uptrace/bun/issues/1117)
+* **create_table:** avoid creating unintended foreign keys ([#1130](https://github.com/uptrace/bun/issues/1130)) ([187743b](https://github.com/uptrace/bun/commit/187743b1e743755cd57a9cc11e7f2f9cea0a7dcd))
+* **pgdialect:** handle []*time.Time arrays ([4c4e12a](https://github.com/uptrace/bun/commit/4c4e12aa7f27cf49189427da5104afb436af4348))
+* **pgdialect:** handle nill array on jsonb column ([0dc4e3e](https://github.com/uptrace/bun/commit/0dc4e3edb3f9021b02ed6f80d54cb88d2ef9b025))
+* **pgdialect:** postgres syntax errors for slices of pointers and json arrays [#877](https://github.com/uptrace/bun/issues/877) ([1422b77](https://github.com/uptrace/bun/commit/1422b7726a24ac55ee6ca0e15ec084c34f7b1bd6))
+* process embedded's struct field for table ([b410e42](https://github.com/uptrace/bun/commit/b410e420ab888d87d2b6ebb014f13baae8fdc2b7)), closes [#1125](https://github.com/uptrace/bun/issues/1125)
+
+
+### Features
+
+* add DBReplica and use it in ReadWriteConnResolver ([95c825e](https://github.com/uptrace/bun/commit/95c825e1215b26456caeebf1893d3b6183202bae))
+* allow setting a query comment through a context value ([9f5ccfe](https://github.com/uptrace/bun/commit/9f5ccfea7144c7ced877e3ce6972c589c5c6c3e6))
+* **bunotel:** ability to override span names ([04e2125](https://github.com/uptrace/bun/commit/04e21253298ee495179754fbbfccc047468a034d))
+* **bunotel:** always record affected rows ([960a304](https://github.com/uptrace/bun/commit/960a3046ad0cc8ea548dc448380549f610cb5da4))
+
+
+
 ## [1.2.9](https://github.com/uptrace/bun/compare/v1.2.8...v1.2.9) (2025-01-26)
 
 
