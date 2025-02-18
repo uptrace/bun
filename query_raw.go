@@ -67,6 +67,9 @@ func (q *RawQuery) scanOrExec(
 		}
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	query := q.db.format(q.query, q.args)
 	var res sql.Result
 
