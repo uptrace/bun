@@ -259,12 +259,12 @@ func (t *Table) processFields(typ reflect.Type) {
 	}
 
 	for _, embfield := range embedded {
-		subfield := embfield.subfield.Clone()
-
-		if ambiguousNames[subfield.Name] > 1 &&
-			!(!subfield.Tag.IsZero() && ambiguousTags[subfield.Name] == 1) {
+		if ambiguousNames[embfield.prefix+embfield.subfield.Name] > 1 &&
+			!(!embfield.subfield.Tag.IsZero() && ambiguousTags[embfield.prefix+embfield.subfield.Name] == 1) {
 			continue // ambiguous embedded field
 		}
+
+		subfield := embfield.subfield.Clone()
 
 		subfield.Index = makeIndex(embfield.index, subfield.Index)
 		if embfield.prefix != "" {
