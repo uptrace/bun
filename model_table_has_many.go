@@ -174,15 +174,8 @@ func indirectAsKey(field reflect.Value) interface{} {
 	}
 
 	if valuer, ok := field.Interface().(driver.Valuer); ok {
-		if v, err := valuer.Value(); err == nil {
-			switch reflect.TypeOf(v).Kind() {
-			case reflect.Array, reflect.Chan, reflect.Func,
-				reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
-				break
-			default:
-				return v
-			}
-		}
+		v, _ := valuer.Value() // No need to record logs, will panic later
+		return v
 	}
 
 	return field.Elem().Interface()
