@@ -1940,51 +1940,21 @@ func TestConnResolver(t *testing.T) {
 
 type doNotCompare [0]func()
 
-type fakeUUID struct {
+type notCompareKey struct {
 	doNotCompare
-
-	Hi uint64
-	Lo uint64
+	s string
 }
 
-func (x *fakeUUID) ToBytes() []byte {
-	if x == nil {
-		return nil
-	}
-	return []byte{
-		byte(x.Hi >> 56), byte(x.Hi >> 48), byte(x.Hi >> 40), byte(x.Hi >> 32),
-		byte(x.Hi >> 24), byte(x.Hi >> 16), byte(x.Hi >> 8), byte(x.Hi),
-
-		byte(x.Lo >> 56), byte(x.Lo >> 48), byte(x.Lo >> 40), byte(x.Lo >> 32),
-		byte(x.Lo >> 24), byte(x.Lo >> 16), byte(x.Lo >> 8), byte(x.Lo),
-	}
-}
-
-func (x *fakeUUID) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
+func (x *notCompareKey) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
 	b = append(b, '\'')
-	v := uuid.UUID{}
-	copy(v[:], x.ToBytes())
-	b = append(b, v.String()...)
+	b = append(b, x.s...)
 	return append(b, '\''), nil
 }
 
-func (x *fakeUUID) Value() (driver.Value, error) {
-	v := uuid.UUID{}
-	copy(v[:], x.ToBytes())
-	return v.Value()
-}
+func (x *notCompareKey) Value() (driver.Value, error) { return x.s, nil }
+func (x *notCompareKey) FromUUID(u uuid.UUID)         { x.s = u.String() }
 
-func (x *fakeUUID) FromUUID(u uuid.UUID) {
-	b := u[:]
-	x.Hi = uint64(b[7]) | uint64(b[6])<<8 | uint64(b[5])<<16 | uint64(b[4])<<24 |
-		uint64(b[3])<<32 | uint64(b[2])<<40 | uint64(b[1])<<48 | uint64(b[0])<<56
-
-	b = u[8:]
-	x.Lo = uint64(b[7]) | uint64(b[6])<<8 | uint64(b[5])<<16 | uint64(b[4])<<24 |
-		uint64(b[3])<<32 | uint64(b[2])<<40 | uint64(b[1])<<48 | uint64(b[0])<<56
-}
-
-func (x *fakeUUID) Scan(src any) error {
+func (x *notCompareKey) Scan(src any) error {
 	var u uuid.UUID
 	if err := u.Scan(src); err != nil {
 		return err
@@ -1994,46 +1964,29 @@ func (x *fakeUUID) Scan(src any) error {
 }
 
 func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) {
-	type User struct {
-		ID     *fakeUUID `bun:"type:uuid,pk"`
-		DeckID *fakeUUID `bun:"type:uuid"`
-		Name   string
+	type Item struct {
+		ID        *notCompareKey `bun:"type:VARCHAR,pk"`
+		ProgramID *notCompareKey `bun:"type:VARCHAR"`
+		Name      string
 	}
-	type Deck struct {
-		ID    *fakeUUID `bun:"type:uuid,pk"`
-		Users []*User   `bun:"rel:has-many,join:id=deck_id"`
-	}
-
-	if db.Dialect().Name() == dialect.SQLite {
-		_, err := db.Exec("PRAGMA foreign_keys = ON;")
-		require.NoError(t, err)
+	type Program struct {
+		ID    *notCompareKey `bun:"type:VARCHAR,pk"`
+		Items []*Item        `bun:"rel:has-many,join:id=program_id"`
 	}
 
-	for _, model := range []any{(*Deck)(nil), (*User)(nil)} {
-		_, err := db.NewDropTable().Model(model).IfExists().Exec(ctx)
-		require.NoError(t, err)
-	}
+	mustResetModel(t, ctx, db, (*Item)(nil), (*Program)(nil))
 
-	mustResetModel(t, ctx, db, (*User)(nil))
-	_, err := db.NewCreateTable().Model((*Deck)(nil)).IfNotExists().Exec(ctx)
-	require.NoError(t, err)
-	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
+	programID := &notCompareKey{s: uuid.New().String()}
+	program := Program{ID: programID}
 
-	deckID := &fakeUUID{}
-	deckID.FromUUID(uuid.New())
-
-	deck := Deck{ID: deckID}
-	_, err = db.NewInsert().Model(&deck).Exec(ctx)
+	_, err := db.NewInsert().Model(&program).Exec(ctx)
 	require.NoError(t, err)
 
-	userID1 := &fakeUUID{}
-	userID2 := &fakeUUID{}
-	userID1.FromUUID(uuid.New())
-	userID2.FromUUID(uuid.New())
-
-	users := []*User{
-		{ID: userID1, DeckID: deckID, Name: "user 1"},
-		{ID: userID2, DeckID: deckID, Name: "user 2"},
+	itemID1 := &notCompareKey{s: uuid.New().String()}
+	itemID2 := &notCompareKey{s: uuid.New().String()}
+	users := []*Item{
+		{ID: itemID1, ProgramID: programID, Name: "Item 1"},
+		{ID: itemID2, ProgramID: programID, Name: "Item 2"},
 	}
 
 	res, err := db.NewInsert().Model(&users).Exec(ctx)
@@ -2043,7 +1996,7 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 	require.NoError(t, err)
 	require.Equal(t, int64(2), affected)
 
-	err = db.NewSelect().Model(&deck).Relation("Users").Scan(ctx)
+	err = db.NewSelect().Model(&program).Relation("Items").Scan(ctx)
 	require.NoError(t, err)
-	require.Len(t, deck.Users, 2)
+	require.Len(t, program.Items, 2)
 }
