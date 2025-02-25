@@ -1995,12 +1995,12 @@ func (x *fakeUUID) Scan(src any) error {
 
 func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) {
 	type User struct {
-		ID     *fakeUUID `bun:",pk"`
-		DeckID *fakeUUID
+		ID     *fakeUUID `bun:"type:uuid,pk"`
+		DeckID *fakeUUID `bun:"type:uuid"`
 		Name   string
 	}
 	type Deck struct {
-		ID    *fakeUUID `bun:",pk"`
+		ID    *fakeUUID `bun:"type:uuid,pk"`
 		Users []*User   `bun:"rel:has-many,join:id=deck_id"`
 	}
 
@@ -2015,11 +2015,7 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 	}
 
 	mustResetModel(t, ctx, db, (*User)(nil))
-	_, err := db.NewCreateTable().
-		Model((*Deck)(nil)).
-		IfNotExists().
-		WithForeignKeys().
-		Exec(ctx)
+	_, err := db.NewCreateTable().Model((*Deck)(nil)).IfNotExists().Exec(ctx)
 	require.NoError(t, err)
 	mustDropTableOnCleanup(t, ctx, db, (*Deck)(nil))
 
