@@ -149,6 +149,8 @@ func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []
 	return key
 }
 
+var driverValuerType = reflect.TypeFor[driver.Valuer]()
+
 // indirectAsKey return the field value dereferencing the pointer if necessary.
 // The value is then used as a map key.
 func indirectAsKey(field reflect.Value) interface{} {
@@ -173,9 +175,13 @@ func indirectAsKey(field reflect.Value) interface{} {
 		return nil
 	}
 
-	if valuer, ok := field.Interface().(driver.Valuer); ok {
-		v, _ := valuer.Value() // No need to record logs, will panic later
-		return v
+	// Only handle pointer-based driver.Valuer implementations
+	// compatible *ULID, see https://github.com/uptrace/bun/issues/1107
+	if !field.Type().Elem().Implements(driverValuerType) {
+		if valuer, ok := field.Interface().(driver.Valuer); ok {
+			v, _ := valuer.Value() // No need to record logs, will panic later
+			return v
+		}
 	}
 
 	return field.Elem().Interface()
