@@ -112,6 +112,29 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{1, 0}, barView.Index)
 	})
 
+	t.Run("unambiguous embed field", func(t *testing.T) {
+		type Perms struct {
+			View   bool
+			Create bool
+		}
+		type Role struct {
+			Perms        // should be ignore
+			Foo    Perms `bun:"embed:foo_"`
+			View   bool
+			Create bool
+		}
+
+		table := tables.Get(reflect.TypeFor[*Role]())
+
+		view, ok := table.FieldMap["view"]
+		require.True(t, ok)
+		require.Equal(t, []int{2}, view.Index)
+
+		fooView, ok := table.FieldMap["foo_view"]
+		require.True(t, ok)
+		require.Equal(t, []int{1, 0}, fooView.Index)
+	})
+
 	t.Run("embedWithUnique", func(t *testing.T) {
 		type Perms struct {
 			View          bool
