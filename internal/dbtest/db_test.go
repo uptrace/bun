@@ -24,12 +24,13 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/extra/bundebug"
-	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/extra/bunexp"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/require"
 )
@@ -302,6 +303,7 @@ func TestDB(t *testing.T) {
 		{testDriverValuerReturnsItself},
 		{testNoPanicWhenReturningNullColumns},
 		{testNoForeignKeyForPrimaryKey},
+		{testWithPointerPrimaryKeyHasManyWithDriverValuer},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1934,4 +1936,67 @@ func TestConnResolver(t *testing.T) {
 	require.Equal(t, 1, num)
 	require.GreaterOrEqual(t, rodb.Stats().OpenConnections, 1)
 	require.Equal(t, 0, rwdb.Stats().OpenConnections)
+}
+
+type doNotCompare [0]func()
+
+type notCompareKey struct {
+	doNotCompare
+	s string
+}
+
+func (x *notCompareKey) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
+	b = append(b, '\'')
+	b = append(b, x.s...)
+	return append(b, '\''), nil
+}
+
+func (x *notCompareKey) Value() (driver.Value, error) { return x.s, nil }
+func (x *notCompareKey) FromUUID(u uuid.UUID)         { x.s = u.String() }
+
+func (x *notCompareKey) Scan(src any) error {
+	var u uuid.UUID
+	if err := u.Scan(src); err != nil {
+		return err
+	}
+	x.FromUUID(u)
+	return nil
+}
+
+func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) {
+	type Item struct {
+		ID        *notCompareKey `bun:"type:VARCHAR,pk"`
+		ProgramID *notCompareKey `bun:"type:VARCHAR"`
+		Name      string
+	}
+	type Program struct {
+		ID    *notCompareKey `bun:"type:VARCHAR,pk"`
+		Items []*Item        `bun:"rel:has-many,join:id=program_id"`
+	}
+
+	mustResetModel(t, ctx, db, (*Item)(nil), (*Program)(nil))
+
+	programID := &notCompareKey{s: uuid.New().String()}
+	program := Program{ID: programID}
+
+	_, err := db.NewInsert().Model(&program).Exec(ctx)
+	require.NoError(t, err)
+
+	itemID1 := &notCompareKey{s: uuid.New().String()}
+	itemID2 := &notCompareKey{s: uuid.New().String()}
+	users := []*Item{
+		{ID: itemID1, ProgramID: programID, Name: "Item 1"},
+		{ID: itemID2, ProgramID: programID, Name: "Item 2"},
+	}
+
+	res, err := db.NewInsert().Model(&users).Exec(ctx)
+	require.NoError(t, err)
+
+	affected, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.Equal(t, int64(2), affected)
+
+	err = db.NewSelect().Model(&program).Relation("Items").Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, program.Items, 2)
 }

@@ -152,25 +152,24 @@ func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []
 // indirectAsKey return the field value dereferencing the pointer if necessary.
 // The value is then used as a map key.
 func indirectAsKey(field reflect.Value) interface{} {
-	if field.Kind() != reflect.Ptr {
-		i := field.Interface()
-		if valuer, ok := i.(driver.Valuer); ok {
-			if v, err := valuer.Value(); err == nil {
-				switch reflect.TypeOf(v).Kind() {
-				case reflect.Array, reflect.Chan, reflect.Func,
-					reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
-					// NOTE #1107, these types cannot be used as map key,
-					// let us use original logic.
-					return i
-				default:
-					return v
-				}
-			}
-		}
-		return i
-	}
-	if field.IsNil() {
+	if field.Kind() == reflect.Pointer && field.IsNil() {
 		return nil
 	}
-	return field.Elem().Interface()
+
+	i := field.Interface()
+	if valuer, ok := i.(driver.Valuer); ok {
+		if v, err := valuer.Value(); err == nil {
+			switch reflect.TypeOf(v).Kind() {
+			case reflect.Array, reflect.Chan, reflect.Func,
+				reflect.Map, reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
+				// NOTE #1107, these types cannot be used as map key,
+				// let us use original logic.
+				return i
+			default:
+				return v
+			}
+		}
+	}
+
+	return reflect.Indirect(field).Interface()
 }
