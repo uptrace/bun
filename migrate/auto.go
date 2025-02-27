@@ -191,7 +191,7 @@ func (am *AutoMigrator) plan(ctx context.Context) (*changeset, error) {
 }
 
 // Migrate writes required changes to a new migration file and runs the migration.
-// This will create and entry in the migrations table, making it possible to revert
+// This will create an entry in the migrations table, making it possible to revert
 // the changes with Migrator.Rollback(). MigrationOptions are passed on to Migrator.Migrate().
 func (am *AutoMigrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	migrations, _, err := am.createSQLMigrations(ctx, false)
