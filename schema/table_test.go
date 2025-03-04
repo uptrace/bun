@@ -186,6 +186,7 @@ func TestTable(t *testing.T) {
 
 		table := tables.Get(reflect.TypeFor[*Embeded]())
 		require.Contains(t, table.StructMap, "profile")
+		require.Equal(t, table.StructMap["profile"].Table.Name, "profiles")
 	})
 
 	t.Run("embed scanonly", func(t *testing.T) {
