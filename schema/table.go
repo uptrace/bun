@@ -171,7 +171,7 @@ func (t *Table) processFields(typ reflect.Type) {
 					if _, ok := ebdStructs[k]; !ok {
 						ebdStructs[k] = &structField{
 							Index: makeIndex(sf.Index, v.Index),
-							Table: subtable,
+							Table: v.Table,
 						}
 					}
 				}
