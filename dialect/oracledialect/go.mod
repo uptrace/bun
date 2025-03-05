@@ -4,7 +4,7 @@ go 1.22.0
 
 replace github.com/uptrace/bun => ../..
 
-require github.com/uptrace/bun v1.2.10
+require github.com/uptrace/bun v1.2.11
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect

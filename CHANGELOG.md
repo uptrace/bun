@@ -1,3 +1,19 @@
+## [1.2.11](https://github.com/uptrace/bun/compare/v1.2.10...v1.2.11) (2025-03-05)
+
+
+### Bug Fixes
+
+* always use the value returned by implemented driver.Valuer ([0c29af6](https://github.com/uptrace/bun/commit/0c29af65f17891d15019e60f64704e9c45204062))
+* handle driver.Valuer in getRealValue ([fa37c7b](https://github.com/uptrace/bun/commit/fa37c7b91e570ca032d01d7311245a07b52dbed8))
+* only handle pointer-based driver.Valuer implementations ([40b20cd](https://github.com/uptrace/bun/commit/40b20cd207a22b8b8f86ec36c62385f6293c192a))
+* **schema:** determine whether a field is ambiguous with prefix ([83f6f99](https://github.com/uptrace/bun/commit/83f6f992bf38a654207b27fcc3bd4ea1984c9acb))
+* **schema:** process embed with struct ([a06003d](https://github.com/uptrace/bun/commit/a06003d867168a663b1ad223bbed85b3d94fd920)), closes [#1136](https://github.com/uptrace/bun/issues/1136)
+* **test:** define uuid type for pointer primary keys ([3b72bd4](https://github.com/uptrace/bun/commit/3b72bd4cd045aa8061b7ca8b1cb00eae6c4016f0))
+* **test:** use varchar to be compatible with multiple databases ([287b0e3](https://github.com/uptrace/bun/commit/287b0e386feeab7391b749723c32377e5315a870))
+* **typo:** minor typo fix in `migrate/auto.go` ([368ed3f](https://github.com/uptrace/bun/commit/368ed3f2e2a65fbad50b26080efb33366b793e83))
+
+
+
 ## [1.2.10](https://github.com/uptrace/bun/compare/v1.2.9...v1.2.10) (2025-02-18)
 
 
