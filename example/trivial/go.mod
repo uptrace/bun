@@ -21,14 +21,14 @@ replace github.com/uptrace/bun/dialect/mssqldialect => ../../dialect/mssqldialec
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/go-sql-driver/mysql v1.9.0
-	github.com/uptrace/bun v1.2.10
-	github.com/uptrace/bun/dialect/mssqldialect v1.2.10
-	github.com/uptrace/bun/dialect/mysqldialect v1.2.10
-	github.com/uptrace/bun/dialect/pgdialect v1.2.10
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.10
-	github.com/uptrace/bun/driver/pgdriver v1.2.10
-	github.com/uptrace/bun/driver/sqliteshim v1.2.10
-	github.com/uptrace/bun/extra/bundebug v1.2.10
+	github.com/uptrace/bun v1.2.11
+	github.com/uptrace/bun/dialect/mssqldialect v1.2.11
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.11
+	github.com/uptrace/bun/dialect/pgdialect v1.2.11
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.11
+	github.com/uptrace/bun/driver/pgdriver v1.2.11
+	github.com/uptrace/bun/driver/sqliteshim v1.2.11
+	github.com/uptrace/bun/extra/bundebug v1.2.11
 )
 
 require (
@@ -50,13 +50,13 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
+	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
 	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect
-	modernc.org/sqlite v1.35.0 // indirect
+	modernc.org/sqlite v1.36.0 // indirect
 )
