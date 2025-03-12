@@ -92,6 +92,27 @@ var (
 	_ QueryBuilder = (*deleteQueryBuilder)(nil)
 )
 
+type IBaseQuery interface {
+	AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool)
+	DB() *DB
+	Dialect() schema.Dialect
+	GetModel() Model
+	GetTableName() string
+	NewAddColumn() *AddColumnQuery
+	NewCreateIndex() *CreateIndexQuery
+	NewCreateTable() *CreateTableQuery
+	NewDelete() *DeleteQuery
+	NewDropColumn() *DropColumnQuery
+	NewDropIndex() *DropIndexQuery
+	NewDropTable() *DropTableQuery
+	NewInsert() *InsertQuery
+	NewRaw(query string, args ...interface{}) *RawQuery
+	NewSelect() *SelectQuery
+	NewTruncateTable() *TruncateTableQuery
+	NewUpdate() *UpdateQuery
+	NewValues(model interface{}) *ValuesQuery
+}
+
 type baseQuery struct {
 	db   *DB
 	conn IConn
