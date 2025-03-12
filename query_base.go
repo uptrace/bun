@@ -50,7 +50,7 @@ type IDB interface {
 	Dialect() schema.Dialect
 
 	NewValues(model any) IValuesQuery
-	NewSelect() *SelectQuery
+	NewSelect() ISelectQuery
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery
 	NewDelete() *DeleteQuery
@@ -107,7 +107,7 @@ type IBaseQuery interface {
 	NewDropTable() *DropTableQuery
 	NewInsert() *InsertQuery
 	NewRaw(query string, args ...interface{}) *RawQuery
-	NewSelect() *SelectQuery
+	NewSelect() ISelectQuery
 	NewTruncateTable() *TruncateTableQuery
 	NewUpdate() *UpdateQuery
 	NewValues(model interface{}) *ValuesQuery
@@ -679,7 +679,7 @@ func (q *baseQuery) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(q.db, model).Conn(q.conn)
 }
 
-func (q *baseQuery) NewSelect() *SelectQuery {
+func (q *baseQuery) NewSelect() ISelectQuery {
 	return NewSelectQuery(q.db).Conn(q.conn)
 }
 

@@ -130,7 +130,7 @@ func (db *DB) NewMerge() IMergeQuery {
 	return NewMergeQuery(db)
 }
 
-func (db *DB) NewSelect() *SelectQuery {
+func (db *DB) NewSelect() ISelectQuery {
 	return NewSelectQuery(db)
 }
 
@@ -382,7 +382,7 @@ func (c Conn) NewMerge() IMergeQuery {
 	return NewMergeQuery(c.db).Conn(c)
 }
 
-func (c Conn) NewSelect() *SelectQuery {
+func (c Conn) NewSelect() ISelectQuery {
 	return NewSelectQuery(c.db).Conn(c)
 }
 
@@ -696,7 +696,7 @@ func (tx Tx) NewMerge() IMergeQuery {
 	return NewMergeQuery(tx.db).Conn(tx)
 }
 
-func (tx Tx) NewSelect() *SelectQuery {
+func (tx Tx) NewSelect() ISelectQuery {
 	return NewSelectQuery(tx.db).Conn(tx)
 }
 
