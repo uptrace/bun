@@ -11,6 +11,33 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+type IMergeQuery interface {
+	IBaseQuery
+
+	AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error)
+	Apply(fns ...func(IMergeQuery) IMergeQuery) IMergeQuery
+	Comment(comment string) IMergeQuery
+	Conn(db IConn) IMergeQuery
+	Err(err error) IMergeQuery
+	Exec(ctx context.Context, dest ...any) (sql.Result, error)
+	Model(model any) IMergeQuery
+	ModelTableExpr(query string, args ...any) IMergeQuery
+	On(s string, args ...any) IMergeQuery
+	Operation() string
+	Returning(query string, args ...any) IMergeQuery
+	Scan(ctx context.Context, dest ...any) error
+	String() string
+	Table(tables ...string) IMergeQuery
+	TableExpr(query string, args ...any) IMergeQuery
+	Using(s string, args ...any) IMergeQuery
+	When(expr string, args ...any) IMergeQuery
+	WhenDelete(expr string) IMergeQuery
+	WhenInsert(expr string, fn func(q *InsertQuery) *InsertQuery) IMergeQuery
+	WhenUpdate(expr string, fn func(q *UpdateQuery) *UpdateQuery) IMergeQuery
+	With(name string, query Query) IMergeQuery
+	WithRecursive(name string, query Query) IMergeQuery
+}
+
 type MergeQuery struct {
 	baseQuery
 	returningQuery
@@ -35,56 +62,59 @@ func NewMergeQuery(db *DB) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) Conn(db IConn) *MergeQuery {
+func (q *MergeQuery) Conn(db IConn) IMergeQuery {
 	q.setConn(db)
 	return q
 }
 
-func (q *MergeQuery) Model(model interface{}) *MergeQuery {
+func (q *MergeQuery) Model(model interface{}) IMergeQuery {
 	q.setModel(model)
 	return q
 }
 
-func (q *MergeQuery) Err(err error) *MergeQuery {
+func (q *MergeQuery) Err(err error) IMergeQuery {
 	q.setErr(err)
 	return q
 }
 
 // Apply calls each function in fns, passing the MergeQuery as an argument.
-func (q *MergeQuery) Apply(fns ...func(*MergeQuery) *MergeQuery) *MergeQuery {
+func (q *MergeQuery) Apply(fns ...func(IMergeQuery) IMergeQuery) IMergeQuery {
 	for _, fn := range fns {
 		if fn != nil {
-			q = fn(q)
+			// Each implement could be different. Here, we expect a *MergeQuery.
+			if v, ok := fn(q).(*MergeQuery); ok {
+				q = v
+			}
 		}
 	}
 	return q
 }
 
-func (q *MergeQuery) With(name string, query Query) *MergeQuery {
+func (q *MergeQuery) With(name string, query Query) IMergeQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *MergeQuery) WithRecursive(name string, query Query) *MergeQuery {
+func (q *MergeQuery) WithRecursive(name string, query Query) IMergeQuery {
 	q.addWith(name, query, true)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *MergeQuery) Table(tables ...string) *MergeQuery {
+func (q *MergeQuery) Table(tables ...string) IMergeQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
-func (q *MergeQuery) TableExpr(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) TableExpr(query string, args ...interface{}) IMergeQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) IMergeQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -95,25 +125,25 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQue
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 // Only for mssql output, postgres not supported returning in merge query
-func (q *MergeQuery) Returning(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) Returning(query string, args ...interface{}) IMergeQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *MergeQuery) Using(s string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) Using(s string, args ...interface{}) IMergeQuery {
 	q.using = schema.SafeQuery(s, args)
 	return q
 }
 
-func (q *MergeQuery) On(s string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) On(s string, args ...interface{}) IMergeQuery {
 	q.on = schema.SafeQuery(s, args)
 	return q
 }
 
 // WhenInsert for when insert clause.
-func (q *MergeQuery) WhenInsert(expr string, fn func(q *InsertQuery) *InsertQuery) *MergeQuery {
+func (q *MergeQuery) WhenInsert(expr string, fn func(q *InsertQuery) *InsertQuery) IMergeQuery {
 	sq := NewInsertQuery(q.db)
 	// apply the model as default into sub query, since appendColumnsValues required
 	if q.model != nil {
@@ -125,7 +155,7 @@ func (q *MergeQuery) WhenInsert(expr string, fn func(q *InsertQuery) *InsertQuer
 }
 
 // WhenUpdate for when update clause.
-func (q *MergeQuery) WhenUpdate(expr string, fn func(q *UpdateQuery) *UpdateQuery) *MergeQuery {
+func (q *MergeQuery) WhenUpdate(expr string, fn func(q *UpdateQuery) *UpdateQuery) IMergeQuery {
 	sq := NewUpdateQuery(q.db)
 	// apply the model as default into sub query
 	if q.model != nil {
@@ -137,13 +167,13 @@ func (q *MergeQuery) WhenUpdate(expr string, fn func(q *UpdateQuery) *UpdateQuer
 }
 
 // WhenDelete for when delete clause.
-func (q *MergeQuery) WhenDelete(expr string) *MergeQuery {
+func (q *MergeQuery) WhenDelete(expr string) IMergeQuery {
 	q.when = append(q.when, &whenDelete{expr: expr})
 	return q
 }
 
 // When for raw expression clause.
-func (q *MergeQuery) When(expr string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) When(expr string, args ...interface{}) IMergeQuery {
 	q.when = append(q.when, schema.SafeQuery(expr, args))
 	return q
 }
@@ -151,7 +181,7 @@ func (q *MergeQuery) When(expr string, args ...interface{}) *MergeQuery {
 //------------------------------------------------------------------------------
 
 // Comment adds a comment to the query, wrapped by /* ... */.
-func (q *MergeQuery) Comment(comment string) *MergeQuery {
+func (q *MergeQuery) Comment(comment string) IMergeQuery {
 	q.comment = comment
 	return q
 }

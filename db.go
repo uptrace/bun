@@ -126,7 +126,7 @@ func (db *DB) NewValues(model any) IValuesQuery {
 	return NewValuesQuery(db, model)
 }
 
-func (db *DB) NewMerge() *MergeQuery {
+func (db *DB) NewMerge() IMergeQuery {
 	return NewMergeQuery(db)
 }
 
@@ -378,7 +378,7 @@ func (c Conn) NewValues(model interface{}) IValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
 }
 
-func (c Conn) NewMerge() *MergeQuery {
+func (c Conn) NewMerge() IMergeQuery {
 	return NewMergeQuery(c.db).Conn(c)
 }
 
@@ -692,7 +692,7 @@ func (tx Tx) NewValues(model interface{}) IValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
 }
 
-func (tx Tx) NewMerge() *MergeQuery {
+func (tx Tx) NewMerge() IMergeQuery {
 	return NewMergeQuery(tx.db).Conn(tx)
 }
 
