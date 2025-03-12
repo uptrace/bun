@@ -49,7 +49,7 @@ type IDB interface {
 	IConn
 	Dialect() schema.Dialect
 
-	NewValues(model interface{}) *ValuesQuery
+	NewValues(model any) IValuesQuery
 	NewSelect() *SelectQuery
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery

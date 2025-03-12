@@ -122,7 +122,7 @@ func (db *DB) DBStats() DBStats {
 	}
 }
 
-func (db *DB) NewValues(model interface{}) *ValuesQuery {
+func (db *DB) NewValues(model any) IValuesQuery {
 	return NewValuesQuery(db, model)
 }
 
@@ -374,7 +374,7 @@ func (c Conn) Dialect() schema.Dialect {
 	return c.db.Dialect()
 }
 
-func (c Conn) NewValues(model interface{}) *ValuesQuery {
+func (c Conn) NewValues(model interface{}) IValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
 }
 
@@ -688,7 +688,7 @@ func (tx Tx) Dialect() schema.Dialect {
 	return tx.db.Dialect()
 }
 
-func (tx Tx) NewValues(model interface{}) *ValuesQuery {
+func (tx Tx) NewValues(model interface{}) IValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
 }
 

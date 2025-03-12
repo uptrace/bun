@@ -469,7 +469,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	values := q.db.NewValues(model)
+	values := NewValuesQuery(q.db, model)
 	values.customValueQuery = q.customValueQuery
 
 	return q.With("_data", values).
