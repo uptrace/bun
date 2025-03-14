@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -304,6 +305,7 @@ func TestDB(t *testing.T) {
 		{testNoPanicWhenReturningNullColumns},
 		{testNoForeignKeyForPrimaryKey},
 		{testWithPointerPrimaryKeyHasManyWithDriverValuer},
+		{testRelationJoinDataRace},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1999,4 +2001,47 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 	err = db.NewSelect().Model(&program).Relation("Items").Scan(ctx)
 	require.NoError(t, err)
 	require.Len(t, program.Items, 2)
+}
+
+func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
+	type Post struct {
+		PostID  int64 `bun:",pk,autoincrement"`
+		UserID  int64
+		Message string
+		Tags    map[string]string `bun:",type:jsonb"`
+	}
+	type User struct {
+		UserID int64 `bun:",pk,autoincrement"`
+		Name   string
+		Posts  *Post `bun:"rel:has-one,join:user_id=user_id"`
+	}
+
+	err := db.ResetModel(ctx, (*Post)(nil), (*User)(nil))
+	require.NoError(t, err)
+
+	for j := 0; j < 10; j++ {
+		user := &User{Name: fmt.Sprintf("user %d", j)}
+		_, err = db.NewInsert().Model(user).Returning("user_id").Exec(ctx, user)
+		require.NoError(t, err)
+
+		i := 0
+		post := &Post{
+			Message: fmt.Sprintf("message %d", i),
+			Tags: map[string]string{
+				"tag1": fmt.Sprintf("tag1 %d", i),
+				"tag2": fmt.Sprintf("tag2 %d", i),
+			},
+			UserID: user.UserID,
+		}
+		_, err = db.NewInsert().Model(post).Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	var users []User
+	_, err = db.NewSelect().
+		Model(&users).
+		Relation("Posts").
+		Offset(1).
+		ScanAndCount(context.Background())
+	require.NoError(t, err)
 }
