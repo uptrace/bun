@@ -38,7 +38,7 @@ import (
 
 var (
 	ctx        = context.TODO()
-	isRaceTest = os.Getenv("GORACE") != ""
+	isRaceTest = os.Getenv("RACETEST") != ""
 )
 
 const (
