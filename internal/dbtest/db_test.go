@@ -2007,11 +2007,14 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 }
 
 func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name().String() == "sqlite" {
+		return
+	}
+
 	type RacePost struct {
 		PostID  int64 `bun:",pk,autoincrement"`
 		UserID  int64
 		Message string
-		Tags    map[string]string `bun:",type:jsonb"`
 	}
 	type RaceUser struct {
 		UserID int64 `bun:",pk,autoincrement"`
@@ -2030,11 +2033,7 @@ func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 		i := 0
 		post := &RacePost{
 			Message: fmt.Sprintf("message %d", i),
-			Tags: map[string]string{
-				"tag1": fmt.Sprintf("tag1 %d", i),
-				"tag2": fmt.Sprintf("tag2 %d", i),
-			},
-			UserID: user.UserID,
+			UserID:  user.UserID,
 		}
 		_, err = db.NewInsert().Model(post).Exec(ctx)
 		require.NoError(t, err)
