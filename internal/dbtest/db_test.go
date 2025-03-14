@@ -36,7 +36,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ctx = context.TODO()
+var (
+	ctx        = context.TODO()
+	isRaceTest = os.Getenv("GORACE") != ""
+)
 
 const (
 	pgName        = "pg"

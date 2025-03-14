@@ -6,7 +6,7 @@ test:
 	  echo "go test in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go test && \
-	    go test -race && \
+	    env GORACE=1 go test -race && \
 	    env GOOS=linux GOARCH=386 TZ= go test && \
 	    go vet); \
 	done
