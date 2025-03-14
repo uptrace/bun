@@ -2007,28 +2007,28 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 }
 
 func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
-	type Post struct {
+	type RacePost struct {
 		PostID  int64 `bun:",pk,autoincrement"`
 		UserID  int64
 		Message string
 		Tags    map[string]string `bun:",type:jsonb"`
 	}
-	type User struct {
+	type RaceUser struct {
 		UserID int64 `bun:",pk,autoincrement"`
 		Name   string
-		Posts  *Post `bun:"rel:has-one,join:user_id=user_id"`
+		Posts  *RacePost `bun:"rel:has-one,join:user_id=user_id"`
 	}
 
-	err := db.ResetModel(ctx, (*Post)(nil), (*User)(nil))
+	err := db.ResetModel(ctx, (*RacePost)(nil), (*RaceUser)(nil))
 	require.NoError(t, err)
 
 	for j := 0; j < 10; j++ {
-		user := &User{Name: fmt.Sprintf("user %d", j)}
+		user := &RaceUser{Name: fmt.Sprintf("user %d", j)}
 		_, err = db.NewInsert().Model(user).Returning("user_id").Exec(ctx, user)
 		require.NoError(t, err)
 
 		i := 0
-		post := &Post{
+		post := &RacePost{
 			Message: fmt.Sprintf("message %d", i),
 			Tags: map[string]string{
 				"tag1": fmt.Sprintf("tag1 %d", i),
@@ -2040,11 +2040,7 @@ func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 		require.NoError(t, err)
 	}
 
-	var users []User
-	_, err = db.NewSelect().
-		Model(&users).
-		Relation("Posts").
-		Offset(1).
-		ScanAndCount(context.Background())
+	var users []RaceUser
+	_, err = db.NewSelect().Model(&users).Relation("Posts").Offset(1).ScanAndCount(ctx)
 	require.NoError(t, err)
 }
