@@ -2022,12 +2022,11 @@ func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 		Posts  *RacePost `bun:"rel:has-one,join:user_id=user_id"`
 	}
 
-	err := db.ResetModel(ctx, (*RacePost)(nil), (*RaceUser)(nil))
-	require.NoError(t, err)
+	mustResetModel(t, ctx, db, (*RaceUser)(nil), (*RacePost)(nil))
 
 	for j := 0; j < 10; j++ {
 		user := &RaceUser{Name: fmt.Sprintf("user %d", j)}
-		_, err = db.NewInsert().Model(user).Returning("user_id").Exec(ctx, user)
+		_, err := db.NewInsert().Model(user).Returning("user_id").Exec(ctx, user)
 		require.NoError(t, err)
 
 		i := 0
@@ -2040,6 +2039,6 @@ func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 	}
 
 	var users []RaceUser
-	_, err = db.NewSelect().Model(&users).Relation("Posts").Offset(1).ScanAndCount(ctx)
+	_, err := db.NewSelect().Model(&users).Relation("Posts").Offset(1).ScanAndCount(ctx)
 	require.NoError(t, err)
 }
