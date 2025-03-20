@@ -45,7 +45,7 @@ func main() {
 	if err := db.NewSelect().
 		Model(user).
 		Column("user.*").
-		Relation("Profiles", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Profiles", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Where("lang = 'ru'")
 		}).
 		OrderExpr("user.id ASC").

@@ -66,7 +66,7 @@ func main() {
 	order = new(Order)
 	if err := db.NewSelect().
 		Model(order).
-		Relation("Items", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Items", func(q bun.ISelectQuery) bun.ISelectQuery {
 			q = q.OrderExpr("item.id DESC")
 			return q
 		}).
