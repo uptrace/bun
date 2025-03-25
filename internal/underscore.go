@@ -22,83 +22,100 @@ func Underscore(s string) string {
 		return s
 	}
 
-	// Handle ClientIDValue special case directly
-	if s == "ClientIDValue" {
-		return "client_id_value"
+	result := make([]byte, 0, len(s)*2)
+
+	// Track positions that we should skip adding underscores for
+	skipUnderscore := make(map[int]bool)
+
+	// First scan for ID patterns to mark positions we should skip for underscores
+	for i := 0; i < len(s); i++ {
+		// Look for ID pattern
+		if i+1 < len(s) && s[i] == 'I' && s[i+1] == 'D' {
+			// Find what position comes after ID or IDs
+			afterPos := i + 2 // After 'ID'
+			if i+2 < len(s) && s[i+2] == 's' {
+				afterPos = i + 3 // After 'IDs'
+			}
+
+			// If there's an uppercase after ID/IDs, mark it to skip adding underscore later
+			if afterPos < len(s) && IsUpper(s[afterPos]) {
+				skipUnderscore[afterPos] = true
+			}
+		}
 	}
 
-	r := make([]byte, 0, len(s)*2)
-	var prev byte
-
+	// Now process the string
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 
 		// Handle underscore -> double underscore
 		if c == '_' {
-			r = append(r, '_', '_')
-			prev = c
+			result = append(result, '_', '_')
 			continue
 		}
 
-		// Special handling for single uppercase letter at the end
-		if i == len(s)-1 && IsUpper(c) {
-			r = append(r, ToLower(c))
-			continue
-		}
-
-		// Handle ID pattern specifically
-		if i > 0 && c == 'I' && i+1 < len(s) && s[i+1] == 'D' {
-			// Check if it's "ID" at the end or followed by non-lowercase
-			isIDAtEnd := i+2 >= len(s)
-			isIDsAtEnd := i+2 < len(s) && s[i+2] == 's' && i+3 >= len(s)
-			isIDNotFollowedByLowercase := i+2 < len(s) && !IsLower(s[i+2])
-			isIDsNotFollowedByLowercase := i+2 < len(s) && s[i+2] == 's' && i+3 < len(s) && !IsLower(s[i+3])
-
-			if isIDAtEnd || isIDsAtEnd || isIDNotFollowedByLowercase || isIDsNotFollowedByLowercase {
-				// Add underscore before ID if needed
-				if len(r) > 0 && r[len(r)-1] != '_' {
-					r = append(r, '_')
-				}
-
-				// Add "id"
-				r = append(r, 'i', 'd')
-				i++ // Skip 'D'
-
-				// If ID is followed by 's', add it
-				if i+1 < len(s) && s[i+1] == 's' {
-					r = append(r, 's')
-					i++ // Skip 's'
-				}
-
-				// If there are more characters and the next one is uppercase, add underscore
-				if i+1 < len(s) && IsUpper(s[i+1]) {
-					r = append(r, '_')
-				}
-
-				prev = s[i]
-				continue
+		// Handle first character
+		if i == 0 {
+			if IsUpper(c) {
+				result = append(result, ToLower(c))
+			} else {
+				result = append(result, c)
 			}
+			continue
 		}
 
-		// Insert underscore before uppercase letters in these cases:
-		// 1. After a lowercase letter (camelCase -> camel_case)
-		// 2. After an uppercase letter followed by a lowercase (HTTPRequest -> http_request)
-		if i > 0 && IsUpper(c) &&
-			(IsLower(prev) || (IsUpper(prev) && i+1 < len(s) && IsLower(s[i+1]))) {
-			r = append(r, '_')
+		// Handle single uppercase letter at the end
+		if i == len(s)-1 && IsUpper(c) {
+			result = append(result, ToLower(c))
+			continue
 		}
 
-		// Add lowercase version of current character
+		// Handle ID pattern
+		if c == 'I' && i+1 < len(s) && s[i+1] == 'D' {
+			// Add underscore before ID if needed
+			if i > 0 && isLetter(s[i-1]) {
+				result = append(result, '_')
+			}
+
+			// Add "id"
+			result = append(result, 'i', 'd')
+			i++ // Skip 'D'
+
+			// Handle plural 's'
+			if i+1 < len(s) && s[i+1] == 's' {
+				result = append(result, 's')
+				i++ // Skip 's'
+			}
+
+			// Add underscore if followed by uppercase letter
+			if i+1 < len(s) && IsUpper(s[i+1]) {
+				result = append(result, '_')
+			}
+
+			continue
+		}
+
+		// Regular camelCase -> snake_case and acronym handling
 		if IsUpper(c) {
-			r = append(r, ToLower(c))
-		} else {
-			r = append(r, c)
-		}
+			prev := s[i-1]
 
-		prev = c
+			// Skip adding underscore if this position was marked to skip
+			if !skipUnderscore[i] && (IsLower(prev) || (IsUpper(prev) && i+1 < len(s) && IsLower(s[i+1]))) {
+				result = append(result, '_')
+			}
+
+			result = append(result, ToLower(c))
+		} else {
+			result = append(result, c)
+		}
 	}
 
-	return string(r)
+	return string(result)
+}
+
+// Helper to check if a byte is a letter (a-z, A-Z)
+func isLetter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 func CamelCased(s string) string {
