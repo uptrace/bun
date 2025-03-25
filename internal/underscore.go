@@ -34,6 +34,37 @@ func Underscore(s string) string {
 			continue
 		}
 
+		// Special handling for "ID" and "IDs" patterns in the string
+		if c == 'I' && i+1 < len(s) && s[i+1] == 'D' {
+			// Check for "IDs" (plural form)
+			if i+2 < len(s) && s[i+2] == 's' && (i+3 >= len(s) || !IsLower(s[i+3])) {
+				// We have "IDs" at the end or followed by non-lowercase
+				if i > 0 {
+					// Not at the beginning, add underscore if needed
+					if r[len(r)-1] != '_' {
+						r = append(r, '_')
+					}
+				}
+				r = append(r, 'i', 'd', 's')
+				i += 2 // Skip the 'Ds'
+				continue
+			}
+
+			// Check for "ID" at the end or followed by uppercase
+			if i+2 >= len(s) || !IsLower(s[i+2]) {
+				// We have "ID" - followed by end of string or non-lowercase
+				if i > 0 {
+					// Not at the beginning, add underscore if needed
+					if r[len(r)-1] != '_' {
+						r = append(r, '_')
+					}
+				}
+				r = append(r, 'i', 'd')
+				i++ // Skip the 'D'
+				continue
+			}
+		}
+
 		// Check if we need to insert an underscore before this character
 		if i > 0 && IsUpper(c) {
 			// Don't add underscore for single capital at end of string

@@ -27,6 +27,16 @@ func TestUnderscore(t *testing.T) {
 		// Test existing underscores - should become double underscores
 		{"Genre_Rating", "genre__rating"},
 		{"User_ID", "user__id"},
+
+		// Test ID patterns
+		{"ID", "id"},
+		{"UserID", "user_id"},
+		{"ChildIDs", "child_ids"},
+		{"ItemsIDs", "items_ids"},
+		{"ClientIDValue", "client_id_value"},
+		{"OrderID", "order_id"},
+		{"HTML", "html"},
+		{"HTMLIDs", "html_ids"},
 	}
 
 	for _, test := range tests {
