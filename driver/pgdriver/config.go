@@ -45,6 +45,9 @@ type Config struct {
 	// ResetSessionFunc is called prior to executing a query on a connection
 	// that has been used before.
 	ResetSessionFunc func(context.Context, *Conn) error
+
+	// Enable tracing
+	EnableTracing bool
 }
 
 func newDefaultConfig() *Config {
@@ -62,6 +65,8 @@ func newDefaultConfig() *Config {
 
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 5 * time.Second,
+
+		EnableTracing: true,
 	}
 
 	conf.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -199,6 +204,12 @@ func WithDSN(dsn string) Option {
 		for _, opt := range opts {
 			opt(conf)
 		}
+	}
+}
+
+func WithTracing(on bool) Option {
+	return func(conf *Config) {
+		conf.EnableTracing = on
 	}
 }
 
