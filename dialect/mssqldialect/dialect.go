@@ -37,6 +37,8 @@ type Dialect struct {
 
 	tables   *schema.Tables
 	features feature.Feature
+
+	unicode bool
 }
 
 func New(opts ...DialectOption) *Dialect {
@@ -50,6 +52,8 @@ func New(opts ...DialectOption) *Dialect {
 		feature.UpdateFromTable |
 		feature.MSSavepoint
 
+	d.unicode = true
+
 	for _, opt := range opts {
 		opt(d)
 	}
@@ -61,6 +65,12 @@ type DialectOption func(d *Dialect)
 func WithoutFeature(other feature.Feature) DialectOption {
 	return func(d *Dialect) {
 		d.features = d.features.Remove(other)
+	}
+}
+
+func WithUnicode(on bool) DialectOption {
+	return func(d *Dialect) {
+		d.unicode = on
 	}
 }
 
@@ -140,8 +150,11 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 }
 
 func (d *Dialect) AppendString(b []byte, s string) []byte {
-	// 'N' prefix means the string uses Unicode encoding.
-	b = append(b, 'N')
+	if d.unicode {
+		// 'N' prefix means the string uses Unicode encoding.
+		b = append(b, 'N')
+	}
+
 	return d.BaseDialect.AppendString(b, s)
 }
 
