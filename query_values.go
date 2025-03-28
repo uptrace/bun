@@ -9,6 +9,20 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+type IValuesQuery interface {
+	IBaseQuery
+
+	AppendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error)
+	AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error)
+	Column(columns ...string) *ValuesQuery
+	Comment(comment string) *ValuesQuery
+	Conn(db IConn) *ValuesQuery
+	Err(err error) *ValuesQuery
+	Operation() string
+	Value(column string, expr string, args ...any) *ValuesQuery
+	WithOrder() *ValuesQuery
+}
+
 type ValuesQuery struct {
 	baseQuery
 	customValueQuery
@@ -22,13 +36,14 @@ var (
 	_ schema.NamedArgAppender = (*ValuesQuery)(nil)
 )
 
-func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
+func NewValuesQuery(db *DB, model any) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
 			db: db,
 		},
 	}
 	q.setModel(model)
+
 	return q
 }
 
@@ -50,7 +65,7 @@ func (q *ValuesQuery) Column(columns ...string) *ValuesQuery {
 }
 
 // Value overwrites model value for the column.
-func (q *ValuesQuery) Value(column string, expr string, args ...interface{}) *ValuesQuery {
+func (q *ValuesQuery) Value(column string, expr string, args ...any) *ValuesQuery {
 	if q.table == nil {
 		q.setErr(errNilModel)
 		return q

@@ -18,36 +18,36 @@ type relationJoin struct {
 
 	additionalJoinOnConditions []schema.QueryWithArgs
 
-	apply   func(*SelectQuery) *SelectQuery
+	apply   func(ISelectQuery) ISelectQuery
 	columns []schema.QueryWithArgs
 }
 
-func (j *relationJoin) applyTo(q *SelectQuery) {
+func (j *relationJoin) applyTo(q ISelectQuery) {
 	if j.apply == nil {
 		return
 	}
 
-	var table *schema.Table
-	var columns []schema.QueryWithArgs
-
 	// Save state.
-	table, q.table = q.table, j.JoinModel.Table()
-	columns, q.columns = q.columns, nil
+	table := q.getTable()
+	q.setTable(j.JoinModel.Table())
+	columns := q.getColumns()
+	q.setColumns(nil)
 
 	q = j.apply(q)
 
 	// Restore state.
-	q.table = table
-	j.columns, q.columns = q.columns, columns
+	q.setTable(table)
+	j.columns = q.getColumns()
+	q.setColumns(columns)
 }
 
-func (j *relationJoin) Select(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) Select(ctx context.Context, q ISelectQuery) error {
 	switch j.Relation.Type {
 	}
 	panic("not reached")
 }
 
-func (j *relationJoin) selectMany(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) selectMany(ctx context.Context, q ISelectQuery) error {
 	q = j.manyQuery(q)
 	if q == nil {
 		return nil
@@ -55,7 +55,7 @@ func (j *relationJoin) selectMany(ctx context.Context, q *SelectQuery) error {
 	return q.Scan(ctx)
 }
 
-func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
+func (j *relationJoin) manyQuery(q ISelectQuery) ISelectQuery {
 	hasManyModel := newHasManyModel(j)
 	if hasManyModel == nil {
 		return nil
@@ -65,13 +65,13 @@ func (j *relationJoin) manyQuery(q *SelectQuery) *SelectQuery {
 
 	var where []byte
 
-	if q.db.HasFeature(feature.CompositeIn) {
+	if q.DB().HasFeature(feature.CompositeIn) {
 		return j.manyQueryCompositeIn(where, q)
 	}
 	return j.manyQueryMulti(where, q)
 }
 
-func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *SelectQuery {
+func (j *relationJoin) manyQueryCompositeIn(where []byte, q ISelectQuery) ISelectQuery {
 	if len(j.Relation.JoinPKs) > 1 {
 		where = append(where, '(')
 	}
@@ -81,7 +81,7 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 	}
 	where = append(where, " IN ("...)
 	where = appendChildValues(
-		q.db.Formatter(),
+		q.DB().Formatter(),
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
@@ -90,24 +90,24 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 	where = append(where, ")"...)
 	if len(j.additionalJoinOnConditions) > 0 {
 		where = append(where, " AND "...)
-		where = appendAdditionalJoinOnConditions(q.db.Formatter(), where, j.additionalJoinOnConditions)
+		where = appendAdditionalJoinOnConditions(q.DB().Formatter(), where, j.additionalJoinOnConditions)
 	}
 
-	q = q.Where(internal.String(where))
+	q = q.Where(internal.String(where)).(*SelectQuery)
 
 	if j.Relation.PolymorphicField != nil {
-		q = q.Where("? = ?", j.Relation.PolymorphicField.SQLName, j.Relation.PolymorphicValue)
+		q = q.Where("? = ?", j.Relation.PolymorphicField.SQLName, j.Relation.PolymorphicValue).(*SelectQuery)
 	}
 
 	j.applyTo(q)
-	q = q.Apply(j.hasManyColumns)
+	q = q.Apply(j.hasManyColumns).(*SelectQuery)
 
 	return q
 }
 
-func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery {
+func (j *relationJoin) manyQueryMulti(where []byte, q ISelectQuery) ISelectQuery {
 	where = appendMultiValues(
-		q.db.Formatter(),
+		q.DB().Formatter(),
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
@@ -119,7 +119,7 @@ func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery
 	q = q.Where(internal.String(where))
 
 	if len(j.additionalJoinOnConditions) > 0 {
-		q = q.Where(internal.String(appendAdditionalJoinOnConditions(q.db.Formatter(), []byte{}, j.additionalJoinOnConditions)))
+		q = q.Where(internal.String(appendAdditionalJoinOnConditions(q.DB().Formatter(), []byte{}, j.additionalJoinOnConditions)))
 	}
 
 	if j.Relation.PolymorphicField != nil {
@@ -132,7 +132,7 @@ func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery
 	return q
 }
 
-func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
+func (j *relationJoin) hasManyColumns(q ISelectQuery) ISelectQuery {
 	b := make([]byte, 0, 32)
 
 	joinTable := j.JoinModel.Table()
@@ -152,7 +152,7 @@ func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
 			}
 
 			var err error
-			b, err = col.AppendQuery(q.db.fmter, b)
+			b, err = col.AppendQuery(q.DB().fmter, b)
 			if err != nil {
 				q.setErr(err)
 				return q
@@ -168,7 +168,7 @@ func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
 	return q
 }
 
-func (j *relationJoin) selectM2M(ctx context.Context, q *SelectQuery) error {
+func (j *relationJoin) selectM2M(ctx context.Context, q ISelectQuery) error {
 	q = j.m2mQuery(q)
 	if q == nil {
 		return nil
@@ -176,8 +176,8 @@ func (j *relationJoin) selectM2M(ctx context.Context, q *SelectQuery) error {
 	return q.Scan(ctx)
 }
 
-func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
-	fmter := q.db.fmter
+func (j *relationJoin) m2mQuery(q ISelectQuery) ISelectQuery {
+	fmter := q.DB().fmter
 
 	m2mModel := newM2MModel(j)
 	if m2mModel == nil {
