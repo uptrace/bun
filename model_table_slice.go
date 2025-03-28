@@ -124,3 +124,13 @@ func (m *sliceTableModel) updateSoftDeleteField(tm time.Time) error {
 	}
 	return nil
 }
+
+func (m *sliceTableModel) clone() TableModel {
+	return &sliceTableModel{
+		structTableModel: *m.structTableModel.clone().(*structTableModel),
+		slice:            m.slice,
+		sliceLen:         m.sliceLen,
+		sliceOfPtr:       m.sliceOfPtr,
+		nextElem:         m.nextElem,
+	}
+}

@@ -130,6 +130,16 @@ func (m *hasManyModel) parkStruct() error {
 	return nil
 }
 
+func (m *hasManyModel) clone() TableModel {
+	return &hasManyModel{
+		sliceTableModel: m.sliceTableModel.clone().(*sliceTableModel),
+		baseTable:       m.baseTable,
+		rel:             m.rel,
+		baseValues:      m.baseValues,
+		structKey:       m.structKey,
+	}
+}
+
 func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]reflect.Value {
 	fieldIndex := model.Relation().Field.Index
 	m := make(map[internal.MapKey][]reflect.Value)
