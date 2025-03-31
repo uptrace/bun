@@ -236,7 +236,7 @@ func parseLen(typ string) (string, int, error) {
 }
 
 // exprOrLiteral converts string to lowercase, if it does not contain a string literal 'lit'
-// and trims the surrounding ” otherwise.
+// and trims the surrounding '' otherwise.
 // Use it to ensure that user-defined default values in the models are always comparable
 // to those returned by the database inspector, regardless of the case convention in individual drivers.
 func exprOrLiteral(s string) string {
