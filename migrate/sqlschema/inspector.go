@@ -30,6 +30,12 @@ type InspectorDialect interface {
 // InspectorConfig controls the scope of migration by limiting the objects Inspector should return.
 // Inspectors SHOULD use the configuration directly instead of copying it, or MAY choose to embed it,
 // to make sure options are always applied correctly.
+//
+// ExcludeTables and ExcludeForeignKeys are intended for database inspectors,
+// to compensate for the fact that model structs may not wholly reflect the
+// state of the database schema.
+// Database inspectors MUST respect these exclusions to prevent relations
+// from being dropped unintentionally.
 type InspectorConfig struct {
 	// SchemaName limits inspection to tables in a particular schema.
 	SchemaName string
@@ -52,13 +58,17 @@ func WithSchemaName(schemaName string) InspectorOption {
 	}
 }
 
-// WithExcludeTables works in append-only mode, i.e. tables cannot be re-included.
+// WithExcludeTables forces inspector to exclude tables
+// from the reported schema state.
+// It works in append-only mode, i.e. tables cannot be re-included.
 func WithExcludeTables(tables ...string) InspectorOption {
 	return func(cfg *InspectorConfig) {
 		cfg.ExcludeTables = append(cfg.ExcludeTables, tables...)
 	}
 }
 
+// WithExcludeForeignKeys forces inspector to exclude foreign keys
+// from the reported schema state.
 func WithExcludeForeignKeys(fks ...ForeignKey) InspectorOption {
 	return func(cfg *InspectorConfig) {
 		for _, fk := range fks {

@@ -24,7 +24,7 @@ func WithModel(models ...interface{}) AutoMigratorOption {
 	}
 }
 
-// WithExcludeTable tells the AutoMigrator to ignore a table in the database.
+// WithExcludeTable tells AutoMigrator to ignore a table in the database.
 // This prevents AutoMigrator from dropping tables which may exist in the schema
 // but which are not used by the application.
 //
@@ -35,6 +35,9 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 	}
 }
 
+// WithExcludeForeignKeys tells AutoMigrator to exclude a foreign key constaint
+// from the migration scope. This prevents AutoMigrator from dropping foreign keys
+// that are defined manually via CreateTableQuery.ForeignKey().
 func WithExcludeForeignKeys(fks ...sqlschema.ForeignKey) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.excludeForeignKeys = append(m.excludeForeignKeys, fks...)
