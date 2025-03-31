@@ -35,6 +35,12 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 	}
 }
 
+func WithExcludeForeignKeys(fks ...sqlschema.ForeignKey) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.excludeForeignKeys = append(m.excludeForeignKeys, fks...)
+	}
+}
+
 // WithSchemaName changes the default database schema to migrate objects in.
 func WithSchemaName(schemaName string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
@@ -127,6 +133,9 @@ type AutoMigrator struct {
 	// excludeTables are excluded from database inspection.
 	excludeTables []string
 
+	// excludeForeignKeys are excluded from database inspection.
+	excludeForeignKeys []sqlschema.ForeignKey
+
 	// diffOpts are passed to detector constructor.
 	diffOpts []diffOption
 
@@ -150,7 +159,11 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 	}
 	am.excludeTables = append(am.excludeTables, am.table, am.locksTable)
 
-	dbInspector, err := sqlschema.NewInspector(db, sqlschema.WithSchemaName(am.schemaName), sqlschema.WithExcludeTables(am.excludeTables...))
+	dbInspector, err := sqlschema.NewInspector(db,
+		sqlschema.WithSchemaName(am.schemaName),
+		sqlschema.WithExcludeTables(am.excludeTables...),
+		sqlschema.WithExcludeForeignKeys(am.excludeForeignKeys...),
+	)
 	if err != nil {
 		return nil, err
 	}
