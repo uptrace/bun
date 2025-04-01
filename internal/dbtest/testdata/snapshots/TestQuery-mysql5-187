@@ -1,0 +1,1 @@
+CREATE TABLE `acronym_pdfs` (`user_id` VARCHAR(255) NOT NULL, `inner_html` VARCHAR(255), `http_proxy` VARCHAR(255), `max_cpu` BIGINT, `ssl_certificate` BLOB, PRIMARY KEY (`user_id`))
