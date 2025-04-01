@@ -1680,7 +1680,6 @@ func TestQuery(t *testing.T) {
 					}).
 					Comment("test").
 					Returning("$action")
-
 			},
 		},
 		{
@@ -1736,6 +1735,19 @@ func TestQuery(t *testing.T) {
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewValues(&[]Model{{1, "hello"}}).
 					Comment("test")
+			},
+		},
+		{
+			id: 187,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type AcronymPDF struct {
+					UserID         string `bun:",pk"`
+					InnerHTML      string
+					HTTPProxy      string
+					MaxCPU         int
+					SSLCertificate []byte
+				}
+				return db.NewCreateTable().Model(new(AcronymPDF))
 			},
 		},
 	}
