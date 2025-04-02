@@ -267,7 +267,6 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 			checkMigrationFileContains(t, "_auto.tx.up.sql", "CREATE TABLE", "SET statement_timeout = 0")
 			checkMigrationFileContains(t, "_auto.tx.down.sql", "DROP TABLE", "SET statement_timeout = 0")
 		})
-
 	})
 }
 
@@ -325,7 +324,6 @@ func runMigrations(t *testing.T, m *migrate.AutoMigrator) {
 }
 
 func TestAutoMigrator_Migrate(t *testing.T) {
-
 	tests := []struct {
 		fn func(t *testing.T, db *bun.DB)
 	}{
@@ -340,6 +338,7 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 		{testUniqueRenamedTable},
 		{testUpdatePrimaryKeys},
 		{testNothingToMigrate},
+		{testExcludeForeignKeys},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -474,7 +473,7 @@ func testAlterForeignKeys(t *testing.T, db *bun.DB) {
 	// Assert
 	state := inspect(ctx)
 
-	// Crated 2 new constraints
+	// Created 2 new constraints
 	require.Contains(t, state.ForeignKeys, sqlschema.ForeignKey{
 		From: sqlschema.NewColumnReference("things_to_owners", "owner_id"),
 		To:   sqlschema.NewColumnReference("owners", "id"),
@@ -1125,4 +1124,51 @@ func testNothingToMigrate(t *testing.T, db *bun.DB) {
 	applied, err := migrator.AppliedMigrations(ctx)
 	require.NoError(t, err, "fetch applied migrations")
 	require.Empty(t, applied, "nothing to migrate, AppliedMigrations not empty")
+}
+
+// Foreign keys can be excluded from migration scope.
+// Useful in cases when foreign keys are created via ForeignKey()
+// method on CreateTableQuery, and not defined in the struct tag.
+// See: https://github.com/uptrace/bun/issues/1160
+func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
+	type Thing struct {
+		ID    int64  `bun:",pk"`
+		Owner string `bun:"owner_name"`
+	}
+
+	type Owner struct {
+		Name string `bun:",pk"`
+	}
+
+	// Arrange
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+
+	_, err := db.NewCreateTable().Model((*Owner)(nil)).Exec(ctx)
+	require.NoError(t, err, "arrange: must create table \"owners\"")
+
+	_, err = db.NewCreateTable().Model((*Thing)(nil)).
+		ForeignKey("(owner_name) REFERENCES owners (name)").Exec(ctx)
+	require.NoError(t, err, "arrange: must create table \"things\"")
+
+	mustDropTableOnCleanup(t, ctx, db, (*Thing)(nil), (*Owner)(nil))
+
+	excluded := sqlschema.ForeignKey{
+		From: sqlschema.NewColumnReference("things", "owner_name"),
+		To:   sqlschema.NewColumnReference("owners", "name"),
+	}
+	m := newAutoMigratorOrSkip(t, db, migrate.WithModel(
+		(*Thing)(nil),
+		(*Owner)(nil),
+	), migrate.WithExcludeForeignKeys(excluded))
+
+	// Act
+	_, err = m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created
+	require.NoError(t, err, "auto migration failed")
+
+	// Assert
+	state := inspect(ctx)
+
+	require.Contains(t, state.ForeignKeys, excluded,
+		"expected FK constraint things.owner_name -> owners.name")
 }

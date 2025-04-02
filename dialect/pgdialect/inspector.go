@@ -113,10 +113,14 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	}
 
 	for _, fk := range fks {
-		dbSchema.ForeignKeys[sqlschema.ForeignKey{
+		dbFK := sqlschema.ForeignKey{
 			From: sqlschema.NewColumnReference(fk.SourceTable, fk.SourceColumns...),
 			To:   sqlschema.NewColumnReference(fk.TargetTable, fk.TargetColumns...),
-		}] = fk.ConstraintName
+		}
+		if _, exclude := in.ExcludeForeignKeys[dbFK]; exclude {
+			continue
+		}
+		dbSchema.ForeignKeys[dbFK] = fk.ConstraintName
 	}
 	return dbSchema, nil
 }
