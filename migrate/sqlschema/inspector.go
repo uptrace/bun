@@ -126,7 +126,6 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		BaseDatabase: BaseDatabase{
 			ForeignKeys: make(map[ForeignKey]string),
 		},
-		Tables: ordered.NewMap[string, Table](),
 	}
 	for _, t := range bmi.tables.All() {
 		if t.Schema != bmi.SchemaName {
@@ -186,7 +185,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		// produces
 		// 	schema.Table{ Schema: "favourite", Name: "favourite.books" }
 		tableName := strings.TrimPrefix(t.Name, t.Schema+".")
-		state.Tables.Store(tableName, &BunTable{
+		state.Tables = append(state.Tables, &BunTable{
 			BaseTable: BaseTable{
 				Schema:            t.Schema,
 				Name:              tableName,
@@ -236,7 +235,7 @@ func parseLen(typ string) (string, int, error) {
 }
 
 // exprOrLiteral converts string to lowercase, if it does not contain a string literal 'lit'
-// and trims the surrounding '' otherwise.
+// and trims the surrounding ” otherwise.
 // Use it to ensure that user-defined default values in the models are always comparable
 // to those returned by the database inspector, regardless of the case convention in individual drivers.
 func exprOrLiteral(s string) string {
@@ -250,10 +249,10 @@ func exprOrLiteral(s string) string {
 type BunModelSchema struct {
 	BaseDatabase
 
-	Tables *ordered.Map[string, Table]
+	Tables []Table
 }
 
-func (ms BunModelSchema) GetTables() *ordered.Map[string, Table] {
+func (ms BunModelSchema) GetTables() []Table {
 	return ms.Tables
 }
 

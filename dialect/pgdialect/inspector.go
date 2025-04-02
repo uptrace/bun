@@ -34,7 +34,6 @@ func newInspector(db *bun.DB, options ...sqlschema.InspectorOption) *Inspector {
 
 func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	dbSchema := Schema{
-		Tables:      ordered.NewMap[string, sqlschema.Table](),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
@@ -103,7 +102,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 			}
 		}
 
-		dbSchema.Tables.Store(table.Name, &Table{
+		dbSchema.Tables = append(dbSchema.Tables, &Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
 			Columns:           colDefs,
