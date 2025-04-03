@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqltype"
-	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
@@ -378,10 +377,9 @@ func testRenameTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	tables := state.Tables
-	require.Equal(t, 1, tables.Len())
-	_, found := tables.Load("changed")
-	require.True(t, found)
+	tables := state.GetTables()
+	require.Len(t, tables, 1)
+	checkHasTable(t, tables, "changed")
 }
 
 func testCreateDropTable(t *testing.T, db *bun.DB) {
@@ -408,10 +406,9 @@ func testCreateDropTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	tables := state.Tables
-	require.Equal(t, 1, tables.Len())
-	_, found := tables.Load("createme")
-	require.True(t, found)
+	tables := state.GetTables()
+	require.Len(t, tables, 1)
+	checkHasTable(t, tables, "createme")
 }
 
 func testAlterForeignKeys(t *testing.T, db *bun.DB) {
@@ -534,10 +531,10 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	require.Equal(t, 2, state.Tables.Len())
+	require.Len(t, state.GetTables(), 2)
 
 	var renamed, model2 sqlschema.Table
-	for _, tbl := range state.Tables.Values() {
+	for _, tbl := range state.GetTables() {
 		switch tbl.GetName() {
 		case "renamed":
 			renamed = tbl
@@ -546,9 +543,18 @@ func testRenamedColumns(t *testing.T, db *bun.DB) {
 		}
 	}
 
-	require.NotNil(t, renamed.GetColumns().Value("count"))
-	require.NotNil(t, model2.GetColumns().Value("second_column"))
-	require.NotNil(t, model2.GetColumns().Value("do_not_rename"))
+	checkHasColumn(t, renamed, "count")
+	checkHasColumn(t, model2, "second_column")
+	checkHasColumn(t, model2, "do_not_rename")
+}
+
+func checkHasColumn(t *testing.T, table sqlschema.Table, name string) {
+	for _, column := range table.GetColumns() {
+		if column.GetName() == name {
+			return
+		}
+	}
+	require.Fail(t, "expected table %q to have column %q", table.GetName(), name)
 }
 
 // testChangeColumnType_AutoCast checks type changes which can be type-casted automatically,
@@ -578,70 +584,53 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "change_me_own_type",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "change_me_own_type",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "bigger_int",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    "bigint",
-							IsIdentity: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "ts",
-						Value: &sqlschema.BaseColumn{
-							SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
-							DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
-							IsNullable:   true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "default_expr",
-						Value: &sqlschema.BaseColumn{
-							SQLType:      "varchar",
-							IsNullable:   true,
-							DefaultValue: "random()",
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "empty_default",
-						Value: &sqlschema.BaseColumn{
-							SQLType:      "varchar",
-							IsNullable:   true,
-							DefaultValue: "", // NOT "''"
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "not_null",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    "varchar",
-							IsNullable: false,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "type_override",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    "varchar",
-							IsNullable: true,
-							VarcharLen: 200,
-						},
-					},
-					// ordered.Pair[string, sqlschema.Column]{
-					// 	Key: "many_values",
-					// 	Value: &sqlschema.BaseColumn{
-					// 		SQLType: "array",
-					// 	},
-					// },
-				),
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("bigger_int")},
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "change_me_own_type",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "bigger_int",
+					SQLType:    "bigint",
+					IsIdentity: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:         "ts",
+					SQLType:      "timestamp",         // FIXME(dyma): convert "timestamp with time zone" to sqltype.Timestamp
+					DefaultValue: "current_timestamp", // FIXME(dyma): Convert driver-specific value to common "expressions" (e.g. CURRENT_TIMESTAMP == current_timestamp) OR lowercase all types.
+					IsNullable:   true,
+				},
+				&sqlschema.BaseColumn{
+					Name:         "default_expr",
+					SQLType:      "varchar",
+					IsNullable:   true,
+					DefaultValue: "random()",
+				},
+				&sqlschema.BaseColumn{
+					Name:         "empty_default",
+					SQLType:      "varchar",
+					IsNullable:   true,
+					DefaultValue: "", // NOT "''"
+				},
+				&sqlschema.BaseColumn{
+					Name:       "not_null",
+					SQLType:    "varchar",
+					IsNullable: false,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "type_override",
+					SQLType:    "varchar",
+					IsNullable: true,
+					VarcharLen: 200,
+				},
+				// &sqlschema.BaseColumn{
+				// 	Name:    "many_values",
+				// 	SQLType: "array",
+				// },
 			},
+			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("bigger_int")},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -669,31 +658,24 @@ func testIdentity(t *testing.T, db *bun.DB) {
 		B             int64 `bun:",notnull,identity"`
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "bourne_identity",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "bourne_identity",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "a",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.BigInt,
-							IsIdentity: false, // <- drop IDENTITY
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "b",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.BigInt,
-							IsIdentity: true, // <- add IDENTITY
-						},
-					},
-				),
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "bourne_identity",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "a",
+					SQLType:    sqltype.BigInt,
+					IsIdentity: false, // <- drop IDENTITY
+				},
+				&sqlschema.BaseColumn{
+					Name:       "b",
+					SQLType:    sqltype.BigInt,
+					IsIdentity: true, // <- add IDENTITY
+				},
 			},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -721,31 +703,24 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 		AddMe         bool   `bun:"addme"`
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "column_madness",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "column_madness",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "do_not_touch",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "addme",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.Boolean,
-							IsNullable: true,
-						},
-					},
-				),
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "column_madness",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "do_not_touch",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "addme",
+					SQLType:    sqltype.Boolean,
+					IsNullable: true,
+				},
 			},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -783,72 +758,55 @@ func testUnique(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed"` // shrink "pet" unique group
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "uniqlo_stores",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "uniqlo_stores",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "first_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "middle_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "last_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "birthday",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "email",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "pet_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "pet_breed",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-				),
-				UniqueConstraints: []sqlschema.Unique{
-					{Columns: sqlschema.NewColumns("email")},
-					{Columns: sqlschema.NewColumns("pet_name")},
-					// We can only be sure of the user-defined index name
-					{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "middle_name", "last_name")},
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "uniqlo_stores",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "middle_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "birthday",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "email",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "pet_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "pet_breed",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
 				},
 			},
+			UniqueConstraints: []sqlschema.Unique{
+				{Columns: sqlschema.NewColumns("email")},
+				{Columns: sqlschema.NewColumns("pet_name")},
+				// We can only be sure of the user-defined index name
+				{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "middle_name", "last_name")},
+			},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -885,57 +843,44 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 		PetBreed string `bun:"pet_breed,unique"`
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "after",
-			Value: &sqlschema.BaseTable{
-				Schema: "automigrate",
-				Name:   "after",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "first_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "last_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "birthday",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "pet_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "pet_breed",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-				),
-				UniqueConstraints: []sqlschema.Unique{
-					{Columns: sqlschema.NewColumns("pet_name")},
-					{Columns: sqlschema.NewColumns("pet_breed")},
-					{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name", "birthday")},
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: "automigrate",
+			Name:   "after",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "birthday",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "pet_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "pet_breed",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
 				},
 			},
+			UniqueConstraints: []sqlschema.Unique{
+				{Columns: sqlschema.NewColumns("pet_name")},
+				{Columns: sqlschema.NewColumns("pet_breed")},
+				{Name: "full_name", Columns: sqlschema.NewColumns("first_name", "last_name", "birthday")},
+			},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db, "automigrate")
@@ -952,7 +897,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
@@ -1002,87 +947,64 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 		LastName      string `bun:"last_name,pk"`
 	}
 
-	wantTables := ordered.NewMap[string, sqlschema.Table](
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "drop_your_pks",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "drop_your_pks",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "first_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: false,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "last_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: false,
-						},
-					},
-				),
+	wantTables := []sqlschema.Table{
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "drop_your_pks",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
 			},
 		},
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "add_new_pk",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "add_new_pk",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "new_id",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.BigInt,
-							IsNullable: false,
-							IsIdentity: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "first_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "last_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: true,
-						},
-					},
-				),
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "add_new_pk",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "new_id",
+					SQLType:    sqltype.BigInt,
+					IsNullable: false,
+					IsIdentity: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: true,
+				},
 			},
+			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("new_id")},
 		},
-		ordered.Pair[string, sqlschema.Table]{
-			Key: "change_pk",
-			Value: &sqlschema.BaseTable{
-				Schema: db.Dialect().DefaultSchema(),
-				Name:   "change_pk",
-				Columns: ordered.NewMap[string, sqlschema.Column](
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "first_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: false,
-						},
-					},
-					ordered.Pair[string, sqlschema.Column]{
-						Key: "last_name",
-						Value: &sqlschema.BaseColumn{
-							SQLType:    sqltype.VarChar,
-							IsNullable: false,
-						},
-					},
-				),
-				PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("first_name", "last_name")},
+		&sqlschema.BaseTable{
+			Schema: db.Dialect().DefaultSchema(),
+			Name:   "change_pk",
+			Columns: []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    sqltype.VarChar,
+					IsNullable: false,
+				},
 			},
+			PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("first_name", "last_name")},
 		},
-	)
+	}
 
 	ctx := context.Background()
 	inspect := inspectDbOrSkip(t, db)
@@ -1102,7 +1024,7 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.Tables)
+	cmpTables(t, db.Dialect().(sqlschema.InspectorDialect), wantTables, state.GetTables())
 }
 
 func testNothingToMigrate(t *testing.T, db *bun.DB) {
@@ -1171,4 +1093,14 @@ func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
 
 	require.Contains(t, state.ForeignKeys, excluded,
 		"expected FK constraint things.owner_name -> owners.name")
+}
+
+func checkHasTable(t *testing.T, tables []sqlschema.Table, name string) {
+	t.Helper()
+	for i := range tables {
+		if tables[i].GetName() == name {
+			return
+		}
+	}
+	require.FailNow(t, "table %q not in the schema", name)
 }

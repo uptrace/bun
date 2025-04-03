@@ -1,13 +1,9 @@
 package sqlschema
 
-import (
-	"github.com/uptrace/bun/internal/ordered"
-)
-
 type Table interface {
 	GetSchema() string
 	GetName() string
-	GetColumns() *ordered.Map[string, Column]
+	GetColumns() []Column
 	GetPrimaryKey() *PrimaryKey
 	GetUniqueConstraints() []Unique
 }
@@ -23,7 +19,7 @@ type BaseTable struct {
 	Name   string
 
 	// ColumnDefinitions map each column name to the column definition.
-	Columns *ordered.Map[string, Column]
+	Columns []Column
 
 	// PrimaryKey holds the primary key definition.
 	// A nil value means that no primary key is defined for the table.
@@ -47,7 +43,7 @@ func (td *BaseTable) GetName() string {
 	return td.Name
 }
 
-func (td *BaseTable) GetColumns() *ordered.Map[string, Column] {
+func (td *BaseTable) GetColumns() []Column {
 	return td.Columns
 }
 

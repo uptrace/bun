@@ -4,12 +4,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/schema"
 )
 
 type Database interface {
-	GetTables() *ordered.Map[string, Table]
+	GetTables() []Table
 	GetForeignKeys() map[ForeignKey]string
 }
 
@@ -20,11 +19,11 @@ var _ Database = (*BaseDatabase)(nil)
 // Dialects and only dialects can use it to implement the Database interface.
 // Other packages must use the Database interface.
 type BaseDatabase struct {
-	Tables      *ordered.Map[string, Table]
+	Tables      []Table
 	ForeignKeys map[ForeignKey]string
 }
 
-func (ds BaseDatabase) GetTables() *ordered.Map[string, Table] {
+func (ds BaseDatabase) GetTables() []Table {
 	return ds.Tables
 }
 
