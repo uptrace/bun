@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -132,14 +131,14 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 			continue
 		}
 
-		columns := ordered.NewMap[string, Column]()
+		var columns []Column
 		for _, f := range t.Fields {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
 				return nil, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
-			columns.Store(f.Name, &BaseColumn{
+			columns = append(columns, &BaseColumn{
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
 				VarcharLen:      length,

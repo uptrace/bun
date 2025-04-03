@@ -111,8 +111,8 @@ func toOrderedMap[V interface{ GetName() string }](named []V) *ordered.Map[strin
 
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
-	currentColumns := current.GetColumns()
-	targetColumns := target.GetColumns()
+	currentColumns := toOrderedMap(current.GetColumns())
+	targetColumns := toOrderedMap(target.GetColumns())
 
 ChangeRename:
 	for _, tPair := range targetColumns.Pairs() {
@@ -339,7 +339,7 @@ func newSignature(t sqlschema.Table, eq CompareTypeFunc) signature {
 
 // scan iterates over table's field and counts occurrences of each unique column definition.
 func (s *signature) scan(t sqlschema.Table) {
-	for _, icol := range t.GetColumns().Values() {
+	for _, icol := range t.GetColumns() {
 		scanCol := icol.(*sqlschema.BaseColumn)
 		// This is slightly more expensive than if the columns could be compared directly
 		// and we always did s.underlying[col]++, but we get type-equivalence in return.

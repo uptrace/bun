@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqltype"
-	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -91,81 +90,65 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					&sqlschema.BaseTable{
 						Schema: defaultSchema,
 						Name:   "articles",
-						Columns: ordered.NewMap[string, sqlschema.Column](
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "isbn",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         "bigint",
-									IsNullable:      false,
-									IsAutoIncrement: false,
-									IsIdentity:      true,
-									DefaultValue:    "",
-								},
+						Columns: []sqlschema.Column{
+							&sqlschema.BaseColumn{
+								Name:            "isbn",
+								SQLType:         "bigint",
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      true,
+								DefaultValue:    "",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "editor",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         sqltype.VarChar,
-									IsNullable:      false,
-									IsAutoIncrement: false,
-									IsIdentity:      false,
-									DefaultValue:    "john doe",
-								},
+							&sqlschema.BaseColumn{
+								Name:            "editor",
+								SQLType:         sqltype.VarChar,
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "john doe",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "title",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         sqltype.VarChar,
-									IsNullable:      false,
-									IsAutoIncrement: false,
-									IsIdentity:      false,
-									DefaultValue:    "",
-								},
+							&sqlschema.BaseColumn{
+								Name:            "title",
+								SQLType:         sqltype.VarChar,
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "locale",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         sqltype.VarChar,
-									VarcharLen:      5,
-									IsNullable:      true,
-									IsAutoIncrement: false,
-									IsIdentity:      false,
-									DefaultValue:    "en-GB",
-								},
+							&sqlschema.BaseColumn{
+								Name:            "locale",
+								SQLType:         sqltype.VarChar,
+								VarcharLen:      5,
+								IsNullable:      true,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "en-GB",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "page_count",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         "smallint",
-									IsNullable:      false,
-									IsAutoIncrement: false,
-									IsIdentity:      false,
-									DefaultValue:    "1",
-								},
+							&sqlschema.BaseColumn{
+								Name:            "page_count",
+								SQLType:         "smallint",
+								IsNullable:      false,
+								IsAutoIncrement: false,
+								IsIdentity:      false,
+								DefaultValue:    "1",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "book_count",
-								Value: &sqlschema.BaseColumn{
-									SQLType:         "integer",
-									IsNullable:      false,
-									IsAutoIncrement: true,
-									IsIdentity:      false,
-									DefaultValue:    "",
-								},
+							&sqlschema.BaseColumn{
+								Name:            "book_count",
+								SQLType:         "integer",
+								IsNullable:      false,
+								IsAutoIncrement: true,
+								IsIdentity:      false,
+								DefaultValue:    "",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+							&sqlschema.BaseColumn{
+								Name:    "publisher_id",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "author_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType: "bigint",
-								},
+							&sqlschema.BaseColumn{
+								Name:    "author_id",
+								SQLType: "bigint",
 							},
-						),
+						},
 						PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("isbn")},
 						UniqueConstraints: []sqlschema.Unique{
 							{Columns: sqlschema.NewColumns("editor", "title")},
@@ -174,33 +157,25 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					&sqlschema.BaseTable{
 						Schema: defaultSchema,
 						Name:   "authors",
-						Columns: ordered.NewMap[string, sqlschema.Column](
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "author_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType:    "bigint",
-									IsIdentity: true,
-								},
+						Columns: []sqlschema.Column{
+							&sqlschema.BaseColumn{
+								Name:       "author_id",
+								SQLType:    "bigint",
+								IsIdentity: true,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "first_name",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+							&sqlschema.BaseColumn{
+								Name:    "first_name",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "last_name",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+							&sqlschema.BaseColumn{
+								Name:    "last_name",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "email",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+							&sqlschema.BaseColumn{
+								Name:    "email",
+								SQLType: sqltype.VarChar,
 							},
-						),
+						},
 						PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("author_id")},
 						UniqueConstraints: []sqlschema.Unique{
 							{Columns: sqlschema.NewColumns("first_name", "last_name")},
@@ -210,48 +185,38 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					&sqlschema.BaseTable{
 						Schema: defaultSchema,
 						Name:   "publisher_to_journalists",
-						Columns: ordered.NewMap[string, sqlschema.Column](
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+						Columns: []sqlschema.Column{
+							&sqlschema.BaseColumn{
+								Name:    "publisher_id",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "author_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType: "bigint",
-								},
+							&sqlschema.BaseColumn{
+								Name:    "author_id",
+								SQLType: "bigint",
 							},
-						),
+						},
 						PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id", "author_id")},
 					},
 					&sqlschema.BaseTable{
 						Schema: defaultSchema,
 						Name:   "publishers",
-						Columns: ordered.NewMap[string, sqlschema.Column](
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType:      sqltype.VarChar,
-									DefaultValue: "gen_random_uuid()",
-								},
+						Columns: []sqlschema.Column{
+							&sqlschema.BaseColumn{
+								Name:         "publisher_id",
+								SQLType:      sqltype.VarChar,
+								DefaultValue: "gen_random_uuid()",
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_name",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+							&sqlschema.BaseColumn{
+								Name:    "publisher_name",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "created_at",
-								Value: &sqlschema.BaseColumn{
-									SQLType:      "timestamp",
-									DefaultValue: "current_timestamp",
-									IsNullable:   true,
-								},
+							&sqlschema.BaseColumn{
+								Name:         "created_at",
+								SQLType:      "timestamp",
+								DefaultValue: "current_timestamp",
+								IsNullable:   true,
 							},
-						),
+						},
 						PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("publisher_id")},
 						UniqueConstraints: []sqlschema.Unique{
 							{Columns: sqlschema.NewColumns("publisher_id", "publisher_name")},
@@ -284,28 +249,22 @@ func TestDatabaseInspector_Inspect(t *testing.T) {
 					&sqlschema.BaseTable{
 						Schema: "admin",
 						Name:   "offices",
-						Columns: ordered.NewMap[string, sqlschema.Column](
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "office_name",
-								Value: &sqlschema.BaseColumn{
-									SQLType: sqltype.VarChar,
-								},
+						Columns: []sqlschema.Column{
+							&sqlschema.BaseColumn{
+								Name:    "office_name",
+								SQLType: sqltype.VarChar,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_id",
-								Value: &sqlschema.BaseColumn{
-									SQLType:    sqltype.VarChar,
-									IsNullable: true,
-								},
+							&sqlschema.BaseColumn{
+								Name:       "publisher_id",
+								SQLType:    sqltype.VarChar,
+								IsNullable: true,
 							},
-							ordered.Pair[string, sqlschema.Column]{
-								Key: "publisher_name",
-								Value: &sqlschema.BaseColumn{
-									SQLType:    sqltype.VarChar,
-									IsNullable: true,
-								},
+							&sqlschema.BaseColumn{
+								Name:       "publisher_name",
+								SQLType:    sqltype.VarChar,
+								IsNullable: true,
 							},
-						),
+						},
 						PrimaryKey: &sqlschema.PrimaryKey{Columns: sqlschema.NewColumns("office_name")},
 					},
 				},
@@ -391,9 +350,9 @@ func cmpTables(
 	// They might still appear in a different order, here's a helper to find matching tables.
 	findGot := func(t testing.TB, name string) sqlschema.Table {
 		t.Helper()
-		for _, t := range got {
-			if t.GetName() == name {
-				return t
+		for _, table := range got {
+			if table.GetName() == name {
+				return table
 			}
 		}
 		// This should never happen, as we've verified that table names match.
@@ -413,21 +372,35 @@ func cmpColumns(
 	tb testing.TB,
 	d sqlschema.InspectorDialect,
 	tableName string,
-	want, got *ordered.Map[string, sqlschema.Column],
+	want, got []sqlschema.Column,
 ) {
 	tb.Helper()
 	var errs []string
 
 	var missing []string
-	for _, cPair := range want.Pairs() {
-		colName := cPair.Key
+	findGot := func(name string) sqlschema.Column {
+		for _, col := range got {
+			if col.GetName() == name {
+				return col
+			}
+		}
+		// This should never happen, as we've verified that table names match.
+		missing = append(missing, name)
+		return nil
+	}
+
+	wantColumnNames := make(map[string]struct{}, len(want))
+	for _, wantColumn := range want {
+		colName := wantColumn.GetName()
+		wantColumnNames[colName] = struct{}{}
+
 		errorf := func(format string, args ...interface{}) {
 			errs = append(errs, fmt.Sprintf("[%s.%s] "+format, append([]interface{}{tableName, colName}, args...)...))
 		}
-		wantCol := cPair.Value.(*sqlschema.BaseColumn)
-		gotCol, ok := got.Value(colName).(*sqlschema.BaseColumn)
-		if !ok {
-			missing = append(missing, colName)
+
+		wantCol := wantColumn.(*sqlschema.BaseColumn)
+		gotCol := findGot(colName).(*sqlschema.BaseColumn)
+		if gotCol == nil {
 			continue
 		}
 
@@ -457,9 +430,9 @@ func cmpColumns(
 	}
 
 	var extra []string
-	for _, colName := range got.Keys() {
-		if _, ok := want.Load(colName); !ok {
-			extra = append(extra, colName)
+	for _, c := range got {
+		if _, ok := wantColumnNames[c.GetName()]; !ok {
+			extra = append(extra, c.GetName())
 		}
 	}
 
@@ -523,22 +496,18 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 
-			want := ordered.NewMap[string, sqlschema.Column](
-				ordered.Pair[string, sqlschema.Column]{
-					Key: "id",
-					Value: &sqlschema.BaseColumn{
-						SQLType:      sqltype.VarChar,
-						DefaultValue: "random()",
-					},
+			want := []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:         "id",
+					SQLType:      sqltype.VarChar,
+					DefaultValue: "random()",
 				},
-				ordered.Pair[string, sqlschema.Column]{
-					Key: "name",
-					Value: &sqlschema.BaseColumn{
-						SQLType:      sqltype.VarChar,
-						DefaultValue: "John Doe",
-					},
+				&sqlschema.BaseColumn{
+					Name:         "name",
+					SQLType:      sqltype.VarChar,
+					DefaultValue: "John Doe",
 				},
-			)
+			}
 
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
@@ -562,28 +531,22 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 			tables.Register((*Model)(nil))
 			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
 
-			want := ordered.NewMap[string, sqlschema.Column](
-				ordered.Pair[string, sqlschema.Column]{
-					Key: "id",
-					Value: &sqlschema.BaseColumn{
-						SQLType: "text",
-					},
+			want := []sqlschema.Column{
+				&sqlschema.BaseColumn{
+					Name:    "id",
+					SQLType: "text",
 				},
-				ordered.Pair[string, sqlschema.Column]{
-					Key: "first_name",
-					Value: &sqlschema.BaseColumn{
-						SQLType:    "character varying",
-						VarcharLen: 60,
-					},
+				&sqlschema.BaseColumn{
+					Name:       "first_name",
+					SQLType:    "character varying",
+					VarcharLen: 60,
 				},
-				ordered.Pair[string, sqlschema.Column]{
-					Key: "last_name",
-					Value: &sqlschema.BaseColumn{
-						SQLType:    "varchar",
-						VarcharLen: 100,
-					},
+				&sqlschema.BaseColumn{
+					Name:       "last_name",
+					SQLType:    "varchar",
+					VarcharLen: 100,
 				},
-			)
+			}
 
 			got, err := inspector.Inspect(context.Background())
 			require.NoError(t, err)
