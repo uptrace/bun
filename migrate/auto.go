@@ -352,7 +352,7 @@ func (c *changeset) apply(ctx context.Context, db *bun.DB, m sqlschema.Migrator)
 	}
 
 	for _, op := range c.operations {
-		if _, isComment := op.(*comment); isComment {
+		if _, skip := op.(*Unimplemented); skip {
 			continue
 		}
 
@@ -375,9 +375,9 @@ func (c *changeset) WriteTo(w io.Writer, m sqlschema.Migrator) error {
 
 	b := internal.MakeQueryBytes()
 	for _, op := range c.operations {
-		if c, isComment := op.(*comment); isComment {
+		if comment, isComment := op.(*Unimplemented); isComment {
 			b = append(b, "/*\n"...)
-			b = append(b, *c...)
+			b = append(b, *comment...)
 			b = append(b, "\n*/"...)
 			continue
 		}
