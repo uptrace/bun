@@ -337,6 +337,23 @@ func (m *structTableModel) AppendNamedArg(
 	return m.table.AppendNamedArg(fmter, b, name, m.strct)
 }
 
+func (m *structTableModel) clone() TableModel {
+	return &structTableModel{
+		db:            m.db,
+		table:         m.table,
+		rel:           m.rel,
+		joins:         append([]relationJoin{}, m.joins...),
+		dest:          m.dest,
+		root:          m.root,
+		index:         append([]int{}, m.index...),
+		strct:         m.strct,
+		structInited:  m.structInited,
+		structInitErr: m.structInitErr,
+		columns:       append([]string{}, m.columns...),
+		scanIndex:     m.scanIndex,
+	}
+}
+
 // sqlite3 sometimes does not unquote columns.
 func unquote(s string) string {
 	if s == "" {
