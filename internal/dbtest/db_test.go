@@ -2006,6 +2006,8 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 	require.Len(t, program.Items, 2)
 }
 
+// TODO: Investigate and fix race conditions in other dialects for this test.
+// See https://github.com/uptrace/bun/pull/1146
 func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 	if db.Dialect().Name().String() != pgName {
 		return
