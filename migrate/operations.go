@@ -56,7 +56,7 @@ func (op *DropTableOp) DependsOn(another Operation) bool {
 // GetReverse for a DropTable returns a no-op migration. Logically, CreateTable is the reverse,
 // but DropTable does not have the table's definition to create one.
 func (op *DropTableOp) GetReverse() Operation {
-	c := comment(fmt.Sprintf("WARNING: \"DROP TABLE %s\" cannot be reversed automatically because table definition is not available", op.TableName))
+	c := Unimplemented(fmt.Sprintf("WARNING: \"DROP TABLE %s\" cannot be reversed automatically because table definition is not available", op.TableName))
 	return &c
 }
 
@@ -224,7 +224,6 @@ func (op *AddUniqueConstraintOp) DependsOn(another Operation) bool {
 	default:
 		return false
 	}
-
 }
 
 // DropUniqueConstraintOp drops a UNIQUE constraint.
@@ -326,15 +325,15 @@ func (op *ChangePrimaryKeyOp) GetReverse() Operation {
 	}
 }
 
-// comment denotes an Operation that cannot be executed.
+// Unimplemented denotes an Operation that cannot be executed.
 //
 // Operations, which cannot be reversed due to current technical limitations,
-// may return &comment with a helpful message from their GetReverse() method.
+// may have their GetReverse() return &Unimplemented with a helpful message.
 //
-// Chnagelog should skip it when applying operations or output as log message,
-// and write it as an SQL comment when creating migration files.
-type comment string
+// When applying operations, changelog should skip it or output as a log message,
+// and write it as an SQL Unimplemented when creating migration files.
+type Unimplemented string
 
-var _ Operation = (*comment)(nil)
+var _ Operation = (*Unimplemented)(nil)
 
-func (c *comment) GetReverse() Operation { return c }
+func (reason *Unimplemented) GetReverse() Operation { return reason }
