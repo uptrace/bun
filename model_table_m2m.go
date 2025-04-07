@@ -130,3 +130,13 @@ func (m *m2mModel) parkStruct() error {
 
 	return nil
 }
+
+func (m *m2mModel) clone() TableModel {
+	return &m2mModel{
+		sliceTableModel: m.sliceTableModel.clone().(*sliceTableModel),
+		baseTable:       m.baseTable,
+		rel:             m.rel,
+		baseValues:      m.baseValues,
+		structKey:       m.structKey,
+	}
+}

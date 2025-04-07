@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -35,7 +36,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ctx = context.TODO()
+var (
+	ctx        = context.TODO()
+	isRaceTest = os.Getenv("RACETEST") != ""
+)
 
 const (
 	pgName        = "pg"
@@ -304,6 +308,7 @@ func TestDB(t *testing.T) {
 		{testNoPanicWhenReturningNullColumns},
 		{testNoForeignKeyForPrimaryKey},
 		{testWithPointerPrimaryKeyHasManyWithDriverValuer},
+		{testRelationJoinDataRace},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1999,4 +2004,43 @@ func testWithPointerPrimaryKeyHasManyWithDriverValuer(t *testing.T, db *bun.DB) 
 	err = db.NewSelect().Model(&program).Relation("Items").Scan(ctx)
 	require.NoError(t, err)
 	require.Len(t, program.Items, 2)
+}
+
+// TODO: Investigate and fix race conditions in other dialects for this test.
+// See https://github.com/uptrace/bun/pull/1146
+func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name().String() != pgName {
+		return
+	}
+
+	type RacePost struct {
+		PostID  int64 `bun:",pk,autoincrement"`
+		UserID  int64
+		Message string
+	}
+	type RaceUser struct {
+		UserID int64 `bun:",pk,autoincrement"`
+		Name   string
+		Posts  *RacePost `bun:"rel:has-one,join:user_id=user_id"`
+	}
+
+	mustResetModel(t, ctx, db, (*RaceUser)(nil), (*RacePost)(nil))
+
+	for j := 0; j < 10; j++ {
+		user := &RaceUser{Name: fmt.Sprintf("user %d", j)}
+		_, err := db.NewInsert().Model(user).Returning("user_id").Exec(ctx, user)
+		require.NoError(t, err)
+
+		i := 0
+		post := &RacePost{
+			Message: fmt.Sprintf("message %d", i),
+			UserID:  user.UserID,
+		}
+		_, err = db.NewInsert().Model(post).Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	var users []RaceUser
+	_, err := db.NewSelect().Model(&users).Relation("Posts").Offset(1).ScanAndCount(ctx)
+	require.NoError(t, err)
 }

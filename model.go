@@ -39,6 +39,7 @@ type TableModel interface {
 	getJoin(string) *relationJoin
 	getJoins() []relationJoin
 	addJoin(relationJoin) *relationJoin
+	clone() TableModel
 
 	rootValue() reflect.Value
 	parentIndex() []int
