@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
@@ -34,7 +33,6 @@ func newInspector(db *bun.DB, options ...sqlschema.InspectorOption) *Inspector {
 
 func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 	dbSchema := Schema{
-		Tables:      ordered.NewMap[string, sqlschema.Table](),
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
@@ -61,7 +59,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 			return dbSchema, err
 		}
 
-		colDefs := ordered.NewMap[string, sqlschema.Column]()
+		var colDefs []sqlschema.Column
 		uniqueGroups := make(map[string][]string)
 
 		for _, c := range columns {
@@ -72,7 +70,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 				def = strings.ToLower(def)
 			}
 
-			colDefs.Store(c.Name, &Column{
+			colDefs = append(colDefs, &Column{
 				Name:            c.Name,
 				SQLType:         c.DataType,
 				VarcharLen:      c.VarcharLen,
@@ -103,7 +101,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 			}
 		}
 
-		dbSchema.Tables.Store(table.Name, &Table{
+		dbSchema.Tables = append(dbSchema.Tables, &Table{
 			Schema:            table.Schema,
 			Name:              table.Name,
 			Columns:           colDefs,

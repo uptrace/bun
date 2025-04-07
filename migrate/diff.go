@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"github.com/uptrace/bun/internal/ordered"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
 
@@ -22,8 +23,8 @@ func diff(got, want sqlschema.Database, opts ...diffOption) *changeset {
 }
 
 func (d *detector) detectChanges() *changeset {
-	currentTables := d.current.GetTables()
-	targetTables := d.target.GetTables()
+	currentTables := toOrderedMap(d.current.GetTables())
+	targetTables := toOrderedMap(d.target.GetTables())
 
 RenameCreate:
 	for _, wantPair := range targetTables.Pairs() {
@@ -99,10 +100,19 @@ RenameCreate:
 	return &d.changes
 }
 
+// toOrderedMap transforms a slice of objects to an ordered map, using return of GetName() as key.
+func toOrderedMap[V interface{ GetName() string }](named []V) *ordered.Map[string, V] {
+	m := ordered.NewMap[string, V]()
+	for _, v := range named {
+		m.Store(v.GetName(), v)
+	}
+	return m
+}
+
 // detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
-	currentColumns := current.GetColumns()
-	targetColumns := target.GetColumns()
+	currentColumns := toOrderedMap(current.GetColumns())
+	targetColumns := toOrderedMap(target.GetColumns())
 
 ChangeRename:
 	for _, tPair := range targetColumns.Pairs() {
@@ -311,7 +321,6 @@ func equalSignatures(t1, t2 sqlschema.Table, eq CompareTypeFunc) bool {
 // signature is a set of column definitions, which allows "relation/name-agnostic" comparison between them;
 // meaning that two columns are considered equal if their types are the same.
 type signature struct {
-
 	// underlying stores the number of occurences for each unique column type.
 	// It helps to account for the fact that a table might have multiple columns that have the same type.
 	underlying map[sqlschema.BaseColumn]int
@@ -330,7 +339,7 @@ func newSignature(t sqlschema.Table, eq CompareTypeFunc) signature {
 
 // scan iterates over table's field and counts occurrences of each unique column definition.
 func (s *signature) scan(t sqlschema.Table) {
-	for _, icol := range t.GetColumns().Values() {
+	for _, icol := range t.GetColumns() {
 		scanCol := icol.(*sqlschema.BaseColumn)
 		// This is slightly more expensive than if the columns could be compared directly
 		// and we always did s.underlying[col]++, but we get type-equivalence in return.
