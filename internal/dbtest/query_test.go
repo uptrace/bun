@@ -360,11 +360,11 @@ func TestQuery(t *testing.T) {
 				return db.NewSelect().Model(new(Model)).
 					Where("1").
 					WhereOr("2").
-					WhereGroup(" OR ", func(q *bun.SelectQuery) *bun.SelectQuery {
+					WhereGroup(" OR ", func(q bun.ISelectQuery) bun.ISelectQuery {
 						return q.
 							WhereOr("3").
 							WhereOr("4").
-							WhereGroup(" OR NOT ", func(q *bun.SelectQuery) *bun.SelectQuery {
+							WhereGroup(" OR NOT ", func(q bun.ISelectQuery) bun.ISelectQuery {
 								return q.
 									WhereOr("5").
 									WhereOr("6")
@@ -451,7 +451,7 @@ func TestQuery(t *testing.T) {
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewSelect().
 					Model(new(Story)).
-					Relation("User", func(q *bun.SelectQuery) *bun.SelectQuery {
+					Relation("User", func(q bun.ISelectQuery) bun.ISelectQuery {
 						q = q.ExcludeColumn("*")
 						return q
 					})
@@ -462,7 +462,7 @@ func TestQuery(t *testing.T) {
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewSelect().
 					Model(new(Story)).
-					Relation("User", func(q *bun.SelectQuery) *bun.SelectQuery {
+					Relation("User", func(q bun.ISelectQuery) bun.ISelectQuery {
 						q = q.ExcludeColumn("id")
 						return q
 					})
@@ -689,10 +689,10 @@ func TestQuery(t *testing.T) {
 			id: 72,
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewSelect().
-					WhereGroup("", func(q *bun.SelectQuery) *bun.SelectQuery {
+					WhereGroup("", func(q bun.ISelectQuery) bun.ISelectQuery {
 						return q.Where("a = 1").Where("b = 1")
 					}).
-					WhereGroup(" OR ", func(q *bun.SelectQuery) *bun.SelectQuery {
+					WhereGroup(" OR ", func(q bun.ISelectQuery) bun.ISelectQuery {
 						return q.Where("a = 2").Where("b = 2")
 					})
 			},
@@ -745,7 +745,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 78,
 			query: func(db *bun.DB) schema.QueryAppender {
-				return db.NewSelect().WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+				return db.NewSelect().WhereGroup(" AND ", func(q bun.ISelectQuery) bun.ISelectQuery {
 					return q.WhereOr("one").WhereOr("two")
 				})
 			},

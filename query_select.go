@@ -20,6 +20,85 @@ type union struct {
 	query *SelectQuery
 }
 
+type ISelectQuery interface {
+	IBaseQuery
+
+	AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error)
+	Apply(fns ...func(ISelectQuery) ISelectQuery) ISelectQuery
+	ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) ISelectQuery
+	Clone() ISelectQuery
+	Column(columns ...string) ISelectQuery
+	ColumnExpr(query string, args ...interface{}) ISelectQuery
+	Comment(comment string) ISelectQuery
+	Conn(db IConn) ISelectQuery
+	Count(ctx context.Context) (int, error)
+	Distinct() ISelectQuery
+	DistinctOn(query string, args ...interface{}) ISelectQuery
+	Err(err error) ISelectQuery
+	Except(other ISelectQuery) ISelectQuery
+	ExceptAll(other ISelectQuery) ISelectQuery
+	ExcludeColumn(columns ...string) ISelectQuery
+	Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error)
+	Exists(ctx context.Context) (bool, error)
+	For(s string, args ...interface{}) ISelectQuery
+	ForceIndex(indexes ...string) ISelectQuery
+	ForceIndexForGroupBy(indexes ...string) ISelectQuery
+	ForceIndexForJoin(indexes ...string) ISelectQuery
+	ForceIndexForOrderBy(indexes ...string) ISelectQuery
+	Group(columns ...string) ISelectQuery
+	GroupExpr(group string, args ...interface{}) ISelectQuery
+	Having(having string, args ...interface{}) ISelectQuery
+	IgnoreIndex(indexes ...string) ISelectQuery
+	IgnoreIndexForGroupBy(indexes ...string) ISelectQuery
+	IgnoreIndexForJoin(indexes ...string) ISelectQuery
+	IgnoreIndexForOrderBy(indexes ...string) ISelectQuery
+	Intersect(other ISelectQuery) ISelectQuery
+	IntersectAll(other ISelectQuery) ISelectQuery
+	Join(join string, args ...interface{}) ISelectQuery
+	JoinOn(cond string, args ...interface{}) ISelectQuery
+	JoinOnOr(cond string, args ...interface{}) ISelectQuery
+	Limit(n int) ISelectQuery
+	Model(model interface{}) ISelectQuery
+	ModelTableExpr(query string, args ...interface{}) ISelectQuery
+	Offset(n int) ISelectQuery
+	Operation() string
+	Order(orders ...string) ISelectQuery
+	OrderExpr(query string, args ...interface{}) ISelectQuery
+	QueryBuilder() QueryBuilder
+	Relation(name string, apply ...func(ISelectQuery) ISelectQuery) ISelectQuery
+	RelationWithOpts(name string, opts RelationOpts) ISelectQuery
+	Rows(ctx context.Context) (*sql.Rows, error)
+	Scan(ctx context.Context, dest ...interface{}) error
+	ScanAndCount(ctx context.Context, dest ...interface{}) (int, error)
+	String() string
+	Table(tables ...string) ISelectQuery
+	TableExpr(query string, args ...interface{}) ISelectQuery
+	Union(other ISelectQuery) ISelectQuery
+	UnionAll(other ISelectQuery) ISelectQuery
+	UseIndex(indexes ...string) ISelectQuery
+	UseIndexForGroupBy(indexes ...string) ISelectQuery
+	UseIndexForJoin(indexes ...string) ISelectQuery
+	UseIndexForOrderBy(indexes ...string) ISelectQuery
+	Where(query string, args ...interface{}) ISelectQuery
+	WhereAllWithDeleted() ISelectQuery
+	WhereDeleted() ISelectQuery
+	WhereGroup(sep string, fn func(ISelectQuery) ISelectQuery) ISelectQuery
+	WhereOr(query string, args ...interface{}) ISelectQuery
+	WherePK(cols ...string) ISelectQuery
+	With(name string, query Query) ISelectQuery
+	WithRecursive(name string, query Query) ISelectQuery
+
+	// TODO: remove once all structs are converted to interface
+	addWhere(where schema.QueryWithSep)
+	// TODO: remove once all structs are converted to interface
+	setErr(err error)
+
+	setTable(*schema.Table)
+	getTable() *schema.Table
+	setColumns([]schema.QueryWithArgs)
+	getColumns() []schema.QueryWithArgs
+}
+
 type SelectQuery struct {
 	whereBaseQuery
 	idxHintsQuery
@@ -47,111 +126,127 @@ func NewSelectQuery(db *DB) *SelectQuery {
 	}
 }
 
-func (q *SelectQuery) Conn(db IConn) *SelectQuery {
+func (q *SelectQuery) getColumns() []schema.QueryWithArgs {
+	return q.columns
+}
+
+func (q *SelectQuery) setColumns(columns []schema.QueryWithArgs) {
+	q.columns = columns
+}
+
+func (q *SelectQuery) getTable() *schema.Table {
+	return q.table
+}
+
+func (q *SelectQuery) setTable(table *schema.Table) {
+	q.table = table
+}
+
+func (q *SelectQuery) Conn(db IConn) ISelectQuery {
 	q.setConn(db)
 	return q
 }
 
-func (q *SelectQuery) Model(model interface{}) *SelectQuery {
+func (q *SelectQuery) Model(model interface{}) ISelectQuery {
 	q.setModel(model)
 	return q
 }
 
-func (q *SelectQuery) Err(err error) *SelectQuery {
+func (q *SelectQuery) Err(err error) ISelectQuery {
 	q.setErr(err)
 	return q
 }
 
 // Apply calls each function in fns, passing the SelectQuery as an argument.
-func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery {
+func (q *SelectQuery) Apply(fns ...func(ISelectQuery) ISelectQuery) ISelectQuery {
 	for _, fn := range fns {
 		if fn != nil {
-			q = fn(q)
+			q = fn(q).(*SelectQuery)
 		}
 	}
 	return q
 }
 
-func (q *SelectQuery) With(name string, query Query) *SelectQuery {
+func (q *SelectQuery) With(name string, query Query) ISelectQuery {
 	q.addWith(name, query, false)
 	return q
 }
 
-func (q *SelectQuery) WithRecursive(name string, query Query) *SelectQuery {
+func (q *SelectQuery) WithRecursive(name string, query Query) ISelectQuery {
 	q.addWith(name, query, true)
 	return q
 }
 
-func (q *SelectQuery) Distinct() *SelectQuery {
+func (q *SelectQuery) Distinct() ISelectQuery {
 	q.distinctOn = make([]schema.QueryWithArgs, 0)
 	return q
 }
 
-func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) DistinctOn(query string, args ...interface{}) ISelectQuery {
 	q.distinctOn = append(q.distinctOn, schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Table(tables ...string) *SelectQuery {
+func (q *SelectQuery) Table(tables ...string) ISelectQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
 	}
 	return q
 }
 
-func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) TableExpr(query string, args ...interface{}) ISelectQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) ISelectQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Column(columns ...string) *SelectQuery {
+func (q *SelectQuery) Column(columns ...string) ISelectQuery {
 	for _, column := range columns {
 		q.addColumn(schema.UnsafeIdent(column))
 	}
 	return q
 }
 
-func (q *SelectQuery) ColumnExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) ColumnExpr(query string, args ...interface{}) ISelectQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
+func (q *SelectQuery) ExcludeColumn(columns ...string) ISelectQuery {
 	q.excludeColumn(columns)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
+func (q *SelectQuery) WherePK(cols ...string) ISelectQuery {
 	q.addWhereCols(cols)
 	return q
 }
 
-func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Where(query string, args ...interface{}) ISelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) WhereOr(query string, args ...interface{}) ISelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
-func (q *SelectQuery) WhereGroup(sep string, fn func(*SelectQuery) *SelectQuery) *SelectQuery {
+func (q *SelectQuery) WhereGroup(sep string, fn func(ISelectQuery) ISelectQuery) ISelectQuery {
 	saved := q.where
 	q.where = nil
 
-	q = fn(q)
+	q = fn(q).(*SelectQuery)
 
 	where := q.where
 	q.where = saved
@@ -161,96 +256,96 @@ func (q *SelectQuery) WhereGroup(sep string, fn func(*SelectQuery) *SelectQuery)
 	return q
 }
 
-func (q *SelectQuery) WhereDeleted() *SelectQuery {
+func (q *SelectQuery) WhereDeleted() ISelectQuery {
 	q.whereDeleted()
 	return q
 }
 
-func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
+func (q *SelectQuery) WhereAllWithDeleted() ISelectQuery {
 	q.whereAllWithDeleted()
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) UseIndex(indexes ...string) *SelectQuery {
+func (q *SelectQuery) UseIndex(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndex(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) UseIndexForJoin(indexes ...string) *SelectQuery {
+func (q *SelectQuery) UseIndexForJoin(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForJoin(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForGroupBy(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) IgnoreIndex(indexes ...string) *SelectQuery {
+func (q *SelectQuery) IgnoreIndex(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndex(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) *SelectQuery {
+func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForJoin(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForGroupBy(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) ForceIndex(indexes ...string) *SelectQuery {
+func (q *SelectQuery) ForceIndex(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndex(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) ForceIndexForJoin(indexes ...string) *SelectQuery {
+func (q *SelectQuery) ForceIndexForJoin(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForJoin(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) ForceIndexForOrderBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) ForceIndexForOrderBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForOrderBy(indexes...)
 	}
 	return q
 }
 
-func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) *SelectQuery {
+func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) ISelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForGroupBy(indexes...)
 	}
@@ -259,75 +354,75 @@ func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Group(columns ...string) *SelectQuery {
+func (q *SelectQuery) Group(columns ...string) ISelectQuery {
 	for _, column := range columns {
 		q.group = append(q.group, schema.UnsafeIdent(column))
 	}
 	return q
 }
 
-func (q *SelectQuery) GroupExpr(group string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) GroupExpr(group string, args ...interface{}) ISelectQuery {
 	q.group = append(q.group, schema.SafeQuery(group, args))
 	return q
 }
 
-func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Having(having string, args ...interface{}) ISelectQuery {
 	q.having = append(q.having, schema.SafeQuery(having, args))
 	return q
 }
 
-func (q *SelectQuery) Order(orders ...string) *SelectQuery {
+func (q *SelectQuery) Order(orders ...string) ISelectQuery {
 	q.addOrder(orders...)
 	return q
 }
 
-func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) OrderExpr(query string, args ...interface{}) ISelectQuery {
 	q.addOrderExpr(query, args...)
 	return q
 }
 
-func (q *SelectQuery) Limit(n int) *SelectQuery {
+func (q *SelectQuery) Limit(n int) ISelectQuery {
 	q.setLimit(n)
 	return q
 }
 
-func (q *SelectQuery) Offset(n int) *SelectQuery {
+func (q *SelectQuery) Offset(n int) ISelectQuery {
 	q.setOffset(n)
 	return q
 }
 
-func (q *SelectQuery) For(s string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) For(s string, args ...interface{}) ISelectQuery {
 	q.selFor = schema.SafeQuery(s, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Union(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" UNION ", other)
+func (q *SelectQuery) Union(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" UNION ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) UnionAll(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" UNION ALL ", other)
+func (q *SelectQuery) UnionAll(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" UNION ALL ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) Intersect(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" INTERSECT ", other)
+func (q *SelectQuery) Intersect(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" INTERSECT ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) IntersectAll(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" INTERSECT ALL ", other)
+func (q *SelectQuery) IntersectAll(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" INTERSECT ALL ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) Except(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" EXCEPT ", other)
+func (q *SelectQuery) Except(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" EXCEPT ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) ExceptAll(other *SelectQuery) *SelectQuery {
-	return q.addUnion(" EXCEPT ALL ", other)
+func (q *SelectQuery) ExceptAll(other ISelectQuery) ISelectQuery {
+	return q.addUnion(" EXCEPT ALL ", other.(*SelectQuery))
 }
 
-func (q *SelectQuery) addUnion(expr string, other *SelectQuery) *SelectQuery {
+func (q *SelectQuery) addUnion(expr string, other *SelectQuery) ISelectQuery {
 	q.union = append(q.union, union{
 		expr:  expr,
 		query: other,
@@ -337,22 +432,22 @@ func (q *SelectQuery) addUnion(expr string, other *SelectQuery) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Join(join string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Join(join string, args ...interface{}) ISelectQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
 
-func (q *SelectQuery) JoinOn(cond string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) JoinOn(cond string, args ...interface{}) ISelectQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
-func (q *SelectQuery) JoinOnOr(cond string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) JoinOnOr(cond string, args ...interface{}) ISelectQuery {
 	return q.joinOn(cond, args, " OR ")
 }
 
-func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *SelectQuery {
+func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) ISelectQuery {
 	if len(q.joins) == 0 {
 		q.setErr(errors.New("bun: query has no joins"))
 		return q
@@ -365,7 +460,7 @@ func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *Selec
 //------------------------------------------------------------------------------
 
 // Relation adds a relation to the query.
-func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQuery) *SelectQuery {
+func (q *SelectQuery) Relation(name string, apply ...func(ISelectQuery) ISelectQuery) ISelectQuery {
 	if len(apply) > 1 {
 		panic("only one apply function is supported")
 	}
@@ -381,20 +476,27 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
-	q.applyToRelation(join, apply...)
+	applies := make([]func(ISelectQuery) ISelectQuery, 0, len(apply)+1)
+	for _, v := range apply {
+		applies = append(applies, func(sq ISelectQuery) ISelectQuery {
+			return v(sq)
+		})
+	}
+
+	q.applyToRelation(join, applies...)
 
 	return q
 }
 
 type RelationOpts struct {
 	// Apply applies additional options to the relation.
-	Apply func(*SelectQuery) *SelectQuery
+	Apply func(ISelectQuery) ISelectQuery
 	// AdditionalJoinOnConditions adds additional conditions to the JOIN ON clause.
 	AdditionalJoinOnConditions []schema.QueryWithArgs
 }
 
 // RelationWithOpts adds a relation to the query with additional options.
-func (q *SelectQuery) RelationWithOpts(name string, opts RelationOpts) *SelectQuery {
+func (q *SelectQuery) RelationWithOpts(name string, opts RelationOpts) ISelectQuery {
 	if q.tableModel == nil {
 		q.setErr(errNilModel)
 		return q
@@ -417,11 +519,14 @@ func (q *SelectQuery) RelationWithOpts(name string, opts RelationOpts) *SelectQu
 	return q
 }
 
-func (q *SelectQuery) applyToRelation(join *relationJoin, apply ...func(*SelectQuery) *SelectQuery) {
-	var apply1, apply2 func(*SelectQuery) *SelectQuery
+func (q *SelectQuery) applyToRelation(
+	join *relationJoin,
+	apply ...func(ISelectQuery) ISelectQuery,
+) {
+	var apply1, apply2 func(ISelectQuery) ISelectQuery
 
 	if len(join.Relation.Condition) > 0 {
-		apply1 = func(q *SelectQuery) *SelectQuery {
+		apply1 = func(q ISelectQuery) ISelectQuery {
 			for _, opt := range join.Relation.Condition {
 				q.addWhere(schema.SafeQueryWithSep(opt, nil, " AND "))
 			}
@@ -434,7 +539,7 @@ func (q *SelectQuery) applyToRelation(join *relationJoin, apply ...func(*SelectQ
 		apply2 = apply[0]
 	}
 
-	join.apply = func(q *SelectQuery) *SelectQuery {
+	join.apply = func(q ISelectQuery) ISelectQuery {
 		if apply1 != nil {
 			q = apply1(q)
 		}
@@ -453,7 +558,10 @@ func (q *SelectQuery) forEachInlineRelJoin(fn func(*relationJoin) error) error {
 	return q._forEachInlineRelJoin(fn, q.tableModel.getJoins())
 }
 
-func (q *SelectQuery) _forEachInlineRelJoin(fn func(*relationJoin) error, joins []relationJoin) error {
+func (q *SelectQuery) _forEachInlineRelJoin(
+	fn func(*relationJoin) error,
+	joins []relationJoin,
+) error {
 	for i := range joins {
 		j := &joins[i]
 		switch j.Relation.Type {
@@ -479,9 +587,9 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 		case schema.HasOneRelation, schema.BelongsToRelation:
 			err = q.selectJoins(ctx, j.JoinModel.getJoins())
 		case schema.HasManyRelation:
-			err = j.selectMany(ctx, q.db.NewSelect().Conn(q.conn))
+			err = j.selectMany(ctx, q.db.NewSelect().Conn(q.conn).(*SelectQuery))
 		case schema.ManyToManyRelation:
-			err = j.selectM2M(ctx, q.db.NewSelect().Conn(q.conn))
+			err = j.selectM2M(ctx, q.db.NewSelect().Conn(q.conn).(*SelectQuery))
 		default:
 			panic("not reached")
 		}
@@ -496,7 +604,7 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 //------------------------------------------------------------------------------
 
 // Comment adds a comment to the query, wrapped by /* ... */.
-func (q *SelectQuery) Comment(comment string) *SelectQuery {
+func (q *SelectQuery) Comment(comment string) ISelectQuery {
 	q.comment = comment
 	return q
 }
@@ -863,7 +971,9 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...interface{}) (sql.
 		for _, j := range q.tableModel.getJoins() {
 			switch j.Relation.Type {
 			case schema.HasManyRelation, schema.ManyToManyRelation:
-				return nil, fmt.Errorf("When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.")
+				return nil, fmt.Errorf(
+					"When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.",
+				)
 			}
 		}
 	}
@@ -1095,7 +1205,7 @@ func (q *SelectQuery) String() string {
 	return string(buf)
 }
 
-func (q *SelectQuery) Clone() *SelectQuery {
+func (q *SelectQuery) Clone() ISelectQuery {
 	if q == nil {
 		return nil
 	}
@@ -1195,7 +1305,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 	for i, u := range q.union {
 		clone.union[i] = union{
 			expr:  u.expr,
-			query: u.query.Clone(),
+			query: u.query.Clone().(*SelectQuery),
 		}
 	}
 
@@ -1215,8 +1325,8 @@ func (q *SelectQuery) QueryBuilder() QueryBuilder {
 	return &selectQueryBuilder{q}
 }
 
-func (q *SelectQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *SelectQuery {
-	return fn(q.QueryBuilder()).Unwrap().(*SelectQuery)
+func (q *SelectQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) ISelectQuery {
+	return fn(q.QueryBuilder()).Unwrap().(ISelectQuery)
 }
 
 type selectQueryBuilder struct {
@@ -1226,9 +1336,9 @@ type selectQueryBuilder struct {
 func (q *selectQueryBuilder) WhereGroup(
 	sep string, fn func(QueryBuilder) QueryBuilder,
 ) QueryBuilder {
-	q.SelectQuery = q.SelectQuery.WhereGroup(sep, func(qs *SelectQuery) *SelectQuery {
+	q.SelectQuery = q.SelectQuery.WhereGroup(sep, func(qs ISelectQuery) ISelectQuery {
 		return fn(q).(*selectQueryBuilder).SelectQuery
-	})
+	}).(*SelectQuery)
 	return q
 }
 

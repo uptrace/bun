@@ -61,14 +61,14 @@ func testBookRelations(t *testing.T, db *bun.DB) {
 		Relation("Author.Avatar").
 		Relation("Editor").
 		Relation("Editor.Avatar").
-		Relation("Genres", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Genres", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Column("id", "name", "genre__rating")
 		}).
 		Relation("Comments").
-		Relation("Translations", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Translations", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Order("id")
 		}).
-		Relation("Translations.Comments", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Translations.Comments", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Order("text")
 		}).
 		OrderExpr("book.id ASC").
@@ -127,12 +127,12 @@ func testAuthorRelations(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().
 		Model(&author).
 		Column("author.*").
-		Relation("Books", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Books", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Column("book.id", "book.author_id", "book.editor_id").OrderExpr("book.id ASC")
 		}).
 		Relation("Books.Author").
 		Relation("Books.Editor").
-		Relation("Books.Translations", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Books.Translations", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.OrderExpr("tr.id ASC")
 		}).
 		OrderExpr("author.id ASC").
@@ -177,10 +177,10 @@ func testGenreRelations(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().
 		Model(&genre).
 		Column("genre.*").
-		Relation("Books", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Books", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.ColumnExpr("book.id")
 		}).
-		Relation("Books.Translations", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Books.Translations", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.OrderExpr("tr.id ASC")
 		}).
 		OrderExpr("genre.id ASC").
@@ -213,7 +213,7 @@ func testTranslationRelations(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().
 		Model(&translation).
 		Column("tr.*").
-		Relation("Book", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Book", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.ColumnExpr("book.id AS book__id")
 		}).
 		Relation("Book.Author").
@@ -273,7 +273,7 @@ func testRelationColumn(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().
 		Model(book).
 		ExcludeColumn("created_at").
-		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Author", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.Column("name")
 		}).
 		OrderExpr("book.id").
@@ -296,7 +296,7 @@ func testRelationExcludeAll(t *testing.T, db *bun.DB) {
 	err := db.NewSelect().
 		Model(book).
 		ExcludeColumn("created_at").
-		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Author", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.ExcludeColumn("*")
 		}).
 		Relation("Author.Avatar").
@@ -327,7 +327,7 @@ func testRelationExcludeAll(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().
 		Model(book).
 		ExcludeColumn("*").
-		Relation("Author", func(q *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Author", func(q bun.ISelectQuery) bun.ISelectQuery {
 			return q.ExcludeColumn("*")
 		}).
 		Relation("Author.Avatar").
@@ -427,7 +427,7 @@ func testM2MRelationExcludeColumn(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().
 		Model(order).
 		Where("id = ?", 1).
-		Relation("Items", func(sq *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Items", func(sq bun.ISelectQuery) bun.ISelectQuery {
 			return sq.ExcludeColumn("updated_at")
 		}).
 		Scan(ctx)
@@ -580,7 +580,7 @@ func testHasOneRelationWithOpts(t *testing.T, db *bun.DB) {
 		NewSelect().
 		Model(&outUsers2).
 		RelationWithOpts("Profile", bun.RelationOpts{
-			Apply: func(q *bun.SelectQuery) *bun.SelectQuery {
+			Apply: func(q bun.ISelectQuery) bun.ISelectQuery {
 				return q.Where("profile.lang = ?", "ru")
 			},
 		}).
@@ -654,7 +654,7 @@ func testHasManyRelationWithOpts(t *testing.T, db *bun.DB) {
 		NewSelect().
 		Model(&outUsers2).
 		RelationWithOpts("Profiles", bun.RelationOpts{
-			Apply: func(q *bun.SelectQuery) *bun.SelectQuery {
+			Apply: func(q bun.ISelectQuery) bun.ISelectQuery {
 				return q.Where("profile.lang = ?", "ru")
 			},
 		}).

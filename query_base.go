@@ -49,12 +49,12 @@ type IDB interface {
 	IConn
 	Dialect() schema.Dialect
 
-	NewValues(model interface{}) *ValuesQuery
-	NewSelect() *SelectQuery
+	NewValues(model any) IValuesQuery
+	NewSelect() ISelectQuery
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery
 	NewDelete() *DeleteQuery
-	NewMerge() *MergeQuery
+	NewMerge() IMergeQuery
 	NewRaw(query string, args ...interface{}) *RawQuery
 	NewCreateTable() *CreateTableQuery
 	NewDropTable() *DropTableQuery
@@ -91,6 +91,27 @@ var (
 	_ QueryBuilder = (*updateQueryBuilder)(nil)
 	_ QueryBuilder = (*deleteQueryBuilder)(nil)
 )
+
+type IBaseQuery interface {
+	AppendNamedArg(fmter schema.Formatter, b []byte, name string) ([]byte, bool)
+	DB() *DB
+	Dialect() schema.Dialect
+	GetModel() Model
+	GetTableName() string
+	NewAddColumn() *AddColumnQuery
+	NewCreateIndex() *CreateIndexQuery
+	NewCreateTable() *CreateTableQuery
+	NewDelete() *DeleteQuery
+	NewDropColumn() *DropColumnQuery
+	NewDropIndex() *DropIndexQuery
+	NewDropTable() *DropTableQuery
+	NewInsert() *InsertQuery
+	NewRaw(query string, args ...interface{}) *RawQuery
+	NewSelect() ISelectQuery
+	NewTruncateTable() *TruncateTableQuery
+	NewUpdate() *UpdateQuery
+	NewValues(model interface{}) *ValuesQuery
+}
 
 type baseQuery struct {
 	db   *DB
@@ -658,7 +679,7 @@ func (q *baseQuery) NewValues(model interface{}) *ValuesQuery {
 	return NewValuesQuery(q.db, model).Conn(q.conn)
 }
 
-func (q *baseQuery) NewSelect() *SelectQuery {
+func (q *baseQuery) NewSelect() ISelectQuery {
 	return NewSelectQuery(q.db).Conn(q.conn)
 }
 
