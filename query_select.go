@@ -792,7 +792,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	}
 
 	// if a comment is propagated via the context, use it
-	setCommentFromContext(ctx, q)
+	setCommentFromContext[*SelectQuery](ctx, q)
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
