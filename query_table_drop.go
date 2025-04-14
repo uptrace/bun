@@ -124,7 +124,7 @@ func (q *DropTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Res
 	}
 
 	// if a comment is propagated via the context, use it
-	setCommentFromContext(ctx, q)
+	setCommentFromContext[*DropTableQuery](ctx, q)
 
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
 	if err != nil {
