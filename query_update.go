@@ -557,7 +557,7 @@ func (q *UpdateQuery) scanOrExec(
 	}
 
 	// if a comment is propagated via the context, use it
-	setCommentFromContext(ctx, q)
+	setCommentFromContext[*UpdateQuery](ctx, q)
 
 	// Generate the query before checking hasReturning.
 	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
