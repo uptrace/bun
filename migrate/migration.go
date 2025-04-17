@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -291,12 +292,22 @@ func WithNopMigration() MigrationOption {
 
 func sortAsc(ms MigrationSlice) {
 	sort.Slice(ms, func(i, j int) bool {
+		ni, ei := strconv.ParseInt(ms[i].Name, 10, 64)
+		nj, ej := strconv.ParseInt(ms[j].Name, 10, 64)
+		if ei == nil && ej == nil && ni != nj {
+			return ni < nj
+		}
 		return ms[i].Name < ms[j].Name
 	})
 }
 
 func sortDesc(ms MigrationSlice) {
 	sort.Slice(ms, func(i, j int) bool {
+		ni, ei := strconv.ParseInt(ms[i].Name, 10, 64)
+		nj, ej := strconv.ParseInt(ms[j].Name, 10, 64)
+		if ei == nil && ej == nil && ni != nj {
+			return ni > nj
+		}
 		return ms[i].Name > ms[j].Name
 	})
 }
