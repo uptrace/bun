@@ -237,9 +237,17 @@ type Notification struct {
 
 type ChannelOption func(c *channel)
 
+type channelOverflowHandler func(n Notification)
+
 func WithChannelSize(size int) ChannelOption {
 	return func(c *channel) {
 		c.size = size
+	}
+}
+
+func WithChannelOverflowHandler(handler channelOverflowHandler) ChannelOption {
+	return func(c *channel) {
+		c.overflowHandler = handler
 	}
 }
 
@@ -250,8 +258,9 @@ type channel struct {
 	size        int
 	pingTimeout time.Duration
 
-	ch     chan Notification
-	pingCh chan struct{}
+	ch              chan Notification
+	pingCh          chan struct{}
+	overflowHandler channelOverflowHandler
 }
 
 func newChannel(ln *Listener, opts []ChannelOption) *channel {
@@ -310,6 +319,9 @@ func (c *channel) startReceive() {
 			case c.ch <- Notification{channel, payload}:
 			default:
 				Logger.Printf(c.ctx, "pgdriver: Listener buffer is full (message is dropped)")
+				if c.overflowHandler != nil {
+					c.overflowHandler(Notification{channel, payload})
+				}
 			}
 		}
 	}
