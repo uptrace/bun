@@ -58,8 +58,8 @@ func (m *Migrations) Register(up, down MigrationFunc) error {
 	m.Add(Migration{
 		Name:    name,
 		Comment: comment,
-		Up:      up,
-		Down:    down,
+		Up:      wrapMigrationFunc(up),
+		Down:    wrapMigrationFunc(down),
 	})
 
 	return nil

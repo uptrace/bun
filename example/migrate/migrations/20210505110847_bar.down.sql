@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS test;
+DROP TABLE IF EXISTS {{.Prefix}}test;

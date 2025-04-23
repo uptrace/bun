@@ -1,7 +1,7 @@
-CREATE TABLE test (
+CREATE TABLE {{.Prefix}}test (
   id bigint PRIMARY KEY
 );
 
 --bun:split
 
-ALTER TABLE test ADD COLUMN name varchar(100);
+ALTER TABLE {{.Prefix}}test ADD COLUMN name varchar(100);
