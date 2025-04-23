@@ -58,21 +58,13 @@ func wrapMigrationFunc(fn MigrationFunc) internalMigrationFunc {
 	}
 }
 
-func prepareTemplate(f io.Reader, templateData any) (*bytes.Buffer, error) {
-	contents, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
+func renderTemplate(contents []byte, templateData any) (*bytes.Buffer, error) {
 	tmpl, err := template.New("migration").Parse(string(contents))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
 
 	var rendered bytes.Buffer
-	if templateData == nil {
-		templateData = struct{}{}
-	}
 	if err := tmpl.Execute(&rendered, templateData); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
@@ -82,11 +74,19 @@ func prepareTemplate(f io.Reader, templateData any) (*bytes.Buffer, error) {
 
 // Exec reads and executes the SQL migration in the f.
 func Exec(ctx context.Context, db *bun.DB, f io.Reader, templateData any, isTx bool) error {
-	rendered, err := prepareTemplate(f, templateData)
+	contents, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(rendered)
+	var reader io.Reader = bytes.NewReader(contents)
+	if templateData != nil {
+		buf, err := renderTemplate(contents, templateData)
+		if err != nil {
+			return err
+		}
+		reader = buf
+	}
+	scanner := bufio.NewScanner(reader)
 	var queries []string
 
 	var query []byte
