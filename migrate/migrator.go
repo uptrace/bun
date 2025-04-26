@@ -41,6 +41,12 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 	}
 }
 
+func WithTemplateData(data any) MigratorOption {
+	return func(m *Migrator) {
+		m.templateData = data
+	}
+}
+
 type Migrator struct {
 	db         *bun.DB
 	migrations *Migrations
@@ -50,6 +56,8 @@ type Migrator struct {
 	table                string
 	locksTable           string
 	markAppliedOnSuccess bool
+
+	templateData any
 }
 
 func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Migrator {
@@ -168,7 +176,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		group.Migrations = migrations[:i+1]
 
 		if !cfg.nop && migration.Up != nil {
-			if err := migration.Up(ctx, m.db); err != nil {
+			if err := migration.Up(ctx, m.db, m.templateData); err != nil {
 				return group, err
 			}
 		}
@@ -207,7 +215,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 		}
 
 		if !cfg.nop && migration.Down != nil {
-			if err := migration.Down(ctx, m.db); err != nil {
+			if err := migration.Down(ctx, m.db, m.templateData); err != nil {
 				return lastGroup, err
 			}
 		}
