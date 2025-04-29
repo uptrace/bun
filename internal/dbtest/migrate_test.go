@@ -1102,10 +1102,12 @@ func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
 func testExcludeTableLike(t *testing.T, db *bun.DB) {
 	// Arrange
 	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
 	mustResetModel(t, ctx, db, (*struct {
 		bun.BaseModel `bun:"table:exclude_me"`
+		// Most SQL dialects do not support zero-column tables.
+		Dummy string `bun:",pk"`
 	})(nil))
-	inspect := inspectDbOrSkip(t, db)
 	m := newAutoMigratorOrSkip(t, db, migrate.WithExcludeTableLike("exclude%"))
 
 	// Act

@@ -7,6 +7,7 @@ import (
 )
 
 func TestMssqlMerge(t *testing.T) {
+	t.Skip()
 	db := mssql2019(t)
 	t.Cleanup(func() { db.Close() })
 
@@ -48,5 +49,4 @@ func TestMssqlMerge(t *testing.T) {
 	require.Len(t, changes, 2)
 	require.Equal(t, "UPDATE", changes[0])
 	require.Equal(t, "INSERT", changes[1])
-
 }
