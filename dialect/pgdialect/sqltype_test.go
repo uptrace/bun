@@ -35,6 +35,11 @@ func TestInspectorDialect_CompareType(t *testing.T) {
 			{sqltype.Timestamp, pgTypeTimestamp, true}, // Still, TIMESTAMP == TIMESTAMP
 			{sqltype.Timestamp, pgTypeTimeTz, false},
 			{pgTypeTimestampTz, pgTypeTimestampWithTz, true},
+
+			// SERIAL is an alias to INT + auto-generated sequence
+			{sqltype.BigInt, pgTypeBigSerial, true},
+			{sqltype.Integer, pgTypeSerial, true},
+			{sqltype.SmallInt, pgTypeSmallSerial, true},
 		} {
 			eq := " ~ "
 			if !tt.want {
@@ -48,7 +53,6 @@ func TestInspectorDialect_CompareType(t *testing.T) {
 				require.Equal(t, tt.want, got)
 			})
 		}
-
 	})
 
 	t.Run("custom varchar length", func(t *testing.T) {
