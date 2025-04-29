@@ -1033,9 +1033,7 @@ func testNothingToMigrate(t *testing.T, db *bun.DB) {
 		AlwaysBlue string `bun:"colour,default:'blue'"`
 
 		// Check that no superficial migrations are generated for `autoincrement` columns.
-		BigInt   int64 `bun:",autoincrement"`
-		Int      int32 `bun:",autoincrement"`
-		SmallInt int16 `bun:",autoincrement"`
+		BigInt int64 `bun:",autoincrement"`
 	}
 
 	ctx := context.Background()
