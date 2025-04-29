@@ -1030,6 +1030,11 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 func testNothingToMigrate(t *testing.T, db *bun.DB) {
 	type BoringThing struct {
 		AlwaysBlue string `bun:"colour,default:'blue'"`
+
+		// Check that no superficial migrations are generated for `autoincrement` columns.
+		BigInt   int64 `bun:",autoincrement"`
+		Int      int32 `bun:",autoincrement"`
+		SmallInt int16 `bun:",autoincrement"`
 	}
 
 	ctx := context.Background()
@@ -1090,7 +1095,6 @@ func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-
 	require.Contains(t, state.ForeignKeys, excluded,
 		"expected FK constraint things.owner_name -> owners.name")
 }
