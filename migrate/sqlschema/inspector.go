@@ -113,6 +113,10 @@ type inspector struct {
 
 // BunModelInspector creates the current project state from the passed bun.Models.
 // Do not recycle BunModelInspector for different sets of models, as older models will not be de-registerred before the next run.
+//
+// BunModelInspector does not know which the database's dialect, so it does not
+// assume any default schema name. Always specify the target schema name via
+// WithSchemaName option to receive meaningful results.
 type BunModelInspector struct {
 	InspectorConfig
 	tables *schema.Tables
@@ -138,6 +142,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 			if err != nil {
 				return nil, fmt.Errorf("parse length in %q: %w", f.CreateTableSQLType, err)
 			}
+
 			columns = append(columns, &BaseColumn{
 				Name:            f.Name,
 				SQLType:         strings.ToLower(sqlType), // TODO(dyma): maybe this is not necessary after Column.Eq()
