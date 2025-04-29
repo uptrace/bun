@@ -700,7 +700,7 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 	type TableAfter struct {
 		bun.BaseModel `bun:"table:column_madness"`
 		DoNotTouch    string `bun:"do_not_touch"`
-		AddMe         bool   `bun:"addme"`
+		AddMe         int64  `bun:"addme,autoincrement"`
 	}
 
 	wantTables := []sqlschema.Table{
@@ -714,9 +714,10 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 					IsNullable: true,
 				},
 				&sqlschema.BaseColumn{
-					Name:       "addme",
-					SQLType:    sqltype.Boolean,
-					IsNullable: true,
+					Name:            "addme",
+					SQLType:         sqltype.BigInt,
+					IsNullable:      false,
+					IsAutoIncrement: true,
 				},
 			},
 		},
