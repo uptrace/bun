@@ -40,7 +40,18 @@ type InspectorConfig struct {
 	SchemaName string
 
 	// ExcludeTables from inspection.
+	//
+	// Deprecated: Prefer using ExcludeTablesLike with the LIKE operator.
+	// AutoMigrator will continue to populate ExcludeTables separately
+	// for backwards compatibility.
 	ExcludeTables []string
+
+	// ExcludeTablesLike excludes tables which match a pattern expression
+	// from inspection. Dialects should use these with the LIKE operator.
+	//
+	// Because expression without additional wildcards (%, _) is valid
+	// it is sufficient to exclude tables based on this field only.
+	ExcludeTablesLike []string
 
 	// ExcludeForeignKeys from inspection.
 	ExcludeForeignKeys map[ForeignKey]string
@@ -57,12 +68,23 @@ func WithSchemaName(schemaName string) InspectorOption {
 	}
 }
 
-// WithExcludeTables forces inspector to exclude tables
-// from the reported schema state.
+// WithExcludeTables forces inspector to exclude tables from the reported schema state.
 // It works in append-only mode, i.e. tables cannot be re-included.
+//
+// All tables are additionally appended to WithExcludeTablesLike
+// for forward-compatibility, allowing dialects to ignore deprecated ExcludeTables.
 func WithExcludeTables(tables ...string) InspectorOption {
 	return func(cfg *InspectorConfig) {
 		cfg.ExcludeTables = append(cfg.ExcludeTables, tables...)
+		cfg.ExcludeTablesLike = append(cfg.ExcludeTablesLike, tables...)
+	}
+}
+
+// WithExcludeTables forces inspector to exclude tables from the reported schema state.
+// It works in append-only mode, i.e. tables cannot be re-included.
+func WithExcludeTablesLike(tables ...string) InspectorOption {
+	return func(cfg *InspectorConfig) {
+		cfg.ExcludeTablesLike = append(cfg.ExcludeTablesLike, tables...)
 	}
 }
 

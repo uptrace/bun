@@ -17,14 +17,14 @@ import (
 
 type AutoMigratorOption func(m *AutoMigrator)
 
-// WithModel adds a bun.Model to the scope of migrations.
+// WithModel adds a bun.Model to the migration scope.
 func WithModel(models ...interface{}) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.includeModels = append(m.includeModels, models...)
 	}
 }
 
-// WithExcludeTable tells AutoMigrator to ignore a table in the database.
+// WithExcludeTable tells AutoMigrator to exclude database tables from the migration scope.
 // This prevents AutoMigrator from dropping tables which may exist in the schema
 // but which are not used by the application.
 //
@@ -32,6 +32,17 @@ func WithModel(models ...interface{}) AutoMigratorOption {
 func WithExcludeTable(tables ...string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.excludeTables = append(m.excludeTables, tables...)
+	}
+}
+
+// WithExcludeTableLike tells AutoMigrator to ignore database tables which match
+// one of the pattern expressions.
+// Expressions can make use of the wildcards supported by the LIKE operator:
+//   - % as a wildcard
+//   - _ as a single character
+func WithExcludeTableLike(exprs ...string) AutoMigratorOption {
+	return func(m *AutoMigrator) {
+		m.excludeTablesLike = append(m.excludeTablesLike, exprs...)
 	}
 }
 
@@ -44,7 +55,8 @@ func WithExcludeForeignKeys(fks ...sqlschema.ForeignKey) AutoMigratorOption {
 	}
 }
 
-// WithSchemaName changes the default database schema to migrate objects in.
+// WithSchemaName sets the database schema to migrate objects in.
+// By default, dialects' default schema is used.
 func WithSchemaName(schemaName string) AutoMigratorOption {
 	return func(m *AutoMigrator) {
 		m.schemaName = schemaName
@@ -133,8 +145,8 @@ type AutoMigrator struct {
 	// includeModels define the migration scope.
 	includeModels []interface{}
 
-	// excludeTables are excluded from database inspection.
-	excludeTables []string
+	excludeTables     []string // excludeTables are excluded from database inspection.
+	excludeTablesLike []string // excludeTablesLike are excluded from database inspection.
 
 	// excludeForeignKeys are excluded from database inspection.
 	excludeForeignKeys []sqlschema.ForeignKey
@@ -165,6 +177,7 @@ func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, err
 	dbInspector, err := sqlschema.NewInspector(db,
 		sqlschema.WithSchemaName(am.schemaName),
 		sqlschema.WithExcludeTables(am.excludeTables...),
+		sqlschema.WithExcludeTablesLike(am.excludeTablesLike...),
 		sqlschema.WithExcludeForeignKeys(am.excludeForeignKeys...),
 	)
 	if err != nil {
