@@ -197,13 +197,11 @@ func (m *migrator) addForeignKey(fmter schema.Formatter, b []byte, add *migrate.
 // Having a backing sequence is necessary to change column type to SERIAL.
 // The updated Column's default is  set to "nextval" of the new sequence.
 func (m *migrator) createDefaultSequence(_ schema.Formatter, b []byte, op *migrate.ChangeColumnTypeOp) (_ sqlschema.Column, _ []byte, err error) {
-	var start int
+	var last int
 	if err = m.db.NewSelect().Table(op.TableName).
-		ColumnExpr("MAX(?)", op.Column).Scan(context.TODO(), &start); err != nil {
+		ColumnExpr("MAX(?)", op.Column).Scan(context.TODO(), &last); err != nil {
 		return nil, b, err
 	}
-	start = max(start, 1) // cannot be less than 1
-
 	seq := op.TableName + "_" + op.Column + "_seq"
 	fqn := op.TableName + "." + op.Column
 
@@ -212,7 +210,7 @@ func (m *migrator) createDefaultSequence(_ schema.Formatter, b []byte, op *migra
 	b = append(b, "CREATE SEQUENCE "...)
 	b = append(b, seq...)
 	b = append(b, " START WITH "...)
-	b = append(b, fmt.Sprint(start)...)
+	b = append(b, fmt.Sprint(last+1)...) // start with next value
 	b = append(b, " OWNED BY "...)
 	b = append(b, fqn...)
 	b = append(b, ";\n"...)
