@@ -569,6 +569,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		EmptyDefault string    `bun:"empty_default"`
 		Nullable     string    `bun:"not_null"`
 		TypeOverride string    `bun:"type:varchar(100)"`
+		Incremented  int       `bun:"incremented"`
 		// ManyValues    []string  `bun:",array"`
 	}
 
@@ -581,6 +582,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		EmptyDefault string    `bun:"empty_default,default:''"`      // '' empty string default
 		NotNullable  string    `bun:"not_null,notnull"`              // added NOT NULL
 		TypeOverride string    `bun:"type:varchar(200)"`             // new length
+		Incremented  int       `bun:"incremented,autoincrement"`     // make autoincremented
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
@@ -622,6 +624,12 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 					SQLType:    "varchar",
 					IsNullable: true,
 					VarcharLen: 200,
+				},
+				&sqlschema.BaseColumn{
+					Name:            "incremented",
+					SQLType:         "bigint",
+					IsNullable:      false,
+					IsAutoIncrement: true,
 				},
 				// &sqlschema.BaseColumn{
 				// 	Name:    "many_values",
