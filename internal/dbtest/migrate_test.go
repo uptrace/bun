@@ -1045,10 +1045,10 @@ func testNothingToMigrate(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-	mustResetModel(t, ctx, db, (*BoringThing)(nil))
 	m := newAutoMigratorOrSkip(t, db,
 		migrate.WithModel((*BoringThing)(nil)),
 	)
+	mustResetModel(t, ctx, db, (*BoringThing)(nil))
 
 	// Act
 	_, err := m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created
