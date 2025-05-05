@@ -30,11 +30,14 @@ func main() {
 		bundebug.FromEnv(),
 	))
 
+	templateData := map[string]string{
+		"Prefix": "example_",
+	}
 	app := &cli.App{
 		Name: "bun",
 
 		Commands: []*cli.Command{
-			newDBCommand(migrate.NewMigrator(db, migrations.Migrations)),
+			newDBCommand(migrate.NewMigrator(db, migrations.Migrations, migrate.WithTemplateData(templateData))),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

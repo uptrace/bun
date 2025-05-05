@@ -75,22 +75,22 @@ func testMigrateUpAndDown(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, db *bun.DB) error {
+		Up: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "up1")
 			return nil
 		},
-		Down: func(ctx context.Context, db *bun.DB) error {
+		Down: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "down1")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, db *bun.DB) error {
+		Up: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "up2")
 			return nil
 		},
-		Down: func(ctx context.Context, db *bun.DB) error {
+		Down: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "down2")
 			return nil
 		},
@@ -125,33 +125,33 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, db *bun.DB) error {
+		Up: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "up1")
 			return nil
 		},
-		Down: func(ctx context.Context, db *bun.DB) error {
+		Down: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "down1")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, db *bun.DB) error {
+		Up: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "up2")
 			return errors.New("failed")
 		},
-		Down: func(ctx context.Context, db *bun.DB) error {
+		Down: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "down2")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102170405",
-		Up: func(ctx context.Context, db *bun.DB) error {
+		Up: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "up3")
 			return errors.New("failed")
 		},
-		Down: func(ctx context.Context, db *bun.DB) error {
+		Down: func(ctx context.Context, db *bun.DB, templateData any) error {
 			history = append(history, "down3")
 			return nil
 		},
