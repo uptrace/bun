@@ -47,6 +47,15 @@ func WithTemplateData(data any) MigratorOption {
 	}
 }
 
+// WithSort overrides the default ascending sort function for all migrations.
+// This affects all sorting operations in the entire migrate package.
+func WithSort(ascSortFn, descSortFn MigrationSortFunc) {
+	sortMutex.Lock()
+	defer sortMutex.Unlock()
+	AscSort = ascSortFn
+	DescSort = descSortFn
+}
+
 type Migrator struct {
 	db         *bun.DB
 	migrations *Migrations

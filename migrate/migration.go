@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -233,7 +231,7 @@ func (ms MigrationSlice) Applied() MigrationSlice {
 			applied = append(applied, ms[i])
 		}
 	}
-	sortDesc(applied)
+	SafeDescSort(applied)
 	return applied
 }
 
@@ -246,7 +244,7 @@ func (ms MigrationSlice) Unapplied() MigrationSlice {
 			unapplied = append(unapplied, ms[i])
 		}
 	}
-	sortAsc(unapplied)
+	SafeAscSort(unapplied)
 	return unapplied
 }
 
@@ -276,6 +274,7 @@ func (ms MigrationSlice) LastGroup() *MigrationGroup {
 			group.Migrations = append(group.Migrations, ms[i])
 		}
 	}
+
 	return group
 }
 
@@ -321,28 +320,4 @@ func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.nop = true
 	}
-}
-
-//------------------------------------------------------------------------------
-
-func sortAsc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		ni, ei := strconv.ParseInt(ms[i].Name, 10, 64)
-		nj, ej := strconv.ParseInt(ms[j].Name, 10, 64)
-		if ei == nil && ej == nil && ni != nj {
-			return ni < nj
-		}
-		return ms[i].Name < ms[j].Name
-	})
-}
-
-func sortDesc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		ni, ei := strconv.ParseInt(ms[i].Name, 10, 64)
-		nj, ej := strconv.ParseInt(ms[j].Name, 10, 64)
-		if ei == nil && ej == nil && ni != nj {
-			return ni > nj
-		}
-		return ms[i].Name > ms[j].Name
-	})
 }
