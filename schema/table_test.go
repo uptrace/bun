@@ -322,4 +322,17 @@ func TestTable(t *testing.T) {
 
 		require.Equal(t, table.FieldMap["foo"].SQLName, table.FieldMap["alt_name"].SQLName)
 	})
+
+	t.Run("autoincrement is not nullable", func(t *testing.T) {
+		type Thing struct {
+			Counter int `bun:",autoincrement"`
+		}
+
+		table := tables.Get(reflect.TypeFor[*Thing]())
+
+		require.Contains(t, table.FieldMap, "counter")
+		counter := table.FieldMap["counter"]
+		require.True(t, counter.AutoIncrement, "autoincrement")
+		require.True(t, counter.NotNull, "not null")
+	})
 }

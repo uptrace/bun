@@ -538,6 +538,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 	if tag.HasOption("autoincrement") {
 		field.AutoIncrement = true
+		field.NotNull = true
 		field.NullZero = true
 	}
 	if tag.HasOption("identity") {

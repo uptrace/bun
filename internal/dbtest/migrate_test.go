@@ -569,6 +569,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		EmptyDefault string    `bun:"empty_default"`
 		Nullable     string    `bun:"not_null"`
 		TypeOverride string    `bun:"type:varchar(100)"`
+		Incremented  int       `bun:"incremented"`
 		// ManyValues    []string  `bun:",array"`
 	}
 
@@ -581,6 +582,7 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 		EmptyDefault string    `bun:"empty_default,default:''"`      // '' empty string default
 		NotNullable  string    `bun:"not_null,notnull"`              // added NOT NULL
 		TypeOverride string    `bun:"type:varchar(200)"`             // new length
+		Incremented  int       `bun:"incremented,autoincrement"`     // make autoincremented
 		// ManyValues    []string  `bun:",array"`                    // did not change
 	}
 
@@ -622,6 +624,12 @@ func testChangeColumnType_AutoCast(t *testing.T, db *bun.DB) {
 					SQLType:    "varchar",
 					IsNullable: true,
 					VarcharLen: 200,
+				},
+				&sqlschema.BaseColumn{
+					Name:            "incremented",
+					SQLType:         "bigint",
+					IsNullable:      false,
+					IsAutoIncrement: true,
 				},
 				// &sqlschema.BaseColumn{
 				// 	Name:    "many_values",
@@ -700,7 +708,7 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 	type TableAfter struct {
 		bun.BaseModel `bun:"table:column_madness"`
 		DoNotTouch    string `bun:"do_not_touch"`
-		AddMe         bool   `bun:"addme"`
+		AddMe         int64  `bun:"addme,autoincrement"`
 	}
 
 	wantTables := []sqlschema.Table{
@@ -714,9 +722,10 @@ func testAddDropColumn(t *testing.T, db *bun.DB) {
 					IsNullable: true,
 				},
 				&sqlschema.BaseColumn{
-					Name:       "addme",
-					SQLType:    sqltype.Boolean,
-					IsNullable: true,
+					Name:            "addme",
+					SQLType:         sqltype.BigInt,
+					IsNullable:      false,
+					IsAutoIncrement: true,
 				},
 			},
 		},
@@ -1030,13 +1039,16 @@ func testUpdatePrimaryKeys(t *testing.T, db *bun.DB) {
 func testNothingToMigrate(t *testing.T, db *bun.DB) {
 	type BoringThing struct {
 		AlwaysBlue string `bun:"colour,default:'blue'"`
+
+		// Check that no superficial migrations are generated for `autoincrement` columns.
+		BigInt int64 `bun:",pk,autoincrement"`
 	}
 
 	ctx := context.Background()
-	mustResetModel(t, ctx, db, (*BoringThing)(nil))
 	m := newAutoMigratorOrSkip(t, db,
 		migrate.WithModel((*BoringThing)(nil)),
 	)
+	mustResetModel(t, ctx, db, (*BoringThing)(nil))
 
 	// Act
 	_, err := m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created
@@ -1090,7 +1102,6 @@ func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
 
 	// Assert
 	state := inspect(ctx)
-
 	require.Contains(t, state.ForeignKeys, excluded,
 		"expected FK constraint things.owner_name -> owners.name")
 }

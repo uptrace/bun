@@ -127,6 +127,9 @@ var (
 	char        = newAliases(pgTypeChar, pgTypeCharacter)
 	varchar     = newAliases(pgTypeVarchar, pgTypeCharacterVarying)
 	timestampTz = newAliases(sqltype.Timestamp, pgTypeTimestampTz, pgTypeTimestampWithTz)
+	bigint      = newAliases(sqltype.BigInt, pgTypeBigSerial)
+	integer     = newAliases(sqltype.Integer, pgTypeSerial)
+	smallint    = newAliases(sqltype.SmallInt, pgTypeSmallSerial)
 )
 
 func (d *Dialect) CompareType(col1, col2 sqlschema.Column) bool {
@@ -142,6 +145,10 @@ func (d *Dialect) CompareType(col1, col2 sqlschema.Column) bool {
 	case varchar.IsAlias(typ1) && varchar.IsAlias(typ2):
 		return checkVarcharLen(col1, col2, d.DefaultVarcharLen())
 	case timestampTz.IsAlias(typ1) && timestampTz.IsAlias(typ2):
+		return true
+	case bigint.IsAlias(typ1) && bigint.IsAlias(typ2),
+		integer.IsAlias(typ1) && integer.IsAlias(typ2),
+		smallint.IsAlias(typ1) && smallint.IsAlias(typ2):
 		return true
 	}
 	return false
