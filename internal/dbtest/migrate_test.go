@@ -1108,7 +1108,7 @@ func testExcludeTableLike(t *testing.T, db *bun.DB) {
 		// Most SQL dialects do not support zero-column tables.
 		Dummy string `bun:",pk"`
 	})(nil))
-	m := newAutoMigratorOrSkip(t, db, migrate.WithExcludeTableLike("exclude%"))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithExcludeTable("exclude%"))
 
 	// Act
 	_, err := m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created

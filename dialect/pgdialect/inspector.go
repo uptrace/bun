@@ -36,7 +36,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 		ForeignKeys: make(map[sqlschema.ForeignKey]string),
 	}
 
-	exclude := in.ExcludeTablesLike
+	exclude := in.ExcludeTables
 	if len(exclude) == 0 {
 		// Avoid getting NOT LIKE ALL (ARRAY[NULL]) if bun.In() is called with an empty slice.
 		exclude = []string{""}
