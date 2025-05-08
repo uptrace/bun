@@ -52,13 +52,13 @@ const (
 )
 
 var allDBs = map[string]func(tb testing.TB) *bun.DB{
-	pgName: pg,
-	// pgxName:       pgx,
-	// mysql5Name:    mysql5,
-	// mysql8Name:    mysql8,
-	// mariadbName:   mariadb,
-	// sqliteName:    sqlite,
-	// mssql2019Name: mssql2019,
+	pgName:        pg,
+	pgxName:       pgx,
+	mysql5Name:    mysql5,
+	mysql8Name:    mysql8,
+	mariadbName:   mariadb,
+	sqliteName:    sqlite,
+	mssql2019Name: mssql2019,
 }
 
 var allDialects = []func() schema.Dialect{
