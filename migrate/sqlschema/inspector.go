@@ -39,7 +39,9 @@ type InspectorConfig struct {
 	// SchemaName limits inspection to tables in a particular schema.
 	SchemaName string
 
-	// ExcludeTables from inspection.
+	// ExcludeTables from inspection. Patterns MAY make use of wildcards
+	// like % and _ and dialects MUST acknowledge that by using them
+	// with the SQL LIKE operator.
 	ExcludeTables []string
 
 	// ExcludeForeignKeys from inspection.
@@ -57,9 +59,10 @@ func WithSchemaName(schemaName string) InspectorOption {
 	}
 }
 
-// WithExcludeTables forces inspector to exclude tables
-// from the reported schema state.
+// WithExcludeTables forces inspector to exclude tables from the reported schema state.
 // It works in append-only mode, i.e. tables cannot be re-included.
+//
+// Patterns MAY make use of % and _ wildcards, as if writing a LIKE clause in SQL.
 func WithExcludeTables(tables ...string) InspectorOption {
 	return func(cfg *InspectorConfig) {
 		cfg.ExcludeTables = append(cfg.ExcludeTables, tables...)

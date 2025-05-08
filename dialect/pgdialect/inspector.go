@@ -38,7 +38,7 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 
 	exclude := in.ExcludeTables
 	if len(exclude) == 0 {
-		// Avoid getting NOT IN (NULL) if bun.In() is called with an empty slice.
+		// Avoid getting NOT LIKE ALL (ARRAY[NULL]) if bun.In() is called with an empty slice.
 		exclude = []string{""}
 	}
 
@@ -187,7 +187,7 @@ FROM information_schema.tables "t"
 WHERE table_type = 'BASE TABLE'
 	AND "t".table_schema = ?
 	AND "t".table_schema NOT LIKE 'pg_%'
-	AND "table_name" NOT IN (?)
+	AND "table_name" NOT LIKE ALL (ARRAY[?])
 ORDER BY "t".table_schema, "t".table_name
 `
 
@@ -293,7 +293,8 @@ WHERE co.contype = 'f'
 	AND co.conrelid IN (SELECT oid FROM pg_class WHERE relkind = 'r')
 	AND ARRAY_POSITION(co.conkey, sc.attnum) = ARRAY_POSITION(co.confkey, tc.attnum)
 	AND ss.nspname = ?
-	AND s.relname NOT IN (?) AND "t".relname NOT IN (?)
+	AND s.relname NOT LIKE ALL (ARRAY[?])
+	AND "t".relname NOT LIKE ALL (ARRAY[?])
 GROUP BY "constraint_name", "schema_name", "table_name", target_schema, target_table
 `
 )
