@@ -214,17 +214,19 @@ func newAutoMigratorOrSkip(tb testing.TB, db *bun.DB, opts ...migrate.AutoMigrat
 // inspectDbOrSkip returns a function to inspect the current state of the database.
 // The test will be *skipped* if the current dialect doesn't support database inpection
 // and fail if the inspector cannot successfully retrieve database state.
-func inspectDbOrSkip(tb testing.TB, db *bun.DB, schemaName ...string) func(context.Context) sqlschema.BaseDatabase {
+func inspectDbOrSkip(tb testing.TB, db *bun.DB, options ...sqlschema.InspectorOption) func(context.Context) sqlschema.BaseDatabase {
 	tb.Helper()
 
-	// For convenience, schemaName is an optional parameter in this function.
-	inspectSchema := db.Dialect().DefaultSchema()
-	if len(schemaName) > 0 {
-		inspectSchema = schemaName[0]
+	// By appending options to default options we make sure they can be overriden.
+	// E.g. passing sqlschema.WithSchemaName("custom") sets migration schema to "custom".
+	defaultOptions := []sqlschema.InspectorOption{
+		sqlschema.WithSchemaName(db.Dialect().DefaultSchema()),
+		sqlschema.WithExcludeTables(migrationsTable, migrationLocksTable),
 	}
+	options = append(defaultOptions, options...)
 
 	// AutoMigrator excludes these tables by default, but here we need to do this explicitly.
-	inspector, err := sqlschema.NewInspector(db, sqlschema.WithSchemaName(inspectSchema), sqlschema.WithExcludeTables(migrationsTable, migrationLocksTable))
+	inspector, err := sqlschema.NewInspector(db, options...)
 	if err != nil {
 		tb.Skip(err)
 	}
@@ -338,6 +340,7 @@ func TestAutoMigrator_Migrate(t *testing.T) {
 		{testUpdatePrimaryKeys},
 		{testNothingToMigrate},
 		{testExcludeForeignKeys},
+		{testExcludeTableLike},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -892,7 +895,7 @@ func testUniqueRenamedTable(t *testing.T, db *bun.DB) {
 	}
 
 	ctx := context.Background()
-	inspect := inspectDbOrSkip(t, db, "automigrate")
+	inspect := inspectDbOrSkip(t, db, sqlschema.WithSchemaName("automigrate"))
 	mustCreateSchema(t, ctx, db, "automigrate")
 	mustResetModel(t, ctx, db, (*TableBefore)(nil))
 	mustDropTableOnCleanup(t, ctx, db, (*TableAfter)(nil))
@@ -1106,6 +1109,29 @@ func testExcludeForeignKeys(t *testing.T, db *bun.DB) {
 		"expected FK constraint things.owner_name -> owners.name")
 }
 
+// Tables can be excluded from migration scope using LIKE pattern.
+func testExcludeTableLike(t *testing.T, db *bun.DB) {
+	// Arrange
+	ctx := context.Background()
+	inspect := inspectDbOrSkip(t, db)
+	mustResetModel(t, ctx, db, (*struct {
+		bun.BaseModel `bun:"table:exclude_me"`
+		// Most SQL dialects do not support zero-column tables.
+		Dummy string `bun:",pk"`
+	})(nil))
+	m := newAutoMigratorOrSkip(t, db, migrate.WithExcludeTable("exclude%"))
+
+	// Act
+	_, err := m.Migrate(ctx) // do not use runMigrations because we do not expect any files to be created
+	require.NoError(t, err, "auto migration failed")
+
+	// Assert
+	state := inspect(ctx)
+	tables := state.GetTables()
+	require.Len(t, tables, 1)
+	checkHasTable(t, tables, "exclude_me")
+}
+
 func checkHasTable(t *testing.T, tables []sqlschema.Table, name string) {
 	t.Helper()
 	for i := range tables {
@@ -1113,5 +1139,5 @@ func checkHasTable(t *testing.T, tables []sqlschema.Table, name string) {
 			return
 		}
 	}
-	require.FailNow(t, "table %q not in the schema", name)
+	require.FailNowf(t, "incomplete schema", "table %q not in schema", name)
 }
