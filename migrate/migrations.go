@@ -38,7 +38,7 @@ func NewMigrations(opts ...MigrationsOption) *Migrations {
 func (m *Migrations) Sorted() MigrationSlice {
 	migrations := make(MigrationSlice, len(m.ms))
 	copy(migrations, m.ms)
-	sortAsc(migrations)
+	SafeAscSort(migrations)
 	return migrations
 }
 
