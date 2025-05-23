@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
@@ -102,6 +103,10 @@ func scanner(typ reflect.Type) ScannerFunc {
 		return scanIP
 	case ipNetType:
 		return scanIPNet
+	case netipAddrType:
+		return scanNetIpAddr
+	case netipPrefixType:
+		return scanNetIpPrefix
 	case jsonRawMessageType:
 		return scanBytes
 	}
@@ -409,6 +414,48 @@ func scanIPNet(dest reflect.Value, src interface{}) error {
 
 	ptr := dest.Addr().Interface().(*net.IPNet)
 	*ptr = *ipnet
+
+	return nil
+}
+
+func scanNetIpAddr(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	val, _ := netip.ParseAddr(internal.String(b))
+	if !val.IsValid() {
+		return fmt.Errorf("bun: invalid ip: %q", b)
+	}
+
+	ptr := dest.Addr().Interface().(*netip.Addr)
+	*ptr = val
+
+	return nil
+}
+
+func scanNetIpPrefix(dest reflect.Value, src interface{}) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	val, _ := netip.ParsePrefix(internal.String(b))
+	if !val.IsValid() {
+		return fmt.Errorf("bun: invalid prefix: %q", b)
+	}
+
+	ptr := dest.Addr().Interface().(*netip.Prefix)
+	*ptr = val
 
 	return nil
 }
