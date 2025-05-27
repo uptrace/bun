@@ -1,6 +1,7 @@
 package dbtest_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -239,15 +240,20 @@ func inspectDbOrSkip(tb testing.TB, db *bun.DB, options ...sqlschema.InspectorOp
 }
 
 func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
-	type NewTable struct {
-		bun.BaseModel `bun:"table:new_table"`
-		Bar           string
-		Baz           time.Time
+	type Pizza struct {
+		Name     string `bun:",pk"`
+		Toppings []string
+	}
+	type Pasta struct {
+		Name  string `bun:",pk"`
+		Sauce string
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		ctx := context.Background()
-		m := newAutoMigratorOrSkip(t, db, migrate.WithModel((*NewTable)(nil)))
+		m := newAutoMigratorOrSkip(t, db, migrate.WithModel(
+			(*Pizza)(nil),
+			(*Pasta)(nil)))
 
 		t.Run("basic", func(t *testing.T) {
 			migrations, err := m.CreateSQLMigrations(ctx)
@@ -257,6 +263,7 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 			require.DirExists(t, migrationsDir)
 			checkMigrationFileContains(t, "_auto.up.sql", "CREATE TABLE")
 			checkMigrationFileContains(t, "_auto.down.sql", "DROP TABLE")
+			checkMigrationFileContainsTimes(t, "_auto.up.sql", "PRIMARY KEY", 2)
 		})
 
 		t.Run("transactional", func(t *testing.T) {
@@ -271,7 +278,7 @@ func TestAutoMigrator_CreateSQLMigrations(t *testing.T) {
 	})
 }
 
-// checkMigrationFileContains expected SQL snippet.
+// checkMigrationFileContains expected SQL snippets.
 func checkMigrationFileContains(t *testing.T, fileSuffix string, snippets ...string) {
 	t.Helper()
 
@@ -286,6 +293,27 @@ func checkMigrationFileContains(t *testing.T, fileSuffix string, snippets ...str
 				require.Containsf(t, string(b), content, "expected %s file to contain string", f.Name())
 			}
 			return
+		}
+	}
+	t.Errorf("no *%s file in migrations directory (%s)", fileSuffix, migrationsDir)
+}
+
+// checkMigrationFileContainsTimes checks that expected SQL snippet.
+func checkMigrationFileContainsTimes(t *testing.T, fileSuffix string, snippet string, n int) {
+	t.Helper()
+
+	files, err := os.ReadDir(migrationsDir)
+	require.NoErrorf(t, err, "list files in %s", migrationsDir)
+
+	for _, f := range files {
+		if strings.HasSuffix(f.Name(), fileSuffix) {
+			b, err := os.ReadFile(filepath.Join(migrationsDir, f.Name()))
+			require.NoError(t, err)
+
+			count := bytes.Count(b, []byte(snippet))
+			require.Equalf(t, n, count,
+				"expected %s to contain %q %d times, got %d", f.Name(), snippet, n, count)
+			return // check first matching file
 		}
 	}
 	t.Errorf("no *%s file in migrations directory (%s)", fileSuffix, migrationsDir)
