@@ -28,6 +28,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -42,6 +43,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   2 * time.Second,
 				WriteTimeout:  3 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -59,6 +61,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -73,6 +76,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -87,6 +91,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -101,6 +106,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 		{
@@ -115,6 +121,7 @@ func TestParseDSN(t *testing.T) {
 				ReadTimeout:   10 * time.Second,
 				WriteTimeout:  5 * time.Second,
 				EnableTracing: true,
+				BufferSize:    4096,
 			},
 		},
 	}

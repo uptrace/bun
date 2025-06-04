@@ -36,11 +36,19 @@ type Listener struct {
 }
 
 func NewListener(db *bun.DB) *Listener {
-	return &Listener{
+	ln := &Listener{
 		db:     db,
 		driver: db.Driver().(Driver).connector,
 		exit:   make(chan struct{}),
 	}
+	if conf := ln.driver.Config(); conf.BufferSize < 8000 {
+		// https://github.com/uptrace/bun/issues/1201
+		// listener's payloads can be up to 8000 bytes
+		newConf := *conf
+		newConf.BufferSize = 8192
+		ln.driver = NewConnector(WithConfig(&newConf))
+	}
+	return ln
 }
 
 // Close closes the listener, releasing any open resources.
