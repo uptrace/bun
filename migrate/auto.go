@@ -384,10 +384,15 @@ func (c *changeset) WriteTo(w io.Writer, m sqlschema.Migrator) error {
 			continue
 		}
 
-		b, err = m.AppendSQL(b, op)
+		// Append each query separately, merge later.
+		// Dialects assume that the []byte only holds
+		// the contents of a single query and may be misled.
+		queryBytes := internal.MakeQueryBytes()
+		queryBytes, err = m.AppendSQL(queryBytes, op)
 		if err != nil {
 			return fmt.Errorf("write changeset: %w", err)
 		}
+		b = append(b, queryBytes...)
 		b = append(b, ";\n"...)
 	}
 	if _, err := w.Write(b); err != nil {
