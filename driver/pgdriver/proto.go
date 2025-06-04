@@ -84,9 +84,9 @@ type reader struct {
 	buf []byte
 }
 
-func newReader(r io.Reader) *reader {
+func newReader(r io.Reader, size int) *reader {
 	return &reader{
-		Reader: bufio.NewReader(r),
+		Reader: bufio.NewReaderSize(r, size),
 		buf:    make([]byte, 128),
 	}
 }

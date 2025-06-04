@@ -123,7 +123,7 @@ func newConn(ctx context.Context, conf *Config) (*Conn, error) {
 	cn := &Conn{
 		conf:    conf,
 		netConn: netConn,
-		rd:      newReader(netConn),
+		rd:      newReader(netConn, conf.BufferSize),
 	}
 
 	if conf.TLSConfig != nil {

@@ -48,6 +48,9 @@ type Config struct {
 
 	// Enable tracing
 	EnableTracing bool
+
+	// size of reader buffer, default is 4096
+	BufferSize int
 }
 
 func newDefaultConfig() *Config {
@@ -67,6 +70,8 @@ func newDefaultConfig() *Config {
 		WriteTimeout: 5 * time.Second,
 
 		EnableTracing: true,
+
+		BufferSize: 4096,
 	}
 
 	conf.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -87,6 +92,12 @@ func WithOptions(opts ...Option) Option {
 		for _, opt := range opts {
 			opt(conf)
 		}
+	}
+}
+
+func WithConfig(after *Config) Option {
+	return func(before *Config) {
+		*before = *after
 	}
 }
 
@@ -183,6 +194,12 @@ func WithReadTimeout(readTimeout time.Duration) Option {
 func WithWriteTimeout(writeTimeout time.Duration) Option {
 	return func(conf *Config) {
 		conf.WriteTimeout = writeTimeout
+	}
+}
+
+func WithBufferSize(size int) Option {
+	return func(conf *Config) {
+		conf.BufferSize = size
 	}
 }
 
