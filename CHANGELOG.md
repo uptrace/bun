@@ -1,3 +1,32 @@
+## [1.2.12](https://github.com/uptrace/bun/compare/v1.2.11...v1.2.12) (2025-06-05)
+
+
+### Bug Fixes
+
+* **automigrate:** append SQL to separate []byte slices ([f44a349](https://github.com/uptrace/bun/commit/f44a349ec61b09f9f0240a923e121cbaa3ab1d14))
+* **gh-1160:** add WithExcludeForeignKeys option ([63141cb](https://github.com/uptrace/bun/commit/63141cb6c9a6d0d2abf4b41eac5b1c6078884326)), closes [#1160](https://github.com/uptrace/bun/issues/1160)
+* iss-824 to allow mssql to support non unicode strings ([0565763](https://github.com/uptrace/bun/commit/056576355a0a7ff75f616cedb5d81144f6657a6a))
+* **migrations:** skip template rendering if no data + fix tests ([4055827](https://github.com/uptrace/bun/commit/4055827e1af4f0b7e13879d393c1131ab497d962))
+* **pgdriver:** rename channelOverflowHandler to ChannelOverflowHandler for public API ([65760a9](https://github.com/uptrace/bun/commit/65760a9e648a1ae379982e5d8737d6d864f6a8e3))
+* relation join data race ([37971d7](https://github.com/uptrace/bun/commit/37971d7f83042ab83e52be1c122083f8a98a1efa))
+* report BIGSERIAL ~ BIGINT in pgdialect ([ad7356a](https://github.com/uptrace/bun/commit/ad7356a772324950cf866b86d23771fc53f83505))
+* skip automigrator test early ([5b22710](https://github.com/uptrace/bun/commit/5b22710f0b4d980ebec38fcd306bf459dc1eb615))
+* start sequence with last+1 ([7fbf34a](https://github.com/uptrace/bun/commit/7fbf34a69ff249c72af522331a4f6116f240630a))
+
+
+### Features
+
+* add support for netip.Addr and netip.Prefix ([63ccc8f](https://github.com/uptrace/bun/commit/63ccc8f530092c3dfc71179b94a43db452fa54ec))
+* exclude tables using LIKE pattern ([5351f7e](https://github.com/uptrace/bun/commit/5351f7ed4fe53662386e697cc551ba54487da018))
+* **migrations:** support Go templates in SQL migrations ([d92e29e](https://github.com/uptrace/bun/commit/d92e29e459ae2804ad48e1b4f6a8147211a47a57))
+* **pg:** allow user config buffer size of pg's connect ([e2f2650](https://github.com/uptrace/bun/commit/e2f2650950d13442d45694b7cd186b77b4e8e0bb)), closes [#1201](https://github.com/uptrace/bun/issues/1201)
+* **pgdriver:** add option for tracing ([80c5e3c](https://github.com/uptrace/bun/commit/80c5e3c684c410dfc02170cfb8671bb8b1db2e35)), closes [#1150](https://github.com/uptrace/bun/issues/1150)
+* **pgdriver:** add overflow handler to listener channel ([6f0e3a1](https://github.com/uptrace/bun/commit/6f0e3a1d33de5a61625d22ba6464bfe5da404a11))
+* set notnull=true for autoincrement columns ([1bd5dd7](https://github.com/uptrace/bun/commit/1bd5dd73ce943235a403c5896b6e70401b194093))
+* support changing column type to SERIAL ([136b480](https://github.com/uptrace/bun/commit/136b480e6835dd9a12b4925f57225fb73d0aa7ae))
+
+
+
 ## [1.2.11](https://github.com/uptrace/bun/compare/v1.2.10...v1.2.11) (2025-03-05)
 
 
