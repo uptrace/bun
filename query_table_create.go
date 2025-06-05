@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -308,8 +309,16 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 
 // appendFKConstraintsRel appends a FOREIGN KEY clause for each of the model's existing relations.
 func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	for _, rel := range q.tableModel.Table().Relations {
-		if rel.References() {
+	relations := q.tableModel.Table().Relations
+
+	keys := make([]string, 0, len(relations))
+	for key := range relations {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	for _, key := range keys {
+		if rel := relations[key]; rel.References() {
 			b, err = q.appendFK(fmter, b, schema.QueryWithArgs{
 				Query: "(?) REFERENCES ? (?) ? ?",
 				Args: []interface{}{
