@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"sort"
+	"slices"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/schema"
@@ -155,7 +155,7 @@ func (m *mapSliceModel) initKeys() error {
 		keys = append(keys, k)
 	}
 
-	sort.Strings(keys)
+	slices.Sort(keys)
 	m.keys = keys
 
 	return nil

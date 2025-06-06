@@ -5,7 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -276,7 +276,7 @@ func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []b
 	for key := range unique {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	for _, key := range keys {
 		if key == "" {
