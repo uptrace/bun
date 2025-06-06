@@ -5,7 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"reflect"
-	"sort"
+	"slices"
 
 	"github.com/uptrace/bun/schema"
 )
@@ -121,7 +121,7 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 	for k := range m.m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	b = append(b, " ("...)
 
@@ -157,7 +157,7 @@ func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
 	for k := range m.m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	isTemplate := fmter.IsNop()
 	for i, k := range keys {
