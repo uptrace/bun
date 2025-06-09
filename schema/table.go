@@ -1,10 +1,11 @@
 package schema
 
 import (
+	"cmp"
 	"database/sql"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -299,15 +300,14 @@ func (t *Table) processFields(typ reflect.Type) {
 }
 
 func sortFieldsByStruct(fields []*Field) {
-	sort.Slice(fields, func(i, j int) bool {
-		left, right := fields[i], fields[j]
+	slices.SortFunc(fields, func(left, right *Field) int {
 		for k := 0; k < len(left.Index) && k < len(right.Index); k++ {
-			if left.Index[k] != right.Index[k] {
-				return left.Index[k] < right.Index[k]
+			if res := cmp.Compare(left.Index[k], right.Index[k]); res != 0 {
+				return res
 			}
 		}
 		// NOTE: should not reach
-		return true
+		return 0
 	})
 }
 
