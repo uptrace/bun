@@ -96,7 +96,7 @@ func WithMigrationsDirectoryAuto(directory string) AutoMigratorOption {
 // database schema automatically.
 //
 // Usage:
-//  1. Generate migrations and apply them au once with AutoMigrator.Migrate().
+//  1. Generate migrations and apply them at once with AutoMigrator.Migrate().
 //  2. Create up- and down-SQL migration files and apply migrations using Migrator.Migrate().
 //
 // While both methods produce complete, reversible migrations (with entries in the database
@@ -275,7 +275,7 @@ func (am *AutoMigrator) createSQLMigrations(ctx context.Context, transactional b
 		Comment: "Changes detected by bun.AutoMigrator",
 	})
 
-	// Append .tx.up.sql or .up.sql to migration name, dependin if it should be transactional.
+	// Append .tx.up.sql or .up.sql to migration name, depending if it should be transactional.
 	fname := func(direction string) string {
 		return name + map[bool]string{true: ".tx.", false: "."}[transactional] + direction + ".sql"
 	}
@@ -432,7 +432,7 @@ func (c *changeset) ResolveDependencies() error {
 	}
 
 	// visit iterates over c.operations until it finds all operations that depend on the current one
-	// or runs into cirtular dependency, in which case it will return an error.
+	// or runs into circular dependency, in which case it will return an error.
 	visit = func(op Operation) error {
 		switch status[op] {
 		case visited:

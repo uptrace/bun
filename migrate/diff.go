@@ -109,7 +109,7 @@ func toOrderedMap[V interface{ GetName() string }](named []V) *ordered.Map[strin
 	return m
 }
 
-// detechColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
+// detectColumnChanges finds renamed columns and, if checkType == true, columns with changed type.
 func (d *detector) detectColumnChanges(current, target sqlschema.Table, checkType bool) {
 	currentColumns := toOrderedMap(current.GetColumns())
 	targetColumns := toOrderedMap(target.GetColumns())
@@ -275,7 +275,7 @@ type detector struct {
 	// cmpType determines column type equivalence.
 	// Default is direct comparison with '==' operator, which is inaccurate
 	// due to the existence of dialect-specific type aliases. The caller
-	// should pass a concrete InspectorDialect.EquuivalentType for robust comparison.
+	// should pass a concrete InspectorDialect.EquivalentType for robust comparison.
 	cmpType CompareTypeFunc
 }
 
@@ -293,7 +293,7 @@ func (d detector) equalColumns(col1, col2 sqlschema.Column) bool {
 }
 
 func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.Column {
-	// Avoid unneccessary type-change migrations if the types are equivalent.
+	// Avoid unnecessary type-change migrations if the types are equivalent.
 	if d.cmpType(current, target) {
 		target = &sqlschema.BaseColumn{
 			Name:            target.GetName(),
@@ -321,7 +321,7 @@ func equalSignatures(t1, t2 sqlschema.Table, eq CompareTypeFunc) bool {
 // signature is a set of column definitions, which allows "relation/name-agnostic" comparison between them;
 // meaning that two columns are considered equal if their types are the same.
 type signature struct {
-	// underlying stores the number of occurences for each unique column type.
+	// underlying stores the number of occurrences for each unique column type.
 	// It helps to account for the fact that a table might have multiple columns that have the same type.
 	underlying map[sqlschema.BaseColumn]int
 
@@ -377,7 +377,7 @@ func (s *signature) Equals(other signature) bool {
 }
 
 // refMap is a utility for tracking superficial changes in foreign keys,
-// which do not require any modificiation in the database.
+// which do not require any modification in the database.
 // Modern SQL dialects automatically updated foreign key constraints whenever
 // a column or a table is renamed. Detector can use refMap to ignore any
 // differences in foreign keys which were caused by renamed column/table.
