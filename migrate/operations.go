@@ -17,7 +17,7 @@ import (
 // about the applied change.
 //
 // Some operations might be irreversible due to technical limitations. Returning
-// a *comment from GetReverse() will add an explanatory note to the generate migation file.
+// a *comment from GetReverse() will add an explanatory note to the generate migration file.
 //
 // To declare dependency on another Operation, operations should implement
 // { DependsOn(Operation) bool } interface, which Changeset will use to resolve dependencies.
