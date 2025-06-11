@@ -1120,13 +1120,17 @@ func (q *SelectQuery) Clone() *SelectQuery {
 		}
 	}
 
+	var tableModel TableModel
+	if q.tableModel != nil {
+		tableModel = q.tableModel.clone()
+	}
 	clone := &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
 				db:             q.db,
 				table:          q.table,
 				model:          q.model,
-				tableModel:     q.tableModel.clone(),
+				tableModel:     tableModel,
 				with:           make([]withQuery, len(q.with)),
 				tables:         cloneArgs(q.tables),
 				columns:        cloneArgs(q.columns),

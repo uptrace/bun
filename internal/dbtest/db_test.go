@@ -1509,6 +1509,14 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 		}
 	})
 
+	t.Run("no model", func(t *testing.T) {
+		models := []Model{}
+		count, err := db.NewSelect().Table("models").Limit(10).ScanAndCount(ctx, &models)
+		require.NoError(t, err)
+		require.Equal(t, 0, count)
+		require.Equal(t, 0, len(models))
+	})
+
 	t.Run("no limit", func(t *testing.T) {
 		src := []Model{
 			{Str: "str1"},
