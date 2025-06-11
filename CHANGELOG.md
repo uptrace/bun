@@ -1,3 +1,14 @@
+## [1.2.13](https://github.com/uptrace/bun/compare/v1.2.12...v1.2.13) (2025-06-11)
+
+
+### Bug Fixes
+
+* **query:** scanAndCount without model ([07fb7ec](https://github.com/uptrace/bun/commit/07fb7ec540979d0625cfeb771a0679c5982c6e2a)), closes [#1209](https://github.com/uptrace/bun/issues/1209)
+* sort fk constraints before appending ([c87fa90](https://github.com/uptrace/bun/commit/c87fa903c56743e24a2cb677e8e96fd5c802fba5))
+* use slices sort ([8555900](https://github.com/uptrace/bun/commit/8555900ad840d9b6e73c8655af4f1b6766bc943b))
+
+
+
 ## [1.2.12](https://github.com/uptrace/bun/compare/v1.2.11...v1.2.12) (2025-06-05)
 
 
