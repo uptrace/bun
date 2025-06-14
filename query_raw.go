@@ -96,11 +96,12 @@ func (q *RawQuery) Operation() string {
 	return "SELECT"
 }
 
+// String returns the generated SQL query string. The RawQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *RawQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }

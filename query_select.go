@@ -979,20 +979,25 @@ func (q *SelectQuery) scanAndCountConcurrently(
 	var mu sync.Mutex
 	var firstErr error
 
+	// FIXME: clone should not be needed, because the query is not modified here
+	// and should not be implicitly modified by the Bun lib.
 	countQuery := q.Clone()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	// Don't scan results if the user explicitly set Limit(-1).
+	if q.limit >= 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-		if err := q.Scan(ctx, dest...); err != nil {
-			mu.Lock()
-			if firstErr == nil {
-				firstErr = err
+			if err := q.Scan(ctx, dest...); err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
 			}
-			mu.Unlock()
-		}
-	}()
+		}()
+	}
 
 	wg.Add(1)
 	go func() {
@@ -1016,6 +1021,7 @@ func (q *SelectQuery) scanAndCountConcurrently(
 func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) (int, error) {
 	var firstErr error
 
+	// Don't scan results if the user explicitly set Limit(-1).
 	if q.limit >= 0 {
 		firstErr = q.Scan(ctx, dest...)
 	}
@@ -1086,12 +1092,13 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	return n == 1, nil
 }
 
+// String returns the generated SQL query string. The SelectQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *SelectQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }
 
