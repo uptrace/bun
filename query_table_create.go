@@ -408,11 +408,12 @@ func (q *CreateTableQuery) afterCreateTableHook(ctx context.Context) error {
 	return nil
 }
 
+// String returns the generated SQL query string. The CreateTableQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *CreateTableQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }

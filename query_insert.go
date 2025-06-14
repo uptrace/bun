@@ -694,11 +694,12 @@ func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error 
 	return nil
 }
 
+// String returns the generated SQL query string. The InsertQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *InsertQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }

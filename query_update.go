@@ -635,12 +635,13 @@ func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
 	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
 
+// String returns the generated SQL query string. The UpdateQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *UpdateQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }
 
