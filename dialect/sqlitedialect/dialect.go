@@ -41,6 +41,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.SelectExists |
 		feature.AutoIncrement |
 		feature.CompositeIn |
+		feature.FKDefaultOnAction |
 		feature.DeleteReturning
 
 	for _, opt := range opts {
@@ -102,7 +103,7 @@ func (d *Dialect) AppendBytes(b []byte, bs []byte) []byte {
 	return b
 }
 
-func (d *Dialect) DefaultVarcharLen() int {
+func (*Dialect) DefaultVarcharLen() int {
 	return 0
 }
 
@@ -132,7 +133,7 @@ func (d *Dialect) AppendSequence(b []byte, table *schema.Table, field *schema.Fi
 // DefaultSchemaName is the "schema-name" of the main database.
 // The details might differ from other dialects, but for all means and purposes
 // "main" is the default schema in an SQLite database.
-func (d *Dialect) DefaultSchema() string {
+func (*Dialect) DefaultSchema() string {
 	return "main"
 }
 
