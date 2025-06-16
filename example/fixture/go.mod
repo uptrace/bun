@@ -13,11 +13,11 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 replace github.com/uptrace/bun/dbfixture => ../../dbfixture
 
 require (
-	github.com/uptrace/bun v1.2.13
-	github.com/uptrace/bun/dbfixture v1.2.13
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.13
-	github.com/uptrace/bun/driver/sqliteshim v1.2.13
-	github.com/uptrace/bun/extra/bundebug v1.2.13
+	github.com/uptrace/bun v1.2.14
+	github.com/uptrace/bun/dbfixture v1.2.14
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.14
+	github.com/uptrace/bun/driver/sqliteshim v1.2.14
+	github.com/uptrace/bun/extra/bundebug v1.2.14
 )
 
 require (

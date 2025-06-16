@@ -1,3 +1,12 @@
+## [1.2.14](https://github.com/uptrace/bun/compare/v1.2.13...v1.2.14) (2025-06-16)
+
+
+### Bug Fixes
+
+* restore q.limit check ([07d32c1](https://github.com/uptrace/bun/commit/07d32c1662015a398322fdbc0dc34c5f0d10ce44))
+
+
+
 ## [1.2.13](https://github.com/uptrace/bun/compare/v1.2.12...v1.2.13) (2025-06-11)
 
 
