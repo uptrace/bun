@@ -281,12 +281,13 @@ func (q *MergeQuery) scanOrExec(
 	return res, nil
 }
 
+// String returns the generated SQL query string. The MergeQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *MergeQuery) String() string {
 	buf, err := q.AppendQuery(q.db.Formatter(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }
 
