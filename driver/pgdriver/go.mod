@@ -6,7 +6,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/stretchr/testify v1.10.0
-	github.com/uptrace/bun v1.2.13
+	github.com/uptrace/bun v1.2.14
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
 	mellium.im/sasl v0.3.2

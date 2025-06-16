@@ -11,9 +11,9 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.2.13
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.13
-	github.com/uptrace/bun/driver/sqliteshim v1.2.13
+	github.com/uptrace/bun v1.2.14
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.14
+	github.com/uptrace/bun/driver/sqliteshim v1.2.14
 )
 
 require (

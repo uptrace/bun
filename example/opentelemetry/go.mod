@@ -16,10 +16,10 @@ replace github.com/uptrace/bun/driver/pgdriver => ../../driver/pgdriver
 
 require (
 	github.com/brianvoe/gofakeit/v5 v5.11.2
-	github.com/uptrace/bun v1.2.13
-	github.com/uptrace/bun/dialect/pgdialect v1.2.13
-	github.com/uptrace/bun/driver/pgdriver v1.2.13
-	github.com/uptrace/bun/extra/bunotel v1.2.13
+	github.com/uptrace/bun v1.2.14
+	github.com/uptrace/bun/dialect/pgdialect v1.2.14
+	github.com/uptrace/bun/driver/pgdriver v1.2.14
+	github.com/uptrace/bun/extra/bunotel v1.2.14
 	github.com/uptrace/uptrace-go v1.35.1
 	go.opentelemetry.io/otel v1.36.0
 )
