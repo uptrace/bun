@@ -623,7 +623,10 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.Condition = field.Tag.Options["join_on"]
 	}
 
-	rel.OnUpdate = "ON UPDATE NO ACTION"
+	rel.OnUpdate = ""
+	if onUpdate := t.dialect.DefaultOnUpdate(); len(onUpdate) != 0 {
+		rel.OnUpdate = "ON UPDATE " + onUpdate
+	}
 	if onUpdate, ok := field.Tag.Options["on_update"]; ok {
 		if len(onUpdate) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_update option must be a single field", t.TypeName, field.GoName))
@@ -638,7 +641,10 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.OnUpdate = s
 	}
 
-	rel.OnDelete = "ON DELETE NO ACTION"
+	rel.OnDelete = ""
+	if onDelete := t.dialect.DefaultOnUpdate(); len(onDelete) != 0 {
+		rel.OnDelete = "ON DELETE " + onDelete
+	}
 	if onDelete, ok := field.Tag.Options["on_delete"]; ok {
 		if len(onDelete) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_delete option must be a single field", t.TypeName, field.GoName))

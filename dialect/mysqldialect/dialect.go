@@ -221,6 +221,14 @@ func (d *Dialect) DefaultSchema() string {
 	return "mydb"
 }
 
+func (Dialect) DefaultOnUpdate() string {
+	return "NO ACTION"
+}
+
+func (Dialect) DefaultOnDelete() string {
+	return "NO ACTION"
+}
+
 func sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType

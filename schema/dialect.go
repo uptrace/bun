@@ -42,6 +42,16 @@ type Dialect interface {
 
 	// DefaultSchema should returns the name of the default database schema.
 	DefaultSchema() string
+
+	// DefaultOnUpdate returns the default ON UPDATE action string for foreign key constraints
+	// if none is explicitly specified. For databases that don't support ON UPDATE actions
+	// directly on foreign keys (e.g., Oracle), this might return an empty string.
+	DefaultOnUpdate() string
+
+	// DefaultOnDelete returns the default ON DELETE action string for foreign key constraints
+	// if none is explicitly specified. Common defaults include "NO ACTION" or "RESTRICT",
+	// depending on the specific database dialect's default behavior.
+	DefaultOnDelete() string
 }
 
 // ------------------------------------------------------------------------------
@@ -192,3 +202,6 @@ func (d *nopDialect) AppendSequence(b []byte, _ *Table, _ *Field) []byte {
 func (d *nopDialect) DefaultSchema() string {
 	return "nop"
 }
+
+func (nopDialect) DefaultOnUpdate() string { return "" }
+func (nopDialect) DefaultOnDelete() string { return "" }

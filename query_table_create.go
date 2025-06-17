@@ -318,15 +318,23 @@ func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []by
 
 	for _, key := range keys {
 		if rel := relations[key]; rel.References() {
+			query := "(?) REFERENCES ? (?)"
+			args := []any{
+				Safe(appendColumns(nil, "", rel.BasePKs)),
+				rel.JoinTable.SQLName,
+				Safe(appendColumns(nil, "", rel.JoinPKs)),
+			}
+			if len(rel.OnUpdate) > 0 {
+				query += " ?"
+				args = append(args, Safe(rel.OnUpdate))
+			}
+			if len(rel.OnDelete) > 0 {
+				query += " ?"
+				args = append(args, Safe(rel.OnDelete))
+			}
 			b, err = q.appendFK(fmter, b, schema.QueryWithArgs{
-				Query: "(?) REFERENCES ? (?) ? ?",
-				Args: []interface{}{
-					Safe(appendColumns(nil, "", rel.BasePKs)),
-					rel.JoinTable.SQLName,
-					Safe(appendColumns(nil, "", rel.JoinPKs)),
-					Safe(rel.OnUpdate),
-					Safe(rel.OnDelete),
-				},
+				Query: query,
+				Args:  args,
 			})
 			if err != nil {
 				return nil, err

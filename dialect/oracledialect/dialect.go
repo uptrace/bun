@@ -136,6 +136,16 @@ func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
+func (Dialect) DefaultOnUpdate() string {
+	// Oracle do not support on update.
+	return ""
+}
+
+func (Dialect) DefaultOnDelete() string {
+	// Oracle support on delete, but does not require (or accept) a default value.
+	return ""
+}
+
 func (*Dialect) AppendBool(b []byte, v bool) []byte {
 	if v {
 		return append(b, '1')

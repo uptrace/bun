@@ -158,16 +158,24 @@ func (d *Dialect) AppendString(b []byte, s string) []byte {
 	return d.BaseDialect.AppendString(b, s)
 }
 
-func (d *Dialect) DefaultVarcharLen() int {
-	return 255
-}
-
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " IDENTITY"...)
 }
 
-func (d *Dialect) DefaultSchema() string {
+func (*Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
+func (*Dialect) DefaultSchema() string {
 	return "dbo"
+}
+
+func (Dialect) DefaultOnUpdate() string {
+	return "NO ACTION"
+}
+
+func (Dialect) DefaultOnDelete() string {
+	return "NO ACTION"
 }
 
 func sqlType(field *schema.Field) string {
