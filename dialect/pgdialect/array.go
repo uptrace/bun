@@ -389,10 +389,6 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 			}
 		}
 
-		if src == nil {
-			return nil
-		}
-
 		b, err := toBytes(src)
 		if err != nil {
 			return err
