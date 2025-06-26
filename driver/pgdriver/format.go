@@ -66,6 +66,11 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 	case nil:
 		return append(b, "NULL"...), nil
 	case int64:
+		// To avoid accidental comments which can lead to SQL injection, put a space before
+		// negative numbers immediately following a minus sign.
+		if v < 0 && len(b) > 0 && b[len(b)-1] == '-' {
+			b = append(b, ' ')
+		}
 		return strconv.AppendInt(b, v, 10), nil
 	case float64:
 		switch {
@@ -76,6 +81,11 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		case math.IsInf(v, -1):
 			return append(b, "'-Infinity'"...), nil
 		default:
+			// To avoid accidental comments which can lead to SQL injection, put a space before
+			// negative numbers immediately following a minus sign.
+			if v < 0 && len(b) > 0 && b[len(b)-1] == '-' {
+				b = append(b, ' ')
+			}
 			return strconv.AppendFloat(b, v, 'f', -1, 64), nil
 		}
 	case bool:
