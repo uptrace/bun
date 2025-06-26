@@ -1,6 +1,7 @@
 package pgdriver
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
@@ -66,6 +67,14 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 	case nil:
 		return append(b, "NULL"...), nil
 	case int64:
+		// Wrap negative numbers in parentheses to avoid SQL injection from accidental comments
+		if v < 0 {
+			buf := &bytes.Buffer{}
+			buf.WriteRune('(')
+			buf.WriteString(strconv.FormatInt(v, 10))
+			buf.WriteRune(')')
+			return append(b, buf.Bytes()...), nil
+		}
 		return strconv.AppendInt(b, v, 10), nil
 	case float64:
 		switch {
@@ -76,6 +85,14 @@ func appendArg(b []byte, v interface{}) ([]byte, error) {
 		case math.IsInf(v, -1):
 			return append(b, "'-Infinity'"...), nil
 		default:
+			// Wrap negative numbers in parentheses to avoid SQL injection from accidental comments
+			if v < 0 {
+				buf := &bytes.Buffer{}
+				buf.WriteRune('(')
+				buf.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
+				buf.WriteRune(')')
+				return append(b, buf.Bytes()...), nil
+			}
 			return strconv.AppendFloat(b, v, 'f', -1, 64), nil
 		}
 	case bool:
