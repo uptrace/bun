@@ -55,6 +55,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.SelectExists |
 		feature.GeneratedIdentity |
 		feature.CompositeIn |
+		feature.FKDefaultOnAction |
 		feature.DeleteReturning |
 		feature.AlterColumnExists
 
