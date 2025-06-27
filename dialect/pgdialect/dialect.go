@@ -119,12 +119,6 @@ func (d *Dialect) onField(field *schema.Field) {
 		return
 	}
 
-	if field.Tag.HasOption("multirange") {
-		field.Append = d.arrayAppender(field.StructField.Type)
-		field.Scan = arrayScanner(field.StructField.Type)
-		return
-	}
-
 	switch field.DiscoveredSQLType {
 	case sqltype.HSTORE:
 		field.Append = d.hstoreAppender(field.StructField.Type)

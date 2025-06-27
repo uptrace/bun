@@ -1,138 +1,149 @@
 package pgdialect
 
 import (
+	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"io"
-	"time"
+	"reflect"
 
-	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
 type MultiRange[T any] []Range[T]
 
-type Range[T any] struct {
-	Lower, Upper           T
-	LowerBound, UpperBound RangeBound
+var (
+	_ sql.Scanner   = (*MultiRange[any])(nil)
+	_ driver.Valuer = (*MultiRange[any])(nil)
+)
+
+func (m *MultiRange[T]) Scan(anySrc any) (err error) {
+	return Array(m).Scan(anySrc)
 }
 
-type RangeBound byte
+func (m MultiRange[T]) Value() (driver.Value, error) {
+	return m.String(), nil
+}
+
+func (m MultiRange[T]) String() string {
+	if len(m) == 0 {
+		return "{}"
+	}
+	var b []byte
+	b = append(b, '{')
+	for _, r := range m {
+		b = append(b, unquote(appendElem(nil, r))...)
+		b = append(b, ',')
+	}
+	b = append(b[:len(b)-1], '}')
+	return string(b)
+}
+
+type Range[T any] struct {
+	Lower, Upper T
+	LowerBound   RangeLowerBound
+	UpperBound   RangeUpperBound
+}
+
+var (
+	_ driver.Valuer = (*Range[any])(nil)
+	_ sql.Scanner   = (*Range[any])(nil)
+)
+
+type RangeLowerBound byte
+type RangeUpperBound byte
 
 const (
-	RangeBoundInclusiveLeft  RangeBound = '['
-	RangeBoundInclusiveRight RangeBound = ']'
-	RangeBoundExclusiveLeft  RangeBound = '('
-	RangeBoundExclusiveRight RangeBound = ')'
+	RangeBoundExclusiveLeft  RangeLowerBound = '('
+	RangeBoundExclusiveRight RangeUpperBound = ')'
+	RangeBoundInclusiveLeft  RangeLowerBound = '['
+	RangeBoundInclusiveRight RangeUpperBound = ']'
+
+	RangeBoundDefaultLeft  = RangeBoundInclusiveLeft
+	RangeBoundDefaultRight = RangeBoundExclusiveRight
 )
 
 func NewRange[T any](lower, upper T) Range[T] {
 	return Range[T]{
 		Lower:      lower,
+		LowerBound: RangeBoundDefaultLeft,
 		Upper:      upper,
-		LowerBound: RangeBoundInclusiveLeft,
-		UpperBound: RangeBoundExclusiveRight,
+		UpperBound: RangeBoundDefaultRight,
 	}
 }
 
-var _ sql.Scanner = (*Range[any])(nil)
-
-func (r *Range[T]) Scan(anySrc any) (err error) {
-	src, ok := anySrc.([]byte)
+func (r *Range[T]) Scan(src any) (err error) {
+	srcB, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("pgdialect: Range can't scan %T", anySrc)
+		return fmt.Errorf("unsupported data type: %T", src)
 	}
 
-	if len(src) == 0 {
-		return io.ErrUnexpectedEOF
+	if len(srcB) == 0 {
+		return fmt.Errorf("invalid format: %s", string(srcB))
 	}
-	r.LowerBound = RangeBound(src[0])
-	src = src[1:]
 
-	src, err = scanElem(&r.Lower, src)
-	if err != nil {
+	if string(srcB) == "empty" {
+		return nil
+	}
+
+	// read bounds
+	r.LowerBound = RangeLowerBound(srcB[0])
+	r.UpperBound = RangeUpperBound(srcB[len(srcB)-1])
+	srcB = srcB[1 : len(srcB)-1]
+	if len(srcB) == 0 {
+		return fmt.Errorf("invalid format: %s", string(srcB))
+	}
+
+	l, u, ok := bytes.Cut(srcB, []byte(","))
+	if !ok {
+		return fmt.Errorf("invalid format: %s", string(srcB))
+	}
+
+	scanner := schema.Scanner(reflect.TypeOf(r.Lower))
+	if err := scanner(reflect.ValueOf(&r.Lower).Elem(), unquote(l)); err != nil {
 		return err
 	}
-
-	if len(src) == 0 {
-		return io.ErrUnexpectedEOF
-	}
-	if ch := src[0]; ch != ',' {
-		return fmt.Errorf("got %q, wanted %q", ch, ',')
-	}
-	src = src[1:]
-
-	src, err = scanElem(&r.Upper, src)
-	if err != nil {
+	if err := scanner(reflect.ValueOf(&r.Upper).Elem(), unquote(u)); err != nil {
 		return err
-	}
-
-	if len(src) == 0 {
-		return io.ErrUnexpectedEOF
-	}
-	r.UpperBound = RangeBound(src[0])
-	src = src[1:]
-
-	if len(src) > 0 {
-		return fmt.Errorf("unread data: %q", src)
 	}
 	return nil
 }
 
-var _ schema.QueryAppender = (*Range[any])(nil)
-
-func (r *Range[T]) AppendQuery(fmt schema.Formatter, buf []byte) ([]byte, error) {
-	buf = append(buf, byte(r.LowerBound))
-	buf = appendElem(buf, r.Lower)
-	buf = append(buf, ',')
-	buf = appendElem(buf, r.Upper)
-	buf = append(buf, byte(r.UpperBound))
-	return buf, nil
+func (r Range[T]) Value() (driver.Value, error) {
+	return r.String(), nil
 }
 
-func scanElem(ptr any, src []byte) ([]byte, error) {
-	switch ptr := ptr.(type) {
-	case *time.Time:
-		src, str, err := readStringLiteral(src)
-		if err != nil {
-			return nil, err
-		}
-
-		tm, err := internal.ParseTime(internal.String(str))
-		if err != nil {
-			return nil, err
-		}
-		*ptr = tm
-
-		return src, nil
-
-	case sql.Scanner:
-		src, str, err := readStringLiteral(src)
-		if err != nil {
-			return nil, err
-		}
-		if err := ptr.Scan(str); err != nil {
-			return nil, err
-		}
-		return src, nil
-
-	default:
-		panic(fmt.Errorf("unsupported range type: %T", ptr))
+func (r Range[T]) String() string {
+	if r.IsZero() {
+		return "empty"
 	}
+	var rs []byte
+	if r.LowerBound == 0 {
+		rs = append(rs, byte(RangeBoundDefaultLeft))
+	} else {
+		rs = append(rs, byte(r.LowerBound))
+	}
+	rs = appendElem(rs, r.Lower)
+	rs = append(rs, ',')
+	rs = appendElem(rs, r.Upper)
+	if r.UpperBound == 0 {
+		rs = append(rs, byte(RangeBoundDefaultRight))
+	} else {
+		rs = append(rs, byte(r.UpperBound))
+	}
+	return string(rs)
 }
 
-func readStringLiteral(src []byte) ([]byte, []byte, error) {
-	p := newParser(src)
+func (r Range[T]) IsZero() bool {
+	return r.LowerBound == 0 && r.UpperBound == 0
+}
 
-	if err := p.Skip('"'); err != nil {
-		return nil, nil, err
+func unquote(s []byte) []byte {
+	if len(s) == 0 {
+		return s
 	}
-
-	str, err := p.ReadSubstring('"')
-	if err != nil {
-		return nil, nil, err
+	if s[0] == '"' && s[len(s)-1] == '"' {
+		return bytes.ReplaceAll(s[1:len(s)-1], []byte("\\\""), []byte("\""))
 	}
-
-	src = p.Remaining()
-	return src, str, nil
+	return s
 }
