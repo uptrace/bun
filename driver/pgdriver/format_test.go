@@ -38,15 +38,25 @@ func TestFormatQuery(t *testing.T) {
 		{
 			query:  "select 1-$1, 1.0-$2, 1.0-$3",
 			args:   []interface{}{int64(-1), float64(-1.5), math.Inf(-1)},
-			wanted: "select 1-(-1), 1.0-(-1.5), 1.0-'-Infinity'",
+			wanted: "select 1- -1, 1.0- -1.5, 1.0-'-Infinity'",
+		},
+		{
+			query:  "select 1+$1, 1.0+$2",
+			args:   []interface{}{int64(-1), float64(-1.5)},
+			wanted: "select 1+-1, 1.0+-1.5",
 		},
 		{
 			query: "select 1-$1, $2",
 			args:  []interface{}{int64(-1), "foo\n;\nSELECT * FROM passwords;--"},
-			// Without parentheses around the negative number, the first line ends in a comment
-			wanted: `select 1-(-1), 'foo
+			// Without a space before the negative number, the first line ends in a comment
+			wanted: `select 1- -1, 'foo
 ;
 SELECT * FROM passwords;--'`,
+		},
+		{
+			query:  "$1",
+			args:   []interface{}{int64(-1)},
+			wanted: "-1",
 		},
 	}
 
