@@ -38,7 +38,7 @@ func main() {
 		panic(err)
 	}
 
-	for notif := range ln.Channel() {
+	for notif := range ln.CreateChannel() {
 		fmt.Println(notif.Channel, notif.Payload)
 	}
 }

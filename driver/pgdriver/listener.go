@@ -196,13 +196,13 @@ func (ln *Listener) unlisten(ctx context.Context, cn *Conn, channels ...string) 
 }
 
 // Receive indefinitely waits for a notification. This is low-level API
-// and in most cases Channel should be used instead.
+// and in most cases CreateChannel should be used instead.
 func (ln *Listener) Receive(ctx context.Context) (channel string, payload string, err error) {
 	return ln.ReceiveTimeout(ctx, 0)
 }
 
 // ReceiveTimeout waits for a notification until timeout is reached.
-// This is low-level API and in most cases Channel should be used instead.
+// This is low-level API and in most cases CreateChannel should be used instead.
 func (ln *Listener) ReceiveTimeout(
 	ctx context.Context, timeout time.Duration,
 ) (channel, payload string, err error) {
@@ -226,12 +226,12 @@ func (ln *Listener) ReceiveTimeout(
 	return channel, payload, nil
 }
 
-// Channel returns a channel for concurrently receiving notifications.
+// CreateChannel creates and returns a channel for concurrently receiving notifications.
 // It periodically sends Ping notification to test connection health.
 //
 // The channel is closed with Listener. Receive* APIs can not be used
 // after channel is created.
-func (ln *Listener) Channel(opts ...ChannelOption) <-chan Notification {
+func (ln *Listener) CreateChannel(opts ...ChannelOption) <-chan Notification {
 	return newChannel(ln, opts).ch
 }
 
