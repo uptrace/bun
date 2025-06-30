@@ -1,7 +1,6 @@
 package pgdriver
 
 import (
-	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
