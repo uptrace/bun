@@ -58,7 +58,7 @@ func TestListenerChannel(t *testing.T) {
 	db := pg(t)
 
 	ln := pgdriver.NewListener(db)
-	ch := ln.Channel()
+	ch := ln.CreateChannel()
 
 	err := ln.Listen(ctx, "test_channel")
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestListenerChannelOverflowHandler(t *testing.T) {
 	var overflowCount atomic.Int32
 
 	// Create channel with small buffer and overflow handler
-	ch := ln.Channel(
+	ch := ln.CreateChannel(
 		pgdriver.WithChannelSize(channelSize),
 		pgdriver.WithChannelOverflowHandler(func(n pgdriver.Notification) {
 			overflowCount.Add(1)
