@@ -41,6 +41,7 @@ const (
 	DeleteOrderLimit // DELETE ... ORDER BY ... LIMIT ...
 	DeleteReturning
 	AlterColumnExists // ADD/DROP COLUMN IF NOT EXISTS/IF EXISTS
+	FKDefaultOnAction // FK ON UPDATE/ON DELETE has default value: NO ACTION
 )
 
 type NotSupportError struct {
@@ -91,4 +92,5 @@ var flag2str = map[Feature]string{
 	DeleteOrderLimit:     "DeleteOrderLimit",
 	DeleteReturning:      "DeleteReturning",
 	AlterColumnExists:    "AlterColumnExists",
+	FKDefaultOnAction:    "FKDefaultOnAction",
 }

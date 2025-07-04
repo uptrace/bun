@@ -49,6 +49,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.Identity |
 		feature.Output |
 		feature.OffsetFetch |
+		feature.FKDefaultOnAction |
 		feature.UpdateFromTable |
 		feature.MSSavepoint
 
@@ -158,15 +159,15 @@ func (d *Dialect) AppendString(b []byte, s string) []byte {
 	return d.BaseDialect.AppendString(b, s)
 }
 
-func (d *Dialect) DefaultVarcharLen() int {
-	return 255
-}
-
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " IDENTITY"...)
 }
 
-func (d *Dialect) DefaultSchema() string {
+func (*Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
+func (*Dialect) DefaultSchema() string {
 	return "dbo"
 }
 

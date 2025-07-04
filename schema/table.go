@@ -11,6 +11,7 @@ import (
 
 	"github.com/jinzhu/inflection"
 
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
 )
@@ -623,7 +624,10 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.Condition = field.Tag.Options["join_on"]
 	}
 
-	rel.OnUpdate = "ON UPDATE NO ACTION"
+	if t.dialect.Features().Has(feature.FKDefaultOnAction) {
+		rel.OnUpdate = "ON UPDATE NO ACTION"
+		rel.OnDelete = "ON DELETE NO ACTION"
+	}
 	if onUpdate, ok := field.Tag.Options["on_update"]; ok {
 		if len(onUpdate) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_update option must be a single field", t.TypeName, field.GoName))
@@ -638,7 +642,6 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.OnUpdate = s
 	}
 
-	rel.OnDelete = "ON DELETE NO ACTION"
 	if onDelete, ok := field.Tag.Options["on_delete"]; ok {
 		if len(onDelete) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_delete option must be a single field", t.TypeName, field.GoName))

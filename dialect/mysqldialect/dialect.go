@@ -48,6 +48,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.InsertOnDuplicateKey |
 		feature.SelectExists |
 		feature.CompositeIn |
+		feature.FKDefaultOnAction |
 		feature.UpdateOrderLimit |
 		feature.DeleteOrderLimit
 
