@@ -1007,7 +1007,6 @@ func isKnownFieldOption(name string) bool {
 		"array",
 		"hstore",
 		"composite",
-		"multirange",
 		"json_use_number",
 		"msgpack",
 		"notnull",

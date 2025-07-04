@@ -873,10 +873,34 @@ func TestPostgresCustomTypeBytes(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestPostgresRange(t *testing.T) {
+	type Model struct {
+		ID    int64                      `bun:",pk,autoincrement"`
+		Value pgdialect.Range[time.Time] `bun:",type:tstzrange"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	in := &Model{Value: pgdialect.NewRange(time.Unix(1000, 0), time.Unix(2000, 0))}
+	_, err := db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
+
+	require.True(t, reflect.DeepEqual(in, out))
+}
+
 func TestPostgresMultiRange(t *testing.T) {
 	type Model struct {
 		ID    int64                           `bun:",pk,autoincrement"`
-		Value pgdialect.MultiRange[time.Time] `bun:",multirange,type:tstzmultirange"`
+		Value pgdialect.MultiRange[time.Time] `bun:",type:tstzmultirange"`
 	}
 
 	ctx := context.Background()
@@ -895,6 +919,8 @@ func TestPostgresMultiRange(t *testing.T) {
 	out := new(Model)
 	err = db.NewSelect().Model(out).Scan(ctx)
 	require.NoError(t, err)
+
+	require.True(t, reflect.DeepEqual(in, out))
 }
 
 type UserID struct {
