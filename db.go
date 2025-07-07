@@ -235,6 +235,13 @@ func (db *DB) AddQueryHook(hook QueryHook) {
 	db.queryHooks = append(db.queryHooks, hook)
 }
 
+func (db *DB) CleanQueryHook() {
+	for i := range db.queryHooks {
+		db.queryHooks[i] = nil
+	}
+	db.queryHooks = nil
+}
+
 func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
