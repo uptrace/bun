@@ -235,7 +235,7 @@ func (db *DB) AddQueryHook(hook QueryHook) {
 	db.queryHooks = append(db.queryHooks, hook)
 }
 
-func (db *DB) CleanQueryHook() {
+func (db *DB) ResetQueryHooks() {
 	for i := range db.queryHooks {
 		db.queryHooks[i] = nil
 	}
