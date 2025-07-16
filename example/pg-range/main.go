@@ -17,6 +17,7 @@ type Reservation struct {
 	During     pgdialect.Range[time.Time]      `bun:"type:tsrange,default:'(,]'"`
 	Durings    pgdialect.MultiRange[time.Time] `bun:"type:tsmultirange,multirange,default:'{}'"`
 	DuringDate pgdialect.Range[time.Time]      `bun:"type:daterange,default:'(,]'"`
+	DuringPtr  *pgdialect.Range[time.Time]     `bun:"type:tsrange,default:'(,]'"`
 }
 
 func main() {
@@ -35,6 +36,7 @@ func main() {
 	{
 		now := time.Now()
 		st, end := now.Add(time.Hour), now.AddDate(0, 1, 1)
+		timeRange := pgdialect.NewRange[time.Time](st, end)
 		reservations := []Reservation{
 			{Room: 1, DuringDate: pgdialect.NewRange(st, end)},
 			{Room: 2, During: pgdialect.NewRange(st, end)},
@@ -50,6 +52,8 @@ func main() {
 			)},
 			// empty
 			{Room: 5, During: pgdialect.NewRangeEmpty[time.Time]()},
+			// ptr
+			{Room: 6, DuringPtr: &timeRange},
 
 			{Room: 10, Durings: pgdialect.MultiRange[time.Time]{
 				pgdialect.NewRange(st, end),
@@ -63,10 +67,21 @@ func main() {
 	}
 
 	reservations := []Reservation{}
-	if err := db.NewSelect().Model(&reservations).Order("room").Scan(ctx); err != nil {
+	if err := db.NewSelect().Model(&reservations).
+		Where("during && ?", pgdialect.NewRange[time.Time](time.Now(), time.Now().Add(time.Hour*24))).Order("room").Scan(ctx); err != nil {
 		panic(err)
 	}
 	for _, m := range reservations {
-		fmt.Println(m.Room, m.During, m.Durings)
+		fmt.Println(m.Room, m.During, m.Durings, m.DuringPtr)
+	}
+
+	{
+		// use ptr as query args
+		reservations := []Reservation{}
+		timeRange := pgdialect.NewRange[time.Time](time.Now(), time.Now().Add(time.Hour))
+		if err := db.NewSelect().Model(&reservations).
+			Where("during && ?", &timeRange).Order("room").Scan(ctx); err != nil {
+			panic(err)
+		}
 	}
 }
