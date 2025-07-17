@@ -51,7 +51,7 @@ func main() {
 				pgdialect.WithUpperBound[time.Time](pgdialect.RangeBoundUnbound),
 			)},
 			// empty
-			{Room: 5, During: pgdialect.NewRangeEmpty[time.Time]()},
+			{Room: 5, During: pgdialect.NewEmptyRange[time.Time]()},
 			// ptr
 			{Room: 6, DuringPtr: &timeRange},
 

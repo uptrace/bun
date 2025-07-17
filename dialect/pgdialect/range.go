@@ -55,11 +55,12 @@ func WithUpperBound[T any](bound RangeBound) RangeOption[T] {
 	}
 }
 
-func NewRangeEmpty[T any]() Range[T] {
+func NewEmptyRange[T any]() Range[T] {
 	return Range[T]{LowerBound: RangeBoundEmpty, UpperBound: RangeBoundEmpty}
 }
 
 func (r *Range[T]) IsZero() bool {
+	// NOTE: r.LowerBound represent
 	return r == nil || r.LowerBound == 0
 }
 
@@ -150,6 +151,8 @@ func appendRange[T any](buf []byte, r Range[T]) []byte {
 	}
 
 	if r.LowerBound == RangeBoundUnbound {
+		// NOTE from pg's document:
+		// > Specifying a missing bound as inclusive is automatically converted to exclusive, e.g., [,] is converted to (,).
 		buf = append(buf, byte(RangeBoundExclusiveLeft))
 	} else {
 		buf = append(buf, byte(r.LowerBound))
@@ -165,8 +168,15 @@ func appendRange[T any](buf []byte, r Range[T]) []byte {
 	return buf
 }
 
+func (m *MultiRange[T]) Len() int {
+	if m == nil {
+		return 0
+	}
+	return len(([]Range[T])(*m))
+}
+
 func (m *MultiRange[T]) IsZero() bool {
-	return m == nil || len(([]Range[T])(*m)) == 0
+	return m.Len() == 0
 }
 
 func (m MultiRange[T]) AppendQuery(_ schema.Formatter, buf []byte) ([]byte, error) {
