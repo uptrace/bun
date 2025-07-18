@@ -1,3 +1,19 @@
+## [1.2.15](https://github.com/uptrace/bun/compare/v1.2.14...v1.2.15) (2025-07-17)
+
+
+### Bug Fixes
+
+* **pgdriver:** add mandatory space before negative numbers to resolve CVE-2024-34359 ([8067a8f](https://github.com/uptrace/bun/commit/8067a8f13f8d22fb57b76d6800f7aefc12b044cd))
+
+
+### Features
+
+* **db:** rename CleanQueryHook to ResetQueryHooks ([cb17679](https://github.com/uptrace/bun/commit/cb176796f5fbae8b3ea44e67875dd00ecf689425))
+* **db:** support clean query hooks ([a5f19a7](https://github.com/uptrace/bun/commit/a5f19a7c0d68fd44eaff99ebaaeb88ca089d7538)), closes [#1226](https://github.com/uptrace/bun/issues/1226)
+* **dialect:** return default on update/delete when create table ([d347b48](https://github.com/uptrace/bun/commit/d347b48c7764a23000a28ca3ad40368b8b89e298)), closes [#1212](https://github.com/uptrace/bun/issues/1212)
+
+
+
 ## [1.2.14](https://github.com/uptrace/bun/compare/v1.2.13...v1.2.14) (2025-06-16)
 
 
