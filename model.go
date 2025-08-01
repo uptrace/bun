@@ -14,8 +14,9 @@ import (
 var errNilModel = errors.New("bun: Model(nil)")
 
 var (
-	timeType  = reflect.TypeFor[time.Time]()
-	bytesType = reflect.TypeFor[[]byte]()
+	timeType    = reflect.TypeFor[time.Time]()
+	bytesType   = reflect.TypeFor[[]byte]()
+	scannerType = reflect.TypeFor[sql.Scanner]()
 )
 
 type Model = schema.Model
@@ -125,7 +126,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:
-			if elemType != timeType {
+			if elemType != timeType && !reflect.PointerTo(elemType).Implements(scannerType) {
 				return newSliceTableModel(db, dest, v, elemType), nil
 			}
 		case reflect.Map:
