@@ -137,7 +137,16 @@ func scanBool(dest reflect.Value, src interface{}) error {
 	case bool:
 		dest.SetBool(src)
 		return nil
-	case int8, int16, int32, int64:
+	case int8:
+		dest.SetBool(src != 0)
+		return nil
+	case int16:
+		dest.SetBool(src != 0)
+		return nil
+	case int32:
+		dest.SetBool(src != 0)
+		return nil
+	case int64:
 		dest.SetBool(src != 0)
 		return nil
 	case []byte:
