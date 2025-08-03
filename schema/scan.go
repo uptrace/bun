@@ -137,7 +137,7 @@ func scanBool(dest reflect.Value, src interface{}) error {
 	case bool:
 		dest.SetBool(src)
 		return nil
-	case int64:
+	case int8, int16, int32, int64:
 		dest.SetBool(src != 0)
 		return nil
 	case []byte:
@@ -164,8 +164,26 @@ func scanInt64(dest reflect.Value, src interface{}) error {
 	case nil:
 		dest.SetInt(0)
 		return nil
+	case int8:
+		dest.SetInt(int64(src))
+		return nil
+	case int16:
+		dest.SetInt(int64(src))
+		return nil
+	case int32:
+		dest.SetInt(int64(src))
+		return nil
 	case int64:
 		dest.SetInt(src)
+		return nil
+	case uint8:
+		dest.SetInt(int64(src))
+		return nil
+	case uint16:
+		dest.SetInt(int64(src))
+		return nil
+	case uint32:
+		dest.SetInt(int64(src))
 		return nil
 	case uint64:
 		dest.SetInt(int64(src))
@@ -194,8 +212,26 @@ func scanUint64(dest reflect.Value, src interface{}) error {
 	case nil:
 		dest.SetUint(0)
 		return nil
+	case uint8:
+		dest.SetUint(uint64(src))
+		return nil
+	case uint16:
+		dest.SetUint(uint64(src))
+		return nil
+	case uint32:
+		dest.SetUint(uint64(src))
+		return nil
 	case uint64:
 		dest.SetUint(src)
+		return nil
+	case int8:
+		dest.SetUint(uint64(src))
+		return nil
+	case int16:
+		dest.SetUint(uint64(src))
+		return nil
+	case int32:
+		dest.SetUint(uint64(src))
 		return nil
 	case int64:
 		dest.SetUint(uint64(src))
