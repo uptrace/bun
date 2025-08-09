@@ -1750,6 +1750,55 @@ func TestQuery(t *testing.T) {
 				return db.NewCreateTable().Model(new(AcronymPDF))
 			},
 		},
+		{
+			id: 188,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					Column("name").
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 189,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					Column("name").
+					Value("name", "name2").
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 190,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					ExcludeColumn().
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
