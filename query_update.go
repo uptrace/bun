@@ -342,39 +342,43 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	b = append(b, " SET "...)
+	pos := len(b)
 
-	if len(q.set) > 0 {
-		return q.appendSet(fmter, b)
-	}
-
-	if m, ok := q.model.(*mapModel); ok {
-		return m.appendSet(fmter, b), nil
-	}
-
-	if q.tableModel == nil {
-		return nil, errNilModel
-	}
-
-	switch model := q.tableModel.(type) {
+	switch model := q.model.(type) {
+	case *mapModel:
+		b = model.appendSet(fmter, b)
 	case *structTableModel:
-		pos := len(b)
+		if !model.strct.IsValid() { // Model((*Foo)(nil))
+			break
+		}
+		if len(q.set) > 0 && q.columns == nil {
+			break
+		}
 		b, err = q.appendSetStruct(fmter, b, model)
 		if err != nil {
 			return nil, err
 		}
-
-		// Validate if no values were appended after SET clause.
-		// e.g. UPDATE users SET WHERE id = 1
-		// See issues858
-		if len(b) == pos {
-			return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
-		}
 	case *sliceTableModel:
+		if len(q.set) > 0 { // bulk-update
+			return q.appendSet(fmter, b)
+		}
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
+	case nil:
+		// continue below
 	default:
-		return nil, fmt.Errorf("bun: Update does not support %T", q.tableModel)
+		return nil, fmt.Errorf("bun: Update does not support %T", q.model)
 	}
 
+	if len(q.set) > 0 {
+		if len(b) > pos {
+			b = append(b, ", "...)
+		}
+		return q.appendSet(fmter, b)
+	}
+
+	if len(b) == pos {
+		return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
+	}
 	return b, nil
 }
 
