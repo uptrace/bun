@@ -147,10 +147,10 @@ func (q *InsertQuery) Returning(query string, args ...any) *InsertQuery {
 //   - On MySQL, it generates `INSERT IGNORE INTO`.
 //   - On PostgreSQL, it generates `ON CONFLICT DO NOTHING`.
 func (q *InsertQuery) Ignore() *InsertQuery {
-	if q.db.fmter.HasFeature(feature.InsertOnConflict) {
+	if q.db.gen.HasFeature(feature.InsertOnConflict) {
 		return q.On("CONFLICT DO NOTHING")
 	}
-	if q.db.fmter.HasFeature(feature.InsertIgnore) {
+	if q.db.gen.HasFeature(feature.InsertIgnore) {
 		q.ignore = true
 	}
 	return q
@@ -176,16 +176,16 @@ func (q *InsertQuery) Operation() string {
 	return "INSERT"
 }
 
-func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = appendComment(b, q.comment)
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -201,27 +201,27 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	b = append(b, "INTO "...)
 
 	if q.db.HasFeature(feature.InsertTableAlias) && !q.on.IsZero() {
-		b, err = q.appendFirstTableWithAlias(fmter, b)
+		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
-		b, err = q.appendFirstTable(fmter, b)
+		b, err = q.appendFirstTable(gen, b)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendColumnsValues(fmter, b, false)
+	b, err = q.appendColumnsValues(gen, b, false)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendOn(fmter, b)
+	b, err = q.appendOn(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if q.hasFeature(feature.InsertReturning) && q.hasReturning() {
 		b = append(b, " RETURNING "...)
-		b, err = q.appendReturning(fmter, b)
+		b, err = q.appendReturning(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -231,12 +231,12 @@ func (q *InsertQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 }
 
 func (q *InsertQuery) appendColumnsValues(
-	fmter schema.Formatter, b []byte, skipOutput bool,
+	gen schema.QueryGen, b []byte, skipOutput bool,
 ) (_ []byte, err error) {
 	if q.hasMultiTables() {
 		if q.columns != nil {
 			b = append(b, " ("...)
-			b, err = q.appendColumns(fmter, b)
+			b, err = q.appendColumns(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -245,7 +245,7 @@ func (q *InsertQuery) appendColumnsValues(
 
 		if q.hasFeature(feature.Output) && q.hasReturning() {
 			b = append(b, " OUTPUT "...)
-			b, err = q.appendOutput(fmter, b)
+			b, err = q.appendOutput(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -254,7 +254,7 @@ func (q *InsertQuery) appendColumnsValues(
 		b = append(b, " SELECT "...)
 
 		if q.columns != nil {
-			b, err = q.appendColumns(fmter, b)
+			b, err = q.appendColumns(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -263,7 +263,7 @@ func (q *InsertQuery) appendColumnsValues(
 		}
 
 		b = append(b, " FROM "...)
-		b, err = q.appendOtherTables(fmter, b)
+		b, err = q.appendOtherTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -272,7 +272,7 @@ func (q *InsertQuery) appendColumnsValues(
 	}
 
 	if m, ok := q.model.(*mapModel); ok {
-		return m.appendColumnsValues(fmter, b), nil
+		return m.appendColumnsValues(gen, b), nil
 	}
 	if _, ok := q.model.(*mapSliceModel); ok {
 		return nil, fmt.Errorf("Insert(*[]map[string]any) is not supported")
@@ -289,12 +289,12 @@ func (q *InsertQuery) appendColumnsValues(
 	}
 
 	b = append(b, " ("...)
-	b = q.appendFields(fmter, b, fields)
+	b = q.appendFields(gen, b, fields)
 	b = append(b, ")"...)
 
 	if q.hasFeature(feature.Output) && q.hasReturning() && !skipOutput {
 		b = append(b, " OUTPUT "...)
-		b, err = q.appendOutput(fmter, b)
+		b, err = q.appendOutput(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -304,12 +304,12 @@ func (q *InsertQuery) appendColumnsValues(
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
-		b, err = q.appendStructValues(fmter, b, fields, model.strct)
+		b, err = q.appendStructValues(gen, b, fields, model.strct)
 		if err != nil {
 			return nil, err
 		}
 	case *sliceTableModel:
-		b, err = q.appendSliceValues(fmter, b, fields, model.slice)
+		b, err = q.appendSliceValues(gen, b, fields, model.slice)
 		if err != nil {
 			return nil, err
 		}
@@ -323,9 +323,9 @@ func (q *InsertQuery) appendColumnsValues(
 }
 
 func (q *InsertQuery) appendStructValues(
-	fmter schema.Formatter, b []byte, fields []*schema.Field, strct reflect.Value,
+	gen schema.QueryGen, b []byte, fields []*schema.Field, strct reflect.Value,
 ) (_ []byte, err error) {
-	isTemplate := fmter.IsNop()
+	isTemplate := gen.IsNop()
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -333,7 +333,7 @@ func (q *InsertQuery) appendStructValues(
 
 		app, ok := q.modelValues[f.Name]
 		if ok {
-			b, err = app.AppendQuery(fmter, b)
+			b, err = app.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -354,7 +354,7 @@ func (q *InsertQuery) appendStructValues(
 			}
 			q.addReturningField(f)
 		default:
-			b = f.AppendValue(fmter, b, strct)
+			b = f.AppendValue(gen, b, strct)
 		}
 	}
 
@@ -363,7 +363,7 @@ func (q *InsertQuery) appendStructValues(
 			b = append(b, ", "...)
 		}
 
-		b, err = v.value.AppendQuery(fmter, b)
+		b, err = v.value.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -373,10 +373,10 @@ func (q *InsertQuery) appendStructValues(
 }
 
 func (q *InsertQuery) appendSliceValues(
-	fmter schema.Formatter, b []byte, fields []*schema.Field, slice reflect.Value,
+	gen schema.QueryGen, b []byte, fields []*schema.Field, slice reflect.Value,
 ) (_ []byte, err error) {
-	if fmter.IsNop() {
-		return q.appendStructValues(fmter, b, fields, reflect.Value{})
+	if gen.IsNop() {
+		return q.appendStructValues(gen, b, fields, reflect.Value{})
 	}
 
 	sliceLen := slice.Len()
@@ -385,7 +385,7 @@ func (q *InsertQuery) appendSliceValues(
 			b = append(b, "), ("...)
 		}
 		el := indirect(slice.Index(i))
-		b, err = q.appendStructValues(fmter, b, fields, el)
+		b, err = q.appendStructValues(gen, b, fields, el)
 		if err != nil {
 			return nil, err
 		}
@@ -440,14 +440,14 @@ func (q InsertQuery) marshalsToDefault(f *schema.Field, v reflect.Value) bool {
 }
 
 func (q *InsertQuery) appendFields(
-	fmter schema.Formatter, b []byte, fields []*schema.Field,
+	gen schema.QueryGen, b []byte, fields []*schema.Field,
 ) []byte {
 	b = appendColumns(b, "", fields)
 	for i, v := range q.extraValues {
 		if i > 0 || len(fields) > 0 {
 			b = append(b, ", "...)
 		}
-		b = fmter.AppendIdent(b, v.column)
+		b = gen.AppendIdent(b, v.column)
 	}
 	return b
 }
@@ -469,25 +469,25 @@ func (q *InsertQuery) SetValues(values *ValuesQuery) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *InsertQuery) appendOn(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.on.IsZero() {
 		return b, nil
 	}
 
 	b = append(b, " ON "...)
-	b, err = q.on.AppendQuery(fmter, b)
+	b, err = q.on.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(q.set) > 0 || q.setValues != nil {
-		if fmter.HasFeature(feature.InsertOnDuplicateKey) {
+		if gen.HasFeature(feature.InsertOnDuplicateKey) {
 			b = append(b, ' ')
 		} else {
 			b = append(b, " SET "...)
 		}
 
-		b, err = q.appendSet(fmter, b)
+		b, err = q.appendSet(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +508,7 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 	if len(q.where) > 0 {
 		b = append(b, " WHERE "...)
 
-		b, err = appendWhere(fmter, b, q.where)
+		b, err = appendWhere(gen, b, q.where)
 		if err != nil {
 			return nil, err
 		}
@@ -585,7 +585,7 @@ func (q *InsertQuery) scanOrExec(
 	setCommentFromContext(ctx, q)
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -692,7 +692,7 @@ func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []any) error {
 // String returns the generated SQL query string. The InsertQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *InsertQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}

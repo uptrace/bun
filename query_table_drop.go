@@ -92,7 +92,7 @@ func (q *DropTableQuery) Operation() string {
 	return "DROP TABLE"
 }
 
-func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropTableQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -104,12 +104,12 @@ func (q *DropTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 		b = append(b, "IF EXISTS "...)
 	}
 
-	b, err = q.appendTables(fmter, b)
+	b, err = q.appendTables(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b = q.appendCascade(fmter, b)
+	b = q.appendCascade(gen, b)
 
 	return b, nil
 }
@@ -126,7 +126,7 @@ func (q *DropTableQuery) Exec(ctx context.Context, dest ...any) (sql.Result, err
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (q *DropTableQuery) afterDropTableHook(ctx context.Context) error {
 // String returns the generated SQL query string. The DropTableQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *DropTableQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}

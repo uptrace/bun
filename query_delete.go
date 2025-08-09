@@ -187,14 +187,14 @@ func (q *DeleteQuery) Operation() string {
 	return "DELETE"
 }
 
-func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *DeleteQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = appendComment(b, q.comment)
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
 	if q.isSoftDelete() {
 		now := time.Now()
@@ -207,14 +207,14 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 			whereBaseQuery: q.whereBaseQuery,
 			returningQuery: q.returningQuery,
 		}
-		upd.Set(q.softDeleteSet(fmter, now))
+		upd.Set(q.softDeleteSet(gen, now))
 
-		return upd.AppendQuery(fmter, b)
+		return upd.AppendQuery(gen, b)
 	}
 
 	withAlias := q.db.HasFeature(feature.DeleteTableAlias)
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -222,9 +222,9 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	b = append(b, "DELETE FROM "...)
 
 	if withAlias {
-		b, err = q.appendFirstTableWithAlias(fmter, b)
+		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
-		b, err = q.appendFirstTable(fmter, b)
+		b, err = q.appendFirstTable(gen, b)
 	}
 	if err != nil {
 		return nil, err
@@ -232,7 +232,7 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if q.hasMultiTables() {
 		b = append(b, " USING "...)
-		b, err = q.appendOtherTables(fmter, b)
+		b, err = q.appendOtherTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -240,13 +240,13 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if q.hasFeature(feature.Output) && q.hasReturning() {
 		b = append(b, " OUTPUT "...)
-		b, err = q.appendOutput(fmter, b)
+		b, err = q.appendOutput(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.mustAppendWhere(fmter, b, withAlias)
+	b, err = q.mustAppendWhere(gen, b, withAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -255,19 +255,19 @@ func (q *DeleteQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		return nil, errors.New("bun: can't use ORDER or LIMIT with multiple tables")
 	}
 
-	b, err = q.appendOrder(fmter, b)
+	b, err = q.appendOrder(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendLimitOffset(fmter, b)
+	b, err = q.appendLimitOffset(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if q.hasFeature(feature.DeleteReturning) && q.hasReturning() {
 		b = append(b, " RETURNING "...)
-		b, err = q.appendReturning(fmter, b)
+		b, err = q.appendReturning(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -280,15 +280,15 @@ func (q *DeleteQuery) isSoftDelete() bool {
 	return q.tableModel != nil && q.table.SoftDeleteField != nil && !q.flags.Has(forceDeleteFlag)
 }
 
-func (q *DeleteQuery) softDeleteSet(fmter schema.Formatter, tm time.Time) string {
+func (q *DeleteQuery) softDeleteSet(gen schema.QueryGen, tm time.Time) string {
 	b := make([]byte, 0, 32)
-	if fmter.HasFeature(feature.UpdateMultiTable) {
+	if gen.HasFeature(feature.UpdateMultiTable) {
 		b = append(b, q.table.SQLAlias...)
 		b = append(b, '.')
 	}
 	b = append(b, q.table.SoftDeleteField.SQLName...)
 	b = append(b, " = "...)
-	b = schema.Append(fmter, b, tm)
+	b = gen.Append(b, tm)
 	return internal.String(b)
 }
 
@@ -325,7 +325,7 @@ func (q *DeleteQuery) scanOrExec(
 	setCommentFromContext(ctx, q)
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +387,7 @@ func (q *DeleteQuery) afterDeleteHook(ctx context.Context) error {
 // String returns the generated SQL query string. The DeleteQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *DeleteQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}

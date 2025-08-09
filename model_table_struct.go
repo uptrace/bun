@@ -332,9 +332,9 @@ func (m *structTableModel) isNil() bool {
 }
 
 func (m *structTableModel) AppendNamedArg(
-	fmter schema.Formatter, b []byte, name string,
+	gen schema.QueryGen, b []byte, name string,
 ) ([]byte, bool) {
-	return m.table.AppendNamedArg(fmter, b, name, m.strct)
+	return m.table.AppendNamedArg(gen, b, name, m.strct)
 }
 
 func (m *structTableModel) clone() TableModel {

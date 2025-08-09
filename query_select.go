@@ -507,20 +507,20 @@ func (q *SelectQuery) Operation() string {
 	return "SELECT"
 }
 
-func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = appendComment(b, q.comment)
 
-	return q.appendQuery(fmter, b, false)
+	return q.appendQuery(gen, b, false)
 }
 
 func (q *SelectQuery) appendQuery(
-	fmter schema.Formatter, b []byte, count bool,
+	gen schema.QueryGen, b []byte, count bool,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
 	cteCount := count && (len(q.group) > 0 || q.distinctOn != nil)
 	if cteCount {
@@ -531,7 +531,7 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, '(')
 	}
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +551,7 @@ func (q *SelectQuery) appendQuery(
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = app.AppendQuery(fmter, b)
+			b, err = app.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -565,44 +565,44 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, "count(*)"...)
 	} else {
 		// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
-		if q.limit > 0 && len(q.order) == 0 && fmter.Dialect().Name() == dialect.MSSQL {
+		if q.limit > 0 && len(q.order) == 0 && gen.Dialect().Name() == dialect.MSSQL {
 			b = append(b, "0 AS _temp_sort, "...)
 		}
 
-		b, err = q.appendColumns(fmter, b)
+		b, err = q.appendColumns(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if q.hasTables() {
-		b, err = q.appendTables(fmter, b)
+		b, err = q.appendTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.appendIndexHints(fmter, b)
+	b, err = q.appendIndexHints(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
-		b, err = j.appendHasOneJoin(fmter, b, q)
+		b, err = j.appendHasOneJoin(gen, b, q)
 		return err
 	}); err != nil {
 		return nil, err
 	}
 
 	for _, join := range q.joins {
-		b, err = join.AppendQuery(fmter, b)
+		b, err = join.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.appendWhere(fmter, b, true)
+	b, err = q.appendWhere(gen, b, true)
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +613,7 @@ func (q *SelectQuery) appendQuery(
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = f.AppendQuery(fmter, b)
+			b, err = f.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -627,7 +627,7 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " AND "...)
 			}
 			b = append(b, '(')
-			b, err = f.AppendQuery(fmter, b)
+			b, err = f.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -636,19 +636,19 @@ func (q *SelectQuery) appendQuery(
 	}
 
 	if !count {
-		b, err = q.appendOrder(fmter, b)
+		b, err = q.appendOrder(gen, b)
 		if err != nil {
 			return nil, err
 		}
 
-		b, err = q.appendLimitOffset(fmter, b)
+		b, err = q.appendLimitOffset(gen, b)
 		if err != nil {
 			return nil, err
 		}
 
 		if !q.selFor.IsZero() {
 			b = append(b, " FOR "...)
-			b, err = q.selFor.AppendQuery(fmter, b)
+			b, err = q.selFor.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -661,7 +661,7 @@ func (q *SelectQuery) appendQuery(
 		for _, u := range q.union {
 			b = append(b, u.expr...)
 			b = append(b, '(')
-			b, err = u.query.AppendQuery(fmter, b)
+			b, err = u.query.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -676,7 +676,7 @@ func (q *SelectQuery) appendQuery(
 	return b, nil
 }
 
-func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	start := len(b)
 
 	switch {
@@ -695,16 +695,16 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 				}
 			}
 
-			b, err = col.AppendQuery(fmter, b)
+			b, err = col.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
 		}
 	case q.table != nil:
-		if len(q.table.Fields) > 10 && fmter.IsNop() {
+		if len(q.table.Fields) > 10 && gen.IsNop() {
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
-			b = fmter.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
+			b = gen.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
 		} else {
 			b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		}
@@ -718,7 +718,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 			start = len(b)
 		}
 
-		b, err = q.appendInlineRelColumns(fmter, b, join)
+		b, err = q.appendInlineRelColumns(gen, b, join)
 		if err != nil {
 			return err
 		}
@@ -734,7 +734,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 }
 
 func (q *SelectQuery) appendInlineRelColumns(
-	fmter schema.Formatter, b []byte, join *relationJoin,
+	gen schema.QueryGen, b []byte, join *relationJoin,
 ) (_ []byte, err error) {
 	if join.columns != nil {
 		table := join.JoinModel.Table()
@@ -745,16 +745,16 @@ func (q *SelectQuery) appendInlineRelColumns(
 
 			if col.Args == nil {
 				if field, ok := table.FieldMap[col.Query]; ok {
-					b = join.appendAlias(fmter, b)
+					b = join.appendAlias(gen, b)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
 					b = append(b, " AS "...)
-					b = join.appendAliasColumn(fmter, b, field.Name)
+					b = join.appendAliasColumn(gen, b, field.Name)
 					continue
 				}
 			}
 
-			b, err = col.AppendQuery(fmter, b)
+			b, err = col.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -766,18 +766,18 @@ func (q *SelectQuery) appendInlineRelColumns(
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = join.appendAlias(fmter, b)
+		b = join.appendAlias(gen, b)
 		b = append(b, '.')
 		b = append(b, field.SQLName...)
 		b = append(b, " AS "...)
-		b = join.appendAliasColumn(fmter, b, field.Name)
+		b = join.appendAliasColumn(gen, b, field.Name)
 	}
 	return b, nil
 }
 
-func (q *SelectQuery) appendTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendTables(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
-	return q.appendTablesWithAlias(fmter, b)
+	return q.appendTablesWithAlias(gen, b)
 }
 
 //------------------------------------------------------------------------------
@@ -794,7 +794,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -818,7 +818,7 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...any) (res sql.Result, er
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -881,7 +881,7 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, 
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -938,7 +938,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 
 	qq := countQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -1051,7 +1051,7 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 
 	qq := selectExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1073,7 +1073,7 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 
 	qq := whereExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1095,7 +1095,7 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 // String returns the generated SQL query string. The SelectQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *SelectQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -1279,10 +1279,10 @@ type joinQuery struct {
 	on   []schema.QueryWithSep
 }
 
-func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (j *joinQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, ' ')
 
-	b, err = j.join.AppendQuery(fmter, b)
+	b, err = j.join.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -1295,7 +1295,7 @@ func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err
 			}
 
 			b = append(b, '(')
-			b, err = on.AppendQuery(fmter, b)
+			b, err = on.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -1312,11 +1312,11 @@ type countQuery struct {
 	*SelectQuery
 }
 
-func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q countQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
-	return q.appendQuery(fmter, b, true)
+	return q.appendQuery(gen, b, true)
 }
 
 //------------------------------------------------------------------------------
@@ -1325,14 +1325,14 @@ type selectExistsQuery struct {
 	*SelectQuery
 }
 
-func (q selectExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q selectExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = append(b, "SELECT EXISTS ("...)
 
-	b, err = q.appendQuery(fmter, b, false)
+	b, err = q.appendQuery(gen, b, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1348,14 +1348,14 @@ type whereExistsQuery struct {
 	*SelectQuery
 }
 
-func (q whereExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q whereExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = append(b, "SELECT 1 WHERE EXISTS ("...)
 
-	b, err = q.appendQuery(fmter, b, false)
+	b, err = q.appendQuery(gen, b, false)
 	if err != nil {
 		return nil, err
 	}

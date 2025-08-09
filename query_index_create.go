@@ -161,7 +161,7 @@ func (q *CreateIndexQuery) Operation() string {
 	return "CREATE INDEX"
 }
 
-func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *CreateIndexQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -189,20 +189,20 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, "IF NOT EXISTS "...)
 	}
 
-	b, err = q.index.AppendQuery(fmter, b)
+	b, err = q.index.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, " ON "...)
-	b, err = q.appendFirstTable(fmter, b)
+	b, err = q.appendFirstTable(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if !q.using.IsZero() {
 		b = append(b, " USING "...)
-		b, err = q.using.AppendQuery(fmter, b)
+		b, err = q.using.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +213,7 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b, err = col.AppendQuery(fmter, b)
+		b, err = col.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +226,7 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = col.AppendQuery(fmter, b)
+			b, err = col.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -236,7 +236,7 @@ func (q *CreateIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 	if len(q.where) > 0 {
 		b = append(b, " WHERE "...)
-		b, err = appendWhere(fmter, b, q.where)
+		b, err = appendWhere(gen, b, q.where)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func (q *CreateIndexQuery) Exec(ctx context.Context, dest ...any) (sql.Result, e
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

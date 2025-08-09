@@ -58,7 +58,7 @@ type DB struct {
 
 	queryHooks []QueryHook
 
-	fmter schema.Formatter
+	gen   schema.QueryGen
 	stats DBStats
 }
 
@@ -81,7 +81,7 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 			DB:      sqldb,
 			dialect: dialect,
 		},
-		fmter: schema.NewFormatter(dialect),
+		gen: schema.NewQueryGen(dialect),
 	}
 
 	for _, opt := range opts {
@@ -263,12 +263,12 @@ func (db *DB) clone() *DB {
 
 func (db *DB) WithNamedArg(name string, value any) *DB {
 	clone := db.clone()
-	clone.fmter = clone.fmter.WithNamedArg(name, value)
+	clone.gen = clone.gen.WithNamedArg(name, value)
 	return clone
 }
 
-func (db *DB) Formatter() schema.Formatter {
-	return db.fmter
+func (db *DB) QueryGen() schema.QueryGen {
+	return db.gen
 }
 
 // UpdateFQN returns a fully qualified column name. For MySQL, it returns the column name with
@@ -328,7 +328,7 @@ func (db *DB) QueryRowContext(ctx context.Context, query string, args ...any) *s
 }
 
 func (db *DB) format(query string, args []any) string {
-	return db.fmter.FormatQuery(query, args...)
+	return db.gen.FormatQuery(query, args...)
 }
 
 //------------------------------------------------------------------------------

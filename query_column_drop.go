@@ -98,7 +98,7 @@ func (q *DropColumnQuery) Operation() string {
 	return "DROP COLUMN"
 }
 
-func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropColumnQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -111,14 +111,14 @@ func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 
 	b = append(b, "ALTER TABLE "...)
 
-	b, err = q.appendFirstTable(fmter, b)
+	b, err = q.appendFirstTable(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, " DROP COLUMN "...)
 
-	b, err = q.columns[0].AppendQuery(fmter, b)
+	b, err = q.columns[0].AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (q *DropColumnQuery) Exec(ctx context.Context, dest ...any) (sql.Result, er
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

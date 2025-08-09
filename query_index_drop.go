@@ -86,7 +86,7 @@ func (q *DropIndexQuery) Operation() string {
 	return "DROP INDEX"
 }
 
-func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *DropIndexQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -102,12 +102,12 @@ func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 		b = append(b, "IF EXISTS "...)
 	}
 
-	b, err = q.index.AppendQuery(fmter, b)
+	b, err = q.index.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b = q.appendCascade(fmter, b)
+	b = q.appendCascade(gen, b)
 
 	return b, nil
 }
@@ -118,7 +118,7 @@ func (q *DropIndexQuery) Exec(ctx context.Context, dest ...any) (sql.Result, err
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

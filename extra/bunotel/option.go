@@ -34,11 +34,11 @@ func WithFormattedQueries(format bool) Option {
 	}
 }
 
-// WithSpanNameFormatter takes a function that determines the span name
+// WithSpanNameQueryGen takes a function that determines the span name
 // for a given query event.
-func WithSpanNameFormatter(f func(*bun.QueryEvent) string) Option {
+func WithSpanNameQueryGen(f func(*bun.QueryEvent) string) Option {
 	return func(h *QueryHook) {
-		h.spanNameFormatter = f
+		h.spanNameQueryGen = f
 	}
 }
 

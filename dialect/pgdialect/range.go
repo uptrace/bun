@@ -128,7 +128,7 @@ func (r *Range[T]) Scan(raw any) (err error) {
 
 var _ schema.QueryAppender = (*Range[any])(nil)
 
-func (r Range[T]) AppendQuery(_ schema.Formatter, buf []byte) ([]byte, error) {
+func (r Range[T]) AppendQuery(_ schema.QueryGen, buf []byte) ([]byte, error) {
 	buf = append(buf, '\'')
 	buf = appendRange(buf, r)
 	buf = append(buf, '\'')
@@ -170,7 +170,7 @@ func (m *MultiRange[T]) IsZero() bool {
 	return m.Len() == 0
 }
 
-func (m MultiRange[T]) AppendQuery(_ schema.Formatter, buf []byte) ([]byte, error) {
+func (m MultiRange[T]) AppendQuery(_ schema.QueryGen, buf []byte) ([]byte, error) {
 	if m == nil {
 		return append(buf, []byte("'{}'")...), nil
 	}

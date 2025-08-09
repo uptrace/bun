@@ -416,7 +416,7 @@ func (m *Migrator) AppliedMigrations(ctx context.Context) (MigrationSlice, error
 }
 
 func (m *Migrator) formattedTableName(db *bun.DB) string {
-	return db.Formatter().FormatQuery(m.table)
+	return db.QueryGen().FormatQuery(m.table)
 }
 
 func (m *Migrator) validate() error {

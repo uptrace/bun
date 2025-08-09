@@ -98,7 +98,7 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	return f.IsZero(v)
 }
 
-func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []byte {
+func (f *Field) AppendValue(gen QueryGen, b []byte, strct reflect.Value) []byte {
 	fv, ok := fieldByIndex(strct, f.Index)
 	if !ok {
 		return dialect.AppendNull(b)
@@ -110,7 +110,7 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 	if f.Append == nil {
 		panic(fmt.Errorf("bun: AppendValue(unsupported %s)", fv.Type()))
 	}
-	return f.Append(fmter, b, fv)
+	return f.Append(gen, b, fv)
 }
 
 func (f *Field) ScanValue(strct reflect.Value, src any) error {

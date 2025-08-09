@@ -162,16 +162,16 @@ func (q *MergeQuery) Operation() string {
 	return "MERGE"
 }
 
-func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *MergeQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = appendComment(b, q.comment)
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -181,26 +181,26 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 		b = append(b, "INTO "...)
 	}
 
-	b, err = q.appendFirstTableWithAlias(fmter, b)
+	b, err = q.appendFirstTableWithAlias(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, " USING "...)
-	b, err = q.using.AppendQuery(fmter, b)
+	b, err = q.using.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, " ON "...)
-	b, err = q.on.AppendQuery(fmter, b)
+	b, err = q.on.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, w := range q.when {
 		b = append(b, " WHEN "...)
-		b, err = w.AppendQuery(fmter, b)
+		b, err = w.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 
 	if q.hasFeature(feature.Output) && q.hasReturning() {
 		b = append(b, " OUTPUT "...)
-		b, err = q.appendOutput(fmter, b)
+		b, err = q.appendOutput(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (q *MergeQuery) scanOrExec(
 	setCommentFromContext(ctx, q)
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +284,7 @@ func (q *MergeQuery) scanOrExec(
 // String returns the generated SQL query string. The MergeQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *MergeQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -298,11 +298,11 @@ type whenInsert struct {
 	query *InsertQuery
 }
 
-func (w *whenInsert) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (w *whenInsert) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, w.expr...)
 	if w.query != nil {
 		b = append(b, " THEN INSERT"...)
-		b, err = w.query.appendColumnsValues(fmter, b, true)
+		b, err = w.query.appendColumnsValues(gen, b, true)
 		if err != nil {
 			return nil, err
 		}
@@ -315,11 +315,11 @@ type whenUpdate struct {
 	query *UpdateQuery
 }
 
-func (w *whenUpdate) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (w *whenUpdate) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, w.expr...)
 	if w.query != nil {
 		b = append(b, " THEN UPDATE SET "...)
-		b, err = w.query.appendSet(fmter, b)
+		b, err = w.query.appendSet(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +331,7 @@ type whenDelete struct {
 	expr string
 }
 
-func (w *whenDelete) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (w *whenDelete) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, w.expr...)
 	b = append(b, " THEN DELETE"...)
 	return b, nil

@@ -66,8 +66,8 @@ func (c *Columns) String() string {
 	return string(*c)
 }
 
-func (c *Columns) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return schema.Safe(*c).AppendQuery(fmter, b)
+func (c *Columns) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
+	return schema.Safe(*c).AppendQuery(gen, b)
 }
 
 // Split returns a slice of column names that make up the composite.
