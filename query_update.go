@@ -17,13 +17,11 @@ type UpdateQuery struct {
 	whereBaseQuery
 	orderLimitOffsetQuery
 	returningQuery
-	customValueQuery
 	setQuery
 	idxHintsQuery
 
-	joins    []joinQuery
-	omitZero bool
-	comment  string
+	joins   []joinQuery
+	comment string
 }
 
 var _ Query = (*UpdateQuery)(nil)
@@ -345,8 +343,6 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 	pos := len(b)
 
 	switch model := q.model.(type) {
-	case *mapModel:
-		b = model.appendSet(fmter, b)
 	case *structTableModel:
 		if !model.strct.IsValid() { // Model((*Foo)(nil))
 			break
@@ -354,17 +350,29 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 		if len(q.set) > 0 && q.columns == nil {
 			break
 		}
-		b, err = q.appendSetStruct(fmter, b, model)
+
+		fields, err := q.getDataFields()
 		if err != nil {
 			return nil, err
 		}
+
+		b, err = q.appendSetStruct(fmter, b, model, fields)
+		if err != nil {
+			return nil, err
+		}
+
 	case *sliceTableModel:
 		if len(q.set) > 0 { // bulk-update
 			return q.appendSet(fmter, b)
 		}
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
+
+	case *mapModel:
+		b = model.appendSet(fmter, b)
+
 	case nil:
 		// continue below
+
 	default:
 		return nil, fmt.Errorf("bun: Update does not support %T", q.model)
 	}
@@ -379,67 +387,6 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 	if len(b) == pos {
 		return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
 	}
-	return b, nil
-}
-
-func (q *UpdateQuery) appendSetStruct(
-	fmter schema.Formatter, b []byte, model *structTableModel,
-) ([]byte, error) {
-	fields, err := q.getDataFields()
-	if err != nil {
-		return nil, err
-	}
-
-	isTemplate := fmter.IsNop()
-	pos := len(b)
-	for _, f := range fields {
-		if f.SkipUpdate() {
-			continue
-		}
-
-		app, hasValue := q.modelValues[f.Name]
-
-		if !hasValue && q.omitZero && f.HasZeroValue(model.strct) {
-			continue
-		}
-
-		if len(b) != pos {
-			b = append(b, ", "...)
-			pos = len(b)
-		}
-
-		b = append(b, f.SQLName...)
-		b = append(b, " = "...)
-
-		if isTemplate {
-			b = append(b, '?')
-			continue
-		}
-
-		if hasValue {
-			b, err = app.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b = f.AppendValue(fmter, b, model.strct)
-		}
-	}
-
-	for i, v := range q.extraValues {
-		if i > 0 || len(fields) > 0 {
-			b = append(b, ", "...)
-		}
-
-		b = append(b, v.column...)
-		b = append(b, " = "...)
-
-		b, err = v.value.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return b, nil
 }
 
