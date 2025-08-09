@@ -35,32 +35,8 @@
 - [**Get started**](https://bun.uptrace.dev/guide/golang-orm.html)
 - [Examples](https://github.com/uptrace/bun/tree/master/example)
 - [Discussions](https://github.com/uptrace/bun/discussions)
-- [Chat](https://discord.gg/rWtp5Aj)
 - [Reference](https://pkg.go.dev/github.com/uptrace/bun)
 - [Starter kit](https://github.com/go-bun/bun-starter-kit)
-
-### Tutorials
-
-Wrote a tutorial for Bun? Create a PR to add here and on [Bun](https://bun.uptrace.dev/) site.
-
-### Featured projects using Bun
-
-- [uptrace](https://github.com/uptrace/uptrace) - Distributed tracing and metrics.
-- [paralus](https://github.com/paralus/paralus) - All-in-one Kubernetes access manager.
-- [inovex/scrumlr.io](https://github.com/inovex/scrumlr.io) - Webapp for collaborative online
-  retrospectives.
-- [gotosocial](https://github.com/superseriousbusiness/gotosocial) - Golang fediverse server.
-- [lorawan-stack](https://github.com/TheThingsNetwork/lorawan-stack) - The Things Stack, an Open
-  Source LoRaWAN Network Server.
-- [anti-phishing-bot](https://github.com/Benricheson101/anti-phishing-bot) - Discord bot for
-  deleting Steam/Discord phishing links.
-- [emerald-web3-gateway](https://github.com/oasisprotocol/emerald-web3-gateway) - Web3 Gateway for
-  the Oasis Emerald paratime.
-- [lndhub.go](https://github.com/getAlby/lndhub.go) - accounting wrapper for the Lightning Network.
-- [penguin-statistics](https://github.com/penguin-statistics/backend-next) - Penguin Statistics v3
-  Backend.
-- And
-  [hundreds more](https://github.com/uptrace/bun/network/dependents?package_id=UGFja2FnZS0yMjkxOTc4OTA4).
 
 ## Why another database client?
 
@@ -129,12 +105,6 @@ if err := db.NewSelect().Model(user1).Where("id = ?", 1).Scan(ctx); err != nil {
 See [**Getting started**](https://bun.uptrace.dev/guide/golang-orm.html) guide and check
 [examples](example).
 
-## See also
-
-- [Golang HTTP router](https://github.com/uptrace/bunrouter)
-- [Golang ClickHouse ORM](https://github.com/uptrace/go-clickhouse)
-- [Golang msgpack](https://github.com/vmihailenco/msgpack)
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for some hints.
@@ -144,3 +114,8 @@ And thanks to all the people who already contributed!
 <a href="https://github.com/uptrace/bun/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=uptrace/bun" />
 </a>
+
+## See also
+
+- [Golang HTTP router](https://github.com/uptrace/bunrouter)
+- [Golang msgpack](https://github.com/vmihailenco/msgpack)
