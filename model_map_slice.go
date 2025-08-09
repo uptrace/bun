@@ -98,13 +98,6 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 	}
 	slice := *m.dest
 
-	b = append(b, "VALUES "...)
-	if m.db.HasFeature(feature.ValuesRow) {
-		b = append(b, "ROW("...)
-	} else {
-		b = append(b, '(')
-	}
-
 	if fmter.IsNop() {
 		for i := range m.keys {
 			if i > 0 {
@@ -132,8 +125,6 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 			b = schema.Append(fmter, b, el[key])
 		}
 	}
-
-	b = append(b, ')')
 
 	return b, nil
 }

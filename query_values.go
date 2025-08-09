@@ -131,27 +131,6 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	fmter = formatterWithModel(fmter, q)
 
-	if q.tableModel != nil {
-		fields, err := q.getFields()
-		if err != nil {
-			return nil, err
-		}
-		return q.appendQuery(fmter, b, fields)
-	}
-
-	switch model := q.model.(type) {
-	case *mapSliceModel:
-		return model.appendValues(fmter, b)
-	default:
-		return nil, fmt.Errorf("bun: Values does not support %T", q.model)
-	}
-}
-
-func (q *ValuesQuery) appendQuery(
-	fmter schema.Formatter,
-	b []byte,
-	fields []*schema.Field,
-) (_ []byte, err error) {
 	b = append(b, "VALUES "...)
 	if q.db.HasFeature(feature.ValuesRow) {
 		b = append(b, "ROW("...)
@@ -159,8 +138,13 @@ func (q *ValuesQuery) appendQuery(
 		b = append(b, '(')
 	}
 
-	switch model := q.tableModel.(type) {
+	switch model := q.model.(type) {
 	case *structTableModel:
+		fields, err := q.getFields()
+		if err != nil {
+			return nil, err
+		}
+
 		b, err = q.appendValues(fmter, b, fields, model.strct)
 		if err != nil {
 			return nil, err
@@ -170,10 +154,16 @@ func (q *ValuesQuery) appendQuery(
 			b = append(b, ", "...)
 			b = strconv.AppendInt(b, 0, 10)
 		}
+
 	case *sliceTableModel:
+		fields, err := q.getFields()
+		if err != nil {
+			return nil, err
+		}
+
 		slice := model.slice
 		sliceLen := slice.Len()
-		for i := 0; i < sliceLen; i++ {
+		for i := range sliceLen {
 			if i > 0 {
 				b = append(b, "), "...)
 				if q.db.HasFeature(feature.ValuesRow) {
@@ -193,12 +183,18 @@ func (q *ValuesQuery) appendQuery(
 				b = strconv.AppendInt(b, int64(i), 10)
 			}
 		}
+
+	case *mapSliceModel:
+		b, err = model.appendValues(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 	}
 
 	b = append(b, ')')
-
 	return b, nil
 }
 
