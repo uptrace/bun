@@ -120,8 +120,7 @@ func (d *Dialect) onField(field *schema.Field) {
 		return
 	}
 
-	if field.Tag.HasOption("multirange") {
-		field.Append = d.arrayAppender(field.StructField.Type)
+	if field.Tag.HasOption("multirange") || strings.HasSuffix(field.UserSQLType, "multirange") {
 		field.Scan = arrayScanner(field.StructField.Type)
 		return
 	}
