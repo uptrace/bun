@@ -18,8 +18,6 @@ import (
 
 const (
 	beforeAppendModelHookFlag internal.Flag = 1 << iota
-	beforeScanHookFlag
-	afterScanHookFlag
 	beforeScanRowHookFlag
 	afterScanRowHookFlag
 )
@@ -957,22 +955,16 @@ func (t *Table) Dialect() Dialect { return t.dialect }
 
 func (t *Table) HasBeforeAppendModelHook() bool { return t.flags.Has(beforeAppendModelHookFlag) }
 
-// DEPRECATED. Use HasBeforeScanRowHook.
-func (t *Table) HasBeforeScanHook() bool { return t.flags.Has(beforeScanHookFlag) }
-
-// DEPRECATED. Use HasAfterScanRowHook.
-func (t *Table) HasAfterScanHook() bool { return t.flags.Has(afterScanHookFlag) }
-
 func (t *Table) HasBeforeScanRowHook() bool { return t.flags.Has(beforeScanRowHookFlag) }
 func (t *Table) HasAfterScanRowHook() bool  { return t.flags.Has(afterScanRowHookFlag) }
 
 //------------------------------------------------------------------------------
 
 func (t *Table) AppendNamedArg(
-	fmter Formatter, b []byte, name string, strct reflect.Value,
+	gen QueryGen, b []byte, name string, strct reflect.Value,
 ) ([]byte, bool) {
 	if field, ok := t.FieldMap[name]; ok {
-		return field.AppendValue(fmter, b, strct), true
+		return field.AppendValue(gen, b, strct), true
 	}
 	return b, false
 }
@@ -988,7 +980,7 @@ func (t *Table) quoteTableName(s string) Safe {
 }
 
 func (t *Table) quoteIdent(s string) Safe {
-	return Safe(NewFormatter(t.dialect).AppendIdent(nil, s))
+	return Safe(NewQueryGen(t.dialect).AppendIdent(nil, s))
 }
 
 func isKnownTableOption(name string) bool {

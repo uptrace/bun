@@ -253,52 +253,52 @@ func (q *UpdateQuery) Operation() string {
 	return "UPDATE"
 }
 
-func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = appendComment(b, q.comment)
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, "UPDATE "...)
 
-	if fmter.HasFeature(feature.UpdateMultiTable) {
-		b, err = q.appendTablesWithAlias(fmter, b)
-	} else if fmter.HasFeature(feature.UpdateTableAlias) {
-		b, err = q.appendFirstTableWithAlias(fmter, b)
+	if gen.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendTablesWithAlias(gen, b)
+	} else if gen.HasFeature(feature.UpdateTableAlias) {
+		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
-		b, err = q.appendFirstTable(fmter, b)
+		b, err = q.appendFirstTable(gen, b)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendIndexHints(fmter, b)
+	b, err = q.appendIndexHints(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.mustAppendSet(fmter, b)
+	b, err = q.mustAppendSet(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if !fmter.HasFeature(feature.UpdateMultiTable) {
-		b, err = q.appendOtherTables(fmter, b)
+	if !gen.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendOtherTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	for _, j := range q.joins {
-		b, err = j.AppendQuery(fmter, b)
+		b, err = j.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -306,30 +306,30 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if q.hasFeature(feature.Output) && q.hasReturning() {
 		b = append(b, " OUTPUT "...)
-		b, err = q.appendOutput(fmter, b)
+		b, err = q.appendOutput(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.mustAppendWhere(fmter, b, q.hasTableAlias(fmter))
+	b, err = q.mustAppendWhere(gen, b, q.hasTableAlias(gen))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendOrder(fmter, b)
+	b, err = q.appendOrder(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendLimitOffset(fmter, b)
+	b, err = q.appendLimitOffset(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if q.hasFeature(feature.Returning) && q.hasReturning() {
 		b = append(b, " RETURNING "...)
-		b, err = q.appendReturning(fmter, b)
+		b, err = q.appendReturning(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -338,7 +338,7 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	return b, nil
 }
 
-func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) mustAppendSet(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, " SET "...)
 	pos := len(b)
 
@@ -356,19 +356,19 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 			return nil, err
 		}
 
-		b, err = q.appendSetStruct(fmter, b, model, fields)
+		b, err = q.appendSetStruct(gen, b, model, fields)
 		if err != nil {
 			return nil, err
 		}
 
 	case *sliceTableModel:
 		if len(q.set) > 0 { // bulk-update
-			return q.appendSet(fmter, b)
+			return q.appendSet(gen, b)
 		}
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
 
 	case *mapModel:
-		b = model.appendSet(fmter, b)
+		b = model.appendSet(gen, b)
 
 	case nil:
 		// continue below
@@ -381,7 +381,7 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 		if len(b) > pos {
 			b = append(b, ", "...)
 		}
-		return q.appendSet(fmter, b)
+		return q.appendSet(gen, b)
 	}
 
 	if len(b) == pos {
@@ -390,14 +390,14 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 	return b, nil
 }
 
-func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) appendOtherTables(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if !q.hasMultiTables() {
 		return b, nil
 	}
 
 	b = append(b, " FROM "...)
 
-	b, err = q.whereBaseQuery.appendOtherTables(fmter, b)
+	b, err = q.whereBaseQuery.appendOtherTables(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	set, err := q.updateSliceSet(q.db.fmter, model)
+	set, err := q.updateSliceSet(q.db.gen, model)
 	if err != nil {
 		q.setErr(err)
 		return q
@@ -427,11 +427,11 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		Model(model).
 		TableExpr("_data").
 		Set(set).
-		Where(q.updateSliceWhere(q.db.fmter, model))
+		Where(q.updateSliceWhere(q.db.gen, model))
 }
 
 func (q *UpdateQuery) updateSliceSet(
-	fmter schema.Formatter, model *sliceTableModel,
+	gen schema.QueryGen, model *sliceTableModel,
 ) (string, error) {
 	fields, err := q.getDataFields()
 	if err != nil {
@@ -448,7 +448,7 @@ func (q *UpdateQuery) updateSliceSet(
 			b = append(b, ", "...)
 			pos = len(b)
 		}
-		if fmter.HasFeature(feature.UpdateMultiTable) {
+		if gen.HasFeature(feature.UpdateMultiTable) {
 			b = append(b, model.table.SQLAlias...)
 			b = append(b, '.')
 		}
@@ -459,13 +459,13 @@ func (q *UpdateQuery) updateSliceSet(
 	return internal.String(b), nil
 }
 
-func (q *UpdateQuery) updateSliceWhere(fmter schema.Formatter, model *sliceTableModel) string {
+func (q *UpdateQuery) updateSliceWhere(gen schema.QueryGen, model *sliceTableModel) string {
 	var b []byte
 	for i, pk := range model.table.PKs {
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		if q.hasTableAlias(fmter) {
+		if q.hasTableAlias(gen) {
 			b = append(b, model.table.SQLAlias...)
 		} else {
 			b = append(b, model.table.SQLName...)
@@ -511,7 +511,7 @@ func (q *UpdateQuery) scanOrExec(
 	setCommentFromContext(ctx, q)
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -576,20 +576,20 @@ func (q *UpdateQuery) FQN(column string) Ident {
 	if q.table == nil {
 		panic("UpdateQuery.FQN requires a model")
 	}
-	if q.hasTableAlias(q.db.fmter) {
+	if q.hasTableAlias(q.db.gen) {
 		return Ident(q.table.Alias + "." + column)
 	}
 	return Ident(q.table.Name + "." + column)
 }
 
-func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
-	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
+func (q *UpdateQuery) hasTableAlias(gen schema.QueryGen) bool {
+	return gen.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
 
 // String returns the generated SQL query string. The UpdateQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *UpdateQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}

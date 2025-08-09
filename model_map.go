@@ -115,7 +115,7 @@ func (m *mapModel) scanRaw(src any) error {
 	return nil
 }
 
-func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte {
+func (m *mapModel) appendColumnsValues(gen schema.QueryGen, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -129,12 +129,12 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 	}
 
 	b = append(b, ") VALUES ("...)
 
-	isTemplate := fmter.IsNop()
+	isTemplate := gen.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -142,7 +142,7 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = schema.Append(fmter, b, m.m[k])
+			b = gen.Append(b, m.m[k])
 		}
 	}
 
@@ -151,7 +151,7 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 	return b
 }
 
-func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
+func (m *mapModel) appendSet(gen schema.QueryGen, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
@@ -159,18 +159,18 @@ func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
 	}
 	slices.Sort(keys)
 
-	isTemplate := fmter.IsNop()
+	isTemplate := gen.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
 
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 		b = append(b, " = "...)
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = schema.Append(fmter, b, m.m[k])
+			b = gen.Append(b, m.m[k])
 		}
 	}
 

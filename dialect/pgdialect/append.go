@@ -53,7 +53,7 @@ func (d *Dialect) hstoreAppender(typ reflect.Type) schema.AppenderFunc {
 		return appendMapStringStringValue
 	}
 
-	return func(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+	return func(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
 		err := fmt.Errorf("bun: Hstore(unsupported %s)", v.Type())
 		return dialect.AppendError(b, err)
 	}
@@ -81,7 +81,7 @@ func appendMapStringString(b []byte, m map[string]string) []byte {
 	return b
 }
 
-func appendMapStringStringValue(fmter schema.Formatter, b []byte, v reflect.Value) []byte {
+func appendMapStringStringValue(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
 	m := v.Convert(mapStringStringType).Interface().(map[string]string)
 	return appendMapStringString(b, m)
 }

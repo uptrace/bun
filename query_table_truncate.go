@@ -94,7 +94,7 @@ func (q *TruncateTableQuery) Operation() string {
 }
 
 func (q *TruncateTableQuery) AppendQuery(
-	fmter schema.Formatter, b []byte,
+	gen schema.QueryGen, b []byte,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -102,10 +102,10 @@ func (q *TruncateTableQuery) AppendQuery(
 
 	b = appendComment(b, q.comment)
 
-	if !fmter.HasFeature(feature.TableTruncate) {
+	if !gen.HasFeature(feature.TableTruncate) {
 		b = append(b, "DELETE FROM "...)
 
-		b, err = q.appendTables(fmter, b)
+		b, err = q.appendTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func (q *TruncateTableQuery) AppendQuery(
 
 	b = append(b, "TRUNCATE TABLE "...)
 
-	b, err = q.appendTables(fmter, b)
+	b, err = q.appendTables(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (q *TruncateTableQuery) AppendQuery(
 		}
 	}
 
-	b = q.appendCascade(fmter, b)
+	b = q.appendCascade(gen, b)
 
 	return b, nil
 }
@@ -139,7 +139,7 @@ func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...any) (sql.Result,
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

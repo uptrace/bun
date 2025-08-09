@@ -901,7 +901,7 @@ type UserID struct {
 	ID string
 }
 
-func (u UserID) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+func (u UserID) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
 	v := []byte(`"` + u.ID + `"`)
 	return append(b, v...), nil
 }

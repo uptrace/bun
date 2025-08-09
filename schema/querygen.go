@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -11,46 +12,86 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
-var nopFormatter = Formatter{
+var nopQueryGen = QueryGen{
 	dialect: newNopDialect(),
 }
 
-type Formatter struct {
+type QueryGen struct {
 	dialect Dialect
 	args    *namedArgList
 }
 
-func NewFormatter(dialect Dialect) Formatter {
-	return Formatter{
+func NewQueryGen(dialect Dialect) QueryGen {
+	return QueryGen{
 		dialect: dialect,
 	}
 }
 
-func NewNopFormatter() Formatter {
-	return nopFormatter
+func NewNopQueryGen() QueryGen {
+	return nopQueryGen
 }
 
-func (f Formatter) IsNop() bool {
+func (f QueryGen) IsNop() bool {
 	return f.dialect.Name() == dialect.Invalid
 }
 
-func (f Formatter) Dialect() Dialect {
+func (f QueryGen) Dialect() Dialect {
 	return f.dialect
 }
 
-func (f Formatter) IdentQuote() byte {
+func (f QueryGen) IdentQuote() byte {
 	return f.dialect.IdentQuote()
 }
 
-func (f Formatter) AppendName(b []byte, name string) []byte {
+func (gen QueryGen) Append(b []byte, v any) []byte {
+	switch v := v.(type) {
+	case nil:
+		return dialect.AppendNull(b)
+	case bool:
+		return dialect.AppendBool(b, v)
+	case int:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int32:
+		return strconv.AppendInt(b, int64(v), 10)
+	case int64:
+		return strconv.AppendInt(b, v, 10)
+	case uint:
+		return strconv.AppendInt(b, int64(v), 10)
+	case uint32:
+		return gen.Dialect().AppendUint32(b, v)
+	case uint64:
+		return gen.Dialect().AppendUint64(b, v)
+	case float32:
+		return dialect.AppendFloat32(b, v)
+	case float64:
+		return dialect.AppendFloat64(b, v)
+	case string:
+		return gen.Dialect().AppendString(b, v)
+	case time.Time:
+		return gen.Dialect().AppendTime(b, v)
+	case []byte:
+		return gen.Dialect().AppendBytes(b, v)
+	case QueryAppender:
+		return AppendQueryAppender(gen, b, v)
+	default:
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.Ptr && vv.IsNil() {
+			return dialect.AppendNull(b)
+		}
+		appender := Appender(gen.Dialect(), vv.Type())
+		return appender(gen, b, vv)
+	}
+}
+
+func (f QueryGen) AppendName(b []byte, name string) []byte {
 	return dialect.AppendName(b, name, f.IdentQuote())
 }
 
-func (f Formatter) AppendIdent(b []byte, ident string) []byte {
+func (f QueryGen) AppendIdent(b []byte, ident string) []byte {
 	return dialect.AppendIdent(b, ident, f.IdentQuote())
 }
 
-func (f Formatter) AppendValue(b []byte, v reflect.Value) []byte {
+func (f QueryGen) AppendValue(b []byte, v reflect.Value) []byte {
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return dialect.AppendNull(b)
 	}
@@ -58,39 +99,39 @@ func (f Formatter) AppendValue(b []byte, v reflect.Value) []byte {
 	return appender(f, b, v)
 }
 
-func (f Formatter) HasFeature(feature feature.Feature) bool {
+func (f QueryGen) HasFeature(feature feature.Feature) bool {
 	return f.dialect.Features().Has(feature)
 }
 
-func (f Formatter) WithArg(arg NamedArgAppender) Formatter {
-	return Formatter{
+func (f QueryGen) WithArg(arg NamedArgAppender) QueryGen {
+	return QueryGen{
 		dialect: f.dialect,
 		args:    f.args.WithArg(arg),
 	}
 }
 
-func (f Formatter) WithNamedArg(name string, value any) Formatter {
-	return Formatter{
+func (f QueryGen) WithNamedArg(name string, value any) QueryGen {
+	return QueryGen{
 		dialect: f.dialect,
 		args:    f.args.WithArg(&namedArg{name: name, value: value}),
 	}
 }
 
-func (f Formatter) FormatQuery(query string, args ...any) string {
+func (f QueryGen) FormatQuery(query string, args ...any) string {
 	if f.IsNop() || (args == nil && f.args == nil) || strings.IndexByte(query, '?') == -1 {
 		return query
 	}
 	return internal.String(f.AppendQuery(nil, query, args...))
 }
 
-func (f Formatter) AppendQuery(dst []byte, query string, args ...any) []byte {
+func (f QueryGen) AppendQuery(dst []byte, query string, args ...any) []byte {
 	if f.IsNop() || (args == nil && f.args == nil) || strings.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.NewString(query), args)
 }
 
-func (f Formatter) append(dst []byte, p *parser.Parser, args []any) []byte {
+func (f QueryGen) append(dst []byte, p *parser.Parser, args []any) []byte {
 	var namedArgs NamedArgAppender
 	if len(args) == 1 {
 		if v, ok := args[0].(NamedArgAppender); ok {
@@ -162,23 +203,23 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []any) []byte {
 	return dst
 }
 
-func (f Formatter) appendArg(b []byte, arg any) []byte {
+func (gen QueryGen) appendArg(b []byte, arg any) []byte {
 	switch arg := arg.(type) {
 	case QueryAppender:
-		bb, err := arg.AppendQuery(f, b)
+		bb, err := arg.AppendQuery(gen, b)
 		if err != nil {
 			return dialect.AppendError(b, err)
 		}
 		return bb
 	default:
-		return Append(f, b, arg)
+		return gen.Append(b, arg)
 	}
 }
 
 //------------------------------------------------------------------------------
 
 type NamedArgAppender interface {
-	AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool)
+	AppendNamedArg(gen QueryGen, b []byte, name string) ([]byte, bool)
 }
 
 type namedArgList struct {
@@ -193,9 +234,9 @@ func (l *namedArgList) WithArg(arg NamedArgAppender) *namedArgList {
 	}
 }
 
-func (l *namedArgList) AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool) {
+func (l *namedArgList) AppendNamedArg(gen QueryGen, b []byte, name string) ([]byte, bool) {
 	for l != nil && l.arg != nil {
-		if b, ok := l.arg.AppendNamedArg(fmter, b, name); ok {
+		if b, ok := l.arg.AppendNamedArg(gen, b, name); ok {
 			return b, true
 		}
 		l = l.next
@@ -212,9 +253,9 @@ type namedArg struct {
 
 var _ NamedArgAppender = (*namedArg)(nil)
 
-func (a *namedArg) AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool) {
+func (a *namedArg) AppendNamedArg(gen QueryGen, b []byte, name string) ([]byte, bool) {
 	if a.name == name {
-		return fmter.appendArg(b, a.value), true
+		return gen.appendArg(b, a.value), true
 	}
 	return b, false
 }
@@ -228,7 +269,7 @@ type structArgs struct {
 
 var _ NamedArgAppender = (*structArgs)(nil)
 
-func newStructArgs(fmter Formatter, strct any) (*structArgs, bool) {
+func newStructArgs(gen QueryGen, strct any) (*structArgs, bool) {
 	v := reflect.ValueOf(strct)
 	if !v.IsValid() {
 		return nil, false
@@ -240,11 +281,11 @@ func newStructArgs(fmter Formatter, strct any) (*structArgs, bool) {
 	}
 
 	return &structArgs{
-		table: fmter.Dialect().Tables().Get(v.Type()),
+		table: gen.Dialect().Tables().Get(v.Type()),
 		strct: v,
 	}, true
 }
 
-func (m *structArgs) AppendNamedArg(fmter Formatter, b []byte, name string) ([]byte, bool) {
-	return m.table.AppendNamedArg(fmter, b, name, m.strct)
+func (m *structArgs) AppendNamedArg(gen QueryGen, b []byte, name string) ([]byte, bool) {
+	return m.table.AppendNamedArg(gen, b, name, m.strct)
 }

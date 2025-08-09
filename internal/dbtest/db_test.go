@@ -1958,7 +1958,7 @@ type notCompareKey struct {
 	s string
 }
 
-func (x *notCompareKey) AppendQuery(_ schema.Formatter, b []byte) ([]byte, error) {
+func (x *notCompareKey) AppendQuery(_ schema.QueryGen, b []byte) ([]byte, error) {
 	b = append(b, '\'')
 	b = append(b, x.s...)
 	return append(b, '\''), nil

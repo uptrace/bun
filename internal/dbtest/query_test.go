@@ -1853,7 +1853,7 @@ func TestQuery(t *testing.T) {
 			t.Run(fmt.Sprintf("%d", tt.id), func(t *testing.T) {
 				q := tt.query(db)
 
-				query, err := q.AppendQuery(db.Formatter(), nil)
+				query, err := q.AppendQuery(db.QueryGen(), nil)
 				if err != nil {
 					cupaloy.SnapshotT(t, err.Error())
 				} else {

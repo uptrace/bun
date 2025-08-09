@@ -77,7 +77,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	return n, nil
 }
 
-func (m *mapSliceModel) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -86,19 +86,19 @@ func (m *mapSliceModel) appendColumns(fmter schema.Formatter, b []byte) (_ []byt
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 	}
 
 	return b, nil
 }
 
-func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendValues(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
 	slice := *m.dest
 
-	if fmter.IsNop() {
+	if gen.IsNop() {
 		for i := range m.keys {
 			if i > 0 {
 				b = append(b, ", "...)
@@ -122,7 +122,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 			if j > 0 {
 				b = append(b, ", "...)
 			}
-			b = schema.Append(fmter, b, el[key])
+			b = gen.Append(b, el[key])
 		}
 	}
 

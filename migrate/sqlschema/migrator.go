@@ -41,9 +41,9 @@ func NewBaseMigrator(db *bun.DB) *BaseMigrator {
 }
 
 func (m *BaseMigrator) AppendCreateTable(b []byte, model any) ([]byte, error) {
-	return m.db.NewCreateTable().Model(model).AppendQuery(m.db.Formatter(), b)
+	return m.db.NewCreateTable().Model(model).AppendQuery(m.db.QueryGen(), b)
 }
 
 func (m *BaseMigrator) AppendDropTable(b []byte, schemaName, tableName string) ([]byte, error) {
-	return m.db.NewDropTable().TableExpr("?.?", bun.Ident(schemaName), bun.Ident(tableName)).AppendQuery(m.db.Formatter(), b)
+	return m.db.NewDropTable().TableExpr("?.?", bun.Ident(schemaName), bun.Ident(tableName)).AppendQuery(m.db.QueryGen(), b)
 }

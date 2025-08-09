@@ -48,11 +48,11 @@ var (
 	_ sql.Scanner          = (*HStoreValue)(nil)
 )
 
-func (h *HStoreValue) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+func (h *HStoreValue) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
 	if h.append == nil {
 		panic(fmt.Errorf("bun: HStore(unsupported %s)", h.v.Type()))
 	}
-	return h.append(fmter, b, h.v), nil
+	return h.append(gen, b, h.v), nil
 }
 
 func (h *HStoreValue) Scan(src any) error {

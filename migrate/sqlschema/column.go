@@ -14,7 +14,7 @@ type Column interface {
 	GetIsNullable() bool
 	GetIsAutoIncrement() bool
 	GetIsIdentity() bool
-	AppendQuery(schema.Formatter, []byte) ([]byte, error)
+	AppendQuery(schema.QueryGen, []byte) ([]byte, error)
 }
 
 var _ Column = (*BaseColumn)(nil)
@@ -63,7 +63,7 @@ func (cd BaseColumn) GetIsIdentity() bool {
 }
 
 // AppendQuery appends full SQL data type.
-func (c *BaseColumn) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (c *BaseColumn) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, c.SQLType...)
 	if c.VarcharLen == 0 {
 		return b, nil

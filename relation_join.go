@@ -81,7 +81,7 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 	}
 	where = append(where, " IN ("...)
 	where = appendChildValues(
-		q.db.Formatter(),
+		q.db.QueryGen(),
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
@@ -90,7 +90,7 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 	where = append(where, ")"...)
 	if len(j.additionalJoinOnConditions) > 0 {
 		where = append(where, " AND "...)
-		where = appendAdditionalJoinOnConditions(q.db.Formatter(), where, j.additionalJoinOnConditions)
+		where = appendAdditionalJoinOnConditions(q.db.QueryGen(), where, j.additionalJoinOnConditions)
 	}
 
 	q = q.Where(internal.String(where))
@@ -107,7 +107,7 @@ func (j *relationJoin) manyQueryCompositeIn(where []byte, q *SelectQuery) *Selec
 
 func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery {
 	where = appendMultiValues(
-		q.db.Formatter(),
+		q.db.QueryGen(),
 		where,
 		j.JoinModel.rootValue(),
 		j.JoinModel.parentIndex(),
@@ -119,7 +119,7 @@ func (j *relationJoin) manyQueryMulti(where []byte, q *SelectQuery) *SelectQuery
 	q = q.Where(internal.String(where))
 
 	if len(j.additionalJoinOnConditions) > 0 {
-		q = q.Where(internal.String(appendAdditionalJoinOnConditions(q.db.Formatter(), []byte{}, j.additionalJoinOnConditions)))
+		q = q.Where(internal.String(appendAdditionalJoinOnConditions(q.db.QueryGen(), []byte{}, j.additionalJoinOnConditions)))
 	}
 
 	if j.Relation.PolymorphicField != nil {
@@ -152,7 +152,7 @@ func (j *relationJoin) hasManyColumns(q *SelectQuery) *SelectQuery {
 			}
 
 			var err error
-			b, err = col.AppendQuery(q.db.fmter, b)
+			b, err = col.AppendQuery(q.db.gen, b)
 			if err != nil {
 				q.setErr(err)
 				return q
@@ -177,7 +177,7 @@ func (j *relationJoin) selectM2M(ctx context.Context, q *SelectQuery) error {
 }
 
 func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
-	fmter := q.db.fmter
+	gen := q.db.gen
 
 	m2mModel := newM2MModel(j)
 	if m2mModel == nil {
@@ -200,7 +200,7 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	//nolint
 	var join []byte
 	join = append(join, "JOIN "...)
-	join = fmter.AppendQuery(join, string(j.Relation.M2MTable.SQLName))
+	join = gen.AppendQuery(join, string(j.Relation.M2MTable.SQLName))
 	join = append(join, " AS "...)
 	join = append(join, j.Relation.M2MTable.SQLAlias...)
 	join = append(join, " ON ("...)
@@ -213,12 +213,12 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 		join = append(join, col.SQLName...)
 	}
 	join = append(join, ") IN ("...)
-	join = appendChildValues(fmter, join, j.BaseModel.rootValue(), index, j.Relation.BasePKs)
+	join = appendChildValues(gen, join, j.BaseModel.rootValue(), index, j.Relation.BasePKs)
 	join = append(join, ")"...)
 
 	if len(j.additionalJoinOnConditions) > 0 {
 		join = append(join, " AND "...)
-		join = appendAdditionalJoinOnConditions(fmter, join, j.additionalJoinOnConditions)
+		join = appendAdditionalJoinOnConditions(gen, join, j.additionalJoinOnConditions)
 	}
 
 	q = q.Join(internal.String(join))
@@ -247,8 +247,8 @@ func (j *relationJoin) hasParent() bool {
 	return false
 }
 
-func (j *relationJoin) appendAlias(fmter schema.Formatter, b []byte) []byte {
-	quote := fmter.IdentQuote()
+func (j *relationJoin) appendAlias(gen schema.QueryGen, b []byte) []byte {
+	quote := gen.IdentQuote()
 
 	b = append(b, quote)
 	b = appendAlias(b, j)
@@ -256,8 +256,8 @@ func (j *relationJoin) appendAlias(fmter schema.Formatter, b []byte) []byte {
 	return b
 }
 
-func (j *relationJoin) appendAliasColumn(fmter schema.Formatter, b []byte, column string) []byte {
-	quote := fmter.IdentQuote()
+func (j *relationJoin) appendAliasColumn(gen schema.QueryGen, b []byte, column string) []byte {
+	quote := gen.IdentQuote()
 
 	b = append(b, quote)
 	b = appendAlias(b, j)
@@ -267,8 +267,8 @@ func (j *relationJoin) appendAliasColumn(fmter schema.Formatter, b []byte, colum
 	return b
 }
 
-func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte {
-	quote := fmter.IdentQuote()
+func (j *relationJoin) appendBaseAlias(gen schema.QueryGen, b []byte) []byte {
+	quote := gen.IdentQuote()
 
 	if j.hasParent() {
 		b = append(b, quote)
@@ -280,7 +280,7 @@ func (j *relationJoin) appendBaseAlias(fmter schema.Formatter, b []byte) []byte 
 }
 
 func (j *relationJoin) appendSoftDelete(
-	fmter schema.Formatter, b []byte, flags internal.Flag,
+	gen schema.QueryGen, b []byte, flags internal.Flag,
 ) []byte {
 	b = append(b, '.')
 
@@ -299,7 +299,7 @@ func (j *relationJoin) appendSoftDelete(
 		} else {
 			b = append(b, " = "...)
 		}
-		b = fmter.Dialect().AppendTime(b, time.Time{})
+		b = gen.Dialect().AppendTime(b, time.Time{})
 	}
 
 	return b
@@ -315,14 +315,14 @@ func appendAlias(b []byte, j *relationJoin) []byte {
 }
 
 func (j *relationJoin) appendHasOneJoin(
-	fmter schema.Formatter, b []byte, q *SelectQuery,
+	gen schema.QueryGen, b []byte, q *SelectQuery,
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
 	b = append(b, "LEFT JOIN "...)
-	b = fmter.AppendQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
+	b = gen.AppendQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
 	b = append(b, " AS "...)
-	b = j.appendAlias(fmter, b)
+	b = j.appendAlias(gen, b)
 
 	b = append(b, " ON "...)
 
@@ -331,11 +331,11 @@ func (j *relationJoin) appendHasOneJoin(
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = j.appendAlias(fmter, b)
+		b = j.appendAlias(gen, b)
 		b = append(b, '.')
 		b = append(b, j.Relation.JoinPKs[i].SQLName...)
 		b = append(b, " = "...)
-		b = j.appendBaseAlias(fmter, b)
+		b = j.appendBaseAlias(gen, b)
 		b = append(b, '.')
 		b = append(b, baseField.SQLName...)
 	}
@@ -343,20 +343,20 @@ func (j *relationJoin) appendHasOneJoin(
 
 	if isSoftDelete {
 		b = append(b, " AND "...)
-		b = j.appendAlias(fmter, b)
-		b = j.appendSoftDelete(fmter, b, q.flags)
+		b = j.appendAlias(gen, b)
+		b = j.appendSoftDelete(gen, b, q.flags)
 	}
 
 	if len(j.additionalJoinOnConditions) > 0 {
 		b = append(b, " AND "...)
-		b = appendAdditionalJoinOnConditions(fmter, b, j.additionalJoinOnConditions)
+		b = appendAdditionalJoinOnConditions(gen, b, j.additionalJoinOnConditions)
 	}
 
 	return b, nil
 }
 
 func appendChildValues(
-	fmter schema.Formatter, b []byte, v reflect.Value, index []int, fields []*schema.Field,
+	gen schema.QueryGen, b []byte, v reflect.Value, index []int, fields []*schema.Field,
 ) []byte {
 	seen := make(map[string]struct{})
 	walk(v, index, func(v reflect.Value) {
@@ -369,7 +369,7 @@ func appendChildValues(
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b = f.AppendValue(fmter, b, v)
+			b = f.AppendValue(gen, b, v)
 		}
 		if len(fields) > 1 {
 			b = append(b, ')')
@@ -391,7 +391,7 @@ func appendChildValues(
 // appendMultiValues is an alternative to appendChildValues that doesn't use the sql keyword ID
 // but instead uses old style ((k1=v1) AND (k2=v2)) OR (...) conditions.
 func appendMultiValues(
-	fmter schema.Formatter, b []byte, v reflect.Value, index []int, baseFields, joinFields []*schema.Field, joinTable schema.Safe,
+	gen schema.QueryGen, b []byte, v reflect.Value, index []int, baseFields, joinFields []*schema.Field, joinTable schema.Safe,
 ) []byte {
 	// This is based on a mix of appendChildValues and query_base.appendColumns
 
@@ -419,7 +419,7 @@ func appendMultiValues(
 
 			// Equals value
 			b = append(b, '=')
-			b = f.AppendValue(fmter, b, v)
+			b = f.AppendValue(gen, b, v)
 			if len(baseFields) > 1 {
 				b = append(b, ')')
 			}
@@ -441,13 +441,13 @@ func appendMultiValues(
 }
 
 func appendAdditionalJoinOnConditions(
-	fmter schema.Formatter, b []byte, conditions []schema.QueryWithArgs,
+	gen schema.QueryGen, b []byte, conditions []schema.QueryWithArgs,
 ) []byte {
 	for i, cond := range conditions {
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = fmter.AppendQuery(b, cond.Query, cond.Args...)
+		b = gen.AppendQuery(b, cond.Query, cond.Args...)
 	}
 	return b
 }

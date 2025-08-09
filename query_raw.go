@@ -86,10 +86,10 @@ func (q *RawQuery) scanOrExec(
 	return res, nil
 }
 
-func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+func (q *RawQuery) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
 	b = appendComment(b, q.comment)
 
-	return fmter.AppendQuery(b, q.query, q.args...), nil
+	return gen.AppendQuery(b, q.query, q.args...), nil
 }
 
 func (q *RawQuery) Operation() string {
@@ -99,7 +99,7 @@ func (q *RawQuery) Operation() string {
 // String returns the generated SQL query string. The RawQuery instance must not be
 // modified during query generation to ensure multiple calls to String() return identical results.
 func (q *RawQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}

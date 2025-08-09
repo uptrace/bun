@@ -32,7 +32,7 @@ func TestHStoreAppender(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			got := appendFunc(schema.NewFormatter(pgDialect), []byte{}, reflect.ValueOf(test.input))
+			got := appendFunc(schema.NewQueryGen(pgDialect), []byte{}, reflect.ValueOf(test.input))
 			require.Contains(t, test.expectedIn, string(got))
 		})
 	}

@@ -42,7 +42,7 @@ func TestArrayAppend(t *testing.T) {
 	}
 
 	for _, tcase := range tcases {
-		out, err := Array(tcase.input).AppendQuery(schema.NewFormatter(New()), []byte{})
+		out, err := Array(tcase.input).AppendQuery(schema.NewQueryGen(New()), []byte{})
 		if err != nil {
 			t.Fatal(err)
 		}
