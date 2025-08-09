@@ -20,39 +20,30 @@ type MultiRange[T any] []Range[T]
 type RangeBound byte
 
 const (
+	// RangeBoundUnset indicates that no bound is set.
+	// This usually means the range is uninitialized or unspecified.
+	RangeBoundUnset RangeBound = 0x0
+	// RangeBoundEmpty is a special marker for an empty range.
+	// This is NOT a valid PostgreSQL bound character, but is used internally
+	// to represent a range that contains no values.
+	RangeBoundEmpty RangeBound = 'E'
+
 	RangeBoundInclusiveLeft  RangeBound = '['
 	RangeBoundInclusiveRight RangeBound = ']'
 	RangeBoundExclusiveLeft  RangeBound = '('
 	RangeBoundExclusiveRight RangeBound = ')'
-	RangeBoundUnbound        RangeBound = 'U' // U is just a placeholder and has no actual meaning
-	RangeBoundEmpty          RangeBound = 'E' // E is just a placeholder and has no actual meaning
 )
 
 type RangeOption[T any] func(*Range[T])
 
-func NewRange[T any](lower, upper T, opts ...RangeOption[T]) Range[T] {
+func NewRange[T any](lower, upper T) Range[T] {
 	r := Range[T]{
 		Lower:      lower,
 		Upper:      upper,
 		LowerBound: RangeBoundInclusiveLeft,
 		UpperBound: RangeBoundExclusiveRight,
 	}
-	for _, opt := range opts {
-		opt(&r)
-	}
 	return r
-}
-
-func WithLowerBound[T any](bound RangeBound) RangeOption[T] {
-	return func(r *Range[T]) {
-		r.LowerBound = bound
-	}
-}
-
-func WithUpperBound[T any](bound RangeBound) RangeOption[T] {
-	return func(r *Range[T]) {
-		r.UpperBound = bound
-	}
 }
 
 func NewEmptyRange[T any]() Range[T] {
@@ -120,7 +111,7 @@ func (r *Range[T]) Scan(raw any) (err error) {
 			return err
 		}
 	} else {
-		r.LowerBound = RangeBoundUnbound
+		r.LowerBound = RangeBoundUnset
 	}
 
 	if len(right) > 0 {
@@ -129,7 +120,7 @@ func (r *Range[T]) Scan(raw any) (err error) {
 			return err
 		}
 	} else {
-		r.UpperBound = RangeBoundUnbound
+		r.UpperBound = RangeBoundUnset
 	}
 
 	return nil
@@ -150,7 +141,7 @@ func appendRange[T any](buf []byte, r Range[T]) []byte {
 		return buf
 	}
 
-	if r.LowerBound == RangeBoundUnbound {
+	if r.LowerBound == RangeBoundUnset {
 		// NOTE from pg's document:
 		// > Specifying a missing bound as inclusive is automatically converted to exclusive, e.g., [,] is converted to (,).
 		buf = append(buf, byte(RangeBoundExclusiveLeft))
@@ -159,7 +150,7 @@ func appendRange[T any](buf []byte, r Range[T]) []byte {
 		buf = appendElem(buf, r.Lower)
 	}
 	buf = append(buf, ',')
-	if r.UpperBound == RangeBoundUnbound {
+	if r.UpperBound == RangeBoundUnset {
 		buf = append(buf, byte(RangeBoundExclusiveRight))
 	} else {
 		buf = appendElem(buf, r.Upper)

@@ -41,15 +41,16 @@ func main() {
 			{Room: 1, DuringDate: pgdialect.NewRange(st, end)},
 			{Room: 2, During: pgdialect.NewRange(st, end)},
 			// left is unbound
-			{Room: 3, During: pgdialect.NewRange(
-				time.Time{}, end,
-				pgdialect.WithLowerBound[time.Time](pgdialect.RangeBoundUnbound))},
+			{Room: 3, During: pgdialect.Range[time.Time]{
+				Lower:      time.Time{},
+				Upper:      end,
+				UpperBound: pgdialect.RangeBoundExclusiveRight,
+			}},
 			// left & right is unbound
-			{Room: 4, During: pgdialect.NewRange[time.Time](
-				time.Time{}, time.Time{},
-				pgdialect.WithLowerBound[time.Time](pgdialect.RangeBoundUnbound),
-				pgdialect.WithUpperBound[time.Time](pgdialect.RangeBoundUnbound),
-			)},
+			{Room: 4, During: pgdialect.Range[time.Time]{
+				Lower: time.Time{},
+				Upper: time.Time{},
+			}},
 			// empty
 			{Room: 5, During: pgdialect.NewEmptyRange[time.Time]()},
 			// ptr
