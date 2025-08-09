@@ -1,6 +1,6 @@
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:25.3
+    image: clickhouse/clickhouse-server:25.3.5
     restart: on-failure
     environment:
       CLICKHOUSE_USER: uptrace
@@ -48,8 +48,8 @@ services:
     #environment:
     #  - DEBUG=2
     ports:
-      - '14317:14317'
-      - '14318:14318'
+      - '14317:4317'
+      - '14318:80'
     depends_on:
       - clickhouse
       - postgres

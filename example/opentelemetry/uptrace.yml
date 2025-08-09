@@ -50,13 +50,13 @@ listen:
     # Network address and port to bind to
     # Format: [host]:port or :port (binds to all interfaces)
     # Common values: :80, :8080, localhost:8080
-    addr: :14318
+    addr: :80
 
   # gRPC server configuration
   # Handles: OTLP/gRPC API for high-performance telemetry ingestion
   # Standard OTLP gRPC port is 4317
   grpc:
-    addr: :14317
+    addr: :4317
 
   # TLS/SSL configuration for HTTPS and secure gRPC
   # Uncomment and configure for production deployments

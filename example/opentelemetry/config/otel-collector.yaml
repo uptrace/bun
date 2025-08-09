@@ -20,6 +20,9 @@ receivers:
       memory:
       network:
       paging:
+  redis:
+    endpoint: 'redis:6379'
+    collection_interval: 10s
   postgresql:
     endpoint: postgres:5432
     transport: tcp
@@ -40,15 +43,12 @@ processors:
 exporters:
   debug:
   otlp/uptrace:
-    endpoint: http://uptrace:14317
+    endpoint: http://uptrace:4317
     tls:
       insecure: true
-    headers: { 'uptrace-dsn': 'http://project2_secret_token@localhost:14318?grpc=14317' }
+    headers: { 'uptrace-dsn': 'http://project1_secret@localhost:14318/1?grpc=14317' }
 
 service:
-  # telemetry:
-  #   logs:
-  #     level: DEBUG
   pipelines:
     traces:
       receivers: [otlp]
@@ -59,7 +59,7 @@ service:
       processors: [batch]
       exporters: [otlp/uptrace]
     metrics/hostmetrics:
-      receivers: [hostmetrics, postgresql]
+      receivers: [hostmetrics, redis, postgresql]
       processors: [batch, resourcedetection]
       exporters: [otlp/uptrace]
     logs:
