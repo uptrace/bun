@@ -1,0 +1,1 @@
+INSERT INTO "models" AS "model" ("name") VALUES ('name1') ON CONFLICT DO UPDATE SET "foo" = ''

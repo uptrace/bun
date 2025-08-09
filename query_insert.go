@@ -464,6 +464,11 @@ func (q *InsertQuery) Set(query string, args ...any) *InsertQuery {
 	return q
 }
 
+func (q *InsertQuery) SetValues(values *ValuesQuery) *InsertQuery {
+	q.setValues = values
+	return q
+}
+
 func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err error) {
 	if q.on.IsZero() {
 		return b, nil
@@ -475,7 +480,7 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		return nil, err
 	}
 
-	if len(q.set) > 0 {
+	if len(q.set) > 0 || q.setValues != nil {
 		if fmter.HasFeature(feature.InsertOnDuplicateKey) {
 			b = append(b, ' ')
 		} else {

@@ -1799,6 +1799,51 @@ func TestQuery(t *testing.T) {
 					Where("id = ?", 1)
 			},
 		},
+		{
+			id: 191,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				type Values struct {
+					Foo *string
+					Bar *int64
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				values := &Values{
+					Foo: new(string),
+				}
+				return db.NewInsert().
+					Model(model).
+					On("CONFLICT DO UPDATE").
+					SetValues(db.NewValues(values).OmitZero())
+			},
+		},
+		{
+			id: 192,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				type Values struct {
+					Foo *string
+					Bar *int64
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				values := map[string]any{
+					"foo": "string",
+					"bar": nil,
+				}
+				return db.NewInsert().
+					Model(model).
+					On("CONFLICT DO UPDATE").
+					SetValues(db.NewValues(&values))
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)

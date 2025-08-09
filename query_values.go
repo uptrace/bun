@@ -11,7 +11,7 @@ import (
 
 type ValuesQuery struct {
 	baseQuery
-	customValueQuery
+	setQuery
 
 	withOrder bool
 	comment   string
@@ -56,6 +56,11 @@ func (q *ValuesQuery) Value(column string, expr string, args ...any) *ValuesQuer
 		return q
 	}
 	q.addValue(q.table, column, expr, args)
+	return q
+}
+
+func (q *ValuesQuery) OmitZero() *ValuesQuery {
+	q.omitZero = true
 	return q
 }
 
@@ -161,8 +166,7 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 			return nil, err
 		}
 
-		slice := model.slice
-		sliceLen := slice.Len()
+		sliceLen := model.slice.Len()
 		for i := range sliceLen {
 			if i > 0 {
 				b = append(b, "), "...)
@@ -173,7 +177,7 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 				}
 			}
 
-			b, err = q.appendValues(fmter, b, fields, slice.Index(i))
+			b, err = q.appendValues(fmter, b, fields, model.slice.Index(i))
 			if err != nil {
 				return nil, err
 			}
@@ -191,7 +195,7 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 		}
 
 	default:
-		return nil, fmt.Errorf("bun: Values does not support %T", q.model)
+		return nil, fmt.Errorf("bun: Values does not support %T", model)
 	}
 
 	b = append(b, ')')
@@ -228,4 +232,19 @@ func (q *ValuesQuery) appendValues(
 		}
 	}
 	return b, nil
+}
+
+func (q *ValuesQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	switch model := q.model.(type) {
+	case *mapModel:
+		return model.appendSet(fmter, b), nil
+	case *structTableModel:
+		fields, err := q.getDataFields()
+		if err != nil {
+			return nil, err
+		}
+		return q.appendSetStruct(fmter, b, model, fields)
+	default:
+		return nil, fmt.Errorf("bun: SetValues(unsupported %T)", model)
+	}
 }

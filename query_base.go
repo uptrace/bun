@@ -1060,14 +1060,14 @@ func (q *returningQuery) hasReturning() bool {
 
 //------------------------------------------------------------------------------
 
-type columnValue struct {
-	column string
-	value  schema.QueryWithArgs
-}
-
 type customValueQuery struct {
 	modelValues map[string]schema.QueryWithArgs
 	extraValues []columnValue
+}
+
+type columnValue struct {
+	column string
+	value  schema.QueryWithArgs
 }
 
 func (q *customValueQuery) addValue(
@@ -1094,23 +1094,92 @@ func (q *customValueQuery) addValue(
 //------------------------------------------------------------------------------
 
 type setQuery struct {
-	set []schema.QueryWithArgs
+	set       []schema.QueryWithArgs
+	setValues *ValuesQuery
+	omitZero  bool
+	customValueQuery
 }
 
 func (q *setQuery) addSet(set schema.QueryWithArgs) {
 	q.set = append(q.set, set)
 }
 
-func (q setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	for i, f := range q.set {
-		if i > 0 {
-			b = append(b, ", "...)
-		}
-		b, err = f.AppendQuery(fmter, b)
+func (q *setQuery) appendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+	pos := len(b)
+
+	if q.setValues != nil {
+		b, err = q.setValues.appendSet(fmter, b)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	for _, query := range q.set {
+		if len(b) > pos {
+			b = append(b, ", "...)
+		}
+		b, err = query.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
+func (q *setQuery) appendSetStruct(
+	fmter schema.Formatter, b []byte, model *structTableModel, fields []*schema.Field,
+) (_ []byte, err error) {
+	isTemplate := fmter.IsNop()
+	pos := len(b)
+	for _, f := range fields {
+		if f.SkipUpdate() {
+			continue
+		}
+
+		app, hasValue := q.modelValues[f.Name]
+
+		if !hasValue && q.omitZero && f.HasZeroValue(model.strct) {
+			continue
+		}
+
+		if len(b) != pos {
+			b = append(b, ", "...)
+			pos = len(b)
+		}
+
+		b = append(b, f.SQLName...)
+		b = append(b, " = "...)
+
+		if isTemplate {
+			b = append(b, '?')
+			continue
+		}
+
+		if hasValue {
+			b, err = app.AppendQuery(fmter, b)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b = f.AppendValue(fmter, b, model.strct)
+		}
+	}
+
+	for i, v := range q.extraValues {
+		if i > 0 || len(fields) > 0 {
+			b = append(b, ", "...)
+		}
+
+		b = append(b, v.column...)
+		b = append(b, " = "...)
+
+		b, err = v.value.AppendQuery(fmter, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return b, nil
 }
 
