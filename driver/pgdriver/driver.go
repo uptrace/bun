@@ -24,14 +24,14 @@ func init() {
 }
 
 type logging interface {
-	Printf(ctx context.Context, format string, v ...interface{})
+	Printf(ctx context.Context, format string, v ...any)
 }
 
 type logger struct {
 	log *log.Logger
 }
 
-func (l *logger) Printf(ctx context.Context, format string, v ...interface{}) {
+func (l *logger) Printf(ctx context.Context, format string, v ...any) {
 	_ = l.log.Output(2, fmt.Sprintf(format, v...))
 }
 

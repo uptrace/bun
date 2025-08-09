@@ -9,7 +9,7 @@ import (
 	"github.com/uptrace/bun/dialect"
 )
 
-func Append(fmter Formatter, b []byte, v interface{}) []byte {
+func Append(fmter Formatter, b []byte, v any) []byte {
 	switch v := v.(type) {
 	case nil:
 		return dialect.AppendNull(b)
@@ -51,7 +51,7 @@ func Append(fmter Formatter, b []byte, v interface{}) []byte {
 
 //------------------------------------------------------------------------------
 
-func In(slice interface{}) QueryAppender {
+func In(slice any) QueryAppender {
 	v := reflect.ValueOf(slice)
 	if v.Kind() != reflect.Slice {
 		return &inValues{
@@ -107,14 +107,14 @@ func appendIn(fmter Formatter, b []byte, slice reflect.Value) []byte {
 
 //------------------------------------------------------------------------------
 
-func NullZero(value interface{}) QueryAppender {
+func NullZero(value any) QueryAppender {
 	return nullZero{
 		value: value,
 	}
 }
 
 type nullZero struct {
-	value interface{}
+	value any
 }
 
 func (nz nullZero) AppendQuery(fmter Formatter, b []byte) (_ []byte, err error) {

@@ -11,7 +11,7 @@ type isZeroer interface {
 	IsZero() bool
 }
 
-func isZero(v interface{}) bool {
+func isZero(v any) bool {
 	switch v := v.(type) {
 	case isZeroer:
 		return v.IsZero()

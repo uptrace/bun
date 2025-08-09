@@ -25,7 +25,7 @@ func NewTables(dialect Dialect) *Tables {
 	}
 }
 
-func (t *Tables) Register(models ...interface{}) {
+func (t *Tables) Register(models ...any) {
 	for _, model := range models {
 		_ = t.Get(reflect.TypeOf(model).Elem())
 	}

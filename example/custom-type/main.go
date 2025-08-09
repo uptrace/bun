@@ -65,7 +65,7 @@ func (tm Time) Value() (driver.Value, error) {
 var _ sql.Scanner = (*Time)(nil)
 
 // Scan scans the time parsing it if necessary using timeFormat.
-func (tm *Time) Scan(src interface{}) (err error) {
+func (tm *Time) Scan(src any) (err error) {
 	switch src := src.(type) {
 	case time.Time:
 		*tm = NewTime(src)

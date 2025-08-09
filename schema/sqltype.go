@@ -111,7 +111,7 @@ func (tm NullTime) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 	return fmter.Dialect().AppendTime(b, tm.Time), nil
 }
 
-func (tm *NullTime) Scan(src interface{}) error {
+func (tm *NullTime) Scan(src any) error {
 	if src == nil {
 		tm.Time = time.Time{}
 		return nil

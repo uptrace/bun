@@ -40,7 +40,7 @@ func (q *MergeQuery) Conn(db IConn) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) Model(model interface{}) *MergeQuery {
+func (q *MergeQuery) Model(model any) *MergeQuery {
 	q.setModel(model)
 	return q
 }
@@ -79,12 +79,12 @@ func (q *MergeQuery) Table(tables ...string) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) TableExpr(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) TableExpr(query string, args ...any) *MergeQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) ModelTableExpr(query string, args ...any) *MergeQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -95,19 +95,19 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...interface{}) *MergeQue
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 // Only for mssql output, postgres not supported returning in merge query
-func (q *MergeQuery) Returning(query string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) Returning(query string, args ...any) *MergeQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *MergeQuery) Using(s string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) Using(s string, args ...any) *MergeQuery {
 	q.using = schema.SafeQuery(s, args)
 	return q
 }
 
-func (q *MergeQuery) On(s string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) On(s string, args ...any) *MergeQuery {
 	q.on = schema.SafeQuery(s, args)
 	return q
 }
@@ -143,7 +143,7 @@ func (q *MergeQuery) WhenDelete(expr string) *MergeQuery {
 }
 
 // When for raw expression clause.
-func (q *MergeQuery) When(expr string, args ...interface{}) *MergeQuery {
+func (q *MergeQuery) When(expr string, args ...any) *MergeQuery {
 	q.when = append(q.when, schema.SafeQuery(expr, args))
 	return q
 }
@@ -222,17 +222,17 @@ func (q *MergeQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, er
 
 //------------------------------------------------------------------------------
 
-func (q *MergeQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *MergeQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
-func (q *MergeQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *MergeQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
 func (q *MergeQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err

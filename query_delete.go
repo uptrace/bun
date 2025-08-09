@@ -37,7 +37,7 @@ func (q *DeleteQuery) Conn(db IConn) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) Model(model interface{}) *DeleteQuery {
+func (q *DeleteQuery) Model(model any) *DeleteQuery {
 	q.setModel(model)
 	return q
 }
@@ -74,12 +74,12 @@ func (q *DeleteQuery) Table(tables ...string) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) TableExpr(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) TableExpr(query string, args ...any) *DeleteQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *DeleteQuery) ModelTableExpr(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) ModelTableExpr(query string, args ...any) *DeleteQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -91,12 +91,12 @@ func (q *DeleteQuery) WherePK(cols ...string) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) Where(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) Where(query string, args ...any) *DeleteQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *DeleteQuery) WhereOr(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) WhereOr(query string, args ...any) *DeleteQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
@@ -134,7 +134,7 @@ func (q *DeleteQuery) Order(orders ...string) *DeleteQuery {
 	return q
 }
 
-func (q *DeleteQuery) OrderExpr(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) OrderExpr(query string, args ...any) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
@@ -163,7 +163,7 @@ func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
-func (q *DeleteQuery) Returning(query string, args ...interface{}) *DeleteQuery {
+func (q *DeleteQuery) Returning(query string, args ...any) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteReturning) {
 		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
@@ -294,17 +294,17 @@ func (q *DeleteQuery) softDeleteSet(fmter schema.Formatter, tm time.Time) string
 
 //------------------------------------------------------------------------------
 
-func (q *DeleteQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *DeleteQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
-func (q *DeleteQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *DeleteQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
 func (q *DeleteQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -417,12 +417,12 @@ func (q *deleteQueryBuilder) WhereGroup(
 	return q
 }
 
-func (q *deleteQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+func (q *deleteQueryBuilder) Where(query string, args ...any) QueryBuilder {
 	q.DeleteQuery.Where(query, args...)
 	return q
 }
 
-func (q *deleteQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+func (q *deleteQueryBuilder) WhereOr(query string, args ...any) QueryBuilder {
 	q.DeleteQuery.WhereOr(query, args...)
 	return q
 }
@@ -442,6 +442,6 @@ func (q *deleteQueryBuilder) WherePK(cols ...string) QueryBuilder {
 	return q
 }
 
-func (q *deleteQueryBuilder) Unwrap() interface{} {
+func (q *deleteQueryBuilder) Unwrap() any {
 	return q.DeleteQuery
 }

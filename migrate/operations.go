@@ -32,7 +32,7 @@ type Operation interface {
 // statement, as those may potentially reference not-yet-existing columns/tables.
 type CreateTableOp struct {
 	TableName string
-	Model     interface{}
+	Model     any
 }
 
 var _ Operation = (*CreateTableOp)(nil)

@@ -17,7 +17,7 @@ type hasManyModel struct {
 	rel       *schema.Relation
 
 	baseValues map[internal.MapKey][]reflect.Value
-	structKey  []interface{}
+	structKey  []any
 }
 
 var _ TableModel = (*hasManyModel)(nil)
@@ -52,7 +52,7 @@ func (m *hasManyModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error
 	dest := makeDest(m, len(columns))
 
 	var n int
-	m.structKey = make([]interface{}, len(m.rel.JoinPKs))
+	m.structKey = make([]any, len(m.rel.JoinPKs))
 	for rows.Next() {
 		if m.sliceOfPtr {
 			m.strct = reflect.New(m.table.Type).Elem()
@@ -79,7 +79,7 @@ func (m *hasManyModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error
 	return n, nil
 }
 
-func (m *hasManyModel) Scan(src interface{}) error {
+func (m *hasManyModel) Scan(src any) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
@@ -143,7 +143,7 @@ func (m *hasManyModel) clone() TableModel {
 func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]reflect.Value {
 	fieldIndex := model.Relation().Field.Index
 	m := make(map[internal.MapKey][]reflect.Value)
-	key := make([]interface{}, 0, len(fields))
+	key := make([]any, 0, len(fields))
 	walk(model.rootValue(), model.parentIndex(), func(v reflect.Value) {
 		key = modelKey(key[:0], v, fields)
 		mapKey := internal.NewMapKey(key)
@@ -152,7 +152,7 @@ func baseValues(model TableModel, fields []*schema.Field) map[internal.MapKey][]
 	return m
 }
 
-func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []interface{} {
+func modelKey(key []any, strct reflect.Value, fields []*schema.Field) []any {
 	for _, f := range fields {
 		key = append(key, indirectAsKey(f.Value(strct)))
 	}
@@ -161,7 +161,7 @@ func modelKey(key []interface{}, strct reflect.Value, fields []*schema.Field) []
 
 // indirectAsKey return the field value dereferencing the pointer if necessary.
 // The value is then used as a map key.
-func indirectAsKey(field reflect.Value) interface{} {
+func indirectAsKey(field reflect.Value) any {
 	if field.Kind() == reflect.Pointer && field.IsNil() {
 		return nil
 	}

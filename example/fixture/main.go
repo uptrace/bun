@@ -19,7 +19,7 @@ type User struct {
 	ID        int64 `bun:",pk,autoincrement"`
 	Name      sql.NullString
 	Email     string
-	Attrs     map[string]interface{} `bun:",nullzero"`
+	Attrs     map[string]any `bun:",nullzero"`
 	CreatedAt time.Time
 	UpdatedAt sql.NullTime
 }

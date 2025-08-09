@@ -12,7 +12,7 @@ func ptr[T any](v T) *T {
 
 func TestArrayAppend(t *testing.T) {
 	tcases := []struct {
-		input interface{}
+		input any
 		out   string
 	}{
 		{

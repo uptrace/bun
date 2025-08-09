@@ -22,7 +22,7 @@ var (
 	_ schema.NamedArgAppender = (*ValuesQuery)(nil)
 )
 
-func NewValuesQuery(db *DB, model interface{}) *ValuesQuery {
+func NewValuesQuery(db *DB, model any) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
 			db: db,
@@ -50,7 +50,7 @@ func (q *ValuesQuery) Column(columns ...string) *ValuesQuery {
 }
 
 // Value overwrites model value for the column.
-func (q *ValuesQuery) Value(column string, expr string, args ...interface{}) *ValuesQuery {
+func (q *ValuesQuery) Value(column string, expr string, args ...any) *ValuesQuery {
 	if q.table == nil {
 		q.setErr(errNilModel)
 		return q

@@ -24,12 +24,12 @@ func hstoreScanner(typ reflect.Type) schema.ScannerFunc {
 	if typ.Key() == stringType && typ.Elem() == stringType {
 		return scanMapStringStringValue
 	}
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		return fmt.Errorf("bun: Hstore(unsupported %s)", dest.Type())
 	}
 }
 
-func scanMapStringStringValue(dest reflect.Value, src interface{}) error {
+func scanMapStringStringValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -44,7 +44,7 @@ func scanMapStringStringValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func decodeMapStringString(src interface{}) (map[string]string, error) {
+func decodeMapStringString(src any) (map[string]string, error) {
 	if src == nil {
 		return nil, nil
 	}

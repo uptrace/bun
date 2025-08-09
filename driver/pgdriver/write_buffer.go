@@ -7,7 +7,7 @@ import (
 )
 
 var wbPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return newWriteBuffer()
 	},
 }

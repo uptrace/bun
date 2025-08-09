@@ -11,20 +11,20 @@ import (
 type scanModel struct {
 	db *DB
 
-	dest      []interface{}
+	dest      []any
 	scanIndex int
 }
 
 var _ Model = (*scanModel)(nil)
 
-func newScanModel(db *DB, dest []interface{}) *scanModel {
+func newScanModel(db *DB, dest []any) *scanModel {
 	return &scanModel{
 		db:   db,
 		dest: dest,
 	}
 }
 
-func (m *scanModel) Value() interface{} {
+func (m *scanModel) Value() any {
 	return m.dest
 }
 
@@ -47,7 +47,7 @@ func (m *scanModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
 	return rows.Scan(m.dest...)
 }
 
-func (m *scanModel) Scan(src interface{}) error {
+func (m *scanModel) Scan(src any) error {
 	dest := reflect.ValueOf(m.dest[m.scanIndex])
 	m.scanIndex++
 

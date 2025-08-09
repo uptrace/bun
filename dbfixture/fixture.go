@@ -57,7 +57,7 @@ func WithTemplateFuncs(funcMap template.FuncMap) FixtureOption {
 
 type BeforeInsertData struct {
 	Query *bun.InsertQuery
-	Model interface{}
+	Model any
 }
 
 type BeforeInsertFunc func(ctx context.Context, data *BeforeInsertData) error
@@ -78,7 +78,7 @@ type Fixture struct {
 	seenTables map[string]struct{}
 
 	funcMap   template.FuncMap
-	modelRows map[string]map[string]interface{}
+	modelRows map[string]map[string]any
 }
 
 func New(db bun.IDB, opts ...FixtureOption) *Fixture {
@@ -86,7 +86,7 @@ func New(db bun.IDB, opts ...FixtureOption) *Fixture {
 		db: db,
 
 		funcMap:   defaultFuncs(),
-		modelRows: make(map[string]map[string]interface{}),
+		modelRows: make(map[string]map[string]any),
 	}
 	for _, opt := range opts {
 		opt(f)
@@ -94,7 +94,7 @@ func New(db bun.IDB, opts ...FixtureOption) *Fixture {
 	return f
 }
 
-func (f *Fixture) Row(id string) (interface{}, error) {
+func (f *Fixture) Row(id string) (any, error) {
 	ss := strings.Split(id, ".")
 	if len(ss) != 2 {
 		return nil, fmt.Errorf("fixture: invalid row id: %q", id)
@@ -114,7 +114,7 @@ func (f *Fixture) Row(id string) (interface{}, error) {
 	return row, nil
 }
 
-func (f *Fixture) MustRow(id string) interface{} {
+func (f *Fixture) MustRow(id string) any {
 	row, err := f.Row(id)
 	if err != nil {
 		panic(err)
@@ -226,7 +226,7 @@ func (f *Fixture) addRow(ctx context.Context, table *schema.Table, row row) erro
 	if rowID != "" {
 		rows, ok := f.modelRows[table.TypeName]
 		if !ok {
-			rows = make(map[string]interface{})
+			rows = make(map[string]any)
 			f.modelRows[table.TypeName] = rows
 		}
 		rows[rowID] = model
@@ -244,7 +244,7 @@ func (f *Fixture) decodeField(strct reflect.Value, field *schema.Field, value *y
 	}
 
 	if ss := funcNameRE.FindStringSubmatch(value.Value); len(ss) > 0 {
-		if fn, ok := f.funcMap[ss[1]].(func() interface{}); ok {
+		if fn, ok := f.funcMap[ss[1]].(func() any); ok {
 			return scanFieldValue(strct, field, fn())
 		}
 	}
@@ -311,7 +311,7 @@ func (f *Fixture) truncateTable(ctx context.Context, table *schema.Table) error 
 	return nil
 }
 
-func (f *Fixture) eval(templ string) (interface{}, error) {
+func (f *Fixture) eval(templ string) (any, error) {
 	if v, ok := f.evalFuncCall(templ); ok {
 		return v, nil
 	}
@@ -330,7 +330,7 @@ func (f *Fixture) eval(templ string) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (f *Fixture) evalFuncCall(templ string) (interface{}, bool) {
+func (f *Fixture) evalFuncCall(templ string) (any, bool) {
 	tree, err := parse.Parse("", templ, "{{", "}}", f.funcMap)
 	if err != nil {
 		return nil, false
@@ -430,13 +430,13 @@ func asString(rv reflect.Value) string {
 
 func defaultFuncs() template.FuncMap {
 	return template.FuncMap{
-		"now": func() interface{} {
+		"now": func() any {
 			return time.Now()
 		},
 	}
 }
 
-func scanFieldValue(strct reflect.Value, field *schema.Field, value interface{}) error {
+func scanFieldValue(strct reflect.Value, field *schema.Field, value any) error {
 	if v := reflect.ValueOf(value); v.CanConvert(field.StructField.Type) {
 		field.Value(strct).Set(v.Convert(field.StructField.Type))
 		return nil

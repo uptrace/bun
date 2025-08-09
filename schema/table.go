@@ -43,7 +43,7 @@ type Table struct {
 
 	Type      reflect.Type
 	ZeroValue reflect.Value // reflect.Struct
-	ZeroIface interface{}   // struct pointer
+	ZeroIface any           // struct pointer
 
 	TypeName  string
 	ModelName string

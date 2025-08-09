@@ -65,7 +65,7 @@ func (i *Int) Value() (driver.Value, error) {
 	return (*big.Int)(i).String(), nil
 }
 
-func (i *Int) Scan(value interface{}) error {
+func (i *Int) Scan(value any) error {
 	var x sql.NullString
 
 	if err := x.Scan(value); err != nil {

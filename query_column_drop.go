@@ -31,7 +31,7 @@ func (q *DropColumnQuery) Conn(db IConn) *DropColumnQuery {
 	return q
 }
 
-func (q *DropColumnQuery) Model(model interface{}) *DropColumnQuery {
+func (q *DropColumnQuery) Model(model any) *DropColumnQuery {
 	q.setModel(model)
 	return q
 }
@@ -60,12 +60,12 @@ func (q *DropColumnQuery) Table(tables ...string) *DropColumnQuery {
 	return q
 }
 
-func (q *DropColumnQuery) TableExpr(query string, args ...interface{}) *DropColumnQuery {
+func (q *DropColumnQuery) TableExpr(query string, args ...any) *DropColumnQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *DropColumnQuery) ModelTableExpr(query string, args ...interface{}) *DropColumnQuery {
+func (q *DropColumnQuery) ModelTableExpr(query string, args ...any) *DropColumnQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -79,7 +79,7 @@ func (q *DropColumnQuery) Column(columns ...string) *DropColumnQuery {
 	return q
 }
 
-func (q *DropColumnQuery) ColumnExpr(query string, args ...interface{}) *DropColumnQuery {
+func (q *DropColumnQuery) ColumnExpr(query string, args ...any) *DropColumnQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -128,7 +128,7 @@ func (q *DropColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byt
 
 //------------------------------------------------------------------------------
 
-func (q *DropColumnQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *DropColumnQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 

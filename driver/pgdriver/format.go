@@ -12,7 +12,7 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-func formatQueryArgs(query string, args []interface{}) (string, error) {
+func formatQueryArgs(query string, args []any) (string, error) {
 	namedArgs := make([]driver.NamedValue, len(args))
 	for i, arg := range args {
 		namedArgs[i] = driver.NamedValue{Value: arg}
@@ -61,7 +61,7 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 	return internal.String(dst), nil
 }
 
-func appendArg(b []byte, v interface{}) ([]byte, error) {
+func appendArg(b []byte, v any) ([]byte, error) {
 	switch v := v.(type) {
 	case nil:
 		return append(b, "NULL"...), nil

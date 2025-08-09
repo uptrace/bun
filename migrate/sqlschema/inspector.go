@@ -268,5 +268,5 @@ type BunTable struct {
 	BaseTable
 
 	// Model stores the zero interface to the underlying Go struct.
-	Model interface{}
+	Model any
 }

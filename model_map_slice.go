@@ -12,14 +12,14 @@ import (
 
 type mapSliceModel struct {
 	mapModel
-	dest *[]map[string]interface{}
+	dest *[]map[string]any
 
 	keys []string
 }
 
 var _ Model = (*mapSliceModel)(nil)
 
-func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
+func newMapSliceModel(db *DB, dest *[]map[string]any) *mapSliceModel {
 	return &mapSliceModel{
 		mapModel: mapModel{
 			db: db,
@@ -28,7 +28,7 @@ func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
 	}
 }
 
-func (m *mapSliceModel) Value() interface{} {
+func (m *mapSliceModel) Value() any {
 	return m.dest
 }
 
@@ -37,7 +37,7 @@ func (m *mapSliceModel) SetCap(cap int) {
 		cap = 100
 	}
 	if slice := *m.dest; len(slice) < cap {
-		*m.dest = make([]map[string]interface{}, 0, cap)
+		*m.dest = make([]map[string]any, 0, cap)
 	}
 }
 
@@ -59,7 +59,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	var n int
 
 	for rows.Next() {
-		m.m = make(map[string]interface{}, len(m.columns))
+		m.m = make(map[string]any, len(m.columns))
 
 		m.scanIndex = 0
 		if err := rows.Scan(dest...); err != nil {

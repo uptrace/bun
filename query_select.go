@@ -52,7 +52,7 @@ func (q *SelectQuery) Conn(db IConn) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) Model(model interface{}) *SelectQuery {
+func (q *SelectQuery) Model(model any) *SelectQuery {
 	q.setModel(model)
 	return q
 }
@@ -87,7 +87,7 @@ func (q *SelectQuery) Distinct() *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) DistinctOn(query string, args ...any) *SelectQuery {
 	q.distinctOn = append(q.distinctOn, schema.SafeQuery(query, args))
 	return q
 }
@@ -101,12 +101,12 @@ func (q *SelectQuery) Table(tables ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) TableExpr(query string, args ...any) *SelectQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) ModelTableExpr(query string, args ...any) *SelectQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -120,7 +120,7 @@ func (q *SelectQuery) Column(columns ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) ColumnExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) ColumnExpr(query string, args ...any) *SelectQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -137,12 +137,12 @@ func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Where(query string, args ...any) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) WhereOr(query string, args ...any) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
@@ -266,12 +266,12 @@ func (q *SelectQuery) Group(columns ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) GroupExpr(group string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) GroupExpr(group string, args ...any) *SelectQuery {
 	q.group = append(q.group, schema.SafeQuery(group, args))
 	return q
 }
 
-func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Having(having string, args ...any) *SelectQuery {
 	q.having = append(q.having, schema.SafeQuery(having, args))
 	return q
 }
@@ -281,7 +281,7 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) OrderExpr(query string, args ...any) *SelectQuery {
 	q.addOrderExpr(query, args...)
 	return q
 }
@@ -296,7 +296,7 @@ func (q *SelectQuery) Offset(n int) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) For(s string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) For(s string, args ...any) *SelectQuery {
 	q.selFor = schema.SafeQuery(s, args)
 	return q
 }
@@ -337,22 +337,22 @@ func (q *SelectQuery) addUnion(expr string, other *SelectQuery) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Join(join string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) Join(join string, args ...any) *SelectQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
 
-func (q *SelectQuery) JoinOn(cond string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) JoinOn(cond string, args ...any) *SelectQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
-func (q *SelectQuery) JoinOnOr(cond string, args ...interface{}) *SelectQuery {
+func (q *SelectQuery) JoinOnOr(cond string, args ...any) *SelectQuery {
 	return q.joinOn(cond, args, " OR ")
 }
 
-func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *SelectQuery {
+func (q *SelectQuery) joinOn(cond string, args []any, sep string) *SelectQuery {
 	if len(q.joins) == 0 {
 		q.setErr(errors.New("bun: query has no joins"))
 		return q
@@ -807,7 +807,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	return rows, err
 }
 
-func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
+func (q *SelectQuery) Exec(ctx context.Context, dest ...any) (res sql.Result, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -845,12 +845,12 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 	return res, nil
 }
 
-func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *SelectQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanResult(ctx, dest...)
 	return err
 }
 
-func (q *SelectQuery) scanResult(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -954,7 +954,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	return num, err
 }
 
-func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
+func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int, error) {
 	if q.offset == 0 && q.limit == 0 {
 		// If there is no limit and offset, we can use a single query to get the count and scan
 		if res, err := q.scanResult(ctx, dest...); err != nil {
@@ -972,7 +972,7 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (in
 }
 
 func (q *SelectQuery) scanAndCountConcurrently(
-	ctx context.Context, dest ...interface{},
+	ctx context.Context, dest ...any,
 ) (int, error) {
 	var count int
 	var wg sync.WaitGroup
@@ -1018,7 +1018,7 @@ func (q *SelectQuery) scanAndCountConcurrently(
 	return count, firstErr
 }
 
-func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) (int, error) {
+func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...any) (int, error) {
 	var firstErr error
 
 	// Don't scan results if the user explicitly set Limit(-1).
@@ -1243,12 +1243,12 @@ func (q *selectQueryBuilder) WhereGroup(
 	return q
 }
 
-func (q *selectQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+func (q *selectQueryBuilder) Where(query string, args ...any) QueryBuilder {
 	q.SelectQuery.Where(query, args...)
 	return q
 }
 
-func (q *selectQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+func (q *selectQueryBuilder) WhereOr(query string, args ...any) QueryBuilder {
 	q.SelectQuery.WhereOr(query, args...)
 	return q
 }
@@ -1268,7 +1268,7 @@ func (q *selectQueryBuilder) WherePK(cols ...string) QueryBuilder {
 	return q
 }
 
-func (q *selectQueryBuilder) Unwrap() interface{} {
+func (q *selectQueryBuilder) Unwrap() any {
 	return q.SelectQuery
 }
 

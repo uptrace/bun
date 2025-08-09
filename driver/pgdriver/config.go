@@ -35,7 +35,7 @@ type Config struct {
 	Database string
 	AppName  string
 	// PostgreSQL session parameters updated with `SET` command when a connection is created.
-	ConnParams map[string]interface{}
+	ConnParams map[string]any
 
 	// Timeout for socket reads. If reached, commands fail with a timeout instead of blocking.
 	ReadTimeout time.Duration
@@ -165,7 +165,7 @@ func WithApplicationName(appName string) Option {
 	}
 }
 
-func WithConnParams(params map[string]interface{}) Option {
+func WithConnParams(params map[string]any) Option {
 	return func(conf *Config) {
 		conf.ConnParams = params
 	}
@@ -388,7 +388,7 @@ func parseDSN(dsn string) ([]Option, error) {
 	}
 
 	if len(rem) > 0 {
-		params := make(map[string]interface{}, len(rem))
+		params := make(map[string]any, len(rem))
 		for k, v := range rem {
 			params[k] = v
 		}

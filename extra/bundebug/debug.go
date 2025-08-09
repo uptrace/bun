@@ -99,7 +99,7 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 	now := time.Now()
 	dur := now.Sub(event.StartTime)
 
-	args := []interface{}{
+	args := []any{
 		"[bun]",
 		now.Format(" 15:04:05.000 "),
 		formatOperation(event),

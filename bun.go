@@ -22,7 +22,7 @@ type (
 	AfterScanRowHook  = schema.AfterScanRowHook
 )
 
-func SafeQuery(query string, args ...interface{}) schema.QueryWithArgs {
+func SafeQuery(query string, args ...any) schema.QueryWithArgs {
 	return schema.SafeQuery(query, args)
 }
 
@@ -79,10 +79,10 @@ func SetLogger(logger internal.Logging) {
 	internal.SetLogger(logger)
 }
 
-func In(slice interface{}) schema.QueryAppender {
+func In(slice any) schema.QueryAppender {
 	return schema.In(slice)
 }
 
-func NullZero(value interface{}) schema.QueryAppender {
+func NullZero(value any) schema.QueryAppender {
 	return schema.NullZero(value)
 }

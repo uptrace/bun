@@ -53,14 +53,14 @@ func (s Ident) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
 // NOTE: It should not be modified after creation.
 type QueryWithArgs struct {
 	Query string
-	Args  []interface{}
+	Args  []any
 }
 
 var _ QueryAppender = QueryWithArgs{}
 
-func SafeQuery(query string, args []interface{}) QueryWithArgs {
+func SafeQuery(query string, args []any) QueryWithArgs {
 	if args == nil {
-		args = make([]interface{}, 0)
+		args = make([]any, 0)
 	} else if len(query) > 0 && strings.IndexByte(query, '?') == -1 {
 		internal.Warn.Printf("query %q has %v args, but no placeholders", query, args)
 	}
@@ -92,7 +92,7 @@ type QueryWithSep struct {
 	Sep string
 }
 
-func SafeQueryWithSep(query string, args []interface{}, sep string) QueryWithSep {
+func SafeQueryWithSep(query string, args []any, sep string) QueryWithSep {
 	return QueryWithSep{
 		QueryWithArgs: SafeQuery(query, args),
 		Sep:           sep,

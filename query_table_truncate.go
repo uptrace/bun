@@ -33,7 +33,7 @@ func (q *TruncateTableQuery) Conn(db IConn) *TruncateTableQuery {
 	return q
 }
 
-func (q *TruncateTableQuery) Model(model interface{}) *TruncateTableQuery {
+func (q *TruncateTableQuery) Model(model any) *TruncateTableQuery {
 	q.setModel(model)
 	return q
 }
@@ -52,12 +52,12 @@ func (q *TruncateTableQuery) Table(tables ...string) *TruncateTableQuery {
 	return q
 }
 
-func (q *TruncateTableQuery) TableExpr(query string, args ...interface{}) *TruncateTableQuery {
+func (q *TruncateTableQuery) TableExpr(query string, args ...any) *TruncateTableQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *TruncateTableQuery) ModelTableExpr(query string, args ...interface{}) *TruncateTableQuery {
+func (q *TruncateTableQuery) ModelTableExpr(query string, args ...any) *TruncateTableQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -135,7 +135,7 @@ func (q *TruncateTableQuery) AppendQuery(
 
 //------------------------------------------------------------------------------
 
-func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *TruncateTableQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 

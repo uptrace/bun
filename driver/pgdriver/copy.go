@@ -12,14 +12,14 @@ import (
 
 // CopyFrom copies data from the reader to the query destination.
 func CopyFrom(
-	ctx context.Context, conn bun.Conn, r io.Reader, query string, args ...interface{},
+	ctx context.Context, conn bun.Conn, r io.Reader, query string, args ...any,
 ) (res sql.Result, err error) {
 	query, err = formatQueryArgs(query, args)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := conn.Raw(func(driverConn interface{}) error {
+	if err := conn.Raw(func(driverConn any) error {
 		cn := driverConn.(*Conn)
 
 		if err := writeQuery(ctx, cn, query); err != nil {
@@ -118,14 +118,14 @@ func writeCopyDone(ctx context.Context, cn *Conn) error {
 
 // CopyTo copies data from the query source to the writer.
 func CopyTo(
-	ctx context.Context, conn bun.Conn, w io.Writer, query string, args ...interface{},
+	ctx context.Context, conn bun.Conn, w io.Writer, query string, args ...any,
 ) (res sql.Result, err error) {
 	query, err = formatQueryArgs(query, args)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := conn.Raw(func(driverConn interface{}) error {
+	if err := conn.Raw(func(driverConn any) error {
 		cn := driverConn.(*Conn)
 
 		if err := writeQuery(ctx, cn, query); err != nil {

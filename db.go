@@ -122,7 +122,7 @@ func (db *DB) DBStats() DBStats {
 	}
 }
 
-func (db *DB) NewValues(model interface{}) *ValuesQuery {
+func (db *DB) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(db, model)
 }
 
@@ -146,7 +146,7 @@ func (db *DB) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(db)
 }
 
-func (db *DB) NewRaw(query string, args ...interface{}) *RawQuery {
+func (db *DB) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(db, query, args...)
 }
 
@@ -178,7 +178,7 @@ func (db *DB) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(db)
 }
 
-func (db *DB) ResetModel(ctx context.Context, models ...interface{}) error {
+func (db *DB) ResetModel(ctx context.Context, models ...any) error {
 	for _, model := range models {
 		if _, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx); err != nil {
 			return err
@@ -194,7 +194,7 @@ func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
 
-func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
+func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	defer rows.Close()
 
 	model, err := newModel(db, dest)
@@ -210,7 +210,7 @@ func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...interface{})
 	return rows.Err()
 }
 
-func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...interface{}) error {
+func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	model, err := newModel(db, dest)
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (db *DB) Table(typ reflect.Type) *schema.Table {
 
 // RegisterModel registers models by name so they can be referenced in table relations
 // and fixtures.
-func (db *DB) RegisterModel(models ...interface{}) {
+func (db *DB) RegisterModel(models ...any) {
 	db.dialect.Tables().Register(models...)
 }
 
@@ -261,7 +261,7 @@ func (db *DB) clone() *DB {
 	return &clone
 }
 
-func (db *DB) WithNamedArg(name string, value interface{}) *DB {
+func (db *DB) WithNamedArg(name string, value any) *DB {
 	clone := db.clone()
 	clone.fmter = clone.fmter.WithNamedArg(name, value)
 	return clone
@@ -287,12 +287,12 @@ func (db *DB) HasFeature(feat feature.Feature) bool {
 
 //------------------------------------------------------------------------------
 
-func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
 	return db.ExecContext(context.Background(), query, args...)
 }
 
 func (db *DB) ExecContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -301,12 +301,12 @@ func (db *DB) ExecContext(
 	return res, err
 }
 
-func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (db *DB) Query(query string, args ...any) (*sql.Rows, error) {
 	return db.QueryContext(context.Background(), query, args...)
 }
 
 func (db *DB) QueryContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -315,11 +315,11 @@ func (db *DB) QueryContext(
 	return rows, err
 }
 
-func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+func (db *DB) QueryRow(query string, args ...any) *sql.Row {
 	return db.QueryRowContext(context.Background(), query, args...)
 }
 
-func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+func (db *DB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := db.DB.QueryRowContext(ctx, formattedQuery)
@@ -327,7 +327,7 @@ func (db *DB) QueryRowContext(ctx context.Context, query string, args ...interfa
 	return row
 }
 
-func (db *DB) format(query string, args []interface{}) string {
+func (db *DB) format(query string, args []any) string {
 	return db.fmter.FormatQuery(query, args...)
 }
 
@@ -350,7 +350,7 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 }
 
 func (c Conn) ExecContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
 	formattedQuery := c.db.format(query, args)
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -360,7 +360,7 @@ func (c Conn) ExecContext(
 }
 
 func (c Conn) QueryContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
 	formattedQuery := c.db.format(query, args)
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -369,7 +369,7 @@ func (c Conn) QueryContext(
 	return rows, err
 }
 
-func (c Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+func (c Conn) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := c.db.format(query, args)
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := c.Conn.QueryRowContext(ctx, formattedQuery)
@@ -381,7 +381,7 @@ func (c Conn) Dialect() schema.Dialect {
 	return c.db.Dialect()
 }
 
-func (c Conn) NewValues(model interface{}) *ValuesQuery {
+func (c Conn) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
 }
 
@@ -405,7 +405,7 @@ func (c Conn) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(c.db).Conn(c)
 }
 
-func (c Conn) NewRaw(query string, args ...interface{}) *RawQuery {
+func (c Conn) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(c.db, query, args...).Conn(c)
 }
 
@@ -595,12 +595,12 @@ func (tx Tx) rollbackSP() error {
 	return err
 }
 
-func (tx Tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (tx Tx) Exec(query string, args ...any) (sql.Result, error) {
 	return tx.ExecContext(context.TODO(), query, args...)
 }
 
 func (tx Tx) ExecContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
 	formattedQuery := tx.db.format(query, args)
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -609,12 +609,12 @@ func (tx Tx) ExecContext(
 	return res, err
 }
 
-func (tx Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (tx Tx) Query(query string, args ...any) (*sql.Rows, error) {
 	return tx.QueryContext(context.TODO(), query, args...)
 }
 
 func (tx Tx) QueryContext(
-	ctx context.Context, query string, args ...interface{},
+	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
 	formattedQuery := tx.db.format(query, args)
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -623,11 +623,11 @@ func (tx Tx) QueryContext(
 	return rows, err
 }
 
-func (tx Tx) QueryRow(query string, args ...interface{}) *sql.Row {
+func (tx Tx) QueryRow(query string, args ...any) *sql.Row {
 	return tx.QueryRowContext(context.TODO(), query, args...)
 }
 
-func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := tx.db.format(query, args)
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := tx.Tx.QueryRowContext(ctx, formattedQuery)
@@ -695,7 +695,7 @@ func (tx Tx) Dialect() schema.Dialect {
 	return tx.db.Dialect()
 }
 
-func (tx Tx) NewValues(model interface{}) *ValuesQuery {
+func (tx Tx) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
 }
 
@@ -719,7 +719,7 @@ func (tx Tx) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(tx.db).Conn(tx)
 }
 
-func (tx Tx) NewRaw(query string, args ...interface{}) *RawQuery {
+func (tx Tx) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(tx.db, query, args...).Conn(tx)
 }
 

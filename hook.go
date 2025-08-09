@@ -18,14 +18,14 @@ type QueryEvent struct {
 	IQuery        Query
 	Query         string
 	QueryTemplate string
-	QueryArgs     []interface{}
+	QueryArgs     []any
 	Model         Model
 
 	StartTime time.Time
 	Result    sql.Result
 	Err       error
 
-	Stash map[interface{}]interface{}
+	Stash map[any]any
 }
 
 func (e *QueryEvent) Operation() string {
@@ -56,7 +56,7 @@ func (db *DB) beforeQuery(
 	ctx context.Context,
 	iquery Query,
 	queryTemplate string,
-	queryArgs []interface{},
+	queryArgs []any,
 	query string,
 	model Model,
 ) (context.Context, *QueryEvent) {
