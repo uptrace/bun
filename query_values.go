@@ -142,9 +142,9 @@ func (q *ValuesQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	switch model := q.model.(type) {
 	case *mapSliceModel:
 		return model.appendValues(fmter, b)
+	default:
+		return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 	}
-
-	return nil, fmt.Errorf("bun: Values does not support %T", q.model)
 }
 
 func (q *ValuesQuery) appendQuery(

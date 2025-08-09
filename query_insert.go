@@ -491,22 +491,12 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		if err != nil {
 			return nil, err
 		}
-
-		if len(fields) == 0 {
-			fields = q.tableModel.Table().DataFields
-		}
-
 		b = q.appendSetExcluded(b, fields)
 	} else if q.onDuplicateKeyUpdate() {
 		fields, err := q.getDataFields()
 		if err != nil {
 			return nil, err
 		}
-
-		if len(fields) == 0 {
-			fields = q.tableModel.Table().DataFields
-		}
-
 		b = q.appendSetValues(b, fields)
 	}
 
