@@ -347,15 +347,9 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 		return q.appendSet(fmter, b)
 	}
 
-	if m, ok := q.model.(*mapModel); ok {
-		return m.appendSet(fmter, b), nil
-	}
-
-	if q.tableModel == nil {
-		return nil, errNilModel
-	}
-
-	switch model := q.tableModel.(type) {
+	switch model := q.model.(type) {
+	case *mapModel:
+		return model.appendSet(fmter, b), nil
 	case *structTableModel:
 		pos := len(b)
 		b, err = q.appendSetStruct(fmter, b, model)
@@ -371,8 +365,10 @@ func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte,
 		}
 	case *sliceTableModel:
 		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
+	case nil:
+		return nil, errNilModel
 	default:
-		return nil, fmt.Errorf("bun: Update does not support %T", q.tableModel)
+		return nil, fmt.Errorf("bun: Update does not support %T", q.model)
 	}
 
 	return b, nil
