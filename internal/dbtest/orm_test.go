@@ -785,7 +785,7 @@ type Employee struct {
 func createTestSchema(t *testing.T, db *bun.DB) {
 	_ = db.Table(reflect.TypeFor[BookGenre]())
 
-	models := []interface{}{
+	models := []any{
 		(*Image)(nil),
 		(*Author)(nil),
 		(*Book)(nil),

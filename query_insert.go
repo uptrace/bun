@@ -43,7 +43,7 @@ func (q *InsertQuery) Conn(db IConn) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) Model(model interface{}) *InsertQuery {
+func (q *InsertQuery) Model(model any) *InsertQuery {
 	q.setModel(model)
 	return q
 }
@@ -82,12 +82,12 @@ func (q *InsertQuery) Table(tables ...string) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) TableExpr(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) TableExpr(query string, args ...any) *InsertQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *InsertQuery) ModelTableExpr(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) ModelTableExpr(query string, args ...any) *InsertQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -101,7 +101,7 @@ func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	return q
 }
 
-func (q *InsertQuery) ColumnExpr(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) ColumnExpr(query string, args ...any) *InsertQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -112,7 +112,7 @@ func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
 }
 
 // Value overwrites model value for the column.
-func (q *InsertQuery) Value(column string, expr string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) Value(column string, expr string, args ...any) *InsertQuery {
 	if q.table == nil {
 		q.setErr(errNilModel)
 		return q
@@ -121,12 +121,12 @@ func (q *InsertQuery) Value(column string, expr string, args ...interface{}) *In
 	return q
 }
 
-func (q *InsertQuery) Where(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) Where(query string, args ...any) *InsertQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *InsertQuery) WhereOr(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) WhereOr(query string, args ...any) *InsertQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
@@ -136,7 +136,7 @@ func (q *InsertQuery) WhereOr(query string, args ...interface{}) *InsertQuery {
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("")`.
-func (q *InsertQuery) Returning(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) Returning(query string, args ...any) *InsertQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
@@ -275,7 +275,7 @@ func (q *InsertQuery) appendColumnsValues(
 		return m.appendColumnsValues(fmter, b), nil
 	}
 	if _, ok := q.model.(*mapSliceModel); ok {
-		return nil, fmt.Errorf("Insert(*[]map[string]interface{}) is not supported")
+		return nil, fmt.Errorf("Insert(*[]map[string]any) is not supported")
 	}
 
 	if q.model == nil {
@@ -454,12 +454,12 @@ func (q *InsertQuery) appendFields(
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) On(s string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) On(s string, args ...any) *InsertQuery {
 	q.on = schema.SafeQuery(s, args)
 	return q
 }
 
-func (q *InsertQuery) Set(query string, args ...interface{}) *InsertQuery {
+func (q *InsertQuery) Set(query string, args ...any) *InsertQuery {
 	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
@@ -491,22 +491,12 @@ func (q *InsertQuery) appendOn(fmter schema.Formatter, b []byte) (_ []byte, err 
 		if err != nil {
 			return nil, err
 		}
-
-		if len(fields) == 0 {
-			fields = q.tableModel.Table().DataFields
-		}
-
 		b = q.appendSetExcluded(b, fields)
 	} else if q.onDuplicateKeyUpdate() {
 		fields, err := q.getDataFields()
 		if err != nil {
 			return nil, err
 		}
-
-		if len(fields) == 0 {
-			fields = q.tableModel.Table().DataFields
-		}
-
 		b = q.appendSetValues(b, fields)
 	}
 
@@ -559,17 +549,17 @@ func (q *InsertQuery) appendSetValues(b []byte, fields []*schema.Field) []byte {
 
 //------------------------------------------------------------------------------
 
-func (q *InsertQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *InsertQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
-func (q *InsertQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *InsertQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
 func (q *InsertQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -652,7 +642,7 @@ func (q *InsertQuery) afterInsertHook(ctx context.Context) error {
 	return nil
 }
 
-func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []interface{}) error {
+func (q *InsertQuery) tryLastInsertID(res sql.Result, dest []any) error {
 	if q.db.HasFeature(feature.Returning) ||
 		q.db.HasFeature(feature.Output) ||
 		q.table == nil ||

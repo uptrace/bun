@@ -24,7 +24,7 @@ type migrator struct {
 
 var _ sqlschema.Migrator = (*migrator)(nil)
 
-func (m *migrator) AppendSQL(b []byte, operation interface{}) (_ []byte, err error) {
+func (m *migrator) AppendSQL(b []byte, operation any) (_ []byte, err error) {
 	fmter := m.db.Formatter()
 
 	// Append ALTER TABLE statement to the enclosed query bytes []byte.

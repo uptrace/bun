@@ -33,7 +33,7 @@ func (q *AddColumnQuery) Conn(db IConn) *AddColumnQuery {
 	return q
 }
 
-func (q *AddColumnQuery) Model(model interface{}) *AddColumnQuery {
+func (q *AddColumnQuery) Model(model any) *AddColumnQuery {
 	q.setModel(model)
 	return q
 }
@@ -62,19 +62,19 @@ func (q *AddColumnQuery) Table(tables ...string) *AddColumnQuery {
 	return q
 }
 
-func (q *AddColumnQuery) TableExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *AddColumnQuery) TableExpr(query string, args ...any) *AddColumnQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *AddColumnQuery) ModelTableExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *AddColumnQuery) ModelTableExpr(query string, args ...any) *AddColumnQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) ColumnExpr(query string, args ...interface{}) *AddColumnQuery {
+func (q *AddColumnQuery) ColumnExpr(query string, args ...any) *AddColumnQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -132,7 +132,7 @@ func (q *AddColumnQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *AddColumnQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *AddColumnQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	if q.ifNotExists && !q.hasFeature(feature.AlterColumnExists) {
 		return nil, feature.NewNotSupportError(feature.AlterColumnExists)
 	}

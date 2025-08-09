@@ -44,7 +44,7 @@ func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Model(model interface{}) *UpdateQuery {
+func (q *UpdateQuery) Model(model any) *UpdateQuery {
 	q.setModel(model)
 	return q
 }
@@ -83,12 +83,12 @@ func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) TableExpr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) TableExpr(query string, args ...any) *UpdateQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *UpdateQuery) ModelTableExpr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) ModelTableExpr(query string, args ...any) *UpdateQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -107,12 +107,12 @@ func (q *UpdateQuery) ExcludeColumn(columns ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Set(query string, args ...any) *UpdateQuery {
 	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) SetColumn(column string, query string, args ...any) *UpdateQuery {
 	if q.db.HasFeature(feature.UpdateMultiTable) {
 		column = q.table.Alias + "." + column
 	}
@@ -121,7 +121,7 @@ func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}
 }
 
 // Value overwrites model value for the column.
-func (q *UpdateQuery) Value(column string, query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Value(column string, query string, args ...any) *UpdateQuery {
 	if q.table == nil {
 		q.setErr(errNilModel)
 		return q
@@ -137,22 +137,22 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) Join(join string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Join(join string, args ...any) *UpdateQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
 
-func (q *UpdateQuery) JoinOn(cond string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) JoinOn(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
-func (q *UpdateQuery) JoinOnOr(cond string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) JoinOnOr(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " OR ")
 }
 
-func (q *UpdateQuery) joinOn(cond string, args []interface{}, sep string) *UpdateQuery {
+func (q *UpdateQuery) joinOn(cond string, args []any, sep string) *UpdateQuery {
 	if len(q.joins) == 0 {
 		q.setErr(errors.New("bun: query has no joins"))
 		return q
@@ -169,12 +169,12 @@ func (q *UpdateQuery) WherePK(cols ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Where(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Where(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *UpdateQuery) WhereOr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) WhereOr(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
@@ -213,7 +213,7 @@ func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) OrderExpr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) OrderExpr(query string, args ...any) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
 		return q
@@ -236,7 +236,7 @@ func (q *UpdateQuery) Limit(n int) *UpdateQuery {
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
-func (q *UpdateQuery) Returning(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Returning(query string, args ...any) *UpdateQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
 }
@@ -529,17 +529,17 @@ func (q *UpdateQuery) updateSliceWhere(fmter schema.Formatter, model *sliceTable
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *UpdateQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
-func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *UpdateQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
 func (q *UpdateQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -668,12 +668,12 @@ func (q *updateQueryBuilder) WhereGroup(
 	return q
 }
 
-func (q *updateQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+func (q *updateQueryBuilder) Where(query string, args ...any) QueryBuilder {
 	q.UpdateQuery.Where(query, args...)
 	return q
 }
 
-func (q *updateQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+func (q *updateQueryBuilder) WhereOr(query string, args ...any) QueryBuilder {
 	q.UpdateQuery.WhereOr(query, args...)
 	return q
 }
@@ -693,7 +693,7 @@ func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
 	return q
 }
 
-func (q *updateQueryBuilder) Unwrap() interface{} {
+func (q *updateQueryBuilder) Unwrap() any {
 	return q.UpdateQuery
 }
 

@@ -30,9 +30,9 @@ type withQuery struct {
 
 // IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
 type IConn interface {
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 var (
@@ -49,13 +49,13 @@ type IDB interface {
 	IConn
 	Dialect() schema.Dialect
 
-	NewValues(model interface{}) *ValuesQuery
+	NewValues(model any) *ValuesQuery
 	NewSelect() *SelectQuery
 	NewInsert() *InsertQuery
 	NewUpdate() *UpdateQuery
 	NewDelete() *DeleteQuery
 	NewMerge() *MergeQuery
-	NewRaw(query string, args ...interface{}) *RawQuery
+	NewRaw(query string, args ...any) *RawQuery
 	NewCreateTable() *CreateTableQuery
 	NewDropTable() *DropTableQuery
 	NewCreateIndex() *CreateIndexQuery
@@ -77,13 +77,13 @@ var (
 // QueryBuilder is used for common query methods
 type QueryBuilder interface {
 	Query
-	Where(query string, args ...interface{}) QueryBuilder
+	Where(query string, args ...any) QueryBuilder
 	WhereGroup(sep string, fn func(QueryBuilder) QueryBuilder) QueryBuilder
-	WhereOr(query string, args ...interface{}) QueryBuilder
+	WhereOr(query string, args ...any) QueryBuilder
 	WhereDeleted() QueryBuilder
 	WhereAllWithDeleted() QueryBuilder
 	WherePK(cols ...string) QueryBuilder
-	Unwrap() interface{}
+	Unwrap() any
 }
 
 var (
@@ -169,7 +169,7 @@ func (q *baseQuery) setConn(db IConn) {
 	}
 }
 
-func (q *baseQuery) setModel(modeli interface{}) {
+func (q *baseQuery) setModel(modeli any) {
 	model, err := newSingleModel(q.db, modeli)
 	if err != nil {
 		q.setErr(err)
@@ -189,7 +189,7 @@ func (q *baseQuery) setErr(err error) {
 	}
 }
 
-func (q *baseQuery) getModel(dest []interface{}) (Model, error) {
+func (q *baseQuery) getModel(dest []any) (Model, error) {
 	if len(dest) > 0 {
 		return newModel(q.db, dest)
 	}
@@ -654,7 +654,7 @@ func (q *baseQuery) Dialect() schema.Dialect {
 	return q.db.Dialect()
 }
 
-func (q *baseQuery) NewValues(model interface{}) *ValuesQuery {
+func (q *baseQuery) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(q.db, model).Conn(q.conn)
 }
 
@@ -674,7 +674,7 @@ func (q *baseQuery) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(q.db).Conn(q.conn)
 }
 
-func (q *baseQuery) NewRaw(query string, args ...interface{}) *RawQuery {
+func (q *baseQuery) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(q.db, query, args...).Conn(q.conn)
 }
 
@@ -1071,7 +1071,7 @@ type customValueQuery struct {
 }
 
 func (q *customValueQuery) addValue(
-	table *schema.Table, column string, value string, args []interface{},
+	table *schema.Table, column string, value string, args []any,
 ) {
 	ok := false
 	if table != nil {
@@ -1393,7 +1393,7 @@ func (q *orderLimitOffsetQuery) addOrder(orders ...string) {
 		switch strings.ToUpper(sort) {
 		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
 			"ASC NULLS LAST", "DESC NULLS LAST":
-			q.order = append(q.order, schema.SafeQuery("? ?", []interface{}{
+			q.order = append(q.order, schema.SafeQuery("? ?", []any{
 				Ident(field),
 				Safe(sort),
 			}))
@@ -1404,7 +1404,7 @@ func (q *orderLimitOffsetQuery) addOrder(orders ...string) {
 
 }
 
-func (q *orderLimitOffsetQuery) addOrderExpr(query string, args ...interface{}) {
+func (q *orderLimitOffsetQuery) addOrderExpr(query string, args ...any) {
 	q.order = append(q.order, schema.SafeQuery(query, args))
 }
 

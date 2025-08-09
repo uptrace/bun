@@ -113,7 +113,7 @@ func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []by
 	return f.Append(fmter, b, fv)
 }
 
-func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
+func (f *Field) ScanValue(strct reflect.Value, src any) error {
 	if src == nil {
 		if fv, ok := fieldByIndex(strct, f.Index); ok {
 			return f.ScanWithCheck(fv, src)
@@ -125,7 +125,7 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 	return f.ScanWithCheck(fv, src)
 }
 
-func (f *Field) ScanWithCheck(fv reflect.Value, src interface{}) error {
+func (f *Field) ScanWithCheck(fv reflect.Value, src any) error {
 	if f.Scan == nil {
 		return fmt.Errorf("bun: Scan(unsupported %s)", f.IndirectType)
 	}

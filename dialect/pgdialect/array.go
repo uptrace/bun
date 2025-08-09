@@ -27,7 +27,7 @@ type ArrayValue struct {
 // For struct fields you can use array tag:
 //
 //	Emails  []string `bun:",array"`
-func Array(vi interface{}) *ArrayValue {
+func Array(vi any) *ArrayValue {
 	v := reflect.ValueOf(vi)
 	if !v.IsValid() {
 		panic(fmt.Errorf("bun: Array(nil)"))
@@ -53,7 +53,7 @@ func (a *ArrayValue) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, erro
 	return a.append(fmter, b, a.v), nil
 }
 
-func (a *ArrayValue) Scan(src interface{}) error {
+func (a *ArrayValue) Scan(src any) error {
 	if a.scan == nil {
 		return fmt.Errorf("bun: Array(unsupported %s)", a.v.Type())
 	}
@@ -63,7 +63,7 @@ func (a *ArrayValue) Scan(src interface{}) error {
 	return a.scan(a.v, src)
 }
 
-func (a *ArrayValue) Value() interface{} {
+func (a *ArrayValue) Value() any {
 	if a.v.IsValid() {
 		return a.v.Interface()
 	}
@@ -366,7 +366,7 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	}
 
 	scanElem := schema.Scanner(elemType)
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		dest = reflect.Indirect(dest)
 		if !dest.CanSet() {
 			return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -411,7 +411,7 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	}
 }
 
-func scanStringSliceValue(dest reflect.Value, src interface{}) error {
+func scanStringSliceValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -426,7 +426,7 @@ func scanStringSliceValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func decodeStringSlice(src interface{}) ([]string, error) {
+func decodeStringSlice(src any) ([]string, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -449,7 +449,7 @@ func decodeStringSlice(src interface{}) ([]string, error) {
 	return slice, nil
 }
 
-func scanIntSliceValue(dest reflect.Value, src interface{}) error {
+func scanIntSliceValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -464,7 +464,7 @@ func scanIntSliceValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func decodeIntSlice(src interface{}) ([]int, error) {
+func decodeIntSlice(src any) ([]int, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -498,7 +498,7 @@ func decodeIntSlice(src interface{}) ([]int, error) {
 	return slice, nil
 }
 
-func scanInt64SliceValue(dest reflect.Value, src interface{}) error {
+func scanInt64SliceValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -513,7 +513,7 @@ func scanInt64SliceValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func decodeInt64Slice(src interface{}) ([]int64, error) {
+func decodeInt64Slice(src any) ([]int64, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -547,7 +547,7 @@ func decodeInt64Slice(src interface{}) ([]int64, error) {
 	return slice, nil
 }
 
-func scanFloat64SliceValue(dest reflect.Value, src interface{}) error {
+func scanFloat64SliceValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -562,7 +562,7 @@ func scanFloat64SliceValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func scanFloat64Slice(src interface{}) ([]float64, error) {
+func scanFloat64Slice(src any) ([]float64, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -596,7 +596,7 @@ func scanFloat64Slice(src interface{}) ([]float64, error) {
 	return slice, nil
 }
 
-func toBytes(src interface{}) ([]byte, error) {
+func toBytes(src any) ([]byte, error) {
 	switch src := src.(type) {
 	case string:
 		return internal.Bytes(src), nil

@@ -35,7 +35,7 @@ func (q *DropIndexQuery) Conn(db IConn) *DropIndexQuery {
 	return q
 }
 
-func (q *DropIndexQuery) Model(model interface{}) *DropIndexQuery {
+func (q *DropIndexQuery) Model(model any) *DropIndexQuery {
 	q.setModel(model)
 	return q
 }
@@ -67,7 +67,7 @@ func (q *DropIndexQuery) Restrict() *DropIndexQuery {
 	return q
 }
 
-func (q *DropIndexQuery) Index(query string, args ...interface{}) *DropIndexQuery {
+func (q *DropIndexQuery) Index(query string, args ...any) *DropIndexQuery {
 	q.index = schema.SafeQuery(query, args)
 	return q
 }
@@ -114,7 +114,7 @@ func (q *DropIndexQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
-func (q *DropIndexQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *DropIndexQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 

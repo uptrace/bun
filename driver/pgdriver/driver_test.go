@@ -246,7 +246,7 @@ func TestFloat64(t *testing.T) {
 func TestConnParams(t *testing.T) {
 	db := sql.OpenDB(pgdriver.NewConnector(
 		pgdriver.WithDSN(dsn()),
-		pgdriver.WithConnParams(map[string]interface{}{
+		pgdriver.WithConnParams(map[string]any{
 			"search_path": "foo",
 		}),
 	))

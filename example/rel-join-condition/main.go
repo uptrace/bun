@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/driver/sqliteshim"
@@ -65,7 +66,7 @@ func main() {
 }
 
 func createSchema(ctx context.Context, db *bun.DB) error {
-	models := []interface{}{
+	models := []any{
 		(*User)(nil),
 		(*Profile)(nil),
 	}

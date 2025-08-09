@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect"
 )
 
-func appendElem(buf []byte, val interface{}) []byte {
+func appendElem(buf []byte, val any) []byte {
 	switch val := val.(type) {
 	case int64:
 		return strconv.AppendInt(buf, val, 10)

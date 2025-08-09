@@ -23,7 +23,7 @@ func (f *Float) Value() (driver.Value, error) {
 	return (*big.Float)(f).String(), nil
 }
 
-func (f *Float) Scan(value interface{}) error {
+func (f *Float) Scan(value any) error {
 
 	var i sql.NullString
 

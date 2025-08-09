@@ -30,7 +30,7 @@ type TableModel interface {
 	schema.BeforeAppendModelHook
 	schema.BeforeScanRowHook
 	schema.AfterScanRowHook
-	ScanColumn(column string, src interface{}) error
+	ScanColumn(column string, src any) error
 
 	Table() *schema.Table
 	Relation() *schema.Relation
@@ -48,7 +48,7 @@ type TableModel interface {
 	updateSoftDeleteField(time.Time) error
 }
 
-func newModel(db *DB, dest []interface{}) (Model, error) {
+func newModel(db *DB, dest []any) (Model, error) {
 	if len(dest) == 1 {
 		return _newModel(db, dest[0], true)
 	}
@@ -72,11 +72,11 @@ func newModel(db *DB, dest []interface{}) (Model, error) {
 	return newSliceModel(db, dest, values), nil
 }
 
-func newSingleModel(db *DB, dest interface{}) (Model, error) {
+func newSingleModel(db *DB, dest any) (Model, error) {
 	return _newModel(db, dest, false)
 }
 
-func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
+func _newModel(db *DB, dest any, scan bool) (Model, error) {
 	switch dest := dest.(type) {
 	case nil:
 		return nil, errNilModel
@@ -86,7 +86,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 		if !scan {
 			return nil, fmt.Errorf("bun: Model(unsupported %T)", dest)
 		}
-		return newScanModel(db, []interface{}{dest}), nil
+		return newScanModel(db, []any{dest}), nil
 	}
 
 	v := reflect.ValueOf(dest)
@@ -110,7 +110,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 
 	switch typ {
 	case timeType, bytesType:
-		return newScanModel(db, []interface{}{dest}), nil
+		return newScanModel(db, []any{dest}), nil
 	}
 
 	switch v.Kind() {
@@ -118,7 +118,7 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 		if err := validMap(typ); err != nil {
 			return nil, err
 		}
-		mapPtr := v.Addr().Interface().(*map[string]interface{})
+		mapPtr := v.Addr().Interface().(*map[string]any)
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
 		return newStructTableModelValue(db, dest, v), nil
@@ -132,14 +132,14 @@ func _newModel(db *DB, dest interface{}, scan bool) (Model, error) {
 			if err := validMap(elemType); err != nil {
 				return nil, err
 			}
-			slicePtr := v.Addr().Interface().(*[]map[string]interface{})
+			slicePtr := v.Addr().Interface().(*[]map[string]any)
 			return newMapSliceModel(db, slicePtr), nil
 		}
-		return newSliceModel(db, []interface{}{dest}, []reflect.Value{v}), nil
+		return newSliceModel(db, []any{dest}, []reflect.Value{v}), nil
 	}
 
 	if scan {
-		return newScanModel(db, []interface{}{dest}), nil
+		return newScanModel(db, []any{dest}), nil
 	}
 
 	return nil, fmt.Errorf("bun: Model(unsupported %T)", dest)
@@ -188,7 +188,7 @@ func newTableModelIndex(
 
 func validMap(typ reflect.Type) error {
 	if typ.Key().Kind() != reflect.String || typ.Elem().Kind() != reflect.Interface {
-		return fmt.Errorf("bun: Model(unsupported %s) (expected *map[string]interface{})",
+		return fmt.Errorf("bun: Model(unsupported %s) (expected *map[string]any)",
 			typ)
 	}
 	return nil

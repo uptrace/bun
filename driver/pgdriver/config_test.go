@@ -54,7 +54,7 @@ func TestParseDSN(t *testing.T) {
 				User:     "user",
 				Password: "password",
 				Database: "testDatabase",
-				ConnParams: map[string]interface{}{
+				ConnParams: map[string]any{
 					"search_path": "foo",
 				},
 				DialTimeout:   5 * time.Second,

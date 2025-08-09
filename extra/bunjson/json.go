@@ -9,11 +9,11 @@ var _ Provider = (*StdProvider)(nil)
 
 type StdProvider struct{}
 
-func (StdProvider) Marshal(v interface{}) ([]byte, error) {
+func (StdProvider) Marshal(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (StdProvider) Unmarshal(data []byte, v interface{}) error {
+func (StdProvider) Unmarshal(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
 

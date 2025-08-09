@@ -69,28 +69,28 @@ func (f Formatter) WithArg(arg NamedArgAppender) Formatter {
 	}
 }
 
-func (f Formatter) WithNamedArg(name string, value interface{}) Formatter {
+func (f Formatter) WithNamedArg(name string, value any) Formatter {
 	return Formatter{
 		dialect: f.dialect,
 		args:    f.args.WithArg(&namedArg{name: name, value: value}),
 	}
 }
 
-func (f Formatter) FormatQuery(query string, args ...interface{}) string {
+func (f Formatter) FormatQuery(query string, args ...any) string {
 	if f.IsNop() || (args == nil && f.args == nil) || strings.IndexByte(query, '?') == -1 {
 		return query
 	}
 	return internal.String(f.AppendQuery(nil, query, args...))
 }
 
-func (f Formatter) AppendQuery(dst []byte, query string, args ...interface{}) []byte {
+func (f Formatter) AppendQuery(dst []byte, query string, args ...any) []byte {
 	if f.IsNop() || (args == nil && f.args == nil) || strings.IndexByte(query, '?') == -1 {
 		return append(dst, query...)
 	}
 	return f.append(dst, parser.NewString(query), args)
 }
 
-func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []byte {
+func (f Formatter) append(dst []byte, p *parser.Parser, args []any) []byte {
 	var namedArgs NamedArgAppender
 	if len(args) == 1 {
 		if v, ok := args[0].(NamedArgAppender); ok {
@@ -162,7 +162,7 @@ func (f Formatter) append(dst []byte, p *parser.Parser, args []interface{}) []by
 	return dst
 }
 
-func (f Formatter) appendArg(b []byte, arg interface{}) []byte {
+func (f Formatter) appendArg(b []byte, arg any) []byte {
 	switch arg := arg.(type) {
 	case QueryAppender:
 		bb, err := arg.AppendQuery(f, b)
@@ -207,7 +207,7 @@ func (l *namedArgList) AppendNamedArg(fmter Formatter, b []byte, name string) ([
 
 type namedArg struct {
 	name  string
-	value interface{}
+	value any
 }
 
 var _ NamedArgAppender = (*namedArg)(nil)
@@ -228,7 +228,7 @@ type structArgs struct {
 
 var _ NamedArgAppender = (*structArgs)(nil)
 
-func newStructArgs(fmter Formatter, strct interface{}) (*structArgs, bool) {
+func newStructArgs(fmter Formatter, strct any) (*structArgs, bool) {
 	v := reflect.ValueOf(strct)
 	if !v.IsValid() {
 		return nil, false

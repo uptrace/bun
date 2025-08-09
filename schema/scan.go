@@ -21,7 +21,7 @@ import (
 
 var scannerType = reflect.TypeFor[sql.Scanner]()
 
-type ScannerFunc func(dest reflect.Value, src interface{}) error
+type ScannerFunc func(dest reflect.Value, src any) error
 
 var scanners []ScannerFunc
 
@@ -129,7 +129,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 	return scanners[kind]
 }
 
-func scanBool(dest reflect.Value, src interface{}) error {
+func scanBool(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetBool(false)
@@ -159,7 +159,7 @@ func scanBool(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanInt64(dest reflect.Value, src interface{}) error {
+func scanInt64(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetInt(0)
@@ -189,7 +189,7 @@ func scanInt64(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanUint64(dest reflect.Value, src interface{}) error {
+func scanUint64(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetUint(0)
@@ -219,7 +219,7 @@ func scanUint64(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanFloat(dest reflect.Value, src interface{}) error {
+func scanFloat(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetFloat(0)
@@ -249,7 +249,7 @@ func scanFloat(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanString(dest reflect.Value, src interface{}) error {
+func scanString(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetString("")
@@ -277,7 +277,7 @@ func scanString(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanBytes(dest reflect.Value, src interface{}) error {
+func scanBytes(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetBytes(nil)
@@ -296,7 +296,7 @@ func scanBytes(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanTime(dest reflect.Value, src interface{}) error {
+func scanTime(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		destTime := dest.Addr().Interface().(*time.Time)
@@ -327,11 +327,11 @@ func scanTime(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanScanner(dest reflect.Value, src interface{}) error {
+func scanScanner(dest reflect.Value, src any) error {
 	return dest.Interface().(sql.Scanner).Scan(src)
 }
 
-func scanMsgpack(dest reflect.Value, src interface{}) error {
+func scanMsgpack(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -348,7 +348,7 @@ func scanMsgpack(dest reflect.Value, src interface{}) error {
 	return dec.DecodeValue(dest)
 }
 
-func scanJSON(dest reflect.Value, src interface{}) error {
+func scanJSON(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -361,7 +361,7 @@ func scanJSON(dest reflect.Value, src interface{}) error {
 	return bunjson.Unmarshal(b, dest.Addr().Interface())
 }
 
-func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
+func scanJSONUseNumber(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -376,7 +376,7 @@ func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
 	return dec.Decode(dest.Addr().Interface())
 }
 
-func scanIP(dest reflect.Value, src interface{}) error {
+func scanIP(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -397,7 +397,7 @@ func scanIP(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func scanIPNet(dest reflect.Value, src interface{}) error {
+func scanIPNet(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -418,7 +418,7 @@ func scanIPNet(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func scanNetIpAddr(dest reflect.Value, src interface{}) error {
+func scanNetIpAddr(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -439,7 +439,7 @@ func scanNetIpAddr(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func scanNetIpPrefix(dest reflect.Value, src interface{}) error {
+func scanNetIpPrefix(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -461,7 +461,7 @@ func scanNetIpPrefix(dest reflect.Value, src interface{}) error {
 }
 
 func addrScanner(fn ScannerFunc) ScannerFunc {
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		if !dest.CanAddr() {
 			return fmt.Errorf("bun: Scan(nonaddressable %T)", dest.Interface())
 		}
@@ -469,7 +469,7 @@ func addrScanner(fn ScannerFunc) ScannerFunc {
 	}
 }
 
-func toBytes(src interface{}) ([]byte, error) {
+func toBytes(src any) ([]byte, error) {
 	switch src := src.(type) {
 	case string:
 		return internal.Bytes(src), nil
@@ -481,7 +481,7 @@ func toBytes(src interface{}) ([]byte, error) {
 }
 
 func PtrScanner(fn ScannerFunc) ScannerFunc {
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		if src == nil {
 			if !dest.CanAddr() {
 				if dest.IsNil() {
@@ -516,7 +516,7 @@ func scanNull(dest reflect.Value) error {
 	return nil
 }
 
-func scanJSONIntoInterface(dest reflect.Value, src interface{}) error {
+func scanJSONIntoInterface(dest reflect.Value, src any) error {
 	if dest.IsNil() {
 		if src == nil {
 			return nil
@@ -537,7 +537,7 @@ func scanJSONIntoInterface(dest reflect.Value, src interface{}) error {
 	return scanError(dest.Type(), src)
 }
 
-func scanInterface(dest reflect.Value, src interface{}) error {
+func scanInterface(dest reflect.Value, src any) error {
 	if dest.IsNil() {
 		if src == nil {
 			return nil
@@ -561,6 +561,6 @@ func nilable(kind reflect.Kind) bool {
 	return false
 }
 
-func scanError(dest reflect.Type, src interface{}) error {
+func scanError(dest reflect.Type, src any) error {
 	return fmt.Errorf("bun: can't scan %#v (%T) into %s", src, src, dest.String())
 }

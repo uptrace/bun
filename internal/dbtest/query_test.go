@@ -255,7 +255,7 @@ func TestQuery(t *testing.T) {
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.
 					NewInsert().
-					Model(&map[string]interface{}{
+					Model(&map[string]any{
 						"id":  42,
 						"str": "hello",
 					}).
@@ -265,7 +265,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 25,
 			query: func(db *bun.DB) schema.QueryAppender {
-				src := db.NewValues(&[]map[string]interface{}{
+				src := db.NewValues(&[]map[string]any{
 					{"id": 42, "str": "hello"},
 					{"id": 43, "str": "world"},
 				})
@@ -304,7 +304,7 @@ func TestQuery(t *testing.T) {
 			id: 29,
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewUpdate().
-					Model(&map[string]interface{}{"str": "hello"}).
+					Model(&map[string]any{"str": "hello"}).
 					Table("models").
 					Where("id = 42")
 			},
@@ -312,7 +312,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 30,
 			query: func(db *bun.DB) schema.QueryAppender {
-				src := db.NewValues(&[]map[string]interface{}{
+				src := db.NewValues(&[]map[string]any{
 					{"id": 42, "str": "hello"},
 					{"id": 43, "str": "world"},
 				})
@@ -341,7 +341,7 @@ func TestQuery(t *testing.T) {
 				type Model struct {
 					ID     uint64 `bun:",pk,autoincrement"`
 					Struct struct{}
-					Map    map[string]interface{}
+					Map    map[string]any
 					Slice  []string
 					Array  []string `bun:",array"`
 				}
@@ -1787,7 +1787,7 @@ func TestAlterTable(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		operation interface{}
+		operation any
 	}{
 		{name: "create table", operation: &migrate.CreateTableOp{
 			TableName: tableName,

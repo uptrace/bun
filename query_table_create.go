@@ -52,7 +52,7 @@ func (q *CreateTableQuery) Conn(db IConn) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) Model(model any) *CreateTableQuery {
 	q.setModel(model)
 	return q
 }
@@ -71,17 +71,17 @@ func (q *CreateTableQuery) Table(tables ...string) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) TableExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) TableExpr(query string, args ...any) *CreateTableQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *CreateTableQuery) ModelTableExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ModelTableExpr(query string, args ...any) *CreateTableQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 
-func (q *CreateTableQuery) ColumnExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ColumnExpr(query string, args ...any) *CreateTableQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -108,12 +108,12 @@ func (q *CreateTableQuery) Varchar(n int) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) ForeignKey(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ForeignKey(query string, args ...any) *CreateTableQuery {
 	q.fks = append(q.fks, schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *CreateTableQuery) PartitionBy(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) PartitionBy(query string, args ...any) *CreateTableQuery {
 	q.partitionBy = schema.SafeQuery(query, args)
 	return q
 }
@@ -369,7 +369,7 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 
 // ------------------------------------------------------------------------------
 
-func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *CreateTableQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	if err := q.beforeCreateTableHook(ctx); err != nil {
 		return nil, err
 	}

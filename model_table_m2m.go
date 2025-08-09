@@ -16,7 +16,7 @@ type m2mModel struct {
 	rel       *schema.Relation
 
 	baseValues map[internal.MapKey][]reflect.Value
-	structKey  []interface{}
+	structKey  []any
 }
 
 var _ TableModel = (*m2mModel)(nil)
@@ -79,7 +79,7 @@ func (m *m2mModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	return n, nil
 }
 
-func (m *m2mModel) Scan(src interface{}) error {
+func (m *m2mModel) Scan(src any) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
@@ -96,7 +96,7 @@ func (m *m2mModel) Scan(src interface{}) error {
 	return err
 }
 
-func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
+func (m *m2mModel) scanM2MColumn(column string, src any) error {
 	for _, field := range m.rel.M2MBasePKs {
 		if field.Name == column {
 			dest := reflect.New(field.IndirectType).Elem()
