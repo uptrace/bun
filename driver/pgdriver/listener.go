@@ -23,11 +23,30 @@ func Notify(ctx context.Context, db *bun.DB, channel, payload string) error {
 	return err
 }
 
+// Listener provides a high-level abstraction for PostgreSQL LISTEN/NOTIFY
+// functionality, allowing clients to subscribe to one or more channels and
+// receive asynchronous notifications.
+//
+// A Listener manages a dedicated database connection for receiving events,
+// automatically reconnecting when the connection becomes unhealthy. It can be
+// used in two modes:
+//
+//  1. Low-level mode: using Receive or ReceiveTimeout to explicitly wait for
+//     notifications.
+//  2. High-level mode: using Channel, which returns a Go channel that
+//     concurrently delivers Notification values and periodically pings the
+//     database to monitor connection health.
+//
+// The Listener is NOT safe for concurrent use. Multiple goroutines can NOT call
+// Listen, Unlisten, and receive notifications concurrently.
+//
+// TODO: make it thread-safe by creating 2 separate mutexes for Listen and Receive
 type Listener struct {
 	db     *bun.DB
 	driver *Connector
 
 	channels []string
+	channel  *channel
 
 	mu     sync.Mutex
 	cn     *Conn
@@ -61,7 +80,7 @@ func (ln *Listener) Close() error {
 		ln.closed = true
 		close(ln.exit)
 
-		return ln.closeConn(errListenerClosed)
+		return ln.closeConn()
 	})
 }
 
@@ -121,12 +140,12 @@ func (ln *Listener) checkConn(ctx context.Context, cn *Conn, err error, allowTim
 func (ln *Listener) reconnect(ctx context.Context, reason error) {
 	if ln.cn != nil {
 		Logger.Printf(ctx, "bun: discarding bad listener connection: %s", reason)
-		_ = ln.closeConn(reason)
+		_ = ln.closeConn()
 	}
 	_, _ = ln.conn(ctx)
 }
 
-func (ln *Listener) closeConn(reason error) error {
+func (ln *Listener) closeConn() error {
 	if ln.cn == nil {
 		return nil
 	}
@@ -196,13 +215,13 @@ func (ln *Listener) unlisten(ctx context.Context, cn *Conn, channels ...string) 
 }
 
 // Receive indefinitely waits for a notification. This is low-level API
-// and in most cases CreateChannel should be used instead.
+// and in most cases Channel should be used instead.
 func (ln *Listener) Receive(ctx context.Context) (channel string, payload string, err error) {
 	return ln.ReceiveTimeout(ctx, 0)
 }
 
 // ReceiveTimeout waits for a notification until timeout is reached.
-// This is low-level API and in most cases CreateChannel should be used instead.
+// This is low-level API and in most cases Channel should be used instead.
 func (ln *Listener) ReceiveTimeout(
 	ctx context.Context, timeout time.Duration,
 ) (channel, payload string, err error) {
@@ -226,13 +245,16 @@ func (ln *Listener) ReceiveTimeout(
 	return channel, payload, nil
 }
 
-// CreateChannel creates and returns a channel for concurrently receiving notifications.
+// Channel returns a channel for concurrently receiving notifications.
 // It periodically sends Ping notification to test connection health.
 //
 // The channel is closed with Listener. Receive* APIs can not be used
 // after channel is created.
-func (ln *Listener) CreateChannel(opts ...ChannelOption) <-chan Notification {
-	return newChannel(ln, opts).ch
+func (ln *Listener) Channel(opts ...ChannelOption) <-chan Notification {
+	if ln.channel == nil {
+		ln.channel = newChannel(ln, opts)
+	}
+	return ln.channel.ch
 }
 
 //------------------------------------------------------------------------------
