@@ -258,6 +258,8 @@ func (db *DB) clone() *DB {
 	l := len(clone.queryHooks)
 	clone.queryHooks = clone.queryHooks[:l:l]
 
+	clone.stats = db.DBStats()
+
 	return &clone
 }
 
