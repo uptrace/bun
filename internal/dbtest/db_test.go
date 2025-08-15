@@ -15,6 +15,12 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/denisenkom/go-mssqldb"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/stretchr/testify/require"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
@@ -28,12 +34,6 @@ import (
 	"github.com/uptrace/bun/extra/bunexp"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
-
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/stretchr/testify/require"
 )
 
 var (
