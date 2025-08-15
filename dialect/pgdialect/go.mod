@@ -9,6 +9,7 @@ replace github.com/uptrace/bun => ../..
 require (
 	github.com/stretchr/testify v1.8.1
 	github.com/uptrace/bun v1.2.15
+	golang.org/x/mod v0.27.0
 )
 
 require (
