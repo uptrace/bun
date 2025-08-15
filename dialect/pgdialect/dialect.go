@@ -3,8 +3,11 @@ package pgdialect
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
+
+	"golang.org/x/mod/semver"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
@@ -80,7 +83,20 @@ func WithAppendUintAsInt(on bool) DialectOption {
 	}
 }
 
-func (d *Dialect) Init(*sql.DB) {}
+func (d *Dialect) Init(db *sql.DB) {
+	var version string
+	err := db.QueryRow(`SELECT regexp_replace(version(), E'PostgreSQL (\\d+\\.\\d+).*', E'\\1' );`).
+		Scan(&version)
+	if err != nil {
+		log.Printf("can't discover PostgresSQL version: %s", err)
+		return
+	}
+
+	version = semver.MajorMinor("v" + version)
+	if semver.Compare(version, "v17.0") >= 0 {
+		d.features |= feature.MergeReturning
+	}
+}
 
 func (d *Dialect) Name() dialect.Name {
 	return dialect.PG
