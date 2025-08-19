@@ -57,13 +57,13 @@ func (q *DeleteQuery) Apply(fns ...func(*DeleteQuery) *DeleteQuery) *DeleteQuery
 	return q
 }
 
-func (q *DeleteQuery) With(name string, query Query) *DeleteQuery {
-	q.addWith(name, query, false)
+func (q *DeleteQuery) With(name string, query Query, opts ...WithQueryOption) *DeleteQuery {
+	q.addWith(name, query, opts...)
 	return q
 }
 
 func (q *DeleteQuery) WithRecursive(name string, query Query) *DeleteQuery {
-	q.addWith(name, query, true)
+	q.addWith(name, query, WithQueryRecursive())
 	return q
 }
 

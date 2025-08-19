@@ -62,13 +62,13 @@ func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery
 	return q
 }
 
-func (q *UpdateQuery) With(name string, query Query) *UpdateQuery {
-	q.addWith(name, query, false)
+func (q *UpdateQuery) With(name string, query Query, opts ...WithQueryOption) *UpdateQuery {
+	q.addWith(name, query, opts...)
 	return q
 }
 
 func (q *UpdateQuery) WithRecursive(name string, query Query) *UpdateQuery {
-	q.addWith(name, query, true)
+	q.addWith(name, query, WithQueryRecursive())
 	return q
 }
 

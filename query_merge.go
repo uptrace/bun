@@ -60,13 +60,13 @@ func (q *MergeQuery) Apply(fns ...func(*MergeQuery) *MergeQuery) *MergeQuery {
 	return q
 }
 
-func (q *MergeQuery) With(name string, query Query) *MergeQuery {
-	q.addWith(name, query, false)
+func (q *MergeQuery) With(name string, query Query, opts ...WithQueryOption) *MergeQuery {
+	q.addWith(name, query, opts...)
 	return q
 }
 
 func (q *MergeQuery) WithRecursive(name string, query Query) *MergeQuery {
-	q.addWith(name, query, true)
+	q.addWith(name, query, WithQueryRecursive())
 	return q
 }
 

@@ -63,13 +63,13 @@ func (q *InsertQuery) Apply(fns ...func(*InsertQuery) *InsertQuery) *InsertQuery
 	return q
 }
 
-func (q *InsertQuery) With(name string, query Query) *InsertQuery {
-	q.addWith(name, query, false)
+func (q *InsertQuery) With(name string, query Query, opts ...WithQueryOption) *InsertQuery {
+	q.addWith(name, query, opts...)
 	return q
 }
 
 func (q *InsertQuery) WithRecursive(name string, query Query) *InsertQuery {
-	q.addWith(name, query, true)
+	q.addWith(name, query, WithQueryRecursive())
 	return q
 }
 

@@ -23,9 +23,11 @@ const (
 )
 
 type withQuery struct {
-	name      string
-	query     Query
-	recursive bool
+	name            string
+	query           Query
+	recursive       bool
+	materialize     bool
+	notMaterialized bool
 }
 
 // IConn is a common interface for *sql.DB, *sql.Conn, and *sql.Tx.
@@ -255,12 +257,35 @@ func (q *baseQuery) isSoftDelete() bool {
 
 //------------------------------------------------------------------------------
 
-func (q *baseQuery) addWith(name string, query Query, recursive bool) {
-	q.with = append(q.with, withQuery{
-		name:      name,
-		query:     query,
-		recursive: recursive,
-	})
+type WithQueryOption func(*withQuery)
+
+func WithQueryRecursive() WithQueryOption {
+	return func(wq *withQuery) {
+		wq.recursive = true
+	}
+}
+
+func WithQueryMaterialize() WithQueryOption {
+	return func(wq *withQuery) {
+		wq.materialize = true
+	}
+}
+
+func WithQueryNotMaterialized() WithQueryOption {
+	return func(wq *withQuery) {
+		wq.notMaterialized = true
+	}
+}
+
+func (q *baseQuery) addWith(name string, query Query, opts ...WithQueryOption) {
+	wq := withQuery{
+		name:  name,
+		query: query,
+	}
+	for _, opt := range opts {
+		opt(&wq)
+	}
+	q.with = append(q.with, wq)
 }
 
 func (q *baseQuery) appendWith(gen schema.QueryGen, b []byte) (_ []byte, err error) {
@@ -307,7 +332,14 @@ func (q *baseQuery) appendCTE(
 		b = append(b, ")"...)
 	}
 
-	b = append(b, " AS ("...)
+	switch {
+	case cte.materialize && gen.Dialect().Name() == dialect.PG:
+		b = append(b, " AS MATERIALIZED ("...)
+	case cte.notMaterialized && gen.Dialect().Name() == dialect.PG:
+		b = append(b, " AS NOT MATERIALIZED ("...)
+	default:
+		b = append(b, " AS ("...)
+	}
 
 	b, err = cte.query.AppendQuery(gen, b)
 	if err != nil {
