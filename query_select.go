@@ -1143,7 +1143,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 				table:          q.table,
 				model:          q.model,
 				tableModel:     tableModel,
-				with:           make([]withQuery, len(q.with)),
+				with:           make([]WithQuery, len(q.with)),
 				tables:         cloneArgs(q.tables),
 				columns:        cloneArgs(q.columns),
 				modelTableName: q.modelTableName,
