@@ -62,17 +62,22 @@ func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery
 	return q
 }
 
-func (q *UpdateQuery) With(name string, query Query, opts ...WithQueryOption) *UpdateQuery {
-	q.addWith(name, query, opts...)
+func (q *UpdateQuery) With(name string, query Query) *UpdateQuery {
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
 func (q *UpdateQuery) WithRecursive(name string, query Query) *UpdateQuery {
-	q.addWith(name, query, WithQueryRecursive())
+	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
-//------------------------------------------------------------------------------
+func (q *UpdateQuery) WithQuery(query *WithQuery) *UpdateQuery {
+	q.addWith(query)
+	return q
+}
+
+// ------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	for _, table := range tables {

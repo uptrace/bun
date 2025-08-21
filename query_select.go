@@ -72,13 +72,18 @@ func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery
 	return q
 }
 
-func (q *SelectQuery) With(name string, query Query, opts ...WithQueryOption) *SelectQuery {
-	q.addWith(name, query, opts...)
+func (q *SelectQuery) With(name string, query Query) *SelectQuery {
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
 func (q *SelectQuery) WithRecursive(name string, query Query) *SelectQuery {
-	q.addWith(name, query, WithQueryRecursive())
+	q.addWith(NewWithQuery(name, query).Recursive())
+	return q
+}
+
+func (q *SelectQuery) WithQuery(query *WithQuery) *SelectQuery {
+	q.addWith(query)
 	return q
 }
 
