@@ -1172,7 +1172,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 	}
 
 	for i, w := range q.with {
-		clone.with[i] = withQuery{
+		clone.with[i] = WithQuery{
 			name:      w.name,
 			recursive: w.recursive,
 			query:     w.query, // TODO: maybe clone is need
