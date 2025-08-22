@@ -137,21 +137,20 @@ func newConn(ctx context.Context, conf *Config) (*Conn, error) {
 	}
 
 	for k, v := range conf.ConnParams {
+		if v == nil {
+			continue
+		}
+
 		switch {
-		case k == "standard_conforming_strings" && (v != nil && v != "on"):
+		case k == "standard_conforming_strings" && v != "on":
 			return nil, errRequiresParameter
-		case k == "client_encoding" && (v != nil && v != "UTF8"):
+		case k == "client_encoding" && v != "UTF8":
 			return nil, errRequiresParameter
 		}
 
-		if v != nil {
-			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
-				{Value: v},
-			})
-		} else {
-			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO DEFAULT", k), nil)
-		}
-		if err != nil {
+		if _, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
+			{Value: v},
+		}); err != nil {
 			return nil, err
 		}
 	}
