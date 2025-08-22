@@ -64,14 +64,20 @@ func (q *InsertQuery) Apply(fns ...func(*InsertQuery) *InsertQuery) *InsertQuery
 }
 
 func (q *InsertQuery) With(name string, query Query) *InsertQuery {
-	q.addWith(name, query, false)
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
 func (q *InsertQuery) WithRecursive(name string, query Query) *InsertQuery {
-	q.addWith(name, query, true)
+	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
+
+func (q *InsertQuery) WithQuery(query *WithQuery) *InsertQuery {
+	q.addWith(query)
+	return q
+}
+
 
 //------------------------------------------------------------------------------
 

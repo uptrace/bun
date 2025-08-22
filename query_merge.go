@@ -61,16 +61,21 @@ func (q *MergeQuery) Apply(fns ...func(*MergeQuery) *MergeQuery) *MergeQuery {
 }
 
 func (q *MergeQuery) With(name string, query Query) *MergeQuery {
-	q.addWith(name, query, false)
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
 func (q *MergeQuery) WithRecursive(name string, query Query) *MergeQuery {
-	q.addWith(name, query, true)
+	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
-//------------------------------------------------------------------------------
+func (q *MergeQuery) WithQuery(query *WithQuery) *MergeQuery {
+	q.addWith(query)
+	return q
+}
+
+// ------------------------------------------------------------------------------
 
 func (q *MergeQuery) Table(tables ...string) *MergeQuery {
 	for _, table := range tables {

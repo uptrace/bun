@@ -73,12 +73,17 @@ func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery
 }
 
 func (q *SelectQuery) With(name string, query Query) *SelectQuery {
-	q.addWith(name, query, false)
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
 func (q *SelectQuery) WithRecursive(name string, query Query) *SelectQuery {
-	q.addWith(name, query, true)
+	q.addWith(NewWithQuery(name, query).Recursive())
+	return q
+}
+
+func (q *SelectQuery) WithQuery(query *WithQuery) *SelectQuery {
+	q.addWith(query)
 	return q
 }
 
@@ -1138,7 +1143,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 				table:          q.table,
 				model:          q.model,
 				tableModel:     tableModel,
-				with:           make([]withQuery, len(q.with)),
+				with:           make([]WithQuery, len(q.with)),
 				tables:         cloneArgs(q.tables),
 				columns:        cloneArgs(q.columns),
 				modelTableName: q.modelTableName,
@@ -1167,7 +1172,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 	}
 
 	for i, w := range q.with {
-		clone.with[i] = withQuery{
+		clone.with[i] = WithQuery{
 			name:      w.name,
 			recursive: w.recursive,
 			query:     w.query, // TODO: maybe clone is need
