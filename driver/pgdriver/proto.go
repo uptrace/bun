@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"crypto/tls"
@@ -177,7 +178,15 @@ func startup(ctx context.Context, cn *Conn) error {
 			}
 		case readyForQueryMsg:
 			return rd.Discard(msgLen)
-		case parameterStatusMsg, noticeResponseMsg:
+		case parameterStatusMsg:
+			var b []byte
+			if b, err = rd.ReadTemp(msgLen); err != nil {
+				return err
+			}
+			if err = checkParameterStatus(b); err != nil {
+				return err
+			}
+		case noticeResponseMsg:
 			if err := rd.Discard(msgLen); err != nil {
 				return err
 			}
@@ -1099,4 +1108,33 @@ func appendStmtArg(b []byte, v driver.Value) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("pgdriver: unexpected arg: %T", v)
 	}
+}
+
+// checkParameterStatus
+//
+// Requires that `standard_conforming_strings=on` and `client_encoding=UTF8`.
+func checkParameterStatus(b []byte) error {
+	i := bytes.IndexByte(b, 0x00) // format: key{0x00}value{0x00}
+	if i == -1 {
+		return nil
+	}
+
+	var mustBe []byte
+	switch {
+	case bytes.Equal(b[:i], []byte("standard_conforming_strings")):
+		mustBe = []byte("on")
+	case bytes.Equal(b[:i], []byte("client_encoding")):
+		mustBe = []byte("UTF8")
+	default:
+		return nil
+	}
+	b = b[i+1:]
+
+	if i = bytes.IndexByte(b, 0x00); i == -1 {
+		return nil
+	}
+	if !bytes.Equal(b[:i], mustBe) {
+		return errRequiresParameter
+	}
+	return nil
 }
