@@ -51,6 +51,9 @@ type Config struct {
 
 	// size of reader buffer, default is 4096
 	BufferSize int
+
+	// Allow set standard_conforming_strings=off or client_encoding=other character sets
+	UnsafeStrings bool
 }
 
 func newDefaultConfig() *Config {
@@ -227,6 +230,12 @@ func WithDSN(dsn string) Option {
 func WithTracing(on bool) Option {
 	return func(conf *Config) {
 		conf.EnableTracing = on
+	}
+}
+
+func WithUnsafeStrings(allow bool) Option {
+	return func(conf *Config) {
+		conf.UnsafeStrings = allow
 	}
 }
 

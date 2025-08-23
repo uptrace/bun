@@ -142,9 +142,9 @@ func newConn(ctx context.Context, conf *Config) (*Conn, error) {
 		}
 
 		switch {
-		case k == "standard_conforming_strings" && v != "on":
+		case !conf.UnsafeStrings && k == "standard_conforming_strings" && v != "on":
 			return nil, errRequiresParameter
-		case k == "client_encoding" && v != "UTF8":
+		case !conf.UnsafeStrings && k == "client_encoding" && v != "UTF8":
 			return nil, errRequiresParameter
 		}
 

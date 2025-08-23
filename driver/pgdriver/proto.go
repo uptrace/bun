@@ -179,6 +179,13 @@ func startup(ctx context.Context, cn *Conn) error {
 		case readyForQueryMsg:
 			return rd.Discard(msgLen)
 		case parameterStatusMsg:
+			if cn.conf.UnsafeStrings {
+				if err := rd.Discard(msgLen); err != nil {
+					return err
+				}
+				continue
+			}
+
 			var b []byte
 			if b, err = rd.ReadTemp(msgLen); err != nil {
 				return err
