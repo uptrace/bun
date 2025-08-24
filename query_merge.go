@@ -99,7 +99,7 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...any) *MergeQuery {
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
-// Only for mssql output, postgres not supported returning in merge query
+// Supported for PostgreSQL 17+ and MSSQL (via OUTPUT clause)
 func (q *MergeQuery) Returning(query string, args ...any) *MergeQuery {
 	q.addReturning(schema.SafeQuery(query, args))
 	return q
@@ -219,6 +219,14 @@ func (q *MergeQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err e
 		}
 	}
 
+	if q.hasFeature(feature.MergeReturning) && q.hasReturning() {
+		b = append(b, " RETURNING "...)
+		b, err = q.appendReturning(gen, b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// A MERGE statement must be terminated by a semi-colon (;).
 	b = append(b, ";"...)
 
@@ -257,7 +265,7 @@ func (q *MergeQuery) scanOrExec(
 		return nil, err
 	}
 
-	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.Output))
+	useScan := hasDest || (q.hasReturning() && q.hasFeature(feature.InsertReturning|feature.MergeReturning|feature.Output))
 	var model Model
 
 	if useScan {

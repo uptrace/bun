@@ -40,6 +40,7 @@ const (
 	UpdateOrderLimit // UPDATE ... ORDER BY ... LIMIT ...
 	DeleteOrderLimit // DELETE ... ORDER BY ... LIMIT ...
 	DeleteReturning
+	MergeReturning
 	AlterColumnExists // ADD/DROP COLUMN IF NOT EXISTS/IF EXISTS
 	FKDefaultOnAction // FK ON UPDATE/ON DELETE has default value: NO ACTION
 )
@@ -91,6 +92,7 @@ var flag2str = map[Feature]string{
 	UpdateOrderLimit:     "UpdateOrderLimit",
 	DeleteOrderLimit:     "DeleteOrderLimit",
 	DeleteReturning:      "DeleteReturning",
+	MergeReturning:       "MergeReturning",
 	AlterColumnExists:    "AlterColumnExists",
 	FKDefaultOnAction:    "FKDefaultOnAction",
 }

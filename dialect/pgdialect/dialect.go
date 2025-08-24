@@ -57,6 +57,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.CompositeIn |
 		feature.FKDefaultOnAction |
 		feature.DeleteReturning |
+		feature.MergeReturning |
 		feature.AlterColumnExists
 
 	for _, opt := range opts {
