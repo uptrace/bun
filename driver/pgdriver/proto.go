@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"crypto/tls"
@@ -177,7 +178,22 @@ func startup(ctx context.Context, cn *Conn) error {
 			}
 		case readyForQueryMsg:
 			return rd.Discard(msgLen)
-		case parameterStatusMsg, noticeResponseMsg:
+		case parameterStatusMsg:
+			if cn.conf.UnsafeStrings {
+				if err := rd.Discard(msgLen); err != nil {
+					return err
+				}
+				continue
+			}
+
+			var b []byte
+			if b, err = rd.ReadTemp(msgLen); err != nil {
+				return err
+			}
+			if err = checkParameterStatus(b); err != nil {
+				return err
+			}
+		case noticeResponseMsg:
 			if err := rd.Discard(msgLen); err != nil {
 				return err
 			}
@@ -1099,4 +1115,52 @@ func appendStmtArg(b []byte, v driver.Value) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("pgdriver: unexpected arg: %T", v)
 	}
+}
+
+// checkParameterStatus
+//
+// Ensures that critical PostgreSQL connection parameters are set to their secure and
+// recommended values. Specifically, it verifies that `standard_conforming_strings` is
+// "on" and `client_encoding` is "UTF8".
+//
+// `standard_conforming_strings=on`, backslash characters (`\`) are treated as literal
+// backslashes inside string literals. This ensures that a backslash cannot be used to
+// escape a single quote (`'`), which could otherwise allow an attacker to break out of
+// a string literal and inject malicious SQL code.
+//
+// `client_encoding=UTF8` Setting the client encoding to UTF8 is vital for preventing
+// "encoding-related SQL injection" and "character set confusion attacks." This prevents
+// scenarios where a multibyte character might be misinterpreted (e.g., in a `SQL_ASCII`
+// context), potentially allowing a malicious byte sequence to "consume" a backslash or
+// a quote, thereby bypassing string literal boundaries.
+//
+// Invalid or malformed UTF8 data will be rejected or replaced, preventing adversaries from
+// injecting crafted byte sequences that might be misinterpreted by the server when
+// `SQL_ASCII` or other ambiguous encodings are used.
+func checkParameterStatus(b []byte) error {
+	i := bytes.IndexByte(b, 0x00) // format: key{0x00}value{0x00}
+	if i == -1 {
+		return nil
+	}
+
+	var mustBe []byte
+	switch {
+	case bytes.Equal(b[:i], []byte("standard_conforming_strings")):
+		mustBe = []byte("on")
+	case bytes.Equal(b[:i], []byte("client_encoding")):
+		mustBe = []byte("UTF8")
+	default:
+		return nil
+	}
+
+	// Move past the parameter key and the first null byte to get to the value.
+	b = b[i+1:]
+
+	if i = bytes.IndexByte(b, 0x00); i == -1 {
+		return nil
+	}
+	if !bytes.Equal(b[:i], mustBe) {
+		return errRequiresParameter
+	}
+	return nil
 }
