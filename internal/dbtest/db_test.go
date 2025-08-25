@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -266,6 +267,7 @@ func TestDB(t *testing.T) {
 		{testSelectNestedStructValue},
 		{testSelectNestedStructPtr},
 		{testSelectStructSlice},
+		{testSelectScannerSlice},
 		{testSelectSingleSlice},
 		{testSelectMultiSlice},
 		{testSelectJSONMap},
@@ -518,6 +520,63 @@ func testSelectStructSlice(t *testing.T, db *bun.DB) {
 	require.Len(t, models, 3)
 	for i, model := range models {
 		require.Equal(t, i+1, model.Num)
+	}
+}
+
+type CustomNum struct {
+	Num int
+}
+
+func (n *CustomNum) Scan(src any) error {
+	switch val := src.(type) {
+	case int32:
+		*n = CustomNum{int(val)}
+	case uint32:
+		*n = CustomNum{int(val)}
+	case int64:
+		*n = CustomNum{int(val)}
+	case uint64:
+		*n = CustomNum{int(val)}
+	case []byte:
+		num, err := strconv.ParseInt(string(val), 10, 64)
+		if err != nil {
+			return err
+		}
+		*n = CustomNum{int(num)}
+	case string:
+		num, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return err
+		}
+		*n = CustomNum{int(num)}
+	default:
+		return fmt.Errorf("unsupported type: %T", val)
+	}
+	return nil
+}
+
+var _ sql.Scanner = (*CustomNum)(nil)
+
+func testSelectScannerSlice(t *testing.T, db *bun.DB) {
+	if !db.Dialect().Features().Has(feature.CTE) {
+		t.Skip()
+	}
+
+	values := db.NewValues(&[]map[string]interface{}{
+		{"column1": 1},
+		{"column1": 2},
+		{"column1": 3},
+	})
+
+	var ns []CustomNum
+	err := db.NewSelect().
+		With("t", values).
+		TableExpr("t").
+		Scan(ctx, &ns)
+	require.NoError(t, err)
+	require.Len(t, ns, 3)
+	for i, n := range ns {
+		require.Equal(t, i+1, n.Num)
 	}
 }
 
