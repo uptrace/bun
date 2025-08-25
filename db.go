@@ -59,7 +59,7 @@ type DB struct {
 	queryHooks []QueryHook
 
 	gen   schema.QueryGen
-	stats DBStats
+	stats *DBStats
 }
 
 // noCopyState contains DB fields that must not be copied on clone(),
@@ -81,7 +81,8 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 			DB:      sqldb,
 			dialect: dialect,
 		},
-		gen: schema.NewQueryGen(dialect),
+		gen:   schema.NewQueryGen(dialect),
+		stats: &DBStats{},
 	}
 
 	for _, opt := range opts {
