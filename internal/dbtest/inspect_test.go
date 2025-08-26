@@ -72,10 +72,6 @@ type Journalist struct {
 }
 
 func TestDatabaseInspector_Inspect(t *testing.T) {
-	if isRaceTest {
-		t.Skip("TODO: fix race test")
-	}
-
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
 		defaultSchema := db.Dialect().DefaultSchema()
 
