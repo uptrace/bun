@@ -6,7 +6,6 @@ on:
       - v*
     branches:
       - master
-      - main
   pull_request:
 
 jobs:
@@ -16,4 +15,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v8
