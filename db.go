@@ -58,8 +58,7 @@ type DB struct {
 
 	queryHooks []QueryHook
 
-	gen   schema.QueryGen
-	stats DBStats
+	gen schema.QueryGen
 }
 
 // noCopyState contains DB fields that must not be copied on clone(),
@@ -71,6 +70,8 @@ type noCopyState struct {
 
 	flags  internal.Flag
 	closed atomic.Bool
+
+	stats DBStats
 }
 
 func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {

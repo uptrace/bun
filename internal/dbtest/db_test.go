@@ -308,6 +308,7 @@ func TestDB(t *testing.T) {
 		{testNoForeignKeyForPrimaryKey},
 		{testWithPointerPrimaryKeyHasManyWithDriverValuer},
 		{testRelationJoinDataRace},
+		{testCloneDBStatsDataRace},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -2050,4 +2051,16 @@ func testRelationJoinDataRace(t *testing.T, db *bun.DB) {
 	var users []RaceUser
 	_, err := db.NewSelect().Model(&users).Relation("Posts").Offset(1).ScanAndCount(ctx)
 	require.NoError(t, err)
+}
+
+func testCloneDBStatsDataRace(_ *testing.T, db *bun.DB) {
+	go func() { db.WithNamedArg("", "") }()
+	go func() {
+		var num int
+		_ = db.NewSelect().
+			ColumnExpr("t.num").
+			TableExpr("(SELECT 10 AS num) AS t").
+			Where("1 = 2").
+			Scan(ctx, &num)
+	}()
 }
