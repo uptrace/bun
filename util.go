@@ -1,10 +1,12 @@
 package bun
 
 import (
-	"context"
-	"fmt"
-	"reflect"
-	"strings"
+    "context"
+    "fmt"
+    "reflect"
+    "strings"
+
+    "github.com/uptrace/bun/schema"
 )
 
 func indirect(v reflect.Value) reflect.Value {
@@ -105,8 +107,29 @@ type commenter[T any] interface {
 
 // setCommentFromContext sets the comment on the given query from the supplied context if one is set using the Comment(...) method.
 func setCommentFromContext[T any](ctx context.Context, q commenter[T]) {
-	s, _ := ctx.Value(queryCommentCtxKey{}).(string)
-	if s != "" {
-		q.Comment(s)
-	}
+    s, _ := ctx.Value(queryCommentCtxKey{}).(string)
+    if s != "" {
+        q.Comment(s)
+    }
+}
+
+// remapFieldsToTable returns a copy of fields where each field is replaced
+// with the field from the target table that has the same SQL name, when present.
+// This helps align field indices with the owning struct, e.g. when using bun:",extend".
+func remapFieldsToTable(fields []*schema.Field, to *schema.Table) []*schema.Field {
+    if len(fields) == 0 {
+        return nil
+    }
+    out := make([]*schema.Field, len(fields))
+    for i, f := range fields {
+        if f == nil {
+            continue
+        }
+        if bf, ok := to.FieldMap[f.Name]; ok {
+            out[i] = bf
+        } else {
+            out[i] = f
+        }
+    }
+    return out
 }

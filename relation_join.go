@@ -185,6 +185,8 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 	}
 	q = q.Model(m2mModel)
 
+	// Remap BasePKs to the owner (base) model table to account for bun:",extend".
+	remappedBasePKs := remapFieldsToTable(j.Relation.BasePKs, j.BaseModel.Table())
 	index := j.JoinModel.parentIndex()
 
 	if j.Relation.M2MTable != nil {
@@ -213,7 +215,8 @@ func (j *relationJoin) m2mQuery(q *SelectQuery) *SelectQuery {
 		join = append(join, col.SQLName...)
 	}
 	join = append(join, ") IN ("...)
-	join = appendChildValues(gen, join, j.BaseModel.rootValue(), index, j.Relation.BasePKs)
+	// Collect values from the owner struct using the join model's view and remapped fields.
+	join = appendChildValues(gen, join, j.JoinModel.rootValue(), index, remappedBasePKs)
 	join = append(join, ")"...)
 
 	if len(j.additionalJoinOnConditions) > 0 {

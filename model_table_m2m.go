@@ -22,9 +22,11 @@ type m2mModel struct {
 var _ TableModel = (*m2mModel)(nil)
 
 func newM2MModel(j *relationJoin) *m2mModel {
-	baseTable := j.BaseModel.Table()
-	joinModel := j.JoinModel.(*sliceTableModel)
-	baseValues := baseValues(joinModel, j.Relation.BasePKs)
+    baseTable := j.BaseModel.Table()
+    joinModel := j.JoinModel.(*sliceTableModel)
+    // Remap BasePKs to the owner (base) model table to account for bun:",extend".
+    remappedBasePKs := remapFieldsToTable(j.Relation.BasePKs, j.BaseModel.Table())
+    baseValues := baseValues(joinModel, remappedBasePKs)
 	if len(baseValues) == 0 {
 		return nil
 	}
