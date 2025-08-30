@@ -76,13 +76,14 @@ jobs:
           'select 1' -b -o /dev/null" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up ${{ matrix.go-version }}
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
-
-      - name: Checkout code
-        uses: actions/checkout@v3
+          cache-dependency-path: "**/go.sum"
 
       - name: Test
         run: make test
