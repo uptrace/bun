@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -232,7 +231,7 @@ func (ms MigrationSlice) Applied() MigrationSlice {
 			applied = append(applied, ms[i])
 		}
 	}
-	sortDesc(applied)
+	SafeDescSort(applied)
 	return applied
 }
 
@@ -245,7 +244,7 @@ func (ms MigrationSlice) Unapplied() MigrationSlice {
 			unapplied = append(unapplied, ms[i])
 		}
 	}
-	sortAsc(unapplied)
+	SafeAscSort(unapplied)
 	return unapplied
 }
 
@@ -275,6 +274,7 @@ func (ms MigrationSlice) LastGroup() *MigrationGroup {
 			group.Migrations = append(group.Migrations, ms[i])
 		}
 	}
+
 	return group
 }
 
@@ -320,18 +320,4 @@ func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.nop = true
 	}
-}
-
-//------------------------------------------------------------------------------
-
-func sortAsc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Name < ms[j].Name
-	})
-}
-
-func sortDesc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Name > ms[j].Name
-	})
 }
