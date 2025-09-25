@@ -7,14 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
-
-	"github.com/uptrace/bun/schema"
 )
 
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender schema.QueryAppender // DEPRECATED: use IQuery instead
 	IQuery        Query
 	Query         string
 	QueryTemplate string
@@ -70,7 +67,6 @@ func (db *DB) beforeQuery(
 		DB: db,
 
 		Model:         model,
-		QueryAppender: iquery,
 		IQuery:        iquery,
 		Query:         query,
 		QueryTemplate: queryTemplate,

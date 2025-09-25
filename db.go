@@ -56,9 +56,8 @@ type DB struct {
 	// Must be a pointer so we copy the whole state, not individual fields.
 	*noCopyState
 
+	gen        schema.QueryGen
 	queryHooks []QueryHook
-
-	gen schema.QueryGen
 }
 
 // noCopyState contains DB fields that must not be copied on clone(),
@@ -225,24 +224,6 @@ func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	return rs.ScanRow(ctx, rows)
 }
 
-type queryHookIniter interface {
-	Init(db *DB)
-}
-
-func (db *DB) AddQueryHook(hook QueryHook) {
-	if initer, ok := hook.(queryHookIniter); ok {
-		initer.Init(db)
-	}
-	db.queryHooks = append(db.queryHooks, hook)
-}
-
-func (db *DB) ResetQueryHooks() {
-	for i := range db.queryHooks {
-		db.queryHooks[i] = nil
-	}
-	db.queryHooks = nil
-}
-
 func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
@@ -262,6 +243,10 @@ func (db *DB) clone() *DB {
 	return &clone
 }
 
+// WithNamedArg returns a copy of the DB with an additional named argument
+// bound into its query generator. Named arguments can later be referenced
+// in SQL queries using placeholders (e.g. ?name). This method does not
+// mutate the original DB instance but instead creates a cloned copy.
 func (db *DB) WithNamedArg(name string, value any) *DB {
 	clone := db.clone()
 	clone.gen = clone.gen.WithNamedArg(name, value)
@@ -270,6 +255,42 @@ func (db *DB) WithNamedArg(name string, value any) *DB {
 
 func (db *DB) QueryGen() schema.QueryGen {
 	return db.gen
+}
+
+type queryHookIniter interface {
+	Init(db *DB)
+}
+
+// WithQueryHook returns a copy of the DB with the provided query hook
+// attached. A query hook allows inspection or modification of queries
+// before/after execution (e.g. for logging, tracing, metrics).
+// If the hook implements queryHookIniter, its Init method is invoked
+// with the current DB before cloning. Like other modifiers, this
+// method leaves the original DB unmodified.
+func (db *DB) WithQueryHook(hook QueryHook) *DB {
+	if initer, ok := hook.(queryHookIniter); ok {
+		initer.Init(db)
+	}
+
+	clone := db.clone()
+	clone.queryHooks = append(clone.queryHooks, hook)
+	return clone
+}
+
+// DEPRECATED: use WithQueryHook instead
+func (db *DB) AddQueryHook(hook QueryHook) {
+	if initer, ok := hook.(queryHookIniter); ok {
+		initer.Init(db)
+	}
+	db.queryHooks = append(db.queryHooks, hook)
+}
+
+// DEPRECATED: use WithQueryHook instead
+func (db *DB) ResetQueryHooks() {
+	for i := range db.queryHooks {
+		db.queryHooks[i] = nil
+	}
+	db.queryHooks = nil
 }
 
 // UpdateFQN returns a fully qualified column name. For MySQL, it returns the column name with

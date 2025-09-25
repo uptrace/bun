@@ -78,6 +78,7 @@ func Exec(ctx context.Context, db *bun.DB, f io.Reader, templateData any, isTx b
 	if err != nil {
 		return err
 	}
+
 	var reader io.Reader = bytes.NewReader(contents)
 	if templateData != nil {
 		buf, err := renderTemplate(contents, templateData)
@@ -86,6 +87,7 @@ func Exec(ctx context.Context, db *bun.DB, f io.Reader, templateData any, isTx b
 		}
 		reader = buf
 	}
+
 	scanner := bufio.NewScanner(reader)
 	var queries []string
 
