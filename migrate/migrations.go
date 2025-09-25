@@ -58,8 +58,8 @@ func (m *Migrations) Register(up, down MigrationFunc) error {
 	m.Add(Migration{
 		Name:    name,
 		Comment: comment,
-		Up:      wrapMigrationFunc(up),
-		Down:    wrapMigrationFunc(down),
+		Up:      wrapGoMigrationFunc(up),
+		Down:    wrapGoMigrationFunc(down),
 	})
 
 	return nil
@@ -97,7 +97,7 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 
 		migration := m.getOrCreateMigration(name)
 		migration.Comment = comment
-		migrationFunc := NewSQLMigrationFunc(fsys, path)
+		migrationFunc := newSQLMigrationFunc(fsys, path)
 
 		if strings.HasSuffix(path, ".up.sql") {
 			migration.Up = migrationFunc
