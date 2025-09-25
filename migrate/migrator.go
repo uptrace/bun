@@ -47,6 +47,20 @@ func WithTemplateData(data any) MigratorOption {
 	}
 }
 
+type MigrationHook func(ctx context.Context, db bun.IConn, migration *Migration) error
+
+func BeforeMigration(hook MigrationHook) MigratorOption {
+	return func(m *Migrator) {
+		m.beforeMigrationHook = hook
+	}
+}
+
+func AfterMigration(hook MigrationHook) MigratorOption {
+	return func(m *Migrator) {
+		m.afterMigrationHook = hook
+	}
+}
+
 type Migrator struct {
 	db         *bun.DB
 	migrations *Migrations
@@ -56,8 +70,10 @@ type Migrator struct {
 	table                string
 	locksTable           string
 	markAppliedOnSuccess bool
+	templateData         any
 
-	templateData any
+	beforeMigrationHook MigrationHook
+	afterMigrationHook  MigrationHook
 }
 
 func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Migrator {
@@ -176,7 +192,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		group.Migrations = migrations[:i+1]
 
 		if !cfg.nop && migration.Up != nil {
-			if err := migration.Up(ctx, m.db, m.templateData); err != nil {
+			if err := migration.Up(ctx, m, migration); err != nil {
 				return group, err
 			}
 		}
@@ -215,7 +231,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 		}
 
 		if !cfg.nop && migration.Down != nil {
-			if err := migration.Down(ctx, m.db, m.templateData); err != nil {
+			if err := migration.Down(ctx, m, migration); err != nil {
 				return lastGroup, err
 			}
 		}
@@ -423,6 +439,30 @@ func (m *Migrator) validate() error {
 	if len(m.ms) == 0 {
 		return errors.New("migrate: there are no migrations")
 	}
+	return nil
+}
+
+func (m *Migrator) exec(
+	ctx context.Context, db bun.IConn, migration *Migration, queries []string,
+) error {
+	if m.beforeMigrationHook != nil {
+		if err := m.beforeMigrationHook(ctx, db, migration); err != nil {
+			return err
+		}
+	}
+
+	for _, query := range queries {
+		if _, err := db.ExecContext(ctx, query); err != nil {
+			return err
+		}
+	}
+
+	if m.afterMigrationHook != nil {
+		if err := m.afterMigrationHook(ctx, db, migration); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

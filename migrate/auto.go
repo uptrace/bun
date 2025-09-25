@@ -270,8 +270,8 @@ func (am *AutoMigrator) createSQLMigrations(ctx context.Context, transactional b
 	migrations := NewMigrations(am.migrationsOpts...)
 	migrations.Add(Migration{
 		Name:    name,
-		Up:      wrapMigrationFunc(changes.Up(am.dbMigrator)),
-		Down:    wrapMigrationFunc(changes.Down(am.dbMigrator)),
+		Up:      wrapGoMigrationFunc(changes.Up(am.dbMigrator)),
+		Down:    wrapGoMigrationFunc(changes.Down(am.dbMigrator)),
 		Comment: "Changes detected by bun.AutoMigrator",
 	})
 
