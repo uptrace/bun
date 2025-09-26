@@ -42,7 +42,7 @@ func WithDiscardUnknownColumns() DBOption {
 
 // ConnResolver enables routing queries to multiple databases.
 type ConnResolver interface {
-	ResolveConn(query Query) IConn
+	ResolveConn(ctx context.Context, query Query) IConn
 	Close() error
 }
 

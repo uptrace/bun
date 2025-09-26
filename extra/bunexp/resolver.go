@@ -22,6 +22,8 @@ const (
 	DBReplicaBackup
 )
 
+var _ (bun.ConnResolver) = (*ReadWriteConnResolver)(nil)
+
 // TODO:
 //   - make monitoring interval configurable
 //   - make ping timeout configutable
@@ -75,7 +77,7 @@ func (r *ReadWriteConnResolver) Close() error {
 	return firstErr
 }
 
-func (r *ReadWriteConnResolver) ResolveConn(query bun.Query) bun.IConn {
+func (r *ReadWriteConnResolver) ResolveConn(ctx context.Context, query bun.Query) bun.IConn {
 	readOnly := bun.IsReadOnlyQuery(query)
 
 	var replicas []replica

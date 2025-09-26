@@ -116,12 +116,12 @@ func (q *baseQuery) DB() *DB {
 	return q.db
 }
 
-func (q *baseQuery) resolveConn(query Query) IConn {
+func (q *baseQuery) resolveConn(ctx context.Context, query Query) IConn {
 	if q.conn != nil {
 		return q.conn
 	}
 	if q.db.resolver != nil {
-		if conn := q.db.resolver.ResolveConn(query); conn != nil {
+		if conn := q.db.resolver.ResolveConn(ctx, query); conn != nil {
 			return conn
 		}
 	}
@@ -613,7 +613,7 @@ func (q *baseQuery) _scan(
 	model Model,
 	hasDest bool,
 ) (sql.Result, error) {
-	rows, err := q.resolveConn(iquery).QueryContext(ctx, query)
+	rows, err := q.resolveConn(ctx, iquery).QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func (q *baseQuery) exec(
 	query string,
 ) (sql.Result, error) {
 	ctx, event := q.db.beforeQuery(ctx, iquery, query, nil, query, q.model)
-	res, err := q.resolveConn(iquery).ExecContext(ctx, query)
+	res, err := q.resolveConn(ctx, iquery).ExecContext(ctx, query)
 	q.db.afterQuery(ctx, event, res, err)
 	return res, err
 }
