@@ -47,6 +47,12 @@ func WithTemplateData(data any) MigratorOption {
 	}
 }
 
+func WithLegacyFormat() MigratorOption {
+	return func(m *Migrator) {
+		m.legacyNaming = true
+	}
+}
+
 type MigrationHook func(ctx context.Context, db bun.IConn, migration *Migration) error
 
 func BeforeMigration(hook MigrationHook) MigratorOption {
@@ -71,6 +77,7 @@ type Migrator struct {
 	locksTable           string
 	markAppliedOnSuccess bool
 	templateData         any
+	legacyNaming         bool
 
 	beforeMigrationHook MigrationHook
 	afterMigrationHook  MigrationHook
@@ -83,8 +90,9 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 
 		ms: migrations.ms,
 
-		table:      defaultTable,
-		locksTable: defaultLocksTable,
+		table:        defaultTable,
+		locksTable:   defaultLocksTable,
+		legacyNaming: false,
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -277,7 +285,7 @@ func (m *Migrator) CreateGoMigration(
 		opt(cfg)
 	}
 
-	name, err := genMigrationName(name)
+	name, err := GenMigrationNameWithFormat(name, !m.legacyNaming)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +308,7 @@ func (m *Migrator) CreateGoMigration(
 
 // CreateTxSQLMigration creates transactional up and down SQL migration files.
 func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := genMigrationName(name)
+	name, err := GenMigrationNameWithFormat(name, !m.legacyNaming)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +328,7 @@ func (m *Migrator) CreateTxSQLMigrations(ctx context.Context, name string) ([]*M
 
 // CreateSQLMigrations creates up and down SQL migration files.
 func (m *Migrator) CreateSQLMigrations(ctx context.Context, name string) ([]*MigrationFile, error) {
-	name, err := genMigrationName(name)
+	name, err := GenMigrationNameWithFormat(name, !m.legacyNaming)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +369,16 @@ func (m *Migrator) createSQL(_ context.Context, fname string, transactional bool
 var nameRE = regexp.MustCompile(`^[0-9a-z_\-]+$`)
 
 func genMigrationName(name string) (string, error) {
-	const timeFormat = "20060102150405"
+	return GenMigrationNameWithFormat(name, true)
+}
+
+func GenMigrationNameWithFormat(name string, useNewFormat bool) (string, error) {
+	var timeFormat string
+	if useNewFormat {
+		timeFormat = "2006-01-02-15:04:05"
+	} else {
+		timeFormat = "20060102150405"
+	}
 
 	if name == "" {
 		return "", errors.New("migrate: migration name can't be empty")

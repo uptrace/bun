@@ -153,7 +153,7 @@ func migrationFile() string {
 	return ""
 }
 
-var fnameRE = regexp.MustCompile(`^(\d{1,14})_([0-9a-z_\-]+)\.`)
+var fnameRE = regexp.MustCompile(`^((\d{4}-\d{2}-\d{2}-\d{2}:\d{2}:\d{2})|(\d{1,14}))_([0-9a-z_\-]+)\.`)
 
 func extractMigrationName(fpath string) (string, string, error) {
 	fname := filepath.Base(fpath)
@@ -163,5 +163,8 @@ func extractMigrationName(fpath string) (string, string, error) {
 		return "", "", fmt.Errorf("migrate: unsupported migration name format: %q", fname)
 	}
 
-	return matches[1], matches[2], nil
+	timestamp := matches[1]
+	migrationName := matches[4]
+
+	return timestamp, migrationName, nil
 }
