@@ -4,6 +4,8 @@ type Name int
 
 func (n Name) String() string {
 	switch n {
+	case Invalid:
+		return "invalid"
 	case PG:
 		return "pg"
 	case SQLite:
@@ -15,7 +17,7 @@ func (n Name) String() string {
 	case Oracle:
 		return "oracle"
 	default:
-		return "invalid"
+		return "custom"
 	}
 }
 
