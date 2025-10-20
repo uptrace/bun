@@ -286,6 +286,11 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 	return q
 }
 
+func (q *SelectQuery) OrderBy(colName string, sortDir SortDir) *SelectQuery {
+	q.addOrderBy(colName, sortDir)
+	return q
+}
+
 func (q *SelectQuery) OrderExpr(query string, args ...any) *SelectQuery {
 	q.addOrderExpr(query, args...)
 	return q

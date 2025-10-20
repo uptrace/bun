@@ -1486,21 +1486,14 @@ func (q *orderLimitOffsetQuery) addOrder(orders ...string) {
 			continue
 		}
 
-		field := order[:index]
-		sort := order[index+1:]
-
-		switch strings.ToUpper(sort) {
-		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
-			"ASC NULLS LAST", "DESC NULLS LAST":
-			q.order = append(q.order, schema.SafeQuery("? ?", []any{
-				Ident(field),
-				Safe(sort),
-			}))
-		default:
-			q.order = append(q.order, schema.UnsafeIdent(order))
-		}
+		colName := order[:index]
+		sortDir := order[index+1:]
+		q.addOrderExpr("? ?", Ident(colName), SortDir(strings.ToUpper(sortDir)))
 	}
+}
 
+func (q *orderLimitOffsetQuery) addOrderBy(colName string, sortDir SortDir) {
+	q.addOrderExpr("? ?", Name(colName), sortDir)
 }
 
 func (q *orderLimitOffsetQuery) addOrderExpr(query string, args ...any) {

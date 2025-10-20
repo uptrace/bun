@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/uptrace/bun/internal"
@@ -83,6 +84,35 @@ func (q QueryWithArgs) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 		return gen.AppendIdent(b, q.Query), nil
 	}
 	return gen.AppendQuery(b, q.Query, q.Args...), nil
+}
+
+//------------------------------------------------------------------------------
+
+type SortDir string
+
+const (
+	SortDirAsc            SortDir = "ASC"
+	SortDirAscNullsFirst  SortDir = "ASC NULLS FIRST"
+	SortDirAscNullsLast   SortDir = "ASC NULLS LAST"
+	SortDirDesc           SortDir = "DESC"
+	SortDirDescNullsFirst SortDir = "DESC NULLS FIRST"
+	SortDirDescNullsLast  SortDir = "DESC NULLS LAST"
+)
+
+func (s SortDir) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
+	return AppendSortDir(b, s), nil
+}
+
+func AppendSortDir(b []byte, sortDir SortDir) []byte {
+	switch sortDir {
+	case SortDirAsc, SortDirDesc,
+		SortDirAscNullsFirst, SortDirAscNullsLast,
+		SortDirDescNullsFirst, SortDirDescNullsLast:
+		return append(b, sortDir...)
+	default:
+		slog.Error("unsupported sort direction", slog.String("sort_dir", string(sortDir)))
+		return b
+	}
 }
 
 //------------------------------------------------------------------------------

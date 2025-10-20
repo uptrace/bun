@@ -8,9 +8,10 @@ import (
 )
 
 type (
-	Safe  = schema.Safe
-	Ident = schema.Ident
-	Name  = schema.Name
+	Safe    = schema.Safe
+	Name    = schema.Name
+	Ident   = schema.Ident
+	SortDir = schema.SortDir
 
 	NullTime  = schema.NullTime
 	BaseModel = schema.BaseModel
@@ -20,6 +21,15 @@ type (
 
 	BeforeScanRowHook = schema.BeforeScanRowHook
 	AfterScanRowHook  = schema.AfterScanRowHook
+)
+
+const (
+	SortDirAsc            = schema.SortDirAsc
+	SortDirAscNullsFirst  = schema.SortDirDesc
+	SortDirAscNullsLast   = schema.SortDirAscNullsLast
+	SortDirDesc           = schema.SortDirDesc
+	SortDirDescNullsFirst = schema.SortDirDescNullsFirst
+	SortDirDescNullsLast  = schema.SortDirDescNullsLast
 )
 
 func SafeQuery(query string, args ...any) schema.QueryWithArgs {

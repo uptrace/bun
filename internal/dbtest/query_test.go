@@ -1870,6 +1870,12 @@ func TestQuery(t *testing.T) {
 					Returning("merge_action(), ?TableAlias.*")
 			},
 		},
+		{
+			id: 194,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().OrderBy("foo", bun.SortDirAsc)
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
