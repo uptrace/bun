@@ -1488,11 +1488,11 @@ func (q *orderLimitOffsetQuery) addOrder(orders ...string) {
 
 		colName := order[:index]
 		sortDir := order[index+1:]
-		q.addOrderExpr("? ?", Ident(colName), SortDir(strings.ToUpper(sortDir)))
+		q.addOrderExpr("? ?", Ident(colName), Order(strings.ToUpper(sortDir)))
 	}
 }
 
-func (q *orderLimitOffsetQuery) addOrderBy(colName string, sortDir SortDir) {
+func (q *orderLimitOffsetQuery) addOrderBy(colName string, sortDir Order) {
 	q.addOrderExpr("? ?", Name(colName), sortDir)
 }
 
