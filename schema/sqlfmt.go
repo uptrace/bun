@@ -88,26 +88,26 @@ func (q QueryWithArgs) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
-type SortDir string
+type Order string
 
 const (
-	SortDirAsc            SortDir = "ASC"
-	SortDirAscNullsFirst  SortDir = "ASC NULLS FIRST"
-	SortDirAscNullsLast   SortDir = "ASC NULLS LAST"
-	SortDirDesc           SortDir = "DESC"
-	SortDirDescNullsFirst SortDir = "DESC NULLS FIRST"
-	SortDirDescNullsLast  SortDir = "DESC NULLS LAST"
+	OrderAsc            Order = "ASC"
+	OrderAscNullsFirst  Order = "ASC NULLS FIRST"
+	OrderAscNullsLast   Order = "ASC NULLS LAST"
+	OrderDesc           Order = "DESC"
+	OrderDescNullsFirst Order = "DESC NULLS FIRST"
+	OrderDescNullsLast  Order = "DESC NULLS LAST"
 )
 
-func (s SortDir) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
-	return AppendSortDir(b, s), nil
+func (s Order) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
+	return AppendOrder(b, s), nil
 }
 
-func AppendSortDir(b []byte, sortDir SortDir) []byte {
+func AppendOrder(b []byte, sortDir Order) []byte {
 	switch sortDir {
-	case SortDirAsc, SortDirDesc,
-		SortDirAscNullsFirst, SortDirAscNullsLast,
-		SortDirDescNullsFirst, SortDirDescNullsLast:
+	case OrderAsc, OrderDesc,
+		OrderAscNullsFirst, OrderAscNullsLast,
+		OrderDescNullsFirst, OrderDescNullsLast:
 		return append(b, sortDir...)
 	default:
 		slog.Error("unsupported sort direction", slog.String("sort_dir", string(sortDir)))

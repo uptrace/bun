@@ -1873,7 +1873,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 194,
 			query: func(db *bun.DB) schema.QueryAppender {
-				return db.NewSelect().OrderBy("foo", bun.SortDirAsc)
+				return db.NewSelect().OrderBy("foo", bun.OrderAsc)
 			},
 		},
 	}

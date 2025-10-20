@@ -286,7 +286,7 @@ func (q *SelectQuery) Order(orders ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) OrderBy(colName string, sortDir SortDir) *SelectQuery {
+func (q *SelectQuery) OrderBy(colName string, sortDir Order) *SelectQuery {
 	q.addOrderBy(colName, sortDir)
 	return q
 }
