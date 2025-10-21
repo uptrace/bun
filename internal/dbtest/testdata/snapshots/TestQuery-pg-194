@@ -1,1 +1,1 @@
-SELECT * ORDER BY "foo" ASC
+SELECT * ORDER BY "foo" ASC, "foo"."bar" DESC, "xxx" 
