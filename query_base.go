@@ -1493,7 +1493,7 @@ func (q *orderLimitOffsetQuery) addOrder(orders ...string) {
 }
 
 func (q *orderLimitOffsetQuery) addOrderBy(colName string, sortDir Order) {
-	q.addOrderExpr("? ?", Name(colName), sortDir)
+	q.addOrderExpr("? ?", Ident(colName), sortDir)
 }
 
 func (q *orderLimitOffsetQuery) addOrderExpr(query string, args ...any) {
