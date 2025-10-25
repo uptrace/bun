@@ -91,6 +91,7 @@ func (q QueryWithArgs) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 type Order string
 
 const (
+	OrderNone           Order = ""
 	OrderAsc            Order = "ASC"
 	OrderAscNullsFirst  Order = "ASC NULLS FIRST"
 	OrderAscNullsLast   Order = "ASC NULLS LAST"
@@ -109,6 +110,8 @@ func AppendOrder(b []byte, sortDir Order) []byte {
 		OrderAscNullsFirst, OrderAscNullsLast,
 		OrderDescNullsFirst, OrderDescNullsLast:
 		return append(b, sortDir...)
+	case OrderNone:
+		return b
 	default:
 		slog.Error("unsupported sort direction", slog.String("sort_dir", string(sortDir)))
 		return b
