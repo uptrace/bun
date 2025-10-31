@@ -31,8 +31,9 @@ type SelectQuery struct {
 	having     []schema.QueryWithArgs
 	selFor     schema.QueryWithArgs
 
-	union   []union
-	comment string
+	union           []union
+	skipUnionParens bool
+	comment         string
 }
 
 var _ Query = (*SelectQuery)(nil)
@@ -537,7 +538,10 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, "WITH _count_wrapper AS ("...)
 	}
 
-	if len(q.union) > 0 {
+	hasUnion := len(q.union) > 0
+	wrapUnion := !q.skipUnionParens
+
+	if hasUnion && wrapUnion {
 		b = append(b, '(')
 	}
 
@@ -665,17 +669,23 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
-	if len(q.union) > 0 {
-		b = append(b, ')')
+	if hasUnion {
+		if wrapUnion {
+			b = append(b, ')')
+		}
 
 		for _, u := range q.union {
 			b = append(b, u.expr...)
-			b = append(b, '(')
+			if wrapUnion {
+				b = append(b, '(')
+			}
 			b, err = u.query.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
-			b = append(b, ')')
+			if wrapUnion {
+				b = append(b, ')')
+			}
 		}
 	}
 

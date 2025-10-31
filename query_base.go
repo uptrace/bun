@@ -339,7 +339,14 @@ func (q *baseQuery) appendCTE(
 		b = append(b, " AS ("...)
 	}
 
-	b, err = cte.query.AppendQuery(gen, b)
+	if sq, ok := cte.query.(*SelectQuery); ok && gen.Dialect().Name() == dialect.SQLite {
+		saved := sq.skipUnionParens
+		sq.skipUnionParens = true
+		b, err = cte.query.AppendQuery(gen, b)
+		sq.skipUnionParens = saved
+	} else {
+		b, err = cte.query.AppendQuery(gen, b)
+	}
 	if err != nil {
 		return nil, err
 	}
