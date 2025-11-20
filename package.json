@@ -1,6 +1,6 @@
 {
   "name": "gobun",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "main": "index.js",
   "repository": "git@github.com:uptrace/bun.git",
   "author": "Vladimir Mihailenco <vladimir.webdev@gmail.com>",
