@@ -11,10 +11,10 @@ replace github.com/uptrace/bun/dialect/sqlitedialect => ../../dialect/sqlitedial
 replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
-	github.com/uptrace/bun v1.2.15
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.15
-	github.com/uptrace/bun/driver/sqliteshim v1.2.15
-	github.com/uptrace/bun/extra/bundebug v1.2.15
+	github.com/uptrace/bun v1.2.16
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.16
+	github.com/uptrace/bun/driver/sqliteshim v1.2.16
+	github.com/uptrace/bun/extra/bundebug v1.2.16
 )
 
 require (

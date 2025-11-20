@@ -1,3 +1,29 @@
+## [1.2.16](github.com/uptrace/bun/compare/v1.2.15...v1.2.16) (2025-11-20)
+
+
+### Bug Fixes
+
+* data race in db clone stats ([e92d910](github.com/uptrace/bun/commits/e92d91041144037c270db1f87d7b5750d52d88ab))
+* **db:** data race in db clone stats ([a78f382](github.com/uptrace/bun/commits/a78f38251b0ca990e55868953cd85e3db7cadcc5))
+* **db:** move DBStats to noCopyState ([c646241](github.com/uptrace/bun/commits/c64624188efb7b049a6e70d064566a6613fb9974))
+* return "custom" for unknown dialects instead of "invalid" ([#1280](/github.com/uptrace/bun/issues/1280)) ([106cc08](github.com/uptrace/bun/commits/106cc081023efe0662375fc9e6b9de9b0b06f6b0)), closes [#1276](github.com/uptrace/bun/issues/1276)
+* revert CreateChannel rename ([#1248](/github.com/uptrace/bun/issues/1248)) ([a5b2ac6](github.com/uptrace/bun/commits/a5b2ac63e478da9011640df2612e33094b5fc90b))
+* sql injection [#1228](/github.com/uptrace/bun/issues/1228) ([#1263](/github.com/uptrace/bun/issues/1263)) ([c12edf0](github.com/uptrace/bun/commits/c12edf090a9f7b17ea04f121c8b25603590e845b))
+* update `SelectQuery.Clone` to properly handle non-nil empty arg slices ([#1299](/github.com/uptrace/bun/issues/1299)) ([b499cce](github.com/uptrace/bun/commits/b499cce68bff4c2c51d8647dd1ca17c0451f468e)), closes [#1298](github.com/uptrace/bun/issues/1298)
+
+
+### Features
+
+* add Context to ConnResolver.ResolveConn ([#1275](/github.com/uptrace/bun/issues/1275)) ([d9f273f](github.com/uptrace/bun/commits/d9f273fc119ff2097883fffeb34d2e2c6074accd))
+* add materialize cte support  ([#1260](/github.com/uptrace/bun/issues/1260)) ([16ebb09](github.com/uptrace/bun/commits/16ebb0916c2bffbec6bdb2af4c227d83fefdb4ae))
+* add SetValues ([#1252](/github.com/uptrace/bun/issues/1252)) ([9556d3c](github.com/uptrace/bun/commits/9556d3c4fb5fb79d9295a5937d46052a0e07fb2f))
+* add SortDir type to safely build order queries ([#1284](/github.com/uptrace/bun/issues/1284)) ([2ad0521](github.com/uptrace/bun/commits/2ad05214e57548e0b6dccf487401335cbd4e4ed9))
+* add WithQueryHook and deprecated AddQueryHook ([#1272](/github.com/uptrace/bun/issues/1272)) ([f662c1e](github.com/uptrace/bun/commits/f662c1ee6f49306eea50ceceb23d2da5b83d28cc))
+* **migrate:** add BeforeMigration and AfterMigration ([#1273](/github.com/uptrace/bun/issues/1273)) ([042b10a](github.com/uptrace/bun/commits/042b10aa50f6b0f532a59de4ce81fbddb6a3b739))
+* **pgdialect:** add support for RETURNING clause in MERGE statements ([#1258](/github.com/uptrace/bun/issues/1258)) ([6f4c688](github.com/uptrace/bun/commits/6f4c68874cd3324c863253d10ba4989365837b61))
+
+
+
 ## [1.2.15](https://github.com/uptrace/bun/compare/v1.2.14...v1.2.15) (2025-07-17)
 
 
