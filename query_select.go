@@ -1118,7 +1118,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 	}
 
 	cloneArgs := func(args []schema.QueryWithArgs) []schema.QueryWithArgs {
-		if len(args) == 0 {
+		if args == nil {
 			return nil
 		}
 		clone := make([]schema.QueryWithArgs, len(args))
