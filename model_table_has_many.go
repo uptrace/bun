@@ -168,7 +168,7 @@ func indirectAsKey(field reflect.Value) any {
 
 	i := field.Interface()
 	if valuer, ok := i.(driver.Valuer); ok {
-		if v, err := valuer.Value(); err == nil {
+		if v, err := valuer.Value(); err == nil && v != nil {
 			switch reflect.TypeOf(v).Kind() {
 			case reflect.Array, reflect.Chan, reflect.Func,
 				reflect.Map, reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
