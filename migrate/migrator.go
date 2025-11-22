@@ -207,6 +207,45 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	return group, nil
 }
 
+// RunMigration runs the up migration with the given ID without marking it as applied.
+// It runs the migration even if it is already marked as applied.
+func (m *Migrator) RunMigration(
+	ctx context.Context, migrationID int64, opts ...MigrationOption,
+) error {
+	cfg := newMigrationConfig(opts)
+
+	if err := m.validate(); err != nil {
+		return err
+	}
+	if migrationID == 0 {
+		return errors.New("migrate: migration id must be greater than zero")
+	}
+
+	migrations, _, err := m.migrationsWithStatus(ctx)
+	if err != nil {
+		return err
+	}
+
+	var migration *Migration
+	for i := range migrations {
+		if migrations[i].ID == migrationID {
+			migration = &migrations[i]
+			break
+		}
+	}
+	if migration == nil {
+		return fmt.Errorf("migrate: migration with id %d not found", migrationID)
+	}
+	if migration.Up == nil {
+		return fmt.Errorf("migrate: migration %s does not have up migration", migration.Name)
+	}
+	if cfg.nop {
+		return nil
+	}
+
+	return migration.Up(ctx, m, migration)
+}
+
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	cfg := newMigrationConfig(opts)
 
@@ -418,7 +457,7 @@ func (m *Migrator) MissingMigrations(ctx context.Context) (MigrationSlice, error
 	return applied, nil
 }
 
-// AppliedMigrations selects applied (applied) migrations in descending order.
+// AppliedMigrations returns applied (applied) migrations in descending order.
 func (m *Migrator) AppliedMigrations(ctx context.Context) (MigrationSlice, error) {
 	var ms MigrationSlice
 	if err := m.db.NewSelect().
