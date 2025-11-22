@@ -20,6 +20,7 @@ type union struct {
 	query *SelectQuery
 }
 
+// SelectQuery builds SQL SELECT statements.
 type SelectQuery struct {
 	whereBaseQuery
 	idxHintsQuery
@@ -37,6 +38,7 @@ type SelectQuery struct {
 
 var _ Query = (*SelectQuery)(nil)
 
+// NewSelectQuery returns a SelectQuery attached to the provided DB.
 func NewSelectQuery(db *DB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
@@ -396,6 +398,7 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 	return q
 }
 
+// RelationOpts configures how a relation is joined in a SelectQuery.
 type RelationOpts struct {
 	// Apply applies additional options to the relation.
 	Apply func(*SelectQuery) *SelectQuery

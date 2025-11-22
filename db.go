@@ -19,13 +19,16 @@ const (
 	discardUnknownColumns internal.Flag = 1 << iota
 )
 
+// DBStats tracks aggregate query counters collected by Bun.
 type DBStats struct {
 	Queries uint32
 	Errors  uint32
 }
 
+// DBOption mutates DB configuration during construction.
 type DBOption func(db *DB)
 
+// WithOptions applies multiple DBOption values at once.
 func WithOptions(opts ...DBOption) DBOption {
 	return func(db *DB) {
 		for _, opt := range opts {
@@ -34,6 +37,7 @@ func WithOptions(opts ...DBOption) DBOption {
 	}
 }
 
+// WithDiscardUnknownColumns ignores columns returned by queries that are not present in models.
 func WithDiscardUnknownColumns() DBOption {
 	return func(db *DB) {
 		db.flags = db.flags.Set(discardUnknownColumns)
@@ -46,12 +50,14 @@ type ConnResolver interface {
 	Close() error
 }
 
+// WithConnResolver registers a connection resolver that chooses a connection per query.
 func WithConnResolver(resolver ConnResolver) DBOption {
 	return func(db *DB) {
 		db.resolver = resolver
 	}
 }
 
+// DB is the central access point for building and executing Bun queries.
 type DB struct {
 	// Must be a pointer so we copy the whole state, not individual fields.
 	*noCopyState
@@ -73,6 +79,7 @@ type noCopyState struct {
 	stats DBStats
 }
 
+// NewDB wraps an existing *sql.DB with Bun using the given dialect and options.
 func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	dialect.Init(sqldb)
 
@@ -355,6 +362,7 @@ func (db *DB) format(query string, args []any) string {
 
 //------------------------------------------------------------------------------
 
+// Conn wraps *sql.Conn so queries continue to use Bun features and hooks.
 type Conn struct {
 	db *DB
 	*sql.Conn
@@ -501,6 +509,7 @@ func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 
 //------------------------------------------------------------------------------
 
+// Stmt wraps *sql.Stmt so prepared statements participate in Bun logging.
 type Stmt struct {
 	*sql.Stmt
 }
@@ -519,6 +528,7 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 
 //------------------------------------------------------------------------------
 
+// Tx wraps *sql.Tx and preserves Bun-specific context such as hooks and dialect.
 type Tx struct {
 	ctx context.Context
 	db  *DB

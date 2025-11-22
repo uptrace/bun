@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// DropIndexQuery builds DROP INDEX statements.
 type DropIndexQuery struct {
 	baseQuery
 	cascadeQuery
@@ -21,6 +22,7 @@ type DropIndexQuery struct {
 
 var _ Query = (*DropIndexQuery)(nil)
 
+// NewDropIndexQuery returns a DropIndexQuery associated with the provided DB.
 func NewDropIndexQuery(db *DB) *DropIndexQuery {
 	q := &DropIndexQuery{
 		baseQuery: baseQuery{

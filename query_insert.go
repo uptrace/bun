@@ -12,6 +12,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// InsertQuery builds SQL INSERT statements.
 type InsertQuery struct {
 	whereBaseQuery
 	returningQuery
@@ -27,6 +28,7 @@ type InsertQuery struct {
 
 var _ Query = (*InsertQuery)(nil)
 
+// NewInsertQuery returns an InsertQuery tied to the provided DB.
 func NewInsertQuery(db *DB) *InsertQuery {
 	q := &InsertQuery{
 		whereBaseQuery: whereBaseQuery{

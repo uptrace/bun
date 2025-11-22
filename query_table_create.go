@@ -16,6 +16,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// CreateTableQuery builds CREATE TABLE statements.
 type CreateTableQuery struct {
 	baseQuery
 
@@ -37,6 +38,7 @@ type CreateTableQuery struct {
 
 var _ Query = (*CreateTableQuery)(nil)
 
+// NewCreateTableQuery returns a CreateTableQuery bound to the provided DB.
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{

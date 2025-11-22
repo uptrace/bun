@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// DropTableQuery builds DROP TABLE statements.
 type DropTableQuery struct {
 	baseQuery
 	cascadeQuery
@@ -18,6 +19,7 @@ type DropTableQuery struct {
 
 var _ Query = (*DropTableQuery)(nil)
 
+// NewDropTableQuery returns a DropTableQuery tied to the provided DB.
 func NewDropTableQuery(db *DB) *DropTableQuery {
 	q := &DropTableQuery{
 		baseQuery: baseQuery{

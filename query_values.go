@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// ValuesQuery builds VALUES clauses that can be used as subqueries.
 type ValuesQuery struct {
 	baseQuery
 	setQuery
@@ -22,6 +23,7 @@ var (
 	_ schema.NamedArgAppender = (*ValuesQuery)(nil)
 )
 
+// NewValuesQuery creates a VALUES query for the given model.
 func NewValuesQuery(db *DB, model any) *ValuesQuery {
 	q := &ValuesQuery{
 		baseQuery: baseQuery{
