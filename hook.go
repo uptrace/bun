@@ -9,6 +9,7 @@ import (
 	"unicode"
 )
 
+// QueryEvent captures information about a query execution for hooks.
 type QueryEvent struct {
 	DB *DB
 
@@ -25,6 +26,7 @@ type QueryEvent struct {
 	Stash map[any]any
 }
 
+// Operation returns the SQL operation name such as SELECT or UPDATE.
 func (e *QueryEvent) Operation() string {
 	if e.IQuery != nil {
 		return e.IQuery.Operation()
@@ -44,6 +46,7 @@ func queryOperation(query string) string {
 	return queryOp
 }
 
+// QueryHook allows observing queries before and after execution.
 type QueryHook interface {
 	BeforeQuery(context.Context, *QueryEvent) context.Context
 	AfterQuery(context.Context, *QueryEvent)

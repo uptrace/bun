@@ -18,12 +18,14 @@ var (
 	bytesType = reflect.TypeFor[[]byte]()
 )
 
+// Model is implemented by all Bun models.
 type Model = schema.Model
 
 type rowScanner interface {
 	ScanRow(ctx context.Context, rows *sql.Rows) error
 }
 
+// TableModel describes models that map to database tables and support query lifecycle hooks.
 type TableModel interface {
 	Model
 

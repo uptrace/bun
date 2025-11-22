@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// DropColumnQuery builds ALTER TABLE ... DROP COLUMN statements.
 type DropColumnQuery struct {
 	baseQuery
 
@@ -17,6 +18,7 @@ type DropColumnQuery struct {
 
 var _ Query = (*DropColumnQuery)(nil)
 
+// NewDropColumnQuery creates a DropColumnQuery bound to the provided DB.
 func NewDropColumnQuery(db *DB) *DropColumnQuery {
 	q := &DropColumnQuery{
 		baseQuery: baseQuery{

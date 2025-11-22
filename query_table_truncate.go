@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// TruncateTableQuery builds TRUNCATE TABLE statements.
 type TruncateTableQuery struct {
 	baseQuery
 	cascadeQuery
@@ -19,6 +20,7 @@ type TruncateTableQuery struct {
 
 var _ Query = (*TruncateTableQuery)(nil)
 
+// NewTruncateTableQuery creates a TruncateTableQuery attached to the given DB.
 func NewTruncateTableQuery(db *DB) *TruncateTableQuery {
 	q := &TruncateTableQuery{
 		baseQuery: baseQuery{

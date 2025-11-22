@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// DeleteQuery builds SQL DELETE statements.
 type DeleteQuery struct {
 	whereBaseQuery
 	orderLimitOffsetQuery
@@ -21,6 +22,7 @@ type DeleteQuery struct {
 
 var _ Query = (*DeleteQuery)(nil)
 
+// NewDeleteQuery returns a DeleteQuery associated with the provided DB.
 func NewDeleteQuery(db *DB) *DeleteQuery {
 	q := &DeleteQuery{
 		whereBaseQuery: whereBaseQuery{

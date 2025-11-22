@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// AddColumnQuery builds ALTER TABLE ... ADD COLUMN statements.
 type AddColumnQuery struct {
 	baseQuery
 
@@ -19,6 +20,7 @@ type AddColumnQuery struct {
 
 var _ Query = (*AddColumnQuery)(nil)
 
+// NewAddColumnQuery creates an AddColumnQuery bound to the provided DB.
 func NewAddColumnQuery(db *DB) *AddColumnQuery {
 	q := &AddColumnQuery{
 		baseQuery: baseQuery{

@@ -7,6 +7,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// RawQuery executes a plain SQL query using Bun formatting and hooks.
 type RawQuery struct {
 	baseQuery
 
@@ -15,6 +16,7 @@ type RawQuery struct {
 	comment string
 }
 
+// NewRawQuery creates a RawQuery with the provided SQL template and arguments.
 func NewRawQuery(db *DB, query string, args ...any) *RawQuery {
 	return &RawQuery{
 		baseQuery: baseQuery{

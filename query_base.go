@@ -22,6 +22,7 @@ const (
 	allWithDeletedFlag
 )
 
+// WithQuery defines a common table expression used by another query.
 type WithQuery struct {
 	name            string
 	query           Query
@@ -76,7 +77,7 @@ var (
 	_ IDB = (*Tx)(nil)
 )
 
-// QueryBuilder is used for common query methods
+// QueryBuilder exposes shared filtering helpers across query builders.
 type QueryBuilder interface {
 	Query
 	Where(query string, args ...any) QueryBuilder
@@ -257,6 +258,7 @@ func (q *baseQuery) isSoftDelete() bool {
 
 //------------------------------------------------------------------------------
 
+// NewWithQuery creates a CTE with the given name and underlying query.
 func NewWithQuery(name string, query Query) *WithQuery {
 	return &WithQuery{
 		name:  name,
@@ -1568,6 +1570,7 @@ func (q *orderLimitOffsetQuery) appendLimitOffset(gen schema.QueryGen, b []byte)
 	return b, nil
 }
 
+// IsReadOnlyQuery reports whether the provided query and its CTEs are SELECT-only.
 func IsReadOnlyQuery(query Query) bool {
 	sel, ok := query.(*SelectQuery)
 	if !ok {

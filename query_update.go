@@ -13,6 +13,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// UpdateQuery builds SQL UPDATE statements.
 type UpdateQuery struct {
 	whereBaseQuery
 	orderLimitOffsetQuery
@@ -26,6 +27,7 @@ type UpdateQuery struct {
 
 var _ Query = (*UpdateQuery)(nil)
 
+// NewUpdateQuery returns a new UpdateQuery attached to the provided DB.
 func NewUpdateQuery(db *DB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{
