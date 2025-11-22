@@ -210,15 +210,15 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 // RunMigration runs the up migration with the given ID without marking it as applied.
 // It runs the migration even if it is already marked as applied.
 func (m *Migrator) RunMigration(
-	ctx context.Context, migrationID int64, opts ...MigrationOption,
+	ctx context.Context, migrationName string, opts ...MigrationOption,
 ) error {
 	cfg := newMigrationConfig(opts)
 
 	if err := m.validate(); err != nil {
 		return err
 	}
-	if migrationID == 0 {
-		return errors.New("migrate: migration id must be greater than zero")
+	if migrationName == "" {
+		return errors.New("migrate: migration name cannot be empty")
 	}
 
 	migrations, _, err := m.migrationsWithStatus(ctx)
@@ -228,13 +228,13 @@ func (m *Migrator) RunMigration(
 
 	var migration *Migration
 	for i := range migrations {
-		if migrations[i].ID == migrationID {
+		if migrations[i].Name == migrationName {
 			migration = &migrations[i]
 			break
 		}
 	}
 	if migration == nil {
-		return fmt.Errorf("migrate: migration with id %d not found", migrationID)
+		return fmt.Errorf("migrate: migration with name %q not found", migrationName)
 	}
 	if migration.Up == nil {
 		return fmt.Errorf("migrate: migration %s does not have up migration", migration.Name)

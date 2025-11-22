@@ -226,11 +226,8 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Len(t, migrationsWithStatus, 2)
 
-	targetID := migrationsWithStatus[0].ID
-	require.NotZero(t, targetID)
-
 	history = nil
-	err = m.RunMigration(ctx, targetID)
+	err = m.RunMigration(ctx, "20060102150405")
 	require.NoError(t, err)
 	require.Equal(t, []string{"up1"}, history)
 
