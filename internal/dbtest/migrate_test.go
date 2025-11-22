@@ -55,6 +55,7 @@ func TestMigrate(t *testing.T) {
 	tests := []Test{
 		{run: testMigrateUpAndDown},
 		{run: testMigrateUpError},
+		{run: testRunMigration},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -178,6 +179,64 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	require.Equal(t, int64(1), group.ID)
 	require.Len(t, group.Migrations, 2)
 	require.Equal(t, []string{"down2", "down1"}, history)
+}
+
+func testRunMigration(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	var history []string
+
+	migrations := migrate.NewMigrations()
+	migrations.Add(migrate.Migration{
+		Name: "20060102150405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			history = append(history, "up1")
+			return nil
+		},
+	})
+	migrations.Add(migrate.Migration{
+		Name: "20060102160405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			history = append(history, "up2")
+			return nil
+		},
+	})
+
+	m := migrate.NewMigrator(db, migrations,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationLocksTable),
+	)
+	require.NoError(t, m.Reset(ctx))
+
+	_, err := m.Migrate(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []string{"up1", "up2"}, history)
+
+	appliedBefore, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+	migrationIDs := func(ms migrate.MigrationSlice) []int64 {
+		ids := make([]int64, len(ms))
+		for i := range ms {
+			ids[i] = ms[i].ID
+		}
+		return ids
+	}
+	migrationsWithStatus, err := m.MigrationsWithStatus(ctx)
+	require.NoError(t, err)
+	require.Len(t, migrationsWithStatus, 2)
+
+	targetID := migrationsWithStatus[0].ID
+	require.NotZero(t, targetID)
+
+	history = nil
+	err = m.RunMigration(ctx, targetID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"up1"}, history)
+
+	appliedAfter, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+	require.ElementsMatch(t, migrationIDs(appliedBefore), migrationIDs(appliedAfter))
 }
 
 // newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
