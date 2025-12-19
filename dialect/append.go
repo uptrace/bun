@@ -7,14 +7,6 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-func AppendError(b []byte, err error) []byte {
-	// Use format that's invalid in all SQL dialects, see #1307
-	b = append(b, "\x00BUN_ERROR:"...) // NULL byte is never valid in SQL
-	b = append(b, err.Error()...)
-	b = append(b, '\x00')
-	return b
-}
-
 func AppendNull(b []byte) []byte {
 	return append(b, "NULL"...)
 }

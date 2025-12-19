@@ -9,9 +9,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/schema"
 )
 
-func appendElem(buf []byte, val any) []byte {
+func appendElem(gen schema.QueryGen, buf []byte, val any) []byte {
 	switch val := val.(type) {
 	case int64:
 		return strconv.AppendInt(buf, val, 10)
@@ -32,12 +33,12 @@ func appendElem(buf []byte, val any) []byte {
 		val2, err := val.Value()
 		if err != nil {
 			err := fmt.Errorf("pgdialect: can't append elem value: %w", err)
-			return dialect.AppendError(buf, err)
+			return gen.AppendError(buf, err)
 		}
-		return appendElem(buf, val2)
+		return appendElem(gen, buf, val2)
 	default:
 		err := fmt.Errorf("pgdialect: can't append elem %T", val)
-		return dialect.AppendError(buf, err)
+		return gen.AppendError(buf, err)
 	}
 }
 

@@ -30,6 +30,7 @@ type Dialect interface {
 	AppendBytes(b []byte, bs []byte) []byte
 	AppendJSON(b, jsonb []byte) []byte
 	AppendBool(b []byte, v bool) []byte
+	AppendError(b []byte, err error) []byte
 
 	// AppendSequence adds the appropriate instruction for the driver to create a sequence
 	// from which (autoincremented) values for the column will be generated.
@@ -142,6 +143,8 @@ func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
 func (BaseDialect) AppendBool(b []byte, v bool) []byte {
 	return dialect.AppendBool(b, v)
 }
+
+func (d BaseDialect) AppendError(b []byte, err error) []byte { return d.AppendString(b, err.Error()) }
 
 // ------------------------------------------------------------------------------
 

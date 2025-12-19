@@ -131,6 +131,10 @@ func (f QueryGen) AppendQuery(dst []byte, query string, args ...any) []byte {
 	return f.append(dst, parser.NewString(query), args)
 }
 
+func (f QueryGen) AppendError(b []byte, err error) []byte {
+	return f.Dialect().AppendError(b, err)
+}
+
 func (f QueryGen) append(dst []byte, p *parser.Parser, args []any) []byte {
 	var namedArgs NamedArgAppender
 	if len(args) == 1 {
@@ -208,7 +212,7 @@ func (gen QueryGen) appendArg(b []byte, arg any) []byte {
 	case QueryAppender:
 		bb, err := arg.AppendQuery(gen, b)
 		if err != nil {
-			return dialect.AppendError(b, err)
+			return gen.AppendError(b, err)
 		}
 		return bb
 	default:
