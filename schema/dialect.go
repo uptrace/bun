@@ -144,7 +144,10 @@ func (BaseDialect) AppendBool(b []byte, v bool) []byte {
 	return dialect.AppendBool(b, v)
 }
 
-func (d BaseDialect) AppendError(b []byte, err error) []byte { return d.AppendString(b, err.Error()) }
+func (d BaseDialect) AppendError(b []byte, err error) []byte {
+	b = d.AppendString(b, err.Error())
+	return append(b, 0x00)
+}
 
 // ------------------------------------------------------------------------------
 

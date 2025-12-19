@@ -171,8 +171,6 @@ func (*Dialect) DefaultSchema() string {
 	return "dbo"
 }
 
-func (d *Dialect) AppendError(b []byte, err error) []byte { return d.AppendString(b, err.Error()) }
-
 func sqlType(field *schema.Field) string {
 	switch field.DiscoveredSQLType {
 	case sqltype.Timestamp:

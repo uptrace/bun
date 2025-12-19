@@ -222,8 +222,6 @@ func (d *Dialect) DefaultSchema() string {
 	return "mydb"
 }
 
-func (d *Dialect) AppendError(b []byte, err error) []byte { return d.AppendString(b, err.Error()) }
-
 func sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
 		return datetimeType
