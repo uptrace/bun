@@ -145,8 +145,10 @@ func (BaseDialect) AppendBool(b []byte, v bool) []byte {
 }
 
 func (d BaseDialect) AppendError(b []byte, err error) []byte {
+	b = append(b, "\x00BUN_ERROR("...)
 	b = d.AppendString(b, err.Error())
-	return append(b, 0x00)
+	b = append(b, ")\x00"...)
+	return b
 }
 
 // ------------------------------------------------------------------------------
