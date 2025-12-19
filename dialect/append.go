@@ -8,9 +8,10 @@ import (
 )
 
 func AppendError(b []byte, err error) []byte {
-	b = append(b, "?!("...)
+	// Use format that's invalid in all SQL dialects, see #1307
+	b = append(b, "\x00BUN_ERROR:"...) // NULL byte is never valid in SQL
 	b = append(b, err.Error()...)
-	b = append(b, ')')
+	b = append(b, '\x00')
 	return b
 }
 
