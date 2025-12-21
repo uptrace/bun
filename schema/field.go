@@ -87,7 +87,7 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	}
 
 	for _, index := range f.Index {
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				return true
 			}
@@ -99,12 +99,23 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 }
 
 func (f *Field) AppendValue(gen QueryGen, b []byte, strct reflect.Value) []byte {
+	return f.appendValue(gen, b, strct, false)
+}
+
+func (f *Field) AppendValueOrDefault(gen QueryGen, b []byte, strct reflect.Value) []byte {
+	return f.appendValue(gen, b, strct, true)
+}
+
+func (f *Field) appendValue(gen QueryGen, b []byte, strct reflect.Value, defaultPlaceholder bool) []byte {
 	fv, ok := fieldByIndex(strct, f.Index)
 	if !ok {
 		return dialect.AppendNull(b)
 	}
 
 	if (f.IsPtr && fv.IsNil()) || (f.NullZero && f.IsZero(fv)) {
+		if defaultPlaceholder {
+			return append(b, "DEFAULT"...)
+		}
 		return dialect.AppendNull(b)
 	}
 	if f.Append == nil {

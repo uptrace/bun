@@ -1,1 +1,1 @@
-UPDATE "soft_deletes" AS "soft_delete" SET "deleted_at" = NULL WHERE "soft_delete"."deleted_at" IS NULL AND ("soft_delete"."id" = NULL)
+UPDATE "soft_deletes" AS "soft_delete" SET "deleted_at" = DEFAULT WHERE "soft_delete"."deleted_at" IS NULL AND ("soft_delete"."id" = NULL)
