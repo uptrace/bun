@@ -98,6 +98,7 @@ func NewDB(sqldb *sql.DB, dialect schema.Dialect, opts ...DBOption) *DB {
 	return db
 }
 
+// String returns a string representation of the DB showing its dialect.
 func (db *DB) String() string {
 	var b strings.Builder
 	b.WriteString("DB<dialect=")
@@ -106,6 +107,8 @@ func (db *DB) String() string {
 	return b.String()
 }
 
+// Close closes the database connection and any registered connection resolver.
+// It returns the first error encountered during closure.
 func (db *DB) Close() error {
 	if db.closed.Swap(true) {
 		return nil
@@ -122,6 +125,7 @@ func (db *DB) Close() error {
 	return firstErr
 }
 
+// DBStats returns aggregated query statistics including total queries and errors.
 func (db *DB) DBStats() DBStats {
 	return DBStats{
 		Queries: atomic.LoadUint32(&db.stats.Queries),
@@ -129,62 +133,78 @@ func (db *DB) DBStats() DBStats {
 	}
 }
 
+// NewValues creates a VALUES query for inserting multiple rows efficiently.
 func (db *DB) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(db, model)
 }
 
+// NewMerge creates a MERGE (UPSERT) query for insert-or-update operations.
 func (db *DB) NewMerge() *MergeQuery {
 	return NewMergeQuery(db)
 }
 
+// NewSelect creates a SELECT query builder.
 func (db *DB) NewSelect() *SelectQuery {
 	return NewSelectQuery(db)
 }
 
+// NewInsert creates an INSERT query builder.
 func (db *DB) NewInsert() *InsertQuery {
 	return NewInsertQuery(db)
 }
 
+// NewUpdate creates an UPDATE query builder.
 func (db *DB) NewUpdate() *UpdateQuery {
 	return NewUpdateQuery(db)
 }
 
+// NewDelete creates a DELETE query builder.
 func (db *DB) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(db)
 }
 
+// NewRaw creates a raw SQL query with the given query string and arguments.
 func (db *DB) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(db, query, args...)
 }
 
+// NewCreateTable creates a CREATE TABLE DDL query builder.
 func (db *DB) NewCreateTable() *CreateTableQuery {
 	return NewCreateTableQuery(db)
 }
 
+// NewDropTable creates a DROP TABLE DDL query builder.
 func (db *DB) NewDropTable() *DropTableQuery {
 	return NewDropTableQuery(db)
 }
 
+// NewCreateIndex creates a CREATE INDEX DDL query builder.
 func (db *DB) NewCreateIndex() *CreateIndexQuery {
 	return NewCreateIndexQuery(db)
 }
 
+// NewDropIndex creates a DROP INDEX DDL query builder.
 func (db *DB) NewDropIndex() *DropIndexQuery {
 	return NewDropIndexQuery(db)
 }
 
+// NewTruncateTable creates a TRUNCATE TABLE DDL query builder.
 func (db *DB) NewTruncateTable() *TruncateTableQuery {
 	return NewTruncateTableQuery(db)
 }
 
+// NewAddColumn creates an ALTER TABLE ADD COLUMN DDL query builder.
 func (db *DB) NewAddColumn() *AddColumnQuery {
 	return NewAddColumnQuery(db)
 }
 
+// NewDropColumn creates an ALTER TABLE DROP COLUMN DDL query builder.
 func (db *DB) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(db)
 }
 
+// ResetModel drops and recreates tables for the given models.
+// This is useful for testing and development but should not be used in production.
 func (db *DB) ResetModel(ctx context.Context, models ...any) error {
 	for _, model := range models {
 		if _, err := db.NewDropTable().Model(model).IfExists().Cascade().Exec(ctx); err != nil {
@@ -197,10 +217,13 @@ func (db *DB) ResetModel(ctx context.Context, models ...any) error {
 	return nil
 }
 
+// Dialect returns the database dialect being used (e.g., PostgreSQL, MySQL, SQLite).
 func (db *DB) Dialect() schema.Dialect {
 	return db.dialect
 }
 
+// ScanRows scans all rows from the result set into the destination values.
+// It closes the rows when complete.
 func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	defer rows.Close()
 
@@ -217,6 +240,7 @@ func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	return rows.Err()
 }
 
+// ScanRow scans a single row from the result set into the destination values.
 func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	model, err := newModel(db, dest)
 	if err != nil {
@@ -231,6 +255,7 @@ func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...any) error {
 	return rs.ScanRow(ctx, rows)
 }
 
+// Table returns the schema table metadata for the given type.
 func (db *DB) Table(typ reflect.Type) *schema.Table {
 	return db.dialect.Tables().Get(typ)
 }
@@ -241,6 +266,7 @@ func (db *DB) RegisterModel(models ...any) {
 	db.dialect.Tables().Register(models...)
 }
 
+// clone creates a shallow copy of the DB with independent query hooks.
 func (db *DB) clone() *DB {
 	clone := *db
 
@@ -260,6 +286,7 @@ func (db *DB) WithNamedArg(name string, value any) *DB {
 	return clone
 }
 
+// QueryGen returns the query generator used for formatting SQL queries.
 func (db *DB) QueryGen() schema.QueryGen {
 	return db.gen
 }
@@ -316,10 +343,15 @@ func (db *DB) HasFeature(feat feature.Feature) bool {
 
 //------------------------------------------------------------------------------
 
+// Exec executes a query without returning rows using a background context.
+// Arguments are formatted using the dialect's placeholder syntax.
 func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
 	return db.ExecContext(context.Background(), query, args...)
 }
 
+// ExecContext executes a query without returning rows.
+// Arguments are formatted using the dialect's placeholder syntax.
+// Query hooks are invoked before and after execution.
 func (db *DB) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
@@ -330,10 +362,15 @@ func (db *DB) ExecContext(
 	return res, err
 }
 
+// Query executes a query returning rows using a background context.
+// Arguments are formatted using the dialect's placeholder syntax.
 func (db *DB) Query(query string, args ...any) (*sql.Rows, error) {
 	return db.QueryContext(context.Background(), query, args...)
 }
 
+// QueryContext executes a query returning rows.
+// Arguments are formatted using the dialect's placeholder syntax.
+// Query hooks are invoked before and after execution.
 func (db *DB) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
@@ -344,10 +381,15 @@ func (db *DB) QueryContext(
 	return rows, err
 }
 
+// QueryRow executes a query expected to return at most one row using a background context.
+// Arguments are formatted using the dialect's placeholder syntax.
 func (db *DB) QueryRow(query string, args ...any) *sql.Row {
 	return db.QueryRowContext(context.Background(), query, args...)
 }
 
+// QueryRowContext executes a query expected to return at most one row.
+// Arguments are formatted using the dialect's placeholder syntax.
+// Query hooks are invoked before and after execution.
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := db.format(query, args)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -368,6 +410,8 @@ type Conn struct {
 	*sql.Conn
 }
 
+// Conn returns a Conn wrapping a dedicated *sql.Conn from the connection pool.
+// Query hooks and dialect features remain active on the returned connection.
 func (db *DB) Conn(ctx context.Context) (Conn, error) {
 	conn, err := db.DB.Conn(ctx)
 	if err != nil {
@@ -379,6 +423,7 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 	}, nil
 }
 
+// ExecContext executes a query without returning rows on this connection.
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
@@ -389,6 +434,7 @@ func (c Conn) ExecContext(
 	return res, err
 }
 
+// QueryContext executes a query returning rows on this connection.
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
@@ -399,6 +445,7 @@ func (c Conn) QueryContext(
 	return rows, err
 }
 
+// QueryRowContext executes a query expected to return at most one row on this connection.
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := c.db.format(query, args)
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -407,62 +454,77 @@ func (c Conn) QueryRowContext(ctx context.Context, query string, args ...any) *s
 	return row
 }
 
+// Dialect returns the database dialect for this connection.
 func (c Conn) Dialect() schema.Dialect {
 	return c.db.Dialect()
 }
 
+// NewValues creates a VALUES query bound to this connection.
 func (c Conn) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(c.db, model).Conn(c)
 }
 
+// NewMerge creates a MERGE query bound to this connection.
 func (c Conn) NewMerge() *MergeQuery {
 	return NewMergeQuery(c.db).Conn(c)
 }
 
+// NewSelect creates a SELECT query bound to this connection.
 func (c Conn) NewSelect() *SelectQuery {
 	return NewSelectQuery(c.db).Conn(c)
 }
 
+// NewInsert creates an INSERT query bound to this connection.
 func (c Conn) NewInsert() *InsertQuery {
 	return NewInsertQuery(c.db).Conn(c)
 }
 
+// NewUpdate creates an UPDATE query bound to this connection.
 func (c Conn) NewUpdate() *UpdateQuery {
 	return NewUpdateQuery(c.db).Conn(c)
 }
 
+// NewDelete creates a DELETE query bound to this connection.
 func (c Conn) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(c.db).Conn(c)
 }
 
+// NewRaw creates a raw SQL query bound to this connection.
 func (c Conn) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(c.db, query, args...).Conn(c)
 }
 
+// NewCreateTable creates a CREATE TABLE query bound to this connection.
 func (c Conn) NewCreateTable() *CreateTableQuery {
 	return NewCreateTableQuery(c.db).Conn(c)
 }
 
+// NewDropTable creates a DROP TABLE query bound to this connection.
 func (c Conn) NewDropTable() *DropTableQuery {
 	return NewDropTableQuery(c.db).Conn(c)
 }
 
+// NewCreateIndex creates a CREATE INDEX query bound to this connection.
 func (c Conn) NewCreateIndex() *CreateIndexQuery {
 	return NewCreateIndexQuery(c.db).Conn(c)
 }
 
+// NewDropIndex creates a DROP INDEX query bound to this connection.
 func (c Conn) NewDropIndex() *DropIndexQuery {
 	return NewDropIndexQuery(c.db).Conn(c)
 }
 
+// NewTruncateTable creates a TRUNCATE TABLE query bound to this connection.
 func (c Conn) NewTruncateTable() *TruncateTableQuery {
 	return NewTruncateTableQuery(c.db).Conn(c)
 }
 
+// NewAddColumn creates an ALTER TABLE ADD COLUMN query bound to this connection.
 func (c Conn) NewAddColumn() *AddColumnQuery {
 	return NewAddColumnQuery(c.db).Conn(c)
 }
 
+// NewDropColumn creates an ALTER TABLE DROP COLUMN query bound to this connection.
 func (c Conn) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(c.db).Conn(c)
 }
@@ -493,6 +555,7 @@ func (c Conn) RunInTx(
 	return tx.Commit()
 }
 
+// BeginTx starts a transaction on this connection with the given options.
 func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	ctx, event := c.db.beforeQuery(ctx, nil, "BEGIN", nil, "BEGIN", nil)
 	tx, err := c.Conn.BeginTx(ctx, opts)
@@ -514,10 +577,12 @@ type Stmt struct {
 	*sql.Stmt
 }
 
+// Prepare creates a prepared statement using a background context.
 func (db *DB) Prepare(query string) (Stmt, error) {
 	return db.PrepareContext(context.Background(), query)
 }
 
+// PrepareContext creates a prepared statement for repeated execution.
 func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 	stmt, err := db.DB.PrepareContext(ctx, query)
 	if err != nil {
@@ -563,10 +628,12 @@ func (db *DB) RunInTx(
 	return tx.Commit()
 }
 
+// Begin starts a transaction with default options using a background context.
 func (db *DB) Begin() (Tx, error) {
 	return db.BeginTx(context.Background(), nil)
 }
 
+// BeginTx starts a transaction with the given options.
 func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	ctx, event := db.beforeQuery(ctx, nil, "BEGIN", nil, "BEGIN", nil)
 	tx, err := db.DB.BeginTx(ctx, opts)
@@ -581,6 +648,7 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 	}, nil
 }
 
+// Commit commits the transaction or releases the savepoint if this is a nested transaction.
 func (tx Tx) Commit() error {
 	if tx.name == "" {
 		return tx.commitTX()
@@ -604,6 +672,7 @@ func (tx Tx) commitSP() error {
 	return err
 }
 
+// Rollback rolls back the transaction or rolls back to the savepoint if this is a nested transaction.
 func (tx Tx) Rollback() error {
 	if tx.name == "" {
 		return tx.rollbackTX()
@@ -627,10 +696,12 @@ func (tx Tx) rollbackSP() error {
 	return err
 }
 
+// Exec executes a query without returning rows within this transaction.
 func (tx Tx) Exec(query string, args ...any) (sql.Result, error) {
 	return tx.ExecContext(context.TODO(), query, args...)
 }
 
+// ExecContext executes a query without returning rows within this transaction.
 func (tx Tx) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
@@ -641,10 +712,12 @@ func (tx Tx) ExecContext(
 	return res, err
 }
 
+// Query executes a query returning rows within this transaction.
 func (tx Tx) Query(query string, args ...any) (*sql.Rows, error) {
 	return tx.QueryContext(context.TODO(), query, args...)
 }
 
+// QueryContext executes a query returning rows within this transaction.
 func (tx Tx) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
@@ -655,10 +728,12 @@ func (tx Tx) QueryContext(
 	return rows, err
 }
 
+// QueryRow executes a query expected to return at most one row within this transaction.
 func (tx Tx) QueryRow(query string, args ...any) *sql.Row {
 	return tx.QueryRowContext(context.TODO(), query, args...)
 }
 
+// QueryRowContext executes a query expected to return at most one row within this transaction.
 func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	formattedQuery := tx.db.format(query, args)
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
@@ -669,6 +744,7 @@ func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...any) *sq
 
 //------------------------------------------------------------------------------
 
+// Begin creates a savepoint, effectively starting a nested transaction.
 func (tx Tx) Begin() (Tx, error) {
 	return tx.BeginTx(tx.ctx, nil)
 }
@@ -699,6 +775,8 @@ func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
 	}, nil
 }
 
+// RunInTx creates a savepoint and runs the function within that savepoint.
+// If the function returns an error, the savepoint is rolled back.
 func (tx Tx) RunInTx(
 	ctx context.Context, _ *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
 ) error {
@@ -723,62 +801,77 @@ func (tx Tx) RunInTx(
 	return sp.Commit()
 }
 
+// Dialect returns the database dialect for this transaction.
 func (tx Tx) Dialect() schema.Dialect {
 	return tx.db.Dialect()
 }
 
+// NewValues creates a VALUES query bound to this transaction.
 func (tx Tx) NewValues(model any) *ValuesQuery {
 	return NewValuesQuery(tx.db, model).Conn(tx)
 }
 
+// NewMerge creates a MERGE query bound to this transaction.
 func (tx Tx) NewMerge() *MergeQuery {
 	return NewMergeQuery(tx.db).Conn(tx)
 }
 
+// NewSelect creates a SELECT query bound to this transaction.
 func (tx Tx) NewSelect() *SelectQuery {
 	return NewSelectQuery(tx.db).Conn(tx)
 }
 
+// NewInsert creates an INSERT query bound to this transaction.
 func (tx Tx) NewInsert() *InsertQuery {
 	return NewInsertQuery(tx.db).Conn(tx)
 }
 
+// NewUpdate creates an UPDATE query bound to this transaction.
 func (tx Tx) NewUpdate() *UpdateQuery {
 	return NewUpdateQuery(tx.db).Conn(tx)
 }
 
+// NewDelete creates a DELETE query bound to this transaction.
 func (tx Tx) NewDelete() *DeleteQuery {
 	return NewDeleteQuery(tx.db).Conn(tx)
 }
 
+// NewRaw creates a raw SQL query bound to this transaction.
 func (tx Tx) NewRaw(query string, args ...any) *RawQuery {
 	return NewRawQuery(tx.db, query, args...).Conn(tx)
 }
 
+// NewCreateTable creates a CREATE TABLE query bound to this transaction.
 func (tx Tx) NewCreateTable() *CreateTableQuery {
 	return NewCreateTableQuery(tx.db).Conn(tx)
 }
 
+// NewDropTable creates a DROP TABLE query bound to this transaction.
 func (tx Tx) NewDropTable() *DropTableQuery {
 	return NewDropTableQuery(tx.db).Conn(tx)
 }
 
+// NewCreateIndex creates a CREATE INDEX query bound to this transaction.
 func (tx Tx) NewCreateIndex() *CreateIndexQuery {
 	return NewCreateIndexQuery(tx.db).Conn(tx)
 }
 
+// NewDropIndex creates a DROP INDEX query bound to this transaction.
 func (tx Tx) NewDropIndex() *DropIndexQuery {
 	return NewDropIndexQuery(tx.db).Conn(tx)
 }
 
+// NewTruncateTable creates a TRUNCATE TABLE query bound to this transaction.
 func (tx Tx) NewTruncateTable() *TruncateTableQuery {
 	return NewTruncateTableQuery(tx.db).Conn(tx)
 }
 
+// NewAddColumn creates an ALTER TABLE ADD COLUMN query bound to this transaction.
 func (tx Tx) NewAddColumn() *AddColumnQuery {
 	return NewAddColumnQuery(tx.db).Conn(tx)
 }
 
+// NewDropColumn creates an ALTER TABLE DROP COLUMN query bound to this transaction.
 func (tx Tx) NewDropColumn() *DropColumnQuery {
 	return NewDropColumnQuery(tx.db).Conn(tx)
 }
