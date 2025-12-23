@@ -37,9 +37,11 @@ type Dialect struct {
 
 	tables   *schema.Tables
 	features feature.Feature
+
+	unicode bool
 }
 
-func New() *Dialect {
+func New(opts ...DialectOption) *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.CTE |
@@ -47,9 +49,30 @@ func New() *Dialect {
 		feature.Identity |
 		feature.Output |
 		feature.OffsetFetch |
+		feature.FKDefaultOnAction |
 		feature.UpdateFromTable |
 		feature.MSSavepoint
+
+	d.unicode = true
+
+	for _, opt := range opts {
+		opt(d)
+	}
 	return d
+}
+
+type DialectOption func(d *Dialect)
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
+	}
+}
+
+func WithUnicode(on bool) DialectOption {
+	return func(d *Dialect) {
+		d.unicode = on
+	}
 }
 
 func (d *Dialect) Init(db *sql.DB) {
@@ -128,17 +151,24 @@ func (*Dialect) AppendBool(b []byte, v bool) []byte {
 }
 
 func (d *Dialect) AppendString(b []byte, s string) []byte {
-	// 'N' prefix means the string uses unicode encoding.
-	b = append(b, 'N')
-	return d.BaseDialect.AppendString(b, s)
-}
+	if d.unicode {
+		// 'N' prefix means the string uses Unicode encoding.
+		b = append(b, 'N')
+	}
 
-func (d *Dialect) DefaultVarcharLen() int {
-	return 255
+	return d.BaseDialect.AppendString(b, s)
 }
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " IDENTITY"...)
+}
+
+func (*Dialect) DefaultVarcharLen() int {
+	return 255
+}
+
+func (*Dialect) DefaultSchema() string {
+	return "dbo"
 }
 
 func sqlType(field *schema.Field) string {

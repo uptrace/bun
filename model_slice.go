@@ -15,7 +15,7 @@ type sliceInfo struct {
 }
 
 type sliceModel struct {
-	dest      []interface{}
+	dest      []any
 	values    []reflect.Value
 	scanIndex int
 	info      []sliceInfo
@@ -23,14 +23,14 @@ type sliceModel struct {
 
 var _ Model = (*sliceModel)(nil)
 
-func newSliceModel(db *DB, dest []interface{}, values []reflect.Value) *sliceModel {
+func newSliceModel(db *DB, dest []any, values []reflect.Value) *sliceModel {
 	return &sliceModel{
 		dest:   dest,
 		values: values,
 	}
 }
 
-func (m *sliceModel) Value() interface{} {
+func (m *sliceModel) Value() any {
 	return m.dest
 }
 
@@ -73,7 +73,7 @@ func (m *sliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) 
 	return n, nil
 }
 
-func (m *sliceModel) Scan(src interface{}) error {
+func (m *sliceModel) Scan(src any) error {
 	info := m.info[m.scanIndex]
 	m.scanIndex++
 

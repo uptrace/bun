@@ -1,10 +1,11 @@
 package bun
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"reflect"
-	"sort"
+	"slices"
 
 	"github.com/uptrace/bun/schema"
 )
@@ -12,8 +13,8 @@ import (
 type mapModel struct {
 	db *DB
 
-	dest *map[string]interface{}
-	m    map[string]interface{}
+	dest *map[string]any
+	m    map[string]any
 
 	rows         *sql.Rows
 	columns      []string
@@ -23,7 +24,7 @@ type mapModel struct {
 
 var _ Model = (*mapModel)(nil)
 
-func newMapModel(db *DB, dest *map[string]interface{}) *mapModel {
+func newMapModel(db *DB, dest *map[string]any) *mapModel {
 	m := &mapModel{
 		db:   db,
 		dest: dest,
@@ -34,7 +35,7 @@ func newMapModel(db *DB, dest *map[string]interface{}) *mapModel {
 	return m
 }
 
-func (m *mapModel) Value() interface{} {
+func (m *mapModel) Value() any {
 	return m.dest
 }
 
@@ -53,7 +54,7 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	dest := makeDest(m, len(columns))
 
 	if m.m == nil {
-		m.m = make(map[string]interface{}, len(m.columns))
+		m.m = make(map[string]any, len(m.columns))
 	}
 
 	m.scanIndex = 0
@@ -66,7 +67,7 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	return 1, nil
 }
 
-func (m *mapModel) Scan(src interface{}) error {
+func (m *mapModel) Scan(src any) error {
 	if _, ok := src.([]byte); !ok {
 		return m.scanRaw(src)
 	}
@@ -82,6 +83,8 @@ func (m *mapModel) Scan(src interface{}) error {
 		return m.scanRaw(src)
 	case reflect.Slice:
 		if scanType.Elem().Kind() == reflect.Uint8 {
+			// Reference types such as []byte are only valid until the next call to Scan.
+			src := bytes.Clone(src.([]byte))
 			return m.scanRaw(src)
 		}
 	}
@@ -105,20 +108,20 @@ func (m *mapModel) columnTypes() ([]*sql.ColumnType, error) {
 	return m._columnTypes, nil
 }
 
-func (m *mapModel) scanRaw(src interface{}) error {
+func (m *mapModel) scanRaw(src any) error {
 	columnName := m.columns[m.scanIndex]
 	m.scanIndex++
 	m.m[columnName] = src
 	return nil
 }
 
-func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte {
+func (m *mapModel) appendColumnsValues(gen schema.QueryGen, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	b = append(b, " ("...)
 
@@ -126,12 +129,12 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 	}
 
 	b = append(b, ") VALUES ("...)
 
-	isTemplate := fmter.IsNop()
+	isTemplate := gen.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)
@@ -139,7 +142,7 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = schema.Append(fmter, b, m.m[k])
+			b = gen.Append(b, m.m[k])
 		}
 	}
 
@@ -148,34 +151,34 @@ func (m *mapModel) appendColumnsValues(fmter schema.Formatter, b []byte) []byte 
 	return b
 }
 
-func (m *mapModel) appendSet(fmter schema.Formatter, b []byte) []byte {
+func (m *mapModel) appendSet(gen schema.QueryGen, b []byte) []byte {
 	keys := make([]string, 0, len(m.m))
 
 	for k := range m.m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
-	isTemplate := fmter.IsNop()
+	isTemplate := gen.IsNop()
 	for i, k := range keys {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
 
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 		b = append(b, " = "...)
 		if isTemplate {
 			b = append(b, '?')
 		} else {
-			b = schema.Append(fmter, b, m.m[k])
+			b = gen.Append(b, m.m[k])
 		}
 	}
 
 	return b
 }
 
-func makeDest(v interface{}, n int) []interface{} {
-	dest := make([]interface{}, n)
+func makeDest(v any, n int) []any {
+	dest := make([]any, n)
 	for i := range dest {
 		dest[i] = v
 	}

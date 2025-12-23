@@ -20,8 +20,8 @@ type HStoreValue struct {
 //
 // For struct fields you can use hstore tag:
 //
-//    Attrs  map[string]string `bun:",hstore"`
-func HStore(vi interface{}) *HStoreValue {
+//	Attrs  map[string]string `bun:",hstore"`
+func HStore(vi any) *HStoreValue {
 	v := reflect.ValueOf(vi)
 	if !v.IsValid() {
 		panic(fmt.Errorf("bun: HStore(nil)"))
@@ -48,14 +48,14 @@ var (
 	_ sql.Scanner          = (*HStoreValue)(nil)
 )
 
-func (h *HStoreValue) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
+func (h *HStoreValue) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
 	if h.append == nil {
 		panic(fmt.Errorf("bun: HStore(unsupported %s)", h.v.Type()))
 	}
-	return h.append(fmter, b, h.v), nil
+	return h.append(gen, b, h.v), nil
 }
 
-func (h *HStoreValue) Scan(src interface{}) error {
+func (h *HStoreValue) Scan(src any) error {
 	if h.scan == nil {
 		return fmt.Errorf("bun: HStore(unsupported %s)", h.v.Type())
 	}
@@ -65,7 +65,7 @@ func (h *HStoreValue) Scan(src interface{}) error {
 	return h.scan(h.v.Elem(), src)
 }
 
-func (h *HStoreValue) Value() interface{} {
+func (h *HStoreValue) Value() any {
 	if h.v.IsValid() {
 		return h.v.Interface()
 	}

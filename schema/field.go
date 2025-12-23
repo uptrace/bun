@@ -10,6 +10,7 @@ import (
 )
 
 type Field struct {
+	Table       *Table // Contains this field
 	StructField reflect.StructField
 	IsPtr       bool
 
@@ -86,7 +87,7 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	}
 
 	for _, index := range f.Index {
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				return true
 			}
@@ -97,22 +98,33 @@ func (f *Field) HasZeroValue(v reflect.Value) bool {
 	return f.IsZero(v)
 }
 
-func (f *Field) AppendValue(fmter Formatter, b []byte, strct reflect.Value) []byte {
+func (f *Field) AppendValue(gen QueryGen, b []byte, strct reflect.Value) []byte {
+	return f.appendValue(gen, b, strct, false)
+}
+
+func (f *Field) AppendValueOrDefault(gen QueryGen, b []byte, strct reflect.Value) []byte {
+	return f.appendValue(gen, b, strct, true)
+}
+
+func (f *Field) appendValue(gen QueryGen, b []byte, strct reflect.Value, defaultPlaceholder bool) []byte {
 	fv, ok := fieldByIndex(strct, f.Index)
 	if !ok {
 		return dialect.AppendNull(b)
 	}
 
 	if (f.IsPtr && fv.IsNil()) || (f.NullZero && f.IsZero(fv)) {
+		if defaultPlaceholder {
+			return append(b, "DEFAULT"...)
+		}
 		return dialect.AppendNull(b)
 	}
 	if f.Append == nil {
 		panic(fmt.Errorf("bun: AppendValue(unsupported %s)", fv.Type()))
 	}
-	return f.Append(fmter, b, fv)
+	return f.Append(gen, b, fv)
 }
 
-func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
+func (f *Field) ScanValue(strct reflect.Value, src any) error {
 	if src == nil {
 		if fv, ok := fieldByIndex(strct, f.Index); ok {
 			return f.ScanWithCheck(fv, src)
@@ -124,7 +136,7 @@ func (f *Field) ScanValue(strct reflect.Value, src interface{}) error {
 	return f.ScanWithCheck(fv, src)
 }
 
-func (f *Field) ScanWithCheck(fv reflect.Value, src interface{}) error {
+func (f *Field) ScanWithCheck(fv reflect.Value, src any) error {
 	if f.Scan == nil {
 		return fmt.Errorf("bun: Scan(unsupported %s)", f.IndirectType)
 	}

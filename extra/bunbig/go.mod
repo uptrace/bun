@@ -1,8 +1,6 @@
 module github.com/uptrace/bun/extra/bunbig
 
-go 1.21
-
-toolchain go1.22.1
+go 1.22.0
 
 replace github.com/uptrace/bun => ../..
 

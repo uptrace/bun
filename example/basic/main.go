@@ -56,7 +56,7 @@ func main() {
 	fmt.Printf("story and the author: %v\n\n", story)
 
 	// Select a user into a map.
-	var m map[string]interface{}
+	var m map[string]any
 	if err := db.NewSelect().
 		Model((*User)(nil)).
 		Limit(1).

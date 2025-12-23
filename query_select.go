@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/uptrace/bun/dialect"
@@ -22,80 +20,96 @@ type union struct {
 	query *SelectQuery
 }
 
+// SelectQuery builds SQL SELECT statements.
 type SelectQuery struct {
 	whereBaseQuery
 	idxHintsQuery
+	orderLimitOffsetQuery
 
 	distinctOn []schema.QueryWithArgs
 	joins      []joinQuery
 	group      []schema.QueryWithArgs
 	having     []schema.QueryWithArgs
-	order      []schema.QueryWithArgs
-	limit      int32
-	offset     int32
 	selFor     schema.QueryWithArgs
 
-	union []union
+	union   []union
+	comment string
 }
 
 var _ Query = (*SelectQuery)(nil)
 
+// NewSelectQuery returns a SelectQuery attached to the provided DB.
 func NewSelectQuery(db *DB) *SelectQuery {
 	return &SelectQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
 }
 
+// Conn sets the database connection for this query.
 func (q *SelectQuery) Conn(db IConn) *SelectQuery {
 	q.setConn(db)
 	return q
 }
 
-func (q *SelectQuery) Model(model interface{}) *SelectQuery {
+// Model sets the model to select into and generates SELECT and FROM clauses.
+func (q *SelectQuery) Model(model any) *SelectQuery {
 	q.setModel(model)
 	return q
 }
 
+// Err sets an error on the query, causing subsequent operations to fail.
 func (q *SelectQuery) Err(err error) *SelectQuery {
 	q.setErr(err)
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
-func (q *SelectQuery) Apply(fn func(*SelectQuery) *SelectQuery) *SelectQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the SelectQuery as an argument.
+func (q *SelectQuery) Apply(fns ...func(*SelectQuery) *SelectQuery) *SelectQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }
 
-func (q *SelectQuery) With(name string, query schema.QueryAppender) *SelectQuery {
-	q.addWith(name, query, false)
+// With adds a WITH clause (Common Table Expression) to the query.
+func (q *SelectQuery) With(name string, query Query) *SelectQuery {
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
-func (q *SelectQuery) WithRecursive(name string, query schema.QueryAppender) *SelectQuery {
-	q.addWith(name, query, true)
+// WithRecursive adds a WITH RECURSIVE clause to the query.
+func (q *SelectQuery) WithRecursive(name string, query Query) *SelectQuery {
+	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
+// WithQuery adds a pre-configured WITH clause to the query.
+func (q *SelectQuery) WithQuery(query *WithQuery) *SelectQuery {
+	q.addWith(query)
+	return q
+}
+
+// Distinct adds a DISTINCT clause to eliminate duplicate rows.
 func (q *SelectQuery) Distinct() *SelectQuery {
 	q.distinctOn = make([]schema.QueryWithArgs, 0)
 	return q
 }
 
-func (q *SelectQuery) DistinctOn(query string, args ...interface{}) *SelectQuery {
+// DistinctOn adds a DISTINCT ON clause for PostgreSQL-specific distinct behavior.
+func (q *SelectQuery) DistinctOn(query string, args ...any) *SelectQuery {
 	q.distinctOn = append(q.distinctOn, schema.SafeQuery(query, args))
 	return q
 }
 
 //------------------------------------------------------------------------------
 
+// Table specifies the table(s) to select from.
 func (q *SelectQuery) Table(tables ...string) *SelectQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
@@ -103,18 +117,21 @@ func (q *SelectQuery) Table(tables ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) TableExpr(query string, args ...interface{}) *SelectQuery {
+// TableExpr adds a table expression to the FROM clause with arguments.
+func (q *SelectQuery) TableExpr(query string, args ...any) *SelectQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *SelectQuery) ModelTableExpr(query string, args ...interface{}) *SelectQuery {
+// ModelTableExpr overrides the table name derived from the model.
+func (q *SelectQuery) ModelTableExpr(query string, args ...any) *SelectQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
+// Column adds columns to the SELECT clause.
 func (q *SelectQuery) Column(columns ...string) *SelectQuery {
 	for _, column := range columns {
 		q.addColumn(schema.UnsafeIdent(column))
@@ -122,11 +139,13 @@ func (q *SelectQuery) Column(columns ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) ColumnExpr(query string, args ...interface{}) *SelectQuery {
+// ColumnExpr adds a column expression to the SELECT clause with arguments.
+func (q *SelectQuery) ColumnExpr(query string, args ...any) *SelectQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
+// ExcludeColumn excludes specific columns from being selected.
 func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
 	q.excludeColumn(columns)
 	return q
@@ -134,21 +153,25 @@ func (q *SelectQuery) ExcludeColumn(columns ...string) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
+// WherePK adds a WHERE condition on the model's primary key columns.
 func (q *SelectQuery) WherePK(cols ...string) *SelectQuery {
 	q.addWhereCols(cols)
 	return q
 }
 
-func (q *SelectQuery) Where(query string, args ...interface{}) *SelectQuery {
+// Where adds a WHERE condition combined with AND.
+func (q *SelectQuery) Where(query string, args ...any) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *SelectQuery) WhereOr(query string, args ...interface{}) *SelectQuery {
+// WhereOr adds a WHERE condition combined with OR.
+func (q *SelectQuery) WhereOr(query string, args ...any) *SelectQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
+// WhereGroup groups WHERE conditions with the given separator (AND/OR).
 func (q *SelectQuery) WhereGroup(sep string, fn func(*SelectQuery) *SelectQuery) *SelectQuery {
 	saved := q.where
 	q.where = nil
@@ -163,11 +186,13 @@ func (q *SelectQuery) WhereGroup(sep string, fn func(*SelectQuery) *SelectQuery)
 	return q
 }
 
+// WhereDeleted adds a WHERE condition to select soft-deleted rows only.
 func (q *SelectQuery) WhereDeleted() *SelectQuery {
 	q.whereDeleted()
 	return q
 }
 
+// WhereAllWithDeleted includes both active and soft-deleted rows.
 func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 	q.whereAllWithDeleted()
 	return q
@@ -175,6 +200,7 @@ func (q *SelectQuery) WhereAllWithDeleted() *SelectQuery {
 
 //------------------------------------------------------------------------------
 
+// UseIndex adds a USE INDEX hint for MySQL to suggest index usage.
 func (q *SelectQuery) UseIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndex(indexes...)
@@ -182,6 +208,7 @@ func (q *SelectQuery) UseIndex(indexes ...string) *SelectQuery {
 	return q
 }
 
+// UseIndexForJoin adds a USE INDEX FOR JOIN hint for MySQL.
 func (q *SelectQuery) UseIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForJoin(indexes...)
@@ -189,6 +216,7 @@ func (q *SelectQuery) UseIndexForJoin(indexes ...string) *SelectQuery {
 	return q
 }
 
+// UseIndexForOrderBy adds a USE INDEX FOR ORDER BY hint for MySQL.
 func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForOrderBy(indexes...)
@@ -196,6 +224,7 @@ func (q *SelectQuery) UseIndexForOrderBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+// UseIndexForGroupBy adds a USE INDEX FOR GROUP BY hint for MySQL.
 func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndexForGroupBy(indexes...)
@@ -203,6 +232,7 @@ func (q *SelectQuery) UseIndexForGroupBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+// IgnoreIndex adds an IGNORE INDEX hint for MySQL to prevent index usage.
 func (q *SelectQuery) IgnoreIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndex(indexes...)
@@ -210,6 +240,7 @@ func (q *SelectQuery) IgnoreIndex(indexes ...string) *SelectQuery {
 	return q
 }
 
+// IgnoreIndexForJoin adds an IGNORE INDEX FOR JOIN hint for MySQL.
 func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForJoin(indexes...)
@@ -217,6 +248,7 @@ func (q *SelectQuery) IgnoreIndexForJoin(indexes ...string) *SelectQuery {
 	return q
 }
 
+// IgnoreIndexForOrderBy adds an IGNORE INDEX FOR ORDER BY hint for MySQL.
 func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForOrderBy(indexes...)
@@ -224,6 +256,7 @@ func (q *SelectQuery) IgnoreIndexForOrderBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+// IgnoreIndexForGroupBy adds an IGNORE INDEX FOR GROUP BY hint for MySQL.
 func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndexForGroupBy(indexes...)
@@ -231,6 +264,7 @@ func (q *SelectQuery) IgnoreIndexForGroupBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+// ForceIndex adds a FORCE INDEX hint for MySQL to require index usage.
 func (q *SelectQuery) ForceIndex(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndex(indexes...)
@@ -238,6 +272,7 @@ func (q *SelectQuery) ForceIndex(indexes ...string) *SelectQuery {
 	return q
 }
 
+// ForceIndexForJoin adds a FORCE INDEX FOR JOIN hint for MySQL.
 func (q *SelectQuery) ForceIndexForJoin(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForJoin(indexes...)
@@ -245,6 +280,7 @@ func (q *SelectQuery) ForceIndexForJoin(indexes ...string) *SelectQuery {
 	return q
 }
 
+// ForceIndexForOrderBy adds a FORCE INDEX FOR ORDER BY hint for MySQL.
 func (q *SelectQuery) ForceIndexForOrderBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForOrderBy(indexes...)
@@ -252,6 +288,7 @@ func (q *SelectQuery) ForceIndexForOrderBy(indexes ...string) *SelectQuery {
 	return q
 }
 
+// ForceIndexForGroupBy adds a FORCE INDEX FOR GROUP BY hint for MySQL.
 func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) *SelectQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndexForGroupBy(indexes...)
@@ -261,6 +298,7 @@ func (q *SelectQuery) ForceIndexForGroupBy(indexes ...string) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
+// Group adds columns to the GROUP BY clause.
 func (q *SelectQuery) Group(columns ...string) *SelectQuery {
 	for _, column := range columns {
 		q.group = append(q.group, schema.UnsafeIdent(column))
@@ -268,87 +306,82 @@ func (q *SelectQuery) Group(columns ...string) *SelectQuery {
 	return q
 }
 
-func (q *SelectQuery) GroupExpr(group string, args ...interface{}) *SelectQuery {
+// GroupExpr adds a GROUP BY expression with optional arguments.
+func (q *SelectQuery) GroupExpr(group string, args ...any) *SelectQuery {
 	q.group = append(q.group, schema.SafeQuery(group, args))
 	return q
 }
 
-func (q *SelectQuery) Having(having string, args ...interface{}) *SelectQuery {
+// Having adds a HAVING clause condition to filter grouped results.
+func (q *SelectQuery) Having(having string, args ...any) *SelectQuery {
 	q.having = append(q.having, schema.SafeQuery(having, args))
 	return q
 }
 
+// Order adds columns to the ORDER BY clause.
 func (q *SelectQuery) Order(orders ...string) *SelectQuery {
-	for _, order := range orders {
-		if order == "" {
-			continue
-		}
-
-		index := strings.IndexByte(order, ' ')
-		if index == -1 {
-			q.order = append(q.order, schema.UnsafeIdent(order))
-			continue
-		}
-
-		field := order[:index]
-		sort := order[index+1:]
-
-		switch strings.ToUpper(sort) {
-		case "ASC", "DESC", "ASC NULLS FIRST", "DESC NULLS FIRST",
-			"ASC NULLS LAST", "DESC NULLS LAST":
-			q.order = append(q.order, schema.SafeQuery("? ?", []interface{}{
-				Ident(field),
-				Safe(sort),
-			}))
-		default:
-			q.order = append(q.order, schema.UnsafeIdent(order))
-		}
-	}
+	q.addOrder(orders...)
 	return q
 }
 
-func (q *SelectQuery) OrderExpr(query string, args ...interface{}) *SelectQuery {
-	q.order = append(q.order, schema.SafeQuery(query, args))
+// OrderBy adds an ORDER BY clause with explicit sort direction.
+func (q *SelectQuery) OrderBy(colName string, sortDir Order) *SelectQuery {
+	q.addOrderBy(colName, sortDir)
 	return q
 }
 
+// OrderExpr adds an ORDER BY expression with optional arguments.
+func (q *SelectQuery) OrderExpr(query string, args ...any) *SelectQuery {
+	q.addOrderExpr(query, args...)
+	return q
+}
+
+// Limit sets the maximum number of rows to return.
 func (q *SelectQuery) Limit(n int) *SelectQuery {
-	q.limit = int32(n)
+	q.setLimit(n)
 	return q
 }
 
+// Offset sets the number of rows to skip before returning results.
 func (q *SelectQuery) Offset(n int) *SelectQuery {
-	q.offset = int32(n)
+	q.setOffset(n)
 	return q
 }
 
-func (q *SelectQuery) For(s string, args ...interface{}) *SelectQuery {
+// For adds a FOR clause for row locking (e.g., "UPDATE", "SHARE").
+func (q *SelectQuery) For(s string, args ...any) *SelectQuery {
 	q.selFor = schema.SafeQuery(s, args)
 	return q
 }
 
 //------------------------------------------------------------------------------
 
+// Union combines this query with another using UNION (removes duplicates).
 func (q *SelectQuery) Union(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" UNION ", other)
 }
 
+// UnionAll combines this query with another using UNION ALL (keeps duplicates).
 func (q *SelectQuery) UnionAll(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" UNION ALL ", other)
 }
 
+// Intersect returns rows that appear in both this query and another (removes duplicates).
 func (q *SelectQuery) Intersect(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" INTERSECT ", other)
 }
 
+// IntersectAll returns rows that appear in both this query and another (keeps duplicates).
 func (q *SelectQuery) IntersectAll(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" INTERSECT ALL ", other)
 }
 
+// Except returns rows in this query that are not in another (removes duplicates).
 func (q *SelectQuery) Except(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" EXCEPT ", other)
 }
 
+// ExceptAll returns rows in this query that are not in another (keeps duplicates).
 func (q *SelectQuery) ExceptAll(other *SelectQuery) *SelectQuery {
 	return q.addUnion(" EXCEPT ALL ", other)
 }
@@ -363,24 +396,27 @@ func (q *SelectQuery) addUnion(expr string, other *SelectQuery) *SelectQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *SelectQuery) Join(join string, args ...interface{}) *SelectQuery {
+// Join adds a JOIN clause with the specified join expression.
+func (q *SelectQuery) Join(join string, args ...any) *SelectQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
 
-func (q *SelectQuery) JoinOn(cond string, args ...interface{}) *SelectQuery {
+// JoinOn adds an ON condition to the most recent JOIN, combined with AND.
+func (q *SelectQuery) JoinOn(cond string, args ...any) *SelectQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
-func (q *SelectQuery) JoinOnOr(cond string, args ...interface{}) *SelectQuery {
+// JoinOnOr adds an ON condition to the most recent JOIN, combined with OR.
+func (q *SelectQuery) JoinOnOr(cond string, args ...any) *SelectQuery {
 	return q.joinOn(cond, args, " OR ")
 }
 
-func (q *SelectQuery) joinOn(cond string, args []interface{}, sep string) *SelectQuery {
+func (q *SelectQuery) joinOn(cond string, args []any, sep string) *SelectQuery {
 	if len(q.joins) == 0 {
-		q.err = errors.New("bun: query has no joins")
+		q.setErr(errors.New("bun: query has no joins"))
 		return q
 	}
 	j := &q.joins[len(q.joins)-1]
@@ -407,6 +443,44 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 		return q
 	}
 
+	q.applyToRelation(join, apply...)
+
+	return q
+}
+
+// RelationOpts configures how a relation is joined in a SelectQuery.
+type RelationOpts struct {
+	// Apply applies additional options to the relation.
+	Apply func(*SelectQuery) *SelectQuery
+	// AdditionalJoinOnConditions adds additional conditions to the JOIN ON clause.
+	AdditionalJoinOnConditions []schema.QueryWithArgs
+}
+
+// RelationWithOpts adds a relation to the query with additional options.
+func (q *SelectQuery) RelationWithOpts(name string, opts RelationOpts) *SelectQuery {
+	if q.tableModel == nil {
+		q.setErr(errNilModel)
+		return q
+	}
+
+	join := q.tableModel.join(name)
+	if join == nil {
+		q.setErr(fmt.Errorf("%s does not have relation=%q", q.table, name))
+		return q
+	}
+
+	if opts.Apply != nil {
+		q.applyToRelation(join, opts.Apply)
+	}
+
+	if len(opts.AdditionalJoinOnConditions) > 0 {
+		join.additionalJoinOnConditions = opts.AdditionalJoinOnConditions
+	}
+
+	return q
+}
+
+func (q *SelectQuery) applyToRelation(join *relationJoin, apply ...func(*SelectQuery) *SelectQuery) {
 	var apply1, apply2 func(*SelectQuery) *SelectQuery
 
 	if len(join.Relation.Condition) > 0 {
@@ -433,8 +507,6 @@ func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQ
 
 		return q
 	}
-
-	return q
 }
 
 func (q *SelectQuery) forEachInlineRelJoin(fn func(*relationJoin) error) error {
@@ -486,22 +558,33 @@ func (q *SelectQuery) selectJoins(ctx context.Context, joins []relationJoin) err
 
 //------------------------------------------------------------------------------
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *SelectQuery) Comment(comment string) *SelectQuery {
+	q.comment = comment
+	return q
+}
+
+//------------------------------------------------------------------------------
+
+// Operation returns the query operation name ("SELECT").
 func (q *SelectQuery) Operation() string {
 	return "SELECT"
 }
 
-func (q *SelectQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	return q.appendQuery(fmter, b, false)
+func (q *SelectQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+	b = appendComment(b, q.comment)
+
+	return q.appendQuery(gen, b, false)
 }
 
 func (q *SelectQuery) appendQuery(
-	fmter schema.Formatter, b []byte, count bool,
+	gen schema.QueryGen, b []byte, count bool,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
-	fmter = formatterWithModel(fmter, q)
+	gen = formatterWithModel(gen, q)
 
 	cteCount := count && (len(q.group) > 0 || q.distinctOn != nil)
 	if cteCount {
@@ -512,8 +595,15 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, '(')
 	}
 
-	b, err = q.appendWith(fmter, b)
+	b, err = q.appendWith(gen, b)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
+		j.applyTo(q)
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -525,7 +615,7 @@ func (q *SelectQuery) appendQuery(
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = app.AppendQuery(fmter, b)
+			b, err = app.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -538,40 +628,45 @@ func (q *SelectQuery) appendQuery(
 	if count && !cteCount {
 		b = append(b, "count(*)"...)
 	} else {
-		b, err = q.appendColumns(fmter, b)
+		// MSSQL: allows Limit() without Order() as per https://stackoverflow.com/a/36156953
+		if q.limit > 0 && len(q.order) == 0 && gen.Dialect().Name() == dialect.MSSQL {
+			b = append(b, "0 AS _temp_sort, "...)
+		}
+
+		b, err = q.appendColumns(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if q.hasTables() {
-		b, err = q.appendTables(fmter, b)
+		b, err = q.appendTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.appendIndexHints(fmter, b)
+	b, err = q.appendIndexHints(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
-		b, err = j.appendHasOneJoin(fmter, b, q)
+		b, err = j.appendHasOneJoin(gen, b, q)
 		return err
 	}); err != nil {
 		return nil, err
 	}
 
-	for _, j := range q.joins {
-		b, err = j.AppendQuery(fmter, b)
+	for _, join := range q.joins {
+		b, err = join.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.appendWhere(fmter, b, true)
+	b, err = q.appendWhere(gen, b, true)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +677,7 @@ func (q *SelectQuery) appendQuery(
 			if i > 0 {
 				b = append(b, ", "...)
 			}
-			b, err = f.AppendQuery(fmter, b)
+			b, err = f.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -596,7 +691,7 @@ func (q *SelectQuery) appendQuery(
 				b = append(b, " AND "...)
 			}
 			b = append(b, '(')
-			b, err = f.AppendQuery(fmter, b)
+			b, err = f.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -605,45 +700,19 @@ func (q *SelectQuery) appendQuery(
 	}
 
 	if !count {
-		b, err = q.appendOrder(fmter, b)
+		b, err = q.appendOrder(gen, b)
 		if err != nil {
 			return nil, err
 		}
 
-		if fmter.Dialect().Features().Has(feature.OffsetFetch) {
-			if q.limit > 0 && q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-				b = append(b, " ROWS"...)
-
-				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-				b = append(b, " ROWS ONLY"...)
-			} else if q.limit > 0 {
-				b = append(b, " OFFSET 0 ROWS"...)
-
-				b = append(b, " FETCH NEXT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-				b = append(b, " ROWS ONLY"...)
-			} else if q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-				b = append(b, " ROWS"...)
-			}
-		} else {
-			if q.limit > 0 {
-				b = append(b, " LIMIT "...)
-				b = strconv.AppendInt(b, int64(q.limit), 10)
-			}
-			if q.offset > 0 {
-				b = append(b, " OFFSET "...)
-				b = strconv.AppendInt(b, int64(q.offset), 10)
-			}
+		b, err = q.appendLimitOffset(gen, b)
+		if err != nil {
+			return nil, err
 		}
 
 		if !q.selFor.IsZero() {
 			b = append(b, " FOR "...)
-			b, err = q.selFor.AppendQuery(fmter, b)
+			b, err = q.selFor.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -656,7 +725,7 @@ func (q *SelectQuery) appendQuery(
 		for _, u := range q.union {
 			b = append(b, u.expr...)
 			b = append(b, '(')
-			b, err = u.query.AppendQuery(fmter, b)
+			b, err = u.query.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -671,7 +740,7 @@ func (q *SelectQuery) appendQuery(
 	return b, nil
 }
 
-func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	start := len(b)
 
 	switch {
@@ -690,16 +759,16 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 				}
 			}
 
-			b, err = col.AppendQuery(fmter, b)
+			b, err = col.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
 		}
 	case q.table != nil:
-		if len(q.table.Fields) > 10 && fmter.IsNop() {
+		if len(q.table.Fields) > 10 && gen.IsNop() {
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
-			b = fmter.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
+			b = gen.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
 		} else {
 			b = appendColumns(b, q.table.SQLAlias, q.table.Fields)
 		}
@@ -713,7 +782,7 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 			start = len(b)
 		}
 
-		b, err = q.appendInlineRelColumns(fmter, b, join)
+		b, err = q.appendInlineRelColumns(gen, b, join)
 		if err != nil {
 			return err
 		}
@@ -729,10 +798,8 @@ func (q *SelectQuery) appendColumns(fmter schema.Formatter, b []byte) (_ []byte,
 }
 
 func (q *SelectQuery) appendInlineRelColumns(
-	fmter schema.Formatter, b []byte, join *relationJoin,
+	gen schema.QueryGen, b []byte, join *relationJoin,
 ) (_ []byte, err error) {
-	join.applyTo(q)
-
 	if join.columns != nil {
 		table := join.JoinModel.Table()
 		for i, col := range join.columns {
@@ -742,16 +809,16 @@ func (q *SelectQuery) appendInlineRelColumns(
 
 			if col.Args == nil {
 				if field, ok := table.FieldMap[col.Query]; ok {
-					b = join.appendAlias(fmter, b)
+					b = join.appendAlias(gen, b)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
 					b = append(b, " AS "...)
-					b = join.appendAliasColumn(fmter, b, field.Name)
+					b = join.appendAliasColumn(gen, b, field.Name)
 					continue
 				}
 			}
 
-			b, err = col.AppendQuery(fmter, b)
+			b, err = col.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -763,41 +830,23 @@ func (q *SelectQuery) appendInlineRelColumns(
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = join.appendAlias(fmter, b)
+		b = join.appendAlias(gen, b)
 		b = append(b, '.')
 		b = append(b, field.SQLName...)
 		b = append(b, " AS "...)
-		b = join.appendAliasColumn(fmter, b, field.Name)
+		b = join.appendAliasColumn(gen, b, field.Name)
 	}
 	return b, nil
 }
 
-func (q *SelectQuery) appendTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendTables(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, " FROM "...)
-	return q.appendTablesWithAlias(fmter, b)
-}
-
-func (q *SelectQuery) appendOrder(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	if len(q.order) > 0 {
-		b = append(b, " ORDER BY "...)
-
-		for i, f := range q.order {
-			if i > 0 {
-				b = append(b, ", "...)
-			}
-			b, err = f.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return b, nil
-	}
-	return b, nil
+	return q.appendTablesWithAlias(gen, b)
 }
 
 //------------------------------------------------------------------------------
 
+// Rows executes the query and returns the result rows for manual scanning.
 func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -807,7 +856,10 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -815,12 +867,13 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	query := internal.String(queryBytes)
 
 	ctx, event := q.db.beforeQuery(ctx, q, query, nil, query, q.model)
-	rows, err := q.conn.QueryContext(ctx, query)
+	rows, err := q.resolveConn(ctx, q).QueryContext(ctx, query)
 	q.db.afterQuery(ctx, event, nil, err)
 	return rows, err
 }
 
-func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Result, err error) {
+// Exec executes the query and optionally scans results into dest.
+func (q *SelectQuery) Exec(ctx context.Context, dest ...any) (res sql.Result, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
@@ -828,7 +881,10 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -855,53 +911,70 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...interface{}) (res sql.Re
 	return res, nil
 }
 
-func (q *SelectQuery) Scan(ctx context.Context, dest ...interface{}) error {
+// Scan executes the query and scans the results into dest.
+func (q *SelectQuery) Scan(ctx context.Context, dest ...any) error {
+	_, err := q.scanResult(ctx, dest...)
+	return err
+}
+
+func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, error) {
 	if q.err != nil {
-		return q.err
+		return nil, q.err
 	}
 
 	model, err := q.getModel(dest)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if len(dest) > 0 && q.tableModel != nil && len(q.tableModel.getJoins()) > 0 {
+		for _, j := range q.tableModel.getJoins() {
+			switch j.Relation.Type {
+			case schema.HasManyRelation, schema.ManyToManyRelation:
+				return nil, fmt.Errorf("When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.")
+			}
+		}
 	}
 
 	if q.table != nil {
 		if err := q.beforeSelectHook(ctx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if err := q.beforeAppendModel(ctx, q); err != nil {
-		return err
+		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	query := internal.String(queryBytes)
 
 	res, err := q.scan(ctx, q, query, model, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if n, _ := res.RowsAffected(); n > 0 {
 		if tableModel, ok := model.(TableModel); ok {
 			if err := q.selectJoins(ctx, tableModel.getJoins()); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	if q.table != nil {
 		if err := q.afterSelectHook(ctx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return res, nil
 }
 
 func (q *SelectQuery) beforeSelectHook(ctx context.Context) error {
@@ -922,14 +995,18 @@ func (q *SelectQuery) afterSelectHook(ctx context.Context) error {
 	return nil
 }
 
+// Count executes the query and returns the number of rows that match.
 func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	if q.err != nil {
 		return 0, q.err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	qq := countQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -938,26 +1015,44 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
 
 	var num int
-	err = q.conn.QueryRowContext(ctx, query).Scan(&num)
+	err = q.resolveConn(ctx, q).QueryRowContext(ctx, query).Scan(&num)
 
 	q.db.afterQuery(ctx, event, nil, err)
 
 	return num, err
 }
 
-func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...interface{}) (int, error) {
-	if _, ok := q.conn.(*DB); ok {
-		return q.scanAndCountConc(ctx, dest...)
+// ScanAndCount executes the query, scans results into dest, and returns the total count.
+func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int, error) {
+	if q.offset == 0 && q.limit == 0 {
+		// If there is no limit and offset, we can use a single query to get the count and scan
+		if res, err := q.scanResult(ctx, dest...); err != nil {
+			return 0, err
+		} else if n, err := res.RowsAffected(); err != nil {
+			return 0, err
+		} else {
+			return int(n), nil
+		}
+	}
+	if q.conn == nil {
+		return q.scanAndCountConcurrently(ctx, dest...)
 	}
 	return q.scanAndCountSeq(ctx, dest...)
 }
 
-func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{}) (int, error) {
+func (q *SelectQuery) scanAndCountConcurrently(
+	ctx context.Context, dest ...any,
+) (int, error) {
 	var count int
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var firstErr error
 
+	// FIXME: clone should not be needed, because the query is not modified here
+	// and should not be implicitly modified by the Bun lib.
+	countQuery := q.Clone()
+
+	// Don't scan results if the user explicitly set Limit(-1).
 	if q.limit >= 0 {
 		wg.Add(1)
 		go func() {
@@ -978,7 +1073,7 @@ func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{})
 		defer wg.Done()
 
 		var err error
-		count, err = q.Count(ctx)
+		count, err = countQuery.Count(ctx)
 		if err != nil {
 			mu.Lock()
 			if firstErr == nil {
@@ -992,9 +1087,10 @@ func (q *SelectQuery) scanAndCountConc(ctx context.Context, dest ...interface{})
 	return count, firstErr
 }
 
-func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) (int, error) {
+func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...any) (int, error) {
 	var firstErr error
 
+	// Don't scan results if the user explicitly set Limit(-1).
 	if q.limit >= 0 {
 		firstErr = q.Scan(ctx, dest...)
 	}
@@ -1007,6 +1103,7 @@ func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...interface{}) 
 	return count, firstErr
 }
 
+// Exists checks whether any rows match the query.
 func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	if q.err != nil {
 		return false, q.err
@@ -1019,9 +1116,12 @@ func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 }
 
 func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	qq := selectExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1030,7 +1130,7 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
 
 	var exists bool
-	err = q.conn.QueryRowContext(ctx, query).Scan(&exists)
+	err = q.resolveConn(ctx, q).QueryRowContext(ctx, query).Scan(&exists)
 
 	q.db.afterQuery(ctx, event, nil, err)
 
@@ -1038,9 +1138,12 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 }
 
 func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	qq := whereExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.fmter, nil)
+	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1059,21 +1162,143 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 	return n == 1, nil
 }
 
+// String returns the generated SQL query string. The SelectQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *SelectQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
+}
+
+// Clone creates a deep copy of the SelectQuery.
+func (q *SelectQuery) Clone() *SelectQuery {
+	if q == nil {
+		return nil
+	}
+
+	cloneArgs := func(args []schema.QueryWithArgs) []schema.QueryWithArgs {
+		if args == nil {
+			return nil
+		}
+		clone := make([]schema.QueryWithArgs, len(args))
+		copy(clone, args)
+		return clone
+	}
+	cloneHints := func(hints *indexHints) *indexHints {
+		if hints == nil {
+			return nil
+		}
+		return &indexHints{
+			names:      cloneArgs(hints.names),
+			forJoin:    cloneArgs(hints.forJoin),
+			forOrderBy: cloneArgs(hints.forOrderBy),
+			forGroupBy: cloneArgs(hints.forGroupBy),
+		}
+	}
+
+	var tableModel TableModel
+	if q.tableModel != nil {
+		tableModel = q.tableModel.clone()
+	}
+	clone := &SelectQuery{
+		whereBaseQuery: whereBaseQuery{
+			baseQuery: baseQuery{
+				db:             q.db,
+				table:          q.table,
+				model:          q.model,
+				tableModel:     tableModel,
+				with:           make([]WithQuery, len(q.with)),
+				tables:         cloneArgs(q.tables),
+				columns:        cloneArgs(q.columns),
+				modelTableName: q.modelTableName,
+			},
+			where: make([]schema.QueryWithSep, len(q.where)),
+		},
+
+		idxHintsQuery: idxHintsQuery{
+			use:    cloneHints(q.idxHintsQuery.use),
+			ignore: cloneHints(q.idxHintsQuery.ignore),
+			force:  cloneHints(q.idxHintsQuery.force),
+		},
+
+		orderLimitOffsetQuery: orderLimitOffsetQuery{
+			order:  cloneArgs(q.order),
+			limit:  q.limit,
+			offset: q.offset,
+		},
+
+		distinctOn: cloneArgs(q.distinctOn),
+		joins:      make([]joinQuery, len(q.joins)),
+		group:      cloneArgs(q.group),
+		having:     cloneArgs(q.having),
+		union:      make([]union, len(q.union)),
+		comment:    q.comment,
+	}
+
+	for i, w := range q.with {
+		clone.with[i] = WithQuery{
+			name:      w.name,
+			recursive: w.recursive,
+			query:     w.query, // TODO: maybe clone is need
+		}
+	}
+
+	if !q.modelTableName.IsZero() {
+		clone.modelTableName = schema.SafeQuery(
+			q.modelTableName.Query,
+			append([]any(nil), q.modelTableName.Args...),
+		)
+	}
+
+	for i, w := range q.where {
+		clone.where[i] = schema.SafeQueryWithSep(
+			w.Query,
+			append([]any(nil), w.Args...),
+			w.Sep,
+		)
+	}
+
+	for i, j := range q.joins {
+		clone.joins[i] = joinQuery{
+			join: schema.SafeQuery(j.join.Query, append([]any(nil), j.join.Args...)),
+			on:   make([]schema.QueryWithSep, len(j.on)),
+		}
+		for k, on := range j.on {
+			clone.joins[i].on[k] = schema.SafeQueryWithSep(
+				on.Query,
+				append([]any(nil), on.Args...),
+				on.Sep,
+			)
+		}
+	}
+
+	for i, u := range q.union {
+		clone.union[i] = union{
+			expr:  u.expr,
+			query: u.query.Clone(),
+		}
+	}
+
+	if !q.selFor.IsZero() {
+		clone.selFor = schema.SafeQuery(
+			q.selFor.Query,
+			append([]any(nil), q.selFor.Args...),
+		)
+	}
+
+	return clone
 }
 
 //------------------------------------------------------------------------------
 
+// QueryBuilder wraps the SelectQuery in a generic QueryBuilder interface.
 func (q *SelectQuery) QueryBuilder() QueryBuilder {
 	return &selectQueryBuilder{q}
 }
 
+// ApplyQueryBuilder applies a function to a generic QueryBuilder and returns the modified SelectQuery.
 func (q *SelectQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *SelectQuery {
 	return fn(q.QueryBuilder()).Unwrap().(*SelectQuery)
 }
@@ -1091,12 +1316,12 @@ func (q *selectQueryBuilder) WhereGroup(
 	return q
 }
 
-func (q *selectQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+func (q *selectQueryBuilder) Where(query string, args ...any) QueryBuilder {
 	q.SelectQuery.Where(query, args...)
 	return q
 }
 
-func (q *selectQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+func (q *selectQueryBuilder) WhereOr(query string, args ...any) QueryBuilder {
 	q.SelectQuery.WhereOr(query, args...)
 	return q
 }
@@ -1116,7 +1341,7 @@ func (q *selectQueryBuilder) WherePK(cols ...string) QueryBuilder {
 	return q
 }
 
-func (q *selectQueryBuilder) Unwrap() interface{} {
+func (q *selectQueryBuilder) Unwrap() any {
 	return q.SelectQuery
 }
 
@@ -1127,10 +1352,10 @@ type joinQuery struct {
 	on   []schema.QueryWithSep
 }
 
-func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (j *joinQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, ' ')
 
-	b, err = j.join.AppendQuery(fmter, b)
+	b, err = j.join.AppendQuery(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -1143,7 +1368,7 @@ func (j *joinQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err
 			}
 
 			b = append(b, '(')
-			b, err = on.AppendQuery(fmter, b)
+			b, err = on.AppendQuery(gen, b)
 			if err != nil {
 				return nil, err
 			}
@@ -1160,11 +1385,11 @@ type countQuery struct {
 	*SelectQuery
 }
 
-func (q countQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q countQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
-	return q.appendQuery(fmter, b, true)
+	return q.appendQuery(gen, b, true)
 }
 
 //------------------------------------------------------------------------------
@@ -1173,14 +1398,14 @@ type selectExistsQuery struct {
 	*SelectQuery
 }
 
-func (q selectExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q selectExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = append(b, "SELECT EXISTS ("...)
 
-	b, err = q.appendQuery(fmter, b, false)
+	b, err = q.appendQuery(gen, b, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,14 +1421,14 @@ type whereExistsQuery struct {
 	*SelectQuery
 }
 
-func (q whereExistsQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q whereExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
 	b = append(b, "SELECT 1 WHERE EXISTS ("...)
 
-	b, err = q.appendQuery(fmter, b, false)
+	b, err = q.appendQuery(gen, b, false)
 	if err != nil {
 		return nil, err
 	}

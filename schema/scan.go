@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -18,9 +19,9 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+var scannerType = reflect.TypeFor[sql.Scanner]()
 
-type ScannerFunc func(dest reflect.Value, src interface{}) error
+type ScannerFunc func(dest reflect.Value, src any) error
 
 var scanners []ScannerFunc
 
@@ -38,8 +39,8 @@ func init() {
 		reflect.Uint32:        scanUint64,
 		reflect.Uint64:        scanUint64,
 		reflect.Uintptr:       scanUint64,
-		reflect.Float32:       scanFloat64,
-		reflect.Float64:       scanFloat64,
+		reflect.Float32:       scanFloat,
+		reflect.Float64:       scanFloat,
 		reflect.Complex64:     nil,
 		reflect.Complex128:    nil,
 		reflect.Array:         nil,
@@ -53,7 +54,7 @@ func init() {
 	}
 }
 
-var scannerMap sync.Map
+var scannerCache = xsync.NewMapOf[reflect.Type, ScannerFunc]()
 
 func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 	if field.Tag.HasOption("msgpack") {
@@ -72,14 +73,14 @@ func FieldScanner(dialect Dialect, field *Field) ScannerFunc {
 }
 
 func Scanner(typ reflect.Type) ScannerFunc {
-	if v, ok := scannerMap.Load(typ); ok {
-		return v.(ScannerFunc)
+	if v, ok := scannerCache.Load(typ); ok {
+		return v
 	}
 
 	fn := scanner(typ)
 
-	if v, ok := scannerMap.LoadOrStore(typ, fn); ok {
-		return v.(ScannerFunc)
+	if v, ok := scannerCache.LoadOrStore(typ, fn); ok {
+		return v
 	}
 	return fn
 }
@@ -102,6 +103,10 @@ func scanner(typ reflect.Type) ScannerFunc {
 		return scanIP
 	case ipNetType:
 		return scanIPNet
+	case netipAddrType:
+		return scanNetIpAddr
+	case netipPrefixType:
+		return scanNetIpPrefix
 	case jsonRawMessageType:
 		return scanBytes
 	}
@@ -111,7 +116,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(scannerType) {
 			return addrScanner(scanScanner)
 		}
@@ -124,7 +129,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 	return scanners[kind]
 }
 
-func scanBool(dest reflect.Value, src interface{}) error {
+func scanBool(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetBool(false)
@@ -154,7 +159,7 @@ func scanBool(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanInt64(dest reflect.Value, src interface{}) error {
+func scanInt64(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetInt(0)
@@ -184,7 +189,7 @@ func scanInt64(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanUint64(dest reflect.Value, src interface{}) error {
+func scanUint64(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetUint(0)
@@ -214,10 +219,13 @@ func scanUint64(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanFloat64(dest reflect.Value, src interface{}) error {
+func scanFloat(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetFloat(0)
+		return nil
+	case float32:
+		dest.SetFloat(float64(src))
 		return nil
 	case float64:
 		dest.SetFloat(src)
@@ -241,7 +249,7 @@ func scanFloat64(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanString(dest reflect.Value, src interface{}) error {
+func scanString(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetString("")
@@ -269,7 +277,7 @@ func scanString(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanBytes(dest reflect.Value, src interface{}) error {
+func scanBytes(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		dest.SetBytes(nil)
@@ -288,7 +296,7 @@ func scanBytes(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanTime(dest reflect.Value, src interface{}) error {
+func scanTime(dest reflect.Value, src any) error {
 	switch src := src.(type) {
 	case nil:
 		destTime := dest.Addr().Interface().(*time.Time)
@@ -319,11 +327,11 @@ func scanTime(dest reflect.Value, src interface{}) error {
 	}
 }
 
-func scanScanner(dest reflect.Value, src interface{}) error {
+func scanScanner(dest reflect.Value, src any) error {
 	return dest.Interface().(sql.Scanner).Scan(src)
 }
 
-func scanMsgpack(dest reflect.Value, src interface{}) error {
+func scanMsgpack(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -340,7 +348,7 @@ func scanMsgpack(dest reflect.Value, src interface{}) error {
 	return dec.DecodeValue(dest)
 }
 
-func scanJSON(dest reflect.Value, src interface{}) error {
+func scanJSON(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -353,7 +361,7 @@ func scanJSON(dest reflect.Value, src interface{}) error {
 	return bunjson.Unmarshal(b, dest.Addr().Interface())
 }
 
-func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
+func scanJSONUseNumber(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -368,7 +376,7 @@ func scanJSONUseNumber(dest reflect.Value, src interface{}) error {
 	return dec.Decode(dest.Addr().Interface())
 }
 
-func scanIP(dest reflect.Value, src interface{}) error {
+func scanIP(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -389,7 +397,7 @@ func scanIP(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func scanIPNet(dest reflect.Value, src interface{}) error {
+func scanIPNet(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
@@ -410,8 +418,50 @@ func scanIPNet(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
+func scanNetIpAddr(dest reflect.Value, src any) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	val, _ := netip.ParseAddr(internal.String(b))
+	if !val.IsValid() {
+		return fmt.Errorf("bun: invalid ip: %q", b)
+	}
+
+	ptr := dest.Addr().Interface().(*netip.Addr)
+	*ptr = val
+
+	return nil
+}
+
+func scanNetIpPrefix(dest reflect.Value, src any) error {
+	if src == nil {
+		return scanNull(dest)
+	}
+
+	b, err := toBytes(src)
+	if err != nil {
+		return err
+	}
+
+	val, _ := netip.ParsePrefix(internal.String(b))
+	if !val.IsValid() {
+		return fmt.Errorf("bun: invalid prefix: %q", b)
+	}
+
+	ptr := dest.Addr().Interface().(*netip.Prefix)
+	*ptr = val
+
+	return nil
+}
+
 func addrScanner(fn ScannerFunc) ScannerFunc {
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		if !dest.CanAddr() {
 			return fmt.Errorf("bun: Scan(nonaddressable %T)", dest.Interface())
 		}
@@ -419,7 +469,7 @@ func addrScanner(fn ScannerFunc) ScannerFunc {
 	}
 }
 
-func toBytes(src interface{}) ([]byte, error) {
+func toBytes(src any) ([]byte, error) {
 	switch src := src.(type) {
 	case string:
 		return internal.Bytes(src), nil
@@ -431,7 +481,7 @@ func toBytes(src interface{}) ([]byte, error) {
 }
 
 func PtrScanner(fn ScannerFunc) ScannerFunc {
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		if src == nil {
 			if !dest.CanAddr() {
 				if dest.IsNil() {
@@ -466,7 +516,7 @@ func scanNull(dest reflect.Value) error {
 	return nil
 }
 
-func scanJSONIntoInterface(dest reflect.Value, src interface{}) error {
+func scanJSONIntoInterface(dest reflect.Value, src any) error {
 	if dest.IsNil() {
 		if src == nil {
 			return nil
@@ -487,7 +537,7 @@ func scanJSONIntoInterface(dest reflect.Value, src interface{}) error {
 	return scanError(dest.Type(), src)
 }
 
-func scanInterface(dest reflect.Value, src interface{}) error {
+func scanInterface(dest reflect.Value, src any) error {
 	if dest.IsNil() {
 		if src == nil {
 			return nil
@@ -511,6 +561,6 @@ func nilable(kind reflect.Kind) bool {
 	return false
 }
 
-func scanError(dest reflect.Type, src interface{}) error {
+func scanError(dest reflect.Type, src any) error {
 	return fmt.Errorf("bun: can't scan %#v (%T) into %s", src, src, dest.String())
 }

@@ -32,9 +32,10 @@ type Dialect struct {
 
 	tables   *schema.Tables
 	features feature.Feature
+	loc      *time.Location
 }
 
-func New() *Dialect {
+func New(opts ...DialectOption) *Dialect {
 	d := new(Dialect)
 	d.tables = schema.NewTables(d)
 	d.features = feature.AutoIncrement |
@@ -46,8 +47,34 @@ func New() *Dialect {
 		feature.InsertIgnore |
 		feature.InsertOnDuplicateKey |
 		feature.SelectExists |
-		feature.CompositeIn
+		feature.CompositeIn |
+		feature.FKDefaultOnAction |
+		feature.UpdateOrderLimit |
+		feature.DeleteOrderLimit
+
+	for _, opt := range opts {
+		opt(d)
+	}
+
 	return d
+}
+
+type DialectOption func(d *Dialect)
+
+func WithTimeLocation(loc string) DialectOption {
+	return func(d *Dialect) {
+		location, err := time.LoadLocation(loc)
+		if err != nil {
+			panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
+		}
+		d.loc = location
+	}
+}
+
+func WithoutFeature(other feature.Feature) DialectOption {
+	return func(d *Dialect) {
+		d.features = d.features.Remove(other)
+	}
 }
 
 func (d *Dialect) Init(db *sql.DB) {
@@ -59,6 +86,9 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	if strings.Contains(version, "MariaDB") {
 		version = semver.MajorMinor("v" + cleanupVersion(version))
+		if semver.Compare(version, "v10.0.5") >= 0 {
+			d.features |= feature.DeleteReturning
+		}
 		if semver.Compare(version, "v10.5.0") >= 0 {
 			d.features |= feature.InsertReturning
 		}
@@ -103,9 +133,13 @@ func (d *Dialect) IdentQuote() byte {
 	return '`'
 }
 
-func (*Dialect) AppendTime(b []byte, tm time.Time) []byte {
+func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	b = append(b, '\'')
-	b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	if d.loc != nil {
+		b = tm.In(d.loc).AppendFormat(b, "2006-01-02 15:04:05.999999")
+	} else {
+		b = tm.AppendFormat(b, "2006-01-02 15:04:05.999999")
+	}
 	b = append(b, '\'')
 	return b
 }
@@ -182,6 +216,10 @@ func (d *Dialect) DefaultVarcharLen() int {
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " AUTO_INCREMENT"...)
+}
+
+func (d *Dialect) DefaultSchema() string {
+	return "mydb"
 }
 
 func sqlType(field *schema.Field) string {

@@ -18,7 +18,7 @@ func TestTable(t *testing.T) {
 			Bar string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 
 		require.Len(t, table.allFields, 3)
 		require.Len(t, table.Fields, 3)
@@ -37,7 +37,7 @@ func TestTable(t *testing.T) {
 			Foo string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model1)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model1]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -54,7 +54,7 @@ func TestTable(t *testing.T) {
 			Model
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -70,7 +70,7 @@ func TestTable(t *testing.T) {
 			BaseModel `bun:"custom_name,alias:custom_alias"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 		require.Equal(t, "custom_name", table.Name)
 		require.Equal(t, "custom_alias", table.Alias)
 	})
@@ -83,7 +83,7 @@ func TestTable(t *testing.T) {
 			Model1 `bun:",extend"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Equal(t, "custom_name", table.Name)
 		require.Equal(t, "custom_alias", table.Alias)
 	})
@@ -99,7 +99,7 @@ func TestTable(t *testing.T) {
 			Bar Perms `bun:"embed:bar_"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Role)(nil)))
+		table := tables.Get(reflect.TypeFor[*Role]())
 		require.Nil(t, table.StructMap["foo"])
 		require.Nil(t, table.StructMap["bar"])
 
@@ -112,6 +112,83 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{1, 0}, barView.Index)
 	})
 
+	t.Run("unambiguous embed field", func(t *testing.T) {
+		type Perms struct {
+			View   bool
+			Create bool
+		}
+		type Role struct {
+			Perms        // should be ignore
+			Foo    Perms `bun:"embed:foo_"`
+			View   bool
+			Create bool
+		}
+
+		table := tables.Get(reflect.TypeFor[*Role]())
+
+		view, ok := table.FieldMap["view"]
+		require.True(t, ok)
+		require.Equal(t, []int{2}, view.Index)
+
+		fooView, ok := table.FieldMap["foo_view"]
+		require.True(t, ok)
+		require.Equal(t, []int{1, 0}, fooView.Index)
+	})
+
+	t.Run("embedWithUnique", func(t *testing.T) {
+		type Perms struct {
+			View          bool
+			Create        bool
+			UniqueID      int `bun:",unique"`
+			UniqueGroupID int `bun:",unique:groupa"`
+		}
+
+		type Role struct {
+			Foo Perms `bun:"embed:foo_"`
+			Perms
+		}
+
+		table := tables.Get(reflect.TypeFor[*Role]())
+		require.Nil(t, table.StructMap["foo"])
+		require.Nil(t, table.StructMap["bar"])
+
+		fooView, ok := table.FieldMap["foo_view"]
+		require.True(t, ok)
+		require.Equal(t, []int{0, 0}, fooView.Index)
+
+		barView, ok := table.FieldMap["view"]
+		require.True(t, ok)
+		require.Equal(t, []int{1, 0}, barView.Index)
+
+		require.Equal(t, 3, len(table.Unique))
+		require.Equal(t, 2, len(table.Unique[""]))
+		require.Equal(t, "foo_unique_id", table.Unique[""][0].Name)
+		require.Equal(t, "unique_id", table.Unique[""][1].Name)
+		require.Equal(t, 1, len(table.Unique["groupa"]))
+		require.Equal(t, "unique_group_id", table.Unique["groupa"][0].Name)
+		require.Equal(t, 1, len(table.Unique["foo_groupa"]))
+		require.Equal(t, "foo_unique_group_id", table.Unique["foo_groupa"][0].Name)
+	})
+
+	t.Run("embedWithRelation", func(t *testing.T) {
+		type Profile struct {
+			ID     string `bun:",pk"`
+			UserID string
+		}
+		type User struct {
+			ID      string   `bun:",pk"`
+			Profile *Profile `bun:"rel:has-one,join:id=user_id"`
+		}
+		type Embeded struct {
+			User
+			Extra string `bun:"-"`
+		}
+
+		table := tables.Get(reflect.TypeFor[*Embeded]())
+		require.Contains(t, table.StructMap, "profile")
+		require.Equal(t, table.StructMap["profile"].Table.Name, "profiles")
+	})
+
 	t.Run("embed scanonly", func(t *testing.T) {
 		type Model1 struct {
 			Foo string
@@ -122,7 +199,7 @@ func TestTable(t *testing.T) {
 			Model1
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Len(t, table.FieldMap, 2)
 
 		foo, ok := table.FieldMap["foo"]
@@ -144,7 +221,7 @@ func TestTable(t *testing.T) {
 			Baz Model1 `bun:"embed:baz_"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 		require.Len(t, table.FieldMap, 2)
 
 		foo, ok := table.FieldMap["baz_foo"]
@@ -167,7 +244,7 @@ func TestTable(t *testing.T) {
 			Baz string `bun:",scanonly"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model2)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model2]())
 
 		require.Len(t, table.StructMap, 1)
 		require.NotNil(t, table.StructMap["xxx"])
@@ -194,7 +271,7 @@ func TestTable(t *testing.T) {
 			Bar string
 		}
 
-		table := tables.Get(reflect.TypeOf((*Model)(nil)))
+		table := tables.Get(reflect.TypeFor[*Model]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -212,7 +289,7 @@ func TestTable(t *testing.T) {
 			Item   *Item `bun:"rel:belongs-to,join:item_id=id"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*Item)(nil)))
+		table := tables.Get(reflect.TypeFor[*Item]())
 
 		rel, ok := table.Relations["Item"]
 		require.True(t, ok)
@@ -233,7 +310,7 @@ func TestTable(t *testing.T) {
 			Foo string `bun:"alt:alt_name"`
 		}
 
-		table := tables.Get(reflect.TypeOf((*ModelTest)(nil)))
+		table := tables.Get(reflect.TypeFor[*ModelTest]())
 
 		foo, ok := table.FieldMap["foo"]
 		require.True(t, ok)
@@ -244,5 +321,18 @@ func TestTable(t *testing.T) {
 		require.Equal(t, []int{1}, foo2.Index)
 
 		require.Equal(t, table.FieldMap["foo"].SQLName, table.FieldMap["alt_name"].SQLName)
+	})
+
+	t.Run("autoincrement is not nullable", func(t *testing.T) {
+		type Thing struct {
+			Counter int `bun:",autoincrement"`
+		}
+
+		table := tables.Get(reflect.TypeFor[*Thing]())
+
+		require.Contains(t, table.FieldMap, "counter")
+		counter := table.FieldMap["counter"]
+		require.True(t, counter.AutoIncrement, "autoincrement")
+		require.True(t, counter.NotNull, "not null")
 	})
 }

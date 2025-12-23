@@ -23,11 +23,30 @@ func Notify(ctx context.Context, db *bun.DB, channel, payload string) error {
 	return err
 }
 
+// Listener provides a high-level abstraction for PostgreSQL LISTEN/NOTIFY
+// functionality, allowing clients to subscribe to one or more channels and
+// receive asynchronous notifications.
+//
+// A Listener manages a dedicated database connection for receiving events,
+// automatically reconnecting when the connection becomes unhealthy. It can be
+// used in two modes:
+//
+//  1. Low-level mode: using Receive or ReceiveTimeout to explicitly wait for
+//     notifications.
+//  2. High-level mode: using Channel, which returns a Go channel that
+//     concurrently delivers Notification values and periodically pings the
+//     database to monitor connection health.
+//
+// The Listener is NOT safe for concurrent use. Multiple goroutines can NOT call
+// Listen, Unlisten, and receive notifications concurrently.
+//
+// TODO: make it thread-safe by creating 2 separate mutexes for Listen and Receive
 type Listener struct {
 	db     *bun.DB
 	driver *Connector
 
 	channels []string
+	channel  *channel
 
 	mu     sync.Mutex
 	cn     *Conn
@@ -36,11 +55,19 @@ type Listener struct {
 }
 
 func NewListener(db *bun.DB) *Listener {
-	return &Listener{
+	ln := &Listener{
 		db:     db,
 		driver: db.Driver().(Driver).connector,
 		exit:   make(chan struct{}),
 	}
+	if conf := ln.driver.Config(); conf.BufferSize < 8000 {
+		// https://github.com/uptrace/bun/issues/1201
+		// listener's payloads can be up to 8000 bytes
+		newConf := *conf
+		newConf.BufferSize = 8192
+		ln.driver = NewConnector(WithConfig(&newConf))
+	}
+	return ln
 }
 
 // Close closes the listener, releasing any open resources.
@@ -53,7 +80,7 @@ func (ln *Listener) Close() error {
 		ln.closed = true
 		close(ln.exit)
 
-		return ln.closeConn(errListenerClosed)
+		return ln.closeConn()
 	})
 }
 
@@ -113,12 +140,12 @@ func (ln *Listener) checkConn(ctx context.Context, cn *Conn, err error, allowTim
 func (ln *Listener) reconnect(ctx context.Context, reason error) {
 	if ln.cn != nil {
 		Logger.Printf(ctx, "bun: discarding bad listener connection: %s", reason)
-		_ = ln.closeConn(reason)
+		_ = ln.closeConn()
 	}
 	_, _ = ln.conn(ctx)
 }
 
-func (ln *Listener) closeConn(reason error) error {
+func (ln *Listener) closeConn() error {
 	if ln.cn == nil {
 		return nil
 	}
@@ -224,7 +251,10 @@ func (ln *Listener) ReceiveTimeout(
 // The channel is closed with Listener. Receive* APIs can not be used
 // after channel is created.
 func (ln *Listener) Channel(opts ...ChannelOption) <-chan Notification {
-	return newChannel(ln, opts).ch
+	if ln.channel == nil {
+		ln.channel = newChannel(ln, opts)
+	}
+	return ln.channel.ch
 }
 
 //------------------------------------------------------------------------------
@@ -237,9 +267,17 @@ type Notification struct {
 
 type ChannelOption func(c *channel)
 
+type channelOverflowHandler func(n Notification)
+
 func WithChannelSize(size int) ChannelOption {
 	return func(c *channel) {
 		c.size = size
+	}
+}
+
+func WithChannelOverflowHandler(handler channelOverflowHandler) ChannelOption {
+	return func(c *channel) {
+		c.overflowHandler = handler
 	}
 }
 
@@ -250,8 +288,9 @@ type channel struct {
 	size        int
 	pingTimeout time.Duration
 
-	ch     chan Notification
-	pingCh chan struct{}
+	ch              chan Notification
+	pingCh          chan struct{}
+	overflowHandler channelOverflowHandler
 }
 
 func newChannel(ln *Listener, opts []ChannelOption) *channel {
@@ -310,6 +349,9 @@ func (c *channel) startReceive() {
 			case c.ch <- Notification{channel, payload}:
 			default:
 				Logger.Printf(c.ctx, "pgdriver: Listener buffer is full (message is dropped)")
+				if c.overflowHandler != nil {
+					c.overflowHandler(Notification{channel, payload})
+				}
 			}
 		}
 	}

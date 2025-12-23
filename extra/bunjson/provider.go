@@ -11,26 +11,26 @@ func SetProvider(p Provider) {
 }
 
 type Provider interface {
-	Marshal(v interface{}) ([]byte, error)
-	Unmarshal(data []byte, v interface{}) error
+	Marshal(v any) ([]byte, error)
+	Unmarshal(data []byte, v any) error
 	NewEncoder(w io.Writer) Encoder
 	NewDecoder(r io.Reader) Decoder
 }
 
 type Decoder interface {
-	Decode(v interface{}) error
+	Decode(v any) error
 	UseNumber()
 }
 
 type Encoder interface {
-	Encode(v interface{}) error
+	Encode(v any) error
 }
 
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	return provider.Marshal(v)
 }
 
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v any) error {
 	return provider.Unmarshal(data, v)
 }
 

@@ -25,24 +25,24 @@ func AppendBool(b []byte, v bool) []byte {
 	return append(b, "FALSE"...)
 }
 
-func AppendFloat32(b []byte, v float32) []byte {
-	return appendFloat(b, float64(v), 32)
+func AppendFloat32(b []byte, num float32) []byte {
+	return appendFloat(b, float64(num), 32)
 }
 
-func AppendFloat64(b []byte, v float64) []byte {
-	return appendFloat(b, v, 64)
+func AppendFloat64(b []byte, num float64) []byte {
+	return appendFloat(b, num, 64)
 }
 
-func appendFloat(b []byte, v float64, bitSize int) []byte {
+func appendFloat(b []byte, num float64, bitSize int) []byte {
 	switch {
-	case math.IsNaN(v):
+	case math.IsNaN(num):
 		return append(b, "'NaN'"...)
-	case math.IsInf(v, 1):
+	case math.IsInf(num, 1):
 		return append(b, "'Infinity'"...)
-	case math.IsInf(v, -1):
+	case math.IsInf(num, -1):
 		return append(b, "'-Infinity'"...)
 	default:
-		return strconv.AppendFloat(b, v, 'f', -1, bitSize)
+		return strconv.AppendFloat(b, num, 'f', -1, bitSize)
 	}
 }
 

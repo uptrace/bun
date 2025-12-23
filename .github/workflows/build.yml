@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.21.x, 1.22.x]
+        go-version: [1.23.x, 1.24.x, 1.25.x]
 
     services:
       postgres:
@@ -62,27 +62,28 @@ jobs:
           --health-cmd="mariadb-admin ping" --health-interval=10s --health-timeout=5s
           --health-retries=5
       mssql2019:
-        image: mcmoe/mssqldocker:v2019.CU4.0
+        image: ghcr.io/uptrace/mssql:latest
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: passWORD1
+          MSSQL_SA_PASSWORD: passWORD1
           MSSQL_DB: test
           MSSQL_USER: sa
           MSSQL_PASSWORD: passWORD1
         ports:
           - 1433:1433
         options: >-
-          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S tcp:localhost,1433 -U sa -P passWORD1 -Q
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -C -U sa -P passWORD1 -Q
           'select 1' -b -o /dev/null" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up ${{ matrix.go-version }}
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
-
-      - name: Checkout code
-        uses: actions/checkout@v3
+          cache-dependency-path: "**/go.sum"
 
       - name: Test
         run: make test

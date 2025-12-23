@@ -1,28 +1,29 @@
 package schema
 
 import (
+	"cmp"
 	"database/sql"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/inflection"
 
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
 )
 
 const (
 	beforeAppendModelHookFlag internal.Flag = 1 << iota
-	beforeScanHookFlag
-	afterScanHookFlag
 	beforeScanRowHookFlag
 	afterScanRowHookFlag
 )
 
 var (
-	baseModelType      = reflect.TypeOf((*BaseModel)(nil)).Elem()
+	baseModelType      = reflect.TypeFor[BaseModel]()
 	tableNameInflector = inflection.Plural
 )
 
@@ -40,11 +41,12 @@ type Table struct {
 
 	Type      reflect.Type
 	ZeroValue reflect.Value // reflect.Struct
-	ZeroIface interface{}   // struct pointer
+	ZeroIface any           // struct pointer
 
 	TypeName  string
 	ModelName string
 
+	Schema            string
 	Name              string
 	SQLName           Safe
 	SQLNameForSelects Safe
@@ -60,8 +62,9 @@ type Table struct {
 	FieldMap  map[string]*Field
 	StructMap map[string]*structField
 
-	Relations map[string]*Relation
-	Unique    map[string][]*Field
+	IsM2MTable bool // If true, this table is the "junction table" of an m2m relation.
+	Relations  map[string]*Relation
+	Unique     map[string][]*Field
 
 	SoftDeleteField       *Field
 	UpdateSoftDeleteField func(fv reflect.Value, tm time.Time) error
@@ -74,16 +77,7 @@ type structField struct {
 	Table *Table
 }
 
-func newTable(
-	dialect Dialect, typ reflect.Type, seen map[reflect.Type]*Table, canAddr bool,
-) *Table {
-	if table, ok := seen[typ]; ok {
-		return table
-	}
-
-	table := new(Table)
-	seen[typ] = table
-
+func (table *Table) init(dialect Dialect, typ reflect.Type) {
 	table.dialect = dialect
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()
@@ -94,10 +88,11 @@ func newTable(
 	table.setName(tableName)
 	table.Alias = table.ModelName
 	table.SQLAlias = table.quoteIdent(table.ModelName)
+	table.Schema = dialect.DefaultSchema()
 
 	table.Fields = make([]*Field, 0, typ.NumField())
 	table.FieldMap = make(map[string]*Field, typ.NumField())
-	table.processFields(typ, seen, canAddr)
+	table.processFields(typ)
 
 	hooks := []struct {
 		typ  reflect.Type
@@ -109,28 +104,15 @@ func newTable(
 		{afterScanRowHookType, afterScanRowHookFlag},
 	}
 
-	typ = reflect.PtrTo(table.Type)
+	typ = reflect.PointerTo(table.Type)
 	for _, hook := range hooks {
 		if typ.Implements(hook.typ) {
 			table.flags = table.flags.Set(hook.flag)
 		}
 	}
-
-	return table
 }
 
-func (t *Table) init() {
-	for _, field := range t.relFields {
-		t.processRelation(field)
-	}
-	t.relFields = nil
-}
-
-func (t *Table) processFields(
-	typ reflect.Type,
-	seen map[reflect.Type]*Table,
-	canAddr bool,
-) {
+func (t *Table) processFields(typ reflect.Type) {
 	type embeddedField struct {
 		prefix     string
 		index      []int
@@ -141,6 +123,7 @@ func (t *Table) processFields(
 
 	names := make(map[string]struct{})
 	embedded := make([]embeddedField, 0, 10)
+	ebdStructs := make(map[string]*structField, 0)
 
 	for i, n := 0, typ.NumField(); i < n; i++ {
 		sf := typ.Field(i)
@@ -172,7 +155,7 @@ func (t *Table) processFields(
 				continue
 			}
 
-			subtable := newTable(t.dialect, sfType, seen, canAddr)
+			subtable := t.dialect.Tables().InProgress(sfType)
 
 			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
@@ -181,6 +164,17 @@ func (t *Table) processFields(
 					subtable:   subtable,
 					subfield:   subfield,
 				})
+			}
+			if len(subtable.StructMap) > 0 {
+				for k, v := range subtable.StructMap {
+					// NOTE: conflict Struct name
+					if _, ok := ebdStructs[k]; !ok {
+						ebdStructs[k] = &structField{
+							Index: makeIndex(sf.Index, v.Index),
+							Table: v.Table,
+						}
+					}
+				}
 			}
 
 			if tagstr != "" {
@@ -206,7 +200,7 @@ func (t *Table) processFields(
 					t.TypeName, sf.Name, fieldType.Kind()))
 			}
 
-			subtable := newTable(t.dialect, fieldType, seen, canAddr)
+			subtable := t.dialect.Tables().InProgress(fieldType)
 			for _, subfield := range subtable.allFields {
 				embedded = append(embedded, embeddedField{
 					prefix:     prefix,
@@ -215,6 +209,18 @@ func (t *Table) processFields(
 					subtable:   subtable,
 					subfield:   subfield,
 				})
+			}
+			if len(subtable.StructMap) > 0 {
+				for k, v := range subtable.StructMap {
+					// NOTE: conflict Struct name
+					k = prefix + k
+					if _, ok := ebdStructs[k]; !ok {
+						ebdStructs[k] = &structField{
+							Index: makeIndex(sf.Index, v.Index),
+							Table: subtable,
+						}
+					}
+				}
 			}
 			continue
 		}
@@ -229,7 +235,7 @@ func (t *Table) processFields(
 			}
 			t.StructMap[field.Name] = &structField{
 				Index: field.Index,
-				Table: newTable(t.dialect, field.IndirectType, seen, canAddr),
+				Table: t.dialect.Tables().InProgress(field.IndirectType),
 			}
 		}
 	}
@@ -253,12 +259,12 @@ func (t *Table) processFields(
 	}
 
 	for _, embfield := range embedded {
-		subfield := embfield.subfield.Clone()
-
-		if ambiguousNames[subfield.Name] > 1 &&
-			!(!subfield.Tag.IsZero() && ambiguousTags[subfield.Name] == 1) {
+		if ambiguousNames[embfield.prefix+embfield.subfield.Name] > 1 &&
+			!(!embfield.subfield.Tag.IsZero() && ambiguousTags[embfield.prefix+embfield.subfield.Name] == 1) {
 			continue // ambiguous embedded field
 		}
+
+		subfield := embfield.subfield.Clone()
 
 		subfield.Index = makeIndex(embfield.index, subfield.Index)
 		if embfield.prefix != "" {
@@ -266,6 +272,63 @@ func (t *Table) processFields(
 			subfield.SQLName = t.quoteIdent(subfield.Name)
 		}
 		t.addField(subfield)
+		if v, ok := subfield.Tag.Options["unique"]; ok {
+			t.addUnique(subfield, embfield.prefix, v)
+		}
+	}
+
+	if len(ebdStructs) > 0 && t.StructMap == nil {
+		t.StructMap = make(map[string]*structField)
+	}
+	for name, sfield := range ebdStructs {
+		if _, ok := t.StructMap[name]; !ok {
+			t.StructMap[name] = sfield
+		}
+	}
+
+	if len(embedded) > 0 {
+		// https://github.com/uptrace/bun/issues/1095
+		// < v1.2, all fields follow the order corresponding to the struct
+		// >= v1.2, < v1.2.8, fields of nested structs have been moved to the end.
+		// >= v1.2.8, The default behavior remains the same as initially,
+		sortFieldsByStruct(t.allFields)
+		sortFieldsByStruct(t.Fields)
+		sortFieldsByStruct(t.PKs)
+		sortFieldsByStruct(t.DataFields)
+	}
+}
+
+func sortFieldsByStruct(fields []*Field) {
+	slices.SortFunc(fields, func(left, right *Field) int {
+		for k := 0; k < len(left.Index) && k < len(right.Index); k++ {
+			if res := cmp.Compare(left.Index[k], right.Index[k]); res != 0 {
+				return res
+			}
+		}
+		// NOTE: should not reach
+		return 0
+	})
+}
+
+func (t *Table) addUnique(field *Field, prefix string, tagOptions []string) {
+	var names []string
+	if len(tagOptions) == 1 {
+		// Split the value by comma, this will allow multiple names to be specified.
+		// We can use this to create multiple named unique constraints where a single column
+		// might be included in multiple constraints.
+		names = strings.Split(tagOptions[0], ",")
+	} else {
+		names = tagOptions
+	}
+
+	for _, uname := range names {
+		if t.Unique == nil {
+			t.Unique = make(map[string][]*Field)
+		}
+		if uname != "" && prefix != "" {
+			uname = prefix + uname
+		}
+		t.Unique[uname] = append(t.Unique[uname], field)
 	}
 }
 
@@ -393,10 +456,18 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 	}
 
 	if tag.Name != "" {
+		schema, _ := t.schemaFromTagName(tag.Name)
+		t.Schema = schema
+
+		// Eventually, we should only assign the "table" portion as the table name,
+		// which will also require a change in how the table name is appended to queries.
+		// Until that is done, set table name to tag.Name.
 		t.setName(tag.Name)
 	}
 
 	if s, ok := tag.Option("table"); ok {
+		schema, _ := t.schemaFromTagName(s)
+		t.Schema = schema
 		t.setName(s)
 	}
 
@@ -408,6 +479,17 @@ func (t *Table) processBaseModelField(f reflect.StructField) {
 		t.Alias = s
 		t.SQLAlias = t.quoteIdent(s)
 	}
+}
+
+// schemaFromTagName splits the bun.BaseModel tag name into schema and table name
+// in case it is specified in the "schema"."table" format.
+// Assume default schema if one isn't explicitly specified.
+func (t *Table) schemaFromTagName(name string) (string, string) {
+	schema, table := t.dialect.DefaultSchema(), name
+	if schemaTable := strings.Split(name, "."); len(schemaTable) == 2 {
+		schema, table = schemaTable[0], schemaTable[1]
+	}
+	return schema, table
 }
 
 // nolint
@@ -423,6 +505,10 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 		sqlName = tag.Name
 	}
 
+	if s, ok := tag.Option("column"); ok {
+		sqlName = s
+	}
+
 	for name := range tag.Options {
 		if !isKnownFieldOption(name) {
 			internal.Warn.Printf("%s.%s has unknown tag option: %q", t.TypeName, sf.Name, name)
@@ -430,6 +516,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 
 	field := &Field{
+		Table:       t,
 		StructField: sf,
 		IsPtr:       sf.Type.Kind() == reflect.Ptr,
 
@@ -450,6 +537,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 	if tag.HasOption("autoincrement") {
 		field.AutoIncrement = true
+		field.NotNull = true
 		field.NullZero = true
 	}
 	if tag.HasOption("identity") {
@@ -457,22 +545,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 
 	if v, ok := tag.Options["unique"]; ok {
-		var names []string
-		if len(v) == 1 {
-			// Split the value by comma, this will allow multiple names to be specified.
-			// We can use this to create multiple named unique constraints where a single column
-			// might be included in multiple constraints.
-			names = strings.Split(v[0], ",")
-		} else {
-			names = v
-		}
-
-		for _, uniqueName := range names {
-			if t.Unique == nil {
-				t.Unique = make(map[string][]*Field)
-			}
-			t.Unique[uniqueName] = append(t.Unique[uniqueName], field)
-		}
+		t.addUnique(field, "", v)
 	}
 	if s, ok := tag.Option("default"); ok {
 		field.SQLDefault = s
@@ -489,6 +562,13 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 }
 
 //---------------------------------------------------------------------------------------
+
+func (t *Table) initRelations() {
+	for _, field := range t.relFields {
+		t.processRelation(field)
+	}
+	t.relFields = nil
+}
 
 func (t *Table) processRelation(field *Field) {
 	if rel, ok := field.Tag.Option("rel"); ok {
@@ -542,7 +622,10 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.Condition = field.Tag.Options["join_on"]
 	}
 
-	rel.OnUpdate = "ON UPDATE NO ACTION"
+	if t.dialect.Features().Has(feature.FKDefaultOnAction) {
+		rel.OnUpdate = "ON UPDATE NO ACTION"
+		rel.OnDelete = "ON DELETE NO ACTION"
+	}
 	if onUpdate, ok := field.Tag.Options["on_update"]; ok {
 		if len(onUpdate) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_update option must be a single field", t.TypeName, field.GoName))
@@ -557,7 +640,6 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		rel.OnUpdate = s
 	}
 
-	rel.OnDelete = "ON DELETE NO ACTION"
 	if onDelete, ok := field.Tag.Options["on_delete"]; ok {
 		if len(onDelete) > 1 {
 			panic(fmt.Errorf("bun: %s belongs-to %s: on_delete option must be a single field", t.TypeName, field.GoName))
@@ -577,7 +659,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 			joinColumn := joinColumns[i]
 
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
@@ -586,7 +668,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 			}
 
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
@@ -597,17 +679,17 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 		return rel
 	}
 
-	rel.JoinFields = joinTable.PKs
+	rel.JoinPKs = joinTable.PKs
 	fkPrefix := internal.Underscore(field.GoName) + "_"
 	for _, joinPK := range joinTable.PKs {
 		fkName := fkPrefix + joinPK.Name
 		if fk := t.FieldMap[fkName]; fk != nil {
-			rel.BaseFields = append(rel.BaseFields, fk)
+			rel.BasePKs = append(rel.BasePKs, fk)
 			continue
 		}
 
 		if fk := t.FieldMap[joinPK.Name]; fk != nil {
-			rel.BaseFields = append(rel.BaseFields, fk)
+			rel.BasePKs = append(rel.BasePKs, fk)
 			continue
 		}
 
@@ -640,7 +722,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		baseColumns, joinColumns := parseRelationJoin(join)
 		for i, baseColumn := range baseColumns {
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
@@ -650,7 +732,7 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 
 			joinColumn := joinColumns[i]
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-one %s: %s must have column %s",
@@ -661,17 +743,17 @@ func (t *Table) hasOneRelation(field *Field) *Relation {
 		return rel
 	}
 
-	rel.BaseFields = t.PKs
+	rel.BasePKs = t.PKs
 	fkPrefix := internal.Underscore(t.ModelName) + "_"
 	for _, pk := range t.PKs {
 		fkName := fkPrefix + pk.Name
 		if f := joinTable.FieldMap[fkName]; f != nil {
-			rel.JoinFields = append(rel.JoinFields, f)
+			rel.JoinPKs = append(rel.JoinPKs, f)
 			continue
 		}
 
 		if f := joinTable.FieldMap[pk.Name]; f != nil {
-			rel.JoinFields = append(rel.JoinFields, f)
+			rel.JoinPKs = append(rel.JoinPKs, f)
 			continue
 		}
 
@@ -720,7 +802,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 
 			if f := t.FieldMap[baseColumn]; f != nil {
-				rel.BaseFields = append(rel.BaseFields, f)
+				rel.BasePKs = append(rel.BasePKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-many %s: %s must have column %s",
@@ -729,7 +811,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 
 			if f := joinTable.FieldMap[joinColumn]; f != nil {
-				rel.JoinFields = append(rel.JoinFields, f)
+				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s has-many %s: %s must have column %s",
@@ -738,7 +820,7 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 			}
 		}
 	} else {
-		rel.BaseFields = t.PKs
+		rel.BasePKs = t.PKs
 		fkPrefix := internal.Underscore(t.ModelName) + "_"
 		if isPolymorphic {
 			polymorphicColumn = fkPrefix + "type"
@@ -747,12 +829,12 @@ func (t *Table) hasManyRelation(field *Field) *Relation {
 		for _, pk := range t.PKs {
 			joinColumn := fkPrefix + pk.Name
 			if fk := joinTable.FieldMap[joinColumn]; fk != nil {
-				rel.JoinFields = append(rel.JoinFields, fk)
+				rel.JoinPKs = append(rel.JoinPKs, fk)
 				continue
 			}
 
 			if fk := joinTable.FieldMap[pk.Name]; fk != nil {
-				rel.JoinFields = append(rel.JoinFields, fk)
+				rel.JoinPKs = append(rel.JoinPKs, fk)
 				continue
 			}
 
@@ -817,6 +899,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 		JoinTable: joinTable,
 		M2MTable:  m2mTable,
 	}
+	m2mTable.markM2M()
 
 	if field.Tag.HasOption("join_on") {
 		rel.Condition = field.Tag.Options["join_on"]
@@ -852,14 +935,18 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	}
 
 	leftRel := m2mTable.belongsToRelation(leftField)
-	rel.BaseFields = leftRel.JoinFields
-	rel.M2MBaseFields = leftRel.BaseFields
+	rel.BasePKs = leftRel.JoinPKs
+	rel.M2MBasePKs = leftRel.BasePKs
 
 	rightRel := m2mTable.belongsToRelation(rightField)
-	rel.JoinFields = rightRel.JoinFields
-	rel.M2MJoinFields = rightRel.BaseFields
+	rel.JoinPKs = rightRel.JoinPKs
+	rel.M2MJoinPKs = rightRel.BasePKs
 
 	return rel
+}
+
+func (t *Table) markM2M() {
+	t.IsM2MTable = true
 }
 
 //------------------------------------------------------------------------------
@@ -868,22 +955,16 @@ func (t *Table) Dialect() Dialect { return t.dialect }
 
 func (t *Table) HasBeforeAppendModelHook() bool { return t.flags.Has(beforeAppendModelHookFlag) }
 
-// DEPRECATED. Use HasBeforeScanRowHook.
-func (t *Table) HasBeforeScanHook() bool { return t.flags.Has(beforeScanHookFlag) }
-
-// DEPRECATED. Use HasAfterScanRowHook.
-func (t *Table) HasAfterScanHook() bool { return t.flags.Has(afterScanHookFlag) }
-
 func (t *Table) HasBeforeScanRowHook() bool { return t.flags.Has(beforeScanRowHookFlag) }
 func (t *Table) HasAfterScanRowHook() bool  { return t.flags.Has(afterScanRowHookFlag) }
 
 //------------------------------------------------------------------------------
 
 func (t *Table) AppendNamedArg(
-	fmter Formatter, b []byte, name string, strct reflect.Value,
+	gen QueryGen, b []byte, name string, strct reflect.Value,
 ) ([]byte, bool) {
 	if field, ok := t.FieldMap[name]; ok {
-		return field.AppendValue(fmter, b, strct), true
+		return field.AppendValue(gen, b, strct), true
 	}
 	return b, false
 }
@@ -899,7 +980,7 @@ func (t *Table) quoteTableName(s string) Safe {
 }
 
 func (t *Table) quoteIdent(s string) Safe {
-	return Safe(NewFormatter(t.dialect).AppendIdent(nil, s))
+	return Safe(NewQueryGen(t.dialect).AppendIdent(nil, s))
 }
 
 func isKnownTableOption(name string) bool {
@@ -918,6 +999,7 @@ func isKnownFieldOption(name string) bool {
 		"array",
 		"hstore",
 		"composite",
+		"multirange",
 		"json_use_number",
 		"msgpack",
 		"notnull",

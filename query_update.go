@@ -13,25 +13,26 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// UpdateQuery builds SQL UPDATE statements.
 type UpdateQuery struct {
 	whereBaseQuery
+	orderLimitOffsetQuery
 	returningQuery
-	customValueQuery
 	setQuery
 	idxHintsQuery
 
-	joins    []joinQuery
-	omitZero bool
+	joins   []joinQuery
+	comment string
 }
 
 var _ Query = (*UpdateQuery)(nil)
 
+// NewUpdateQuery returns a new UpdateQuery attached to the provided DB.
 func NewUpdateQuery(db *DB) *UpdateQuery {
 	q := &UpdateQuery{
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
-				db:   db,
-				conn: db.DB,
+				db: db,
 			},
 		},
 	}
@@ -43,7 +44,7 @@ func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Model(model interface{}) *UpdateQuery {
+func (q *UpdateQuery) Model(model any) *UpdateQuery {
 	q.setModel(model)
 	return q
 }
@@ -53,25 +54,32 @@ func (q *UpdateQuery) Err(err error) *UpdateQuery {
 	return q
 }
 
-// Apply calls the fn passing the SelectQuery as an argument.
-func (q *UpdateQuery) Apply(fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
-	if fn != nil {
-		return fn(q)
+// Apply calls each function in fns, passing the UpdateQuery as an argument.
+func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
+	for _, fn := range fns {
+		if fn != nil {
+			q = fn(q)
+		}
 	}
 	return q
 }
 
-func (q *UpdateQuery) With(name string, query schema.QueryAppender) *UpdateQuery {
-	q.addWith(name, query, false)
+func (q *UpdateQuery) With(name string, query Query) *UpdateQuery {
+	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
-func (q *UpdateQuery) WithRecursive(name string, query schema.QueryAppender) *UpdateQuery {
-	q.addWith(name, query, true)
+func (q *UpdateQuery) WithRecursive(name string, query Query) *UpdateQuery {
+	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
-//------------------------------------------------------------------------------
+func (q *UpdateQuery) WithQuery(query *WithQuery) *UpdateQuery {
+	q.addWith(query)
+	return q
+}
+
+// ------------------------------------------------------------------------------
 
 func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	for _, table := range tables {
@@ -80,12 +88,12 @@ func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) TableExpr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) TableExpr(query string, args ...any) *UpdateQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *UpdateQuery) ModelTableExpr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) ModelTableExpr(query string, args ...any) *UpdateQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
@@ -104,12 +112,12 @@ func (q *UpdateQuery) ExcludeColumn(columns ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Set(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Set(query string, args ...any) *UpdateQuery {
 	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) SetColumn(column string, query string, args ...any) *UpdateQuery {
 	if q.db.HasFeature(feature.UpdateMultiTable) {
 		column = q.table.Alias + "." + column
 	}
@@ -118,9 +126,9 @@ func (q *UpdateQuery) SetColumn(column string, query string, args ...interface{}
 }
 
 // Value overwrites model value for the column.
-func (q *UpdateQuery) Value(column string, query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Value(column string, query string, args ...any) *UpdateQuery {
 	if q.table == nil {
-		q.err = errNilModel
+		q.setErr(errNilModel)
 		return q
 	}
 	q.addValue(q.table, column, query, args)
@@ -134,24 +142,24 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) Join(join string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Join(join string, args ...any) *UpdateQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
 	})
 	return q
 }
 
-func (q *UpdateQuery) JoinOn(cond string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) JoinOn(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
-func (q *UpdateQuery) JoinOnOr(cond string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) JoinOnOr(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " OR ")
 }
 
-func (q *UpdateQuery) joinOn(cond string, args []interface{}, sep string) *UpdateQuery {
+func (q *UpdateQuery) joinOn(cond string, args []any, sep string) *UpdateQuery {
 	if len(q.joins) == 0 {
-		q.err = errors.New("bun: query has no joins")
+		q.setErr(errors.New("bun: query has no joins"))
 		return q
 	}
 	j := &q.joins[len(q.joins)-1]
@@ -166,12 +174,12 @@ func (q *UpdateQuery) WherePK(cols ...string) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Where(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Where(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
-func (q *UpdateQuery) WhereOr(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) WhereOr(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
@@ -200,13 +208,49 @@ func (q *UpdateQuery) WhereAllWithDeleted() *UpdateQuery {
 	return q
 }
 
+// ------------------------------------------------------------------------------
+func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
+	if !q.hasFeature(feature.UpdateOrderLimit) {
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
+		return q
+	}
+	q.addOrder(orders...)
+	return q
+}
+
+func (q *UpdateQuery) OrderExpr(query string, args ...any) *UpdateQuery {
+	if !q.hasFeature(feature.UpdateOrderLimit) {
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
+		return q
+	}
+	q.addOrderExpr(query, args...)
+	return q
+}
+
+func (q *UpdateQuery) Limit(n int) *UpdateQuery {
+	if !q.hasFeature(feature.UpdateOrderLimit) {
+		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
+		return q
+	}
+	q.setLimit(n)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // Returning adds a RETURNING clause to the query.
 //
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
-func (q *UpdateQuery) Returning(query string, args ...interface{}) *UpdateQuery {
+func (q *UpdateQuery) Returning(query string, args ...any) *UpdateQuery {
 	q.addReturning(schema.SafeQuery(query, args))
+	return q
+}
+
+//------------------------------------------------------------------------------
+
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *UpdateQuery) Comment(comment string) *UpdateQuery {
+	q.comment = comment
 	return q
 }
 
@@ -216,50 +260,52 @@ func (q *UpdateQuery) Operation() string {
 	return "UPDATE"
 }
 
-func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
 
-	fmter = formatterWithModel(fmter, q)
+	b = appendComment(b, q.comment)
 
-	b, err = q.appendWith(fmter, b)
+	gen = formatterWithModel(gen, q)
+
+	b, err = q.appendWith(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	b = append(b, "UPDATE "...)
 
-	if fmter.HasFeature(feature.UpdateMultiTable) {
-		b, err = q.appendTablesWithAlias(fmter, b)
-	} else if fmter.HasFeature(feature.UpdateTableAlias) {
-		b, err = q.appendFirstTableWithAlias(fmter, b)
+	if gen.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendTablesWithAlias(gen, b)
+	} else if gen.HasFeature(feature.UpdateTableAlias) {
+		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
-		b, err = q.appendFirstTable(fmter, b)
+		b, err = q.appendFirstTable(gen, b)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.appendIndexHints(fmter, b)
+	b, err = q.appendIndexHints(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = q.mustAppendSet(fmter, b)
+	b, err = q.mustAppendSet(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if !fmter.HasFeature(feature.UpdateMultiTable) {
-		b, err = q.appendOtherTables(fmter, b)
+	if !gen.HasFeature(feature.UpdateMultiTable) {
+		b, err = q.appendOtherTables(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	for _, j := range q.joins {
-		b, err = j.AppendQuery(fmter, b)
+		b, err = j.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -267,20 +313,30 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 
 	if q.hasFeature(feature.Output) && q.hasReturning() {
 		b = append(b, " OUTPUT "...)
-		b, err = q.appendOutput(fmter, b)
+		b, err = q.appendOutput(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b, err = q.mustAppendWhere(fmter, b, q.hasTableAlias(fmter))
+	b, err = q.mustAppendWhere(gen, b, q.hasTableAlias(gen))
+	if err != nil {
+		return nil, err
+	}
+
+	b, err = q.appendOrder(gen, b)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err = q.appendLimitOffset(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
 	if q.hasFeature(feature.Returning) && q.hasReturning() {
 		b = append(b, " RETURNING "...)
-		b, err = q.appendReturning(fmter, b)
+		b, err = q.appendReturning(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -289,113 +345,66 @@ func (q *UpdateQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, e
 	return b, nil
 }
 
-func (q *UpdateQuery) mustAppendSet(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) mustAppendSet(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = append(b, " SET "...)
+	pos := len(b)
+
+	switch model := q.model.(type) {
+	case *structTableModel:
+		if !model.strct.IsValid() { // Model((*Foo)(nil))
+			break
+		}
+		if len(q.set) > 0 && q.columns == nil {
+			break
+		}
+
+		fields, err := q.getDataFields()
+		if err != nil {
+			return nil, err
+		}
+
+		b, err = q.appendSetStruct(gen, b, model, fields)
+		if err != nil {
+			return nil, err
+		}
+
+	case *sliceTableModel:
+		if len(q.set) > 0 { // bulk-update
+			return q.appendSet(gen, b)
+		}
+		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
+
+	case *mapModel:
+		b = model.appendSet(gen, b)
+
+	case nil:
+		// continue below
+
+	default:
+		return nil, fmt.Errorf("bun: Update does not support %T", q.model)
+	}
 
 	if len(q.set) > 0 {
-		return q.appendSet(fmter, b)
-	}
-
-	if m, ok := q.model.(*mapModel); ok {
-		return m.appendSet(fmter, b), nil
-	}
-
-	if q.tableModel == nil {
-		return nil, errNilModel
-	}
-
-	switch model := q.tableModel.(type) {
-	case *structTableModel:
-		pos := len(b)
-		b, err = q.appendSetStruct(fmter, b, model)
-		if err != nil {
-			return nil, err
+		if len(b) > pos {
+			b = append(b, ", "...)
 		}
-
-		// Validate if no values were appended after SET clause.
-		// e.g. UPDATE users SET WHERE id = 1
-		// See issues858
-		if len(b) == pos {
-			return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
-		}
-	case *sliceTableModel:
-		return nil, errors.New("bun: to bulk Update, use CTE and VALUES")
-	default:
-		return nil, fmt.Errorf("bun: Update does not support %T", q.tableModel)
+		return q.appendSet(gen, b)
 	}
 
+	if len(b) == pos {
+		return nil, errors.New("bun: empty SET clause is not allowed in the UPDATE query")
+	}
 	return b, nil
 }
 
-func (q *UpdateQuery) appendSetStruct(
-	fmter schema.Formatter, b []byte, model *structTableModel,
-) ([]byte, error) {
-	fields, err := q.getDataFields()
-	if err != nil {
-		return nil, err
-	}
-
-	isTemplate := fmter.IsNop()
-	pos := len(b)
-	for _, f := range fields {
-		if f.SkipUpdate() {
-			continue
-		}
-
-		app, hasValue := q.modelValues[f.Name]
-
-		if !hasValue && q.omitZero && f.HasZeroValue(model.strct) {
-			continue
-		}
-
-		if len(b) != pos {
-			b = append(b, ", "...)
-			pos = len(b)
-		}
-
-		b = append(b, f.SQLName...)
-		b = append(b, " = "...)
-
-		if isTemplate {
-			b = append(b, '?')
-			continue
-		}
-
-		if hasValue {
-			b, err = app.AppendQuery(fmter, b)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b = f.AppendValue(fmter, b, model.strct)
-		}
-	}
-
-	for i, v := range q.extraValues {
-		if i > 0 || len(fields) > 0 {
-			b = append(b, ", "...)
-		}
-
-		b = append(b, v.column...)
-		b = append(b, " = "...)
-
-		b, err = v.value.AppendQuery(fmter, b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b, nil
-}
-
-func (q *UpdateQuery) appendOtherTables(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *UpdateQuery) appendOtherTables(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if !q.hasMultiTables() {
 		return b, nil
 	}
 
 	b = append(b, " FROM "...)
 
-	b, err = q.whereBaseQuery.appendOtherTables(fmter, b)
+	b, err = q.whereBaseQuery.appendOtherTables(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +421,7 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		return q
 	}
 
-	set, err := q.updateSliceSet(q.db.fmter, model)
+	set, err := q.updateSliceSet(q.db.gen, model)
 	if err != nil {
 		q.setErr(err)
 		return q
@@ -425,11 +434,11 @@ func (q *UpdateQuery) Bulk() *UpdateQuery {
 		Model(model).
 		TableExpr("_data").
 		Set(set).
-		Where(q.updateSliceWhere(q.db.fmter, model))
+		Where(q.updateSliceWhere(q.db.gen, model))
 }
 
 func (q *UpdateQuery) updateSliceSet(
-	fmter schema.Formatter, model *sliceTableModel,
+	gen schema.QueryGen, model *sliceTableModel,
 ) (string, error) {
 	fields, err := q.getDataFields()
 	if err != nil {
@@ -446,7 +455,7 @@ func (q *UpdateQuery) updateSliceSet(
 			b = append(b, ", "...)
 			pos = len(b)
 		}
-		if fmter.HasFeature(feature.UpdateMultiTable) {
+		if gen.HasFeature(feature.UpdateMultiTable) {
 			b = append(b, model.table.SQLAlias...)
 			b = append(b, '.')
 		}
@@ -457,13 +466,13 @@ func (q *UpdateQuery) updateSliceSet(
 	return internal.String(b), nil
 }
 
-func (q *UpdateQuery) updateSliceWhere(fmter schema.Formatter, model *sliceTableModel) string {
+func (q *UpdateQuery) updateSliceWhere(gen schema.QueryGen, model *sliceTableModel) string {
 	var b []byte
 	for i, pk := range model.table.PKs {
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		if q.hasTableAlias(fmter) {
+		if q.hasTableAlias(gen) {
 			b = append(b, model.table.SQLAlias...)
 		} else {
 			b = append(b, model.table.SQLName...)
@@ -478,17 +487,17 @@ func (q *UpdateQuery) updateSliceWhere(fmter schema.Formatter, model *sliceTable
 
 //------------------------------------------------------------------------------
 
-func (q *UpdateQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *UpdateQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
-func (q *UpdateQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *UpdateQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
 func (q *UpdateQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -505,8 +514,11 @@ func (q *UpdateQuery) scanOrExec(
 		return nil, err
 	}
 
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -571,22 +583,23 @@ func (q *UpdateQuery) FQN(column string) Ident {
 	if q.table == nil {
 		panic("UpdateQuery.FQN requires a model")
 	}
-	if q.hasTableAlias(q.db.fmter) {
+	if q.hasTableAlias(q.db.gen) {
 		return Ident(q.table.Alias + "." + column)
 	}
 	return Ident(q.table.Name + "." + column)
 }
 
-func (q *UpdateQuery) hasTableAlias(fmter schema.Formatter) bool {
-	return fmter.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
+func (q *UpdateQuery) hasTableAlias(gen schema.QueryGen) bool {
+	return gen.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
 }
 
+// String returns the generated SQL query string. The UpdateQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *UpdateQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }
 
@@ -613,12 +626,12 @@ func (q *updateQueryBuilder) WhereGroup(
 	return q
 }
 
-func (q *updateQueryBuilder) Where(query string, args ...interface{}) QueryBuilder {
+func (q *updateQueryBuilder) Where(query string, args ...any) QueryBuilder {
 	q.UpdateQuery.Where(query, args...)
 	return q
 }
 
-func (q *updateQueryBuilder) WhereOr(query string, args ...interface{}) QueryBuilder {
+func (q *updateQueryBuilder) WhereOr(query string, args ...any) QueryBuilder {
 	q.UpdateQuery.WhereOr(query, args...)
 	return q
 }
@@ -638,7 +651,7 @@ func (q *updateQueryBuilder) WherePK(cols ...string) QueryBuilder {
 	return q
 }
 
-func (q *updateQueryBuilder) Unwrap() interface{} {
+func (q *updateQueryBuilder) Unwrap() any {
 	return q.UpdateQuery
 }
 

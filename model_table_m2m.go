@@ -16,7 +16,7 @@ type m2mModel struct {
 	rel       *schema.Relation
 
 	baseValues map[internal.MapKey][]reflect.Value
-	structKey  []interface{}
+	structKey  []any
 }
 
 var _ TableModel = (*m2mModel)(nil)
@@ -24,7 +24,7 @@ var _ TableModel = (*m2mModel)(nil)
 func newM2MModel(j *relationJoin) *m2mModel {
 	baseTable := j.BaseModel.Table()
 	joinModel := j.JoinModel.(*sliceTableModel)
-	baseValues := baseValues(joinModel, baseTable.PKs)
+	baseValues := baseValues(joinModel, j.Relation.BasePKs)
 	if len(baseValues) == 0 {
 		return nil
 	}
@@ -79,37 +79,31 @@ func (m *m2mModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	return n, nil
 }
 
-func (m *m2mModel) Scan(src interface{}) error {
+func (m *m2mModel) Scan(src any) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
-	field, ok := m.table.FieldMap[column]
-	if !ok {
+	// Base pks must come first.
+	if m.scanIndex <= len(m.rel.M2MBasePKs) {
 		return m.scanM2MColumn(column, src)
 	}
 
-	if err := field.ScanValue(m.strct, src); err != nil {
-		return err
+	if field, ok := m.table.FieldMap[column]; ok {
+		return field.ScanValue(m.strct, src)
 	}
 
-	for _, fk := range m.rel.M2MBaseFields {
-		if fk.Name == field.Name {
-			m.structKey = append(m.structKey, field.Value(m.strct).Interface())
-			break
-		}
-	}
-
-	return nil
+	_, err := m.scanColumn(column, src)
+	return err
 }
 
-func (m *m2mModel) scanM2MColumn(column string, src interface{}) error {
-	for _, field := range m.rel.M2MBaseFields {
+func (m *m2mModel) scanM2MColumn(column string, src any) error {
+	for _, field := range m.rel.M2MBasePKs {
 		if field.Name == column {
 			dest := reflect.New(field.IndirectType).Elem()
 			if err := field.Scan(dest, src); err != nil {
 				return err
 			}
-			m.structKey = append(m.structKey, dest.Interface())
+			m.structKey = append(m.structKey, indirectAsKey(dest))
 			break
 		}
 	}
@@ -135,4 +129,14 @@ func (m *m2mModel) parkStruct() error {
 	}
 
 	return nil
+}
+
+func (m *m2mModel) clone() TableModel {
+	return &m2mModel{
+		sliceTableModel: m.sliceTableModel.clone().(*sliceTableModel),
+		baseTable:       m.baseTable,
+		rel:             m.rel,
+		baseValues:      m.baseValues,
+		structKey:       m.structKey,
+	}
 }

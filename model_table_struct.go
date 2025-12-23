@@ -19,7 +19,7 @@ type structTableModel struct {
 	rel   *schema.Relation
 	joins []relationJoin
 
-	dest  interface{}
+	dest  any
 	root  reflect.Value
 	index []int
 
@@ -33,7 +33,7 @@ type structTableModel struct {
 
 var _ TableModel = (*structTableModel)(nil)
 
-func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structTableModel {
+func newStructTableModel(db *DB, dest any, table *schema.Table) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: table,
@@ -41,7 +41,7 @@ func newStructTableModel(db *DB, dest interface{}, table *schema.Table) *structT
 	}
 }
 
-func newStructTableModelValue(db *DB, dest interface{}, v reflect.Value) *structTableModel {
+func newStructTableModelValue(db *DB, dest any, v reflect.Value) *structTableModel {
 	return &structTableModel{
 		db:    db,
 		table: db.Table(v.Type()),
@@ -51,7 +51,7 @@ func newStructTableModelValue(db *DB, dest interface{}, v reflect.Value) *struct
 	}
 }
 
-func (m *structTableModel) Value() interface{} {
+func (m *structTableModel) Value() any {
 	return m.dest
 }
 
@@ -242,7 +242,7 @@ func (m *structTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, e
 	n++
 
 	// And discard the rest. This is especially important for SQLite3, which can return
-	// a row like it was inserted sucessfully and then return an actual error for the next row.
+	// a row like it was inserted successfully and then return an actual error for the next row.
 	// See issues/100.
 	for rows.Next() {
 		n++
@@ -266,7 +266,7 @@ func (m *structTableModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
 	return m.scanRow(ctx, rows, dest)
 }
 
-func (m *structTableModel) scanRow(ctx context.Context, rows *sql.Rows, dest []interface{}) error {
+func (m *structTableModel) scanRow(ctx context.Context, rows *sql.Rows, dest []any) error {
 	if err := m.BeforeScanRow(ctx); err != nil {
 		return err
 	}
@@ -283,14 +283,14 @@ func (m *structTableModel) scanRow(ctx context.Context, rows *sql.Rows, dest []i
 	return nil
 }
 
-func (m *structTableModel) Scan(src interface{}) error {
+func (m *structTableModel) Scan(src any) error {
 	column := m.columns[m.scanIndex]
 	m.scanIndex++
 
 	return m.ScanColumn(unquote(column), src)
 }
 
-func (m *structTableModel) ScanColumn(column string, src interface{}) error {
+func (m *structTableModel) ScanColumn(column string, src any) error {
 	if ok, err := m.scanColumn(column, src); ok {
 		return err
 	}
@@ -300,7 +300,7 @@ func (m *structTableModel) ScanColumn(column string, src interface{}) error {
 	return fmt.Errorf("bun: %s does not have column %q", m.table.TypeName, column)
 }
 
-func (m *structTableModel) scanColumn(column string, src interface{}) (bool, error) {
+func (m *structTableModel) scanColumn(column string, src any) (bool, error) {
 	if src != nil {
 		if err := m.initStruct(); err != nil {
 			return true, err
@@ -332,9 +332,26 @@ func (m *structTableModel) isNil() bool {
 }
 
 func (m *structTableModel) AppendNamedArg(
-	fmter schema.Formatter, b []byte, name string,
+	gen schema.QueryGen, b []byte, name string,
 ) ([]byte, bool) {
-	return m.table.AppendNamedArg(fmter, b, name, m.strct)
+	return m.table.AppendNamedArg(gen, b, name, m.strct)
+}
+
+func (m *structTableModel) clone() TableModel {
+	return &structTableModel{
+		db:            m.db,
+		table:         m.table,
+		rel:           m.rel,
+		joins:         append([]relationJoin{}, m.joins...),
+		dest:          m.dest,
+		root:          m.root,
+		index:         append([]int{}, m.index...),
+		strct:         m.strct,
+		structInited:  m.structInited,
+		structInitErr: m.structInitErr,
+		columns:       append([]string{}, m.columns...),
+		scanIndex:     m.scanIndex,
+	}
 }
 
 // sqlite3 sometimes does not unquote columns.

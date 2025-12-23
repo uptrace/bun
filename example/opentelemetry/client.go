@@ -11,9 +11,10 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/extra/bunotel"
-	"github.com/uptrace/uptrace-go/uptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/uptrace/uptrace-go/uptrace"
 )
 
 var tracer = otel.Tracer("github.com/uptrace/bun/example/opentelemetry")
@@ -23,7 +24,7 @@ func main() {
 
 	uptrace.ConfigureOpentelemetry(
 		// copy your project DSN here or use UPTRACE_DSN env var
-		// uptrace.WithDSN("http://project2_secret_token@localhost:14317/2"),
+		// uptrace.WithDSN("http://project1_secret@localhost:14318?grpc=14317"),
 
 		uptrace.WithServiceName("myservice"),
 		uptrace.WithServiceVersion("v1.0.0"),

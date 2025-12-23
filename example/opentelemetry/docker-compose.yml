@@ -1,10 +1,10 @@
-version: '3'
-
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:23.11
+    image: clickhouse/clickhouse-server:25.3.5
     restart: on-failure
     environment:
+      CLICKHOUSE_USER: uptrace
+      CLICKHOUSE_PASSWORD: uptrace
       CLICKHOUSE_DB: uptrace
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
@@ -18,7 +18,7 @@ services:
       - '9000:9000'
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: on-failure
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -35,23 +35,27 @@ services:
     ports:
       - '5432:5432'
 
+  redis:
+    image: redis:6.2.2-alpine
+    restart: on-failure
+
   uptrace:
-    image: 'uptrace/uptrace:1.7.0'
+    image: 'uptrace/uptrace:2.0.0'
     #image: 'uptrace/uptrace-dev:latest'
     restart: on-failure
     volumes:
-      - ./uptrace.yml:/etc/uptrace/uptrace.yml
+      - ./uptrace.yml:/etc/uptrace/config.yml
     #environment:
     #  - DEBUG=2
     ports:
-      - '14317:14317'
-      - '14318:14318'
+      - '14317:4317'
+      - '14318:80'
     depends_on:
-      clickhouse:
-        condition: service_healthy
+      - clickhouse
+      - postgres
 
   otelcol:
-    image: otel/opentelemetry-collector-contrib:0.95.0
+    image: otel/opentelemetry-collector-contrib:0.130.0
     restart: on-failure
     volumes:
       - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml

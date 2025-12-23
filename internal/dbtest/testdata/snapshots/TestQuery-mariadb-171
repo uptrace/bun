@@ -1,0 +1,1 @@
+UPDATE `stories` AS `story` SET name = 'new-name' WHERE (`story`.`id` = NULL) ORDER BY `id` LIMIT 1

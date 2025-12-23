@@ -2,6 +2,7 @@ package pgdriver
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -73,3 +74,7 @@ func isBadConn(err error, allowTimeout bool) bool {
 
 	return true
 }
+
+var (
+	errRequiresParameter = errors.New("pgdriver: requires that standard_conforming_strings=on and client_encoding=UTF8")
+)

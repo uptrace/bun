@@ -35,22 +35,32 @@ type Config struct {
 	Database string
 	AppName  string
 	// PostgreSQL session parameters updated with `SET` command when a connection is created.
-	ConnParams map[string]interface{}
+	ConnParams map[string]any
 
 	// Timeout for socket reads. If reached, commands fail with a timeout instead of blocking.
 	ReadTimeout time.Duration
 	// Timeout for socket writes. If reached, commands fail with a timeout instead of blocking.
 	WriteTimeout time.Duration
 
-	// ResetSessionFunc is called prior to executing a query on a connection that has been used before.
+	// ResetSessionFunc is called prior to executing a query on a connection
+	// that has been used before.
 	ResetSessionFunc func(context.Context, *Conn) error
+
+	// Enable tracing
+	EnableTracing bool
+
+	// size of reader buffer, default is 4096
+	BufferSize int
+
+	// Allow set standard_conforming_strings=off or client_encoding=other character sets
+	UnsafeStrings bool
 }
 
 func newDefaultConfig() *Config {
 	host := env("PGHOST", "localhost")
 	port := env("PGPORT", "5432")
 
-	cfg := &Config{
+	conf := &Config{
 		Network:     "tcp",
 		Addr:        net.JoinHostPort(host, port),
 		DialTimeout: 5 * time.Second,
@@ -61,30 +71,45 @@ func newDefaultConfig() *Config {
 
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 5 * time.Second,
+
+		EnableTracing: true,
+
+		BufferSize: 4096,
 	}
 
-	cfg.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	conf.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		netDialer := &net.Dialer{
-			Timeout:   cfg.DialTimeout,
+			Timeout:   conf.DialTimeout,
 			KeepAlive: 5 * time.Minute,
 		}
 		return netDialer.DialContext(ctx, network, addr)
 	}
 
-	return cfg
+	return conf
 }
 
-type Option func(cfg *Config)
+type Option func(conf *Config)
 
-// Deprecated. Use Option instead.
-type DriverOption = Option
+func WithOptions(opts ...Option) Option {
+	return func(conf *Config) {
+		for _, opt := range opts {
+			opt(conf)
+		}
+	}
+}
+
+func WithConfig(after *Config) Option {
+	return func(before *Config) {
+		*before = *after
+	}
+}
 
 func WithNetwork(network string) Option {
 	if network == "" {
 		panic("network is empty")
 	}
-	return func(cfg *Config) {
-		cfg.Network = network
+	return func(conf *Config) {
+		conf.Network = network
 	}
 }
 
@@ -92,23 +117,23 @@ func WithAddr(addr string) Option {
 	if addr == "" {
 		panic("addr is empty")
 	}
-	return func(cfg *Config) {
-		cfg.Addr = addr
+	return func(conf *Config) {
+		conf.Addr = addr
 	}
 }
 
 func WithTLSConfig(tlsConfig *tls.Config) Option {
-	return func(cfg *Config) {
-		cfg.TLSConfig = tlsConfig
+	return func(conf *Config) {
+		conf.TLSConfig = tlsConfig
 	}
 }
 
 func WithInsecure(on bool) Option {
-	return func(cfg *Config) {
+	return func(conf *Config) {
 		if on {
-			cfg.TLSConfig = nil
+			conf.TLSConfig = nil
 		} else {
-			cfg.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+			conf.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 		}
 	}
 }
@@ -117,14 +142,14 @@ func WithUser(user string) Option {
 	if user == "" {
 		panic("user is empty")
 	}
-	return func(cfg *Config) {
-		cfg.User = user
+	return func(conf *Config) {
+		conf.User = user
 	}
 }
 
 func WithPassword(password string) Option {
-	return func(cfg *Config) {
-		cfg.Password = password
+	return func(conf *Config) {
+		conf.Password = password
 	}
 }
 
@@ -132,46 +157,52 @@ func WithDatabase(database string) Option {
 	if database == "" {
 		panic("database is empty")
 	}
-	return func(cfg *Config) {
-		cfg.Database = database
+	return func(conf *Config) {
+		conf.Database = database
 	}
 }
 
 func WithApplicationName(appName string) Option {
-	return func(cfg *Config) {
-		cfg.AppName = appName
+	return func(conf *Config) {
+		conf.AppName = appName
 	}
 }
 
-func WithConnParams(params map[string]interface{}) Option {
-	return func(cfg *Config) {
-		cfg.ConnParams = params
+func WithConnParams(params map[string]any) Option {
+	return func(conf *Config) {
+		conf.ConnParams = params
 	}
 }
 
 func WithTimeout(timeout time.Duration) Option {
-	return func(cfg *Config) {
-		cfg.DialTimeout = timeout
-		cfg.ReadTimeout = timeout
-		cfg.WriteTimeout = timeout
+	return func(conf *Config) {
+		conf.DialTimeout = timeout
+		conf.ReadTimeout = timeout
+		conf.WriteTimeout = timeout
 	}
 }
 
 func WithDialTimeout(dialTimeout time.Duration) Option {
-	return func(cfg *Config) {
-		cfg.DialTimeout = dialTimeout
+	return func(conf *Config) {
+		conf.DialTimeout = dialTimeout
 	}
 }
 
 func WithReadTimeout(readTimeout time.Duration) Option {
-	return func(cfg *Config) {
-		cfg.ReadTimeout = readTimeout
+	return func(conf *Config) {
+		conf.ReadTimeout = readTimeout
 	}
 }
 
 func WithWriteTimeout(writeTimeout time.Duration) Option {
-	return func(cfg *Config) {
-		cfg.WriteTimeout = writeTimeout
+	return func(conf *Config) {
+		conf.WriteTimeout = writeTimeout
+	}
+}
+
+func WithBufferSize(size int) Option {
+	return func(conf *Config) {
+		conf.BufferSize = size
 	}
 }
 
@@ -179,20 +210,32 @@ func WithWriteTimeout(writeTimeout time.Duration) Option {
 // a query on a connection that has been used before.
 // If the func returns driver.ErrBadConn, the connection is discarded.
 func WithResetSessionFunc(fn func(context.Context, *Conn) error) Option {
-	return func(cfg *Config) {
-		cfg.ResetSessionFunc = fn
+	return func(conf *Config) {
+		conf.ResetSessionFunc = fn
 	}
 }
 
 func WithDSN(dsn string) Option {
-	return func(cfg *Config) {
+	return func(conf *Config) {
 		opts, err := parseDSN(dsn)
 		if err != nil {
 			panic(err)
 		}
 		for _, opt := range opts {
-			opt(cfg)
+			opt(conf)
 		}
+	}
+}
+
+func WithTracing(on bool) Option {
+	return func(conf *Config) {
+		conf.EnableTracing = on
+	}
+}
+
+func WithUnsafeStrings(allow bool) Option {
+	return func(conf *Config) {
+		conf.UnsafeStrings = allow
 	}
 }
 
@@ -354,7 +397,7 @@ func parseDSN(dsn string) ([]Option, error) {
 	}
 
 	if len(rem) > 0 {
-		params := make(map[string]interface{}, len(rem))
+		params := make(map[string]any, len(rem))
 		for k, v := range rem {
 			params[k] = v
 		}

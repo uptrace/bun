@@ -17,6 +17,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/uptrace/bun/schema"
 )
 
 func TestPostgresArray(t *testing.T) {
@@ -25,16 +26,20 @@ func TestPostgresArray(t *testing.T) {
 		Array1 []string  `bun:",array"`
 		Array2 *[]string `bun:",array"`
 		Array3 *[]string `bun:",array"`
+		Array4 []*string `bun:",array"`
 	}
 
 	db := pg(t)
 	t.Cleanup(func() { db.Close() })
 	mustResetModel(t, ctx, db, (*Model)(nil))
 
+	str1 := "hello"
+	str2 := "world"
 	model1 := &Model{
 		ID:     123,
 		Array1: []string{"one", "two", "three"},
 		Array2: &[]string{"hello", "world"},
+		Array4: []*string{&str1, &str2},
 	}
 	_, err := db.NewInsert().Model(model1).Exec(ctx)
 	require.NoError(t, err)
@@ -56,6 +61,12 @@ func TestPostgresArray(t *testing.T) {
 		Scan(ctx, pgdialect.Array(&strs))
 	require.NoError(t, err)
 	require.Nil(t, strs)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array4").
+		Scan(ctx, pgdialect.Array(&strs))
+	require.NoError(t, err)
+	require.Equal(t, []string{"hello", "world"}, strs)
 }
 
 func TestPostgresArrayQuote(t *testing.T) {
@@ -73,7 +84,7 @@ func TestPostgresArrayQuote(t *testing.T) {
 
 type Hash [32]byte
 
-func (h *Hash) Scan(src interface{}) error {
+func (h *Hash) Scan(src any) error {
 	srcB, ok := src.([]byte)
 	if !ok {
 		return fmt.Errorf("can't scan %T into Hash", src)
@@ -140,9 +151,9 @@ func TestPostgresMultiTenant(t *testing.T) {
 	db := pg(t)
 
 	db = db.WithNamedArg("tenant", bun.Safe("public"))
-	_ = db.Table(reflect.TypeOf((*IngredientRecipe)(nil)).Elem())
+	_ = db.Table(reflect.TypeFor[IngredientRecipe]())
 
-	models := []interface{}{
+	models := []any{
 		(*Recipe)(nil),
 		(*Ingredient)(nil),
 		(*IngredientRecipe)(nil),
@@ -151,7 +162,7 @@ func TestPostgresMultiTenant(t *testing.T) {
 		mustResetModel(t, ctx, db, model)
 	}
 
-	models = []interface{}{
+	models = []any{
 		&Recipe{ID: 1},
 		&Ingredient{ID: 1},
 		&IngredientRecipe{
@@ -456,6 +467,7 @@ func TestPostgresTimeArray(t *testing.T) {
 		Array1 []time.Time  `bun:",array"`
 		Array2 *[]time.Time `bun:",array"`
 		Array3 *[]time.Time `bun:",array"`
+		Array4 []*time.Time `bun:",array"`
 	}
 
 	db := pg(t)
@@ -471,6 +483,7 @@ func TestPostgresTimeArray(t *testing.T) {
 		ID:     123,
 		Array1: []time.Time{time1, time2, time3},
 		Array2: &[]time.Time{time1, time2, time3},
+		Array4: []*time.Time{&time1, &time2, &time3},
 	}
 	_, err := db.NewInsert().Model(model1).Exec(ctx)
 	require.NoError(t, err)
@@ -498,6 +511,12 @@ func TestPostgresTimeArray(t *testing.T) {
 		Scan(ctx, pgdialect.Array(&times))
 	require.NoError(t, err)
 	require.Nil(t, times)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("array4").
+		Scan(ctx, pgdialect.Array(&times))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(model1.Array4))
 }
 
 func TestPostgresOnConflictDoUpdate(t *testing.T) {
@@ -750,6 +769,22 @@ func TestPostgresHStoreQuote(t *testing.T) {
 	require.Equal(t, wanted, m)
 }
 
+func TestPostgresHStoreEmpty(t *testing.T) {
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS HSTORE;`)
+	require.NoError(t, err)
+
+	wanted := map[string]string{}
+	m := make(map[string]string)
+	err = db.NewSelect().
+		ColumnExpr("?::hstore", pgdialect.HStore(wanted)).
+		Scan(ctx, pgdialect.HStore(&m))
+	require.NoError(t, err)
+	require.Equal(t, wanted, m)
+}
+
 func TestPostgresSkipupdateField(t *testing.T) {
 	type Model struct {
 		ID        int64 `bun:",pk,autoincrement"`
@@ -836,4 +871,110 @@ func TestPostgresCustomTypeBytes(t *testing.T) {
 	out := new(Model)
 	err = db.NewSelect().Model(out).Scan(ctx)
 	require.NoError(t, err)
+}
+
+func TestPostgresMultiRange(t *testing.T) {
+	type Model struct {
+		ID    int64                           `bun:",pk,autoincrement"`
+		Value pgdialect.MultiRange[time.Time] `bun:",multirange,type:tstzmultirange"`
+	}
+
+	ctx := context.Background()
+
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	r1 := pgdialect.NewRange(time.Unix(1000, 0), time.Unix(2000, 0))
+	r2 := pgdialect.NewRange(time.Unix(5000, 0), time.Unix(6000, 0))
+	in := &Model{Value: pgdialect.MultiRange[time.Time]{r1, r2}}
+	_, err := db.NewInsert().Model(in).Exec(ctx)
+	require.NoError(t, err)
+
+	out := new(Model)
+	err = db.NewSelect().Model(out).Scan(ctx)
+	require.NoError(t, err)
+}
+
+type UserID struct {
+	ID string
+}
+
+func (u UserID) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
+	v := []byte(`"` + u.ID + `"`)
+	return append(b, v...), nil
+}
+
+var _ schema.QueryAppender = (*UserID)(nil)
+
+func (r *UserID) Scan(anySrc any) (err error) {
+	src, ok := anySrc.([]byte)
+	if !ok {
+		return fmt.Errorf("pgdialect: Range can't scan %T", anySrc)
+	}
+
+	r.ID = string(src)
+	return nil
+}
+
+var _ sql.Scanner = (*UserID)(nil)
+
+func TestPostgresJSONB(t *testing.T) {
+	type Item struct {
+		Name string `json:"name"`
+	}
+	type Model struct {
+		ID        int64    `bun:",pk,autoincrement"`
+		Item      Item     `bun:",type:jsonb"`
+		ItemPtr   *Item    `bun:",type:jsonb"`
+		Items     []Item   `bun:",type:jsonb"`
+		ItemsP    []*Item  `bun:",type:jsonb"`
+		ItemsNull []*Item  `bun:",type:jsonb"`
+		TextItemA []UserID `bun:"type:text[]"`
+	}
+
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	item1 := Item{Name: "one"}
+	item2 := Item{Name: "two"}
+	uid1 := UserID{ID: "1"}
+	uid2 := UserID{ID: "2"}
+	model1 := &Model{
+		ID:        123,
+		Item:      item1,
+		ItemPtr:   &item2,
+		Items:     []Item{item1, item2},
+		ItemsP:    []*Item{&item1, &item2},
+		ItemsNull: nil,
+		TextItemA: []UserID{uid1, uid2},
+	}
+	_, err := db.NewInsert().Model(model1).Exec(ctx)
+	require.NoError(t, err)
+
+	model2 := new(Model)
+	err = db.NewSelect().Model(model2).Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, model1, model2)
+
+	var items []Item
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("items").
+		Scan(ctx, pgdialect.Array(&items))
+	require.NoError(t, err)
+	require.Equal(t, []Item{item1, item2}, items)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("itemsp").
+		Scan(ctx, pgdialect.Array(&items))
+	require.NoError(t, err)
+	require.Equal(t, []Item{item1, item2}, items)
+
+	err = db.NewSelect().Model((*Model)(nil)).
+		Column("items_null").
+		Scan(ctx, pgdialect.Array(&items))
+	require.NoError(t, err)
+	require.Equal(t, []Item{}, items)
 }

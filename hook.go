@@ -7,27 +7,26 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
-
-	"github.com/uptrace/bun/schema"
 )
 
+// QueryEvent captures information about a query execution for hooks.
 type QueryEvent struct {
 	DB *DB
 
-	QueryAppender schema.QueryAppender // DEPRECATED: use IQuery instead
 	IQuery        Query
 	Query         string
 	QueryTemplate string
-	QueryArgs     []interface{}
+	QueryArgs     []any
 	Model         Model
 
 	StartTime time.Time
 	Result    sql.Result
 	Err       error
 
-	Stash map[interface{}]interface{}
+	Stash map[any]any
 }
 
+// Operation returns the SQL operation name such as SELECT or UPDATE.
 func (e *QueryEvent) Operation() string {
 	if e.IQuery != nil {
 		return e.IQuery.Operation()
@@ -47,6 +46,7 @@ func queryOperation(query string) string {
 	return queryOp
 }
 
+// QueryHook allows observing queries before and after execution.
 type QueryHook interface {
 	BeforeQuery(context.Context, *QueryEvent) context.Context
 	AfterQuery(context.Context, *QueryEvent)
@@ -56,7 +56,7 @@ func (db *DB) beforeQuery(
 	ctx context.Context,
 	iquery Query,
 	queryTemplate string,
-	queryArgs []interface{},
+	queryArgs []any,
 	query string,
 	model Model,
 ) (context.Context, *QueryEvent) {
@@ -70,7 +70,6 @@ func (db *DB) beforeQuery(
 		DB: db,
 
 		Model:         model,
-		QueryAppender: iquery,
 		IQuery:        iquery,
 		Query:         query,
 		QueryTemplate: queryTemplate,

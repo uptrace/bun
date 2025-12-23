@@ -16,16 +16,18 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 )
 
 type QueryHook struct {
-	attrs          []attribute.KeyValue
-	formatQueries  bool
-	tracer         trace.Tracer
-	meter          metric.Meter
-	queryHistogram metric.Int64Histogram
+	attrs            []attribute.KeyValue
+	formatQueries    bool
+	tracer           trace.Tracer
+	meter            metric.Meter
+	queryHistogram   metric.Int64Histogram
+	spanNameQueryGen func(*bun.QueryEvent) string
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -85,7 +87,11 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		return
 	}
 
-	span.SetName(operation)
+	name := operation
+	if h.spanNameQueryGen != nil {
+		name = h.spanNameQueryGen(event)
+	}
+	span.SetName(name)
 	defer span.End()
 
 	query := h.eventQuery(event)
@@ -105,9 +111,8 @@ func (h *QueryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 		attrs = append(attrs, sys)
 	}
 	if event.Result != nil {
-		if n, _ := event.Result.RowsAffected(); n > 0 {
-			attrs = append(attrs, attribute.Int64("db.rows_affected", n))
-		}
+		rows, _ := event.Result.RowsAffected()
+		attrs = append(attrs, attribute.Int64("db.rows_affected", rows))
 	}
 
 	switch event.Err {
@@ -168,8 +173,8 @@ func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 
 func unformattedQuery(event *bun.QueryEvent) string {
 	if event.IQuery != nil {
-		if b, err := event.IQuery.AppendQuery(schema.NewNopFormatter(), nil); err == nil {
-			return bytesToString(b)
+		if b, err := event.IQuery.AppendQuery(schema.NewNopQueryGen(), nil); err == nil {
+			return internal.String(b)
 		}
 	}
 	return string(event.QueryTemplate)

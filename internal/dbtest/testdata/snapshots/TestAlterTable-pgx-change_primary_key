@@ -1,0 +1,1 @@
+ALTER TABLE "hobbies"."movies" DROP CONSTRAINT "old_pk", ADD PRIMARY KEY (director,genre)

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -23,8 +24,8 @@ type Migration struct {
 	GroupID    int64
 	MigratedAt time.Time `bun:",notnull,nullzero,default:current_timestamp"`
 
-	Up   MigrationFunc `bun:"-"`
-	Down MigrationFunc `bun:"-"`
+	Up   internalMigrationFunc `bun:"-"`
+	Down internalMigrationFunc `bun:"-"`
 }
 
 func (m Migration) String() string {
@@ -37,94 +38,135 @@ func (m Migration) IsApplied() bool {
 
 type MigrationFunc func(ctx context.Context, db *bun.DB) error
 
-func NewSQLMigrationFunc(fsys fs.FS, name string) MigrationFunc {
-	return func(ctx context.Context, db *bun.DB) error {
-		f, err := fsys.Open(name)
-		if err != nil {
+type internalMigrationFunc func(ctx context.Context, migrator *Migrator, migration *Migration) error
+
+func wrapGoMigrationFunc(fn MigrationFunc) internalMigrationFunc {
+	return func(ctx context.Context, migrator *Migrator, migration *Migration) error {
+		if migrator.beforeMigrationHook != nil {
+			if err := migrator.beforeMigrationHook(ctx, migrator.db, migration); err != nil {
+				return err
+			}
+		}
+
+		if err := fn(ctx, migrator.db); err != nil {
 			return err
 		}
 
-		isTx := strings.HasSuffix(name, ".tx.up.sql") || strings.HasSuffix(name, ".tx.down.sql")
-		return Exec(ctx, db, f, isTx)
+		if migrator.afterMigrationHook != nil {
+			if err := migrator.afterMigrationHook(ctx, migrator.db, migration); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 }
 
-// Exec reads and executes the SQL migration in the f.
-func Exec(ctx context.Context, db *bun.DB, f io.Reader, isTx bool) error {
-	scanner := bufio.NewScanner(f)
-	var queries []string
-
-	var query []byte
-	for scanner.Scan() {
-		b := scanner.Bytes()
-
-		const prefix = "--bun:"
-		if bytes.HasPrefix(b, []byte(prefix)) {
-			b = b[len(prefix):]
-			if bytes.Equal(b, []byte("split")) {
-				queries = append(queries, string(query))
-				query = query[:0]
-				continue
-			}
-			return fmt.Errorf("bun: unknown directive: %q", b)
-		}
-
-		query = append(query, b...)
-		query = append(query, '\n')
-	}
-
-	if len(query) > 0 {
-		queries = append(queries, string(query))
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	var idb bun.IConn
-
-	if isTx {
-		tx, err := db.BeginTx(ctx, nil)
+func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
+	return func(ctx context.Context, migrator *Migrator, migration *Migration) error {
+		sqlFile, err := fsys.Open(name)
 		if err != nil {
 			return err
 		}
-		idb = tx
-	} else {
-		conn, err := db.Conn(ctx)
+
+		contents, err := io.ReadAll(sqlFile)
 		if err != nil {
 			return err
 		}
-		idb = conn
-	}
 
-	var retErr error
-	var execErr error
-
-	defer func() {
-		if tx, ok := idb.(bun.Tx); ok {
-			if execErr != nil {
-				retErr = tx.Rollback()
-			} else {
-				retErr = tx.Commit()
+		var reader io.Reader = bytes.NewReader(contents)
+		if migrator.templateData != nil {
+			buf, err := renderTemplate(contents, migrator.templateData)
+			if err != nil {
+				return err
 			}
-			return
+			reader = buf
 		}
 
-		if conn, ok := idb.(bun.Conn); ok {
-			retErr = conn.Close()
-			return
+		scanner := bufio.NewScanner(reader)
+		var queries []string
+
+		var query []byte
+		for scanner.Scan() {
+			b := scanner.Bytes()
+
+			const prefix = "--bun:"
+			if bytes.HasPrefix(b, []byte(prefix)) {
+				b = b[len(prefix):]
+				if bytes.Equal(b, []byte("split")) {
+					queries = append(queries, string(query))
+					query = query[:0]
+					continue
+				}
+				return fmt.Errorf("bun: unknown directive: %q", b)
+			}
+
+			query = append(query, b...)
+			query = append(query, '\n')
 		}
 
-		panic("not reached")
-	}()
-
-	for _, q := range queries {
-		_, execErr = idb.ExecContext(ctx, q)
-		if execErr != nil {
-			return execErr
+		if len(query) > 0 {
+			queries = append(queries, string(query))
 		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		var idb bun.IConn
+
+		isTx := strings.HasSuffix(name, ".tx.up.sql") || strings.HasSuffix(name, ".tx.down.sql")
+		if isTx {
+			tx, err := migrator.db.BeginTx(ctx, nil)
+			if err != nil {
+				return err
+			}
+			idb = tx
+		} else {
+			conn, err := migrator.db.Conn(ctx)
+			if err != nil {
+				return err
+			}
+			idb = conn
+		}
+
+		var retErr error
+		var execErr error
+
+		defer func() {
+			if tx, ok := idb.(bun.Tx); ok {
+				if execErr != nil {
+					retErr = tx.Rollback()
+				} else {
+					retErr = tx.Commit()
+				}
+				return
+			}
+
+			if conn, ok := idb.(bun.Conn); ok {
+				retErr = conn.Close()
+				return
+			}
+
+			panic("not reached")
+		}()
+
+		execErr = migrator.exec(ctx, idb, migration, queries)
+		return retErr
+	}
+}
+
+func renderTemplate(contents []byte, templateData any) (*bytes.Buffer, error) {
+	tmpl, err := template.New("migration").Parse(string(contents))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	return retErr
+	var rendered bytes.Buffer
+	if err := tmpl.Execute(&rendered, templateData); err != nil {
+		return nil, fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return &rendered, nil
 }
 
 const goTemplate = `package %s

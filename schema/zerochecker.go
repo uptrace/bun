@@ -5,13 +5,13 @@ import (
 	"reflect"
 )
 
-var isZeroerType = reflect.TypeOf((*isZeroer)(nil)).Elem()
+var isZeroerType = reflect.TypeFor[isZeroer]()
 
 type isZeroer interface {
 	IsZero() bool
 }
 
-func isZero(v interface{}) bool {
+func isZero(v any) bool {
 	switch v := v.(type) {
 	case isZeroer:
 		return v.IsZero()
@@ -60,7 +60,7 @@ func zeroChecker(typ reflect.Type) IsZeroerFunc {
 	kind := typ.Kind()
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(isZeroerType) {
 			return addrChecker(isZeroInterface)
 		}

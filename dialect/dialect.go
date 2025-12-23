@@ -4,6 +4,8 @@ type Name int
 
 func (n Name) String() string {
 	switch n {
+	case Invalid:
+		return "invalid"
 	case PG:
 		return "pg"
 	case SQLite:
@@ -12,8 +14,10 @@ func (n Name) String() string {
 		return "mysql"
 	case MSSQL:
 		return "mssql"
+	case Oracle:
+		return "oracle"
 	default:
-		return "invalid"
+		return "custom"
 	}
 }
 
@@ -23,4 +27,5 @@ const (
 	SQLite
 	MySQL
 	MSSQL
+	Oracle
 )

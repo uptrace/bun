@@ -2,7 +2,6 @@ package pgdialect
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 
 	"github.com/uptrace/bun/schema"
@@ -25,12 +24,12 @@ func hstoreScanner(typ reflect.Type) schema.ScannerFunc {
 	if typ.Key() == stringType && typ.Elem() == stringType {
 		return scanMapStringStringValue
 	}
-	return func(dest reflect.Value, src interface{}) error {
+	return func(dest reflect.Value, src any) error {
 		return fmt.Errorf("bun: Hstore(unsupported %s)", dest.Type())
 	}
 }
 
-func scanMapStringStringValue(dest reflect.Value, src interface{}) error {
+func scanMapStringStringValue(dest reflect.Value, src any) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
@@ -45,7 +44,7 @@ func scanMapStringStringValue(dest reflect.Value, src interface{}) error {
 	return nil
 }
 
-func decodeMapStringString(src interface{}) (map[string]string, error) {
+func decodeMapStringString(src any) (map[string]string, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -58,25 +57,11 @@ func decodeMapStringString(src interface{}) (map[string]string, error) {
 	m := make(map[string]string)
 
 	p := newHStoreParser(b)
-	for {
-		key, err := p.NextKey()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		value, err := p.NextValue()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		m[key] = value
+	for p.Next() {
+		m[p.Key()] = p.Value()
 	}
-
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
 	return m, nil
 }

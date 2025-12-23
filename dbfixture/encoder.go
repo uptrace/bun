@@ -10,8 +10,8 @@ import (
 )
 
 type fixtureRows struct {
-	Model string      `yaml:"model"`
-	Rows  interface{} `yaml:"rows"`
+	Model string `yaml:"model"`
+	Rows  any    `yaml:"rows"`
 }
 
 type Encoder struct {
@@ -26,7 +26,7 @@ func NewEncoder(db bun.IDB, w io.Writer) *Encoder {
 	}
 }
 
-func (e *Encoder) Encode(multiRows ...interface{}) error {
+func (e *Encoder) Encode(multiRows ...any) error {
 	fixtures := make([]fixtureRows, len(multiRows))
 
 	for i, rows := range multiRows {

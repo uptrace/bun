@@ -1,0 +1,1 @@
+ALTER TABLE "hobbies"."movies" ADD CONSTRAINT "genre_description" FOREIGN KEY (genre) REFERENCES "hobbies"."film_genres" (id)

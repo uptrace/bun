@@ -12,28 +12,51 @@ import (
 func TestFormatQuery(t *testing.T) {
 	tests := []struct {
 		query  string
-		args   []interface{}
+		args   []any
 		wanted string
 	}{
 		{
 			query:  "select $1, $1, $2",
-			args:   []interface{}{"hello", int64(123)},
+			args:   []any{"hello", int64(123)},
 			wanted: "select 'hello', 'hello', 123",
 		},
 		{
 			query:  "select '$1', $1",
-			args:   []interface{}{"hello"},
+			args:   []any{"hello"},
 			wanted: "select '$1', 'hello'",
 		},
 		{
 			query:  "select $1, $2",
-			args:   []interface{}{time.Unix(0, 0), math.NaN()},
+			args:   []any{time.Unix(0, 0), math.NaN()},
 			wanted: "select '1970-01-01 00:00:00+00:00', 'NaN'",
 		},
 		{
 			query:  "select $1,$2,$3,$4",
-			args:   []interface{}{nil, "", []byte(nil), time.Time{}},
+			args:   []any{nil, "", []byte(nil), time.Time{}},
 			wanted: "select NULL,'',NULL,NULL",
+		},
+		{
+			query:  "select 1-$1, 1.0-$2, 1.0-$3",
+			args:   []any{int64(-1), float64(-1.5), math.Inf(-1)},
+			wanted: "select 1- -1, 1.0- -1.5, 1.0-'-Infinity'",
+		},
+		{
+			query:  "select 1+$1, 1.0+$2",
+			args:   []any{int64(-1), float64(-1.5)},
+			wanted: "select 1+-1, 1.0+-1.5",
+		},
+		{
+			query: "select 1-$1, $2",
+			args:  []any{int64(-1), "foo\n;\nSELECT * FROM passwords;--"},
+			// Without a space before the negative number, the first line ends in a comment
+			wanted: `select 1- -1, 'foo
+;
+SELECT * FROM passwords;--'`,
+		},
+		{
+			query:  "$1",
+			args:   []any{int64(-1)},
+			wanted: "-1",
 		},
 	}
 
@@ -44,7 +67,7 @@ func TestFormatQuery(t *testing.T) {
 	}
 }
 
-func namedValues(args ...interface{}) []driver.NamedValue {
+func namedValues(args ...any) []driver.NamedValue {
 	vals := make([]driver.NamedValue, len(args))
 	for i, arg := range args {
 		vals[i] = driver.NamedValue{Value: arg}

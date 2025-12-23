@@ -4,21 +4,24 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"net"
+	"net/netip"
 	"reflect"
 	"time"
 )
 
 var (
-	bytesType          = reflect.TypeOf((*[]byte)(nil)).Elem()
-	timePtrType        = reflect.TypeOf((*time.Time)(nil))
-	timeType           = timePtrType.Elem()
-	ipType             = reflect.TypeOf((*net.IP)(nil)).Elem()
-	ipNetType          = reflect.TypeOf((*net.IPNet)(nil)).Elem()
-	jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
+	bytesType          = reflect.TypeFor[[]byte]()
+	timePtrType        = reflect.TypeFor[*time.Time]()
+	timeType           = reflect.TypeFor[time.Time]()
+	ipType             = reflect.TypeFor[net.IP]()
+	ipNetType          = reflect.TypeFor[net.IPNet]()
+	netipPrefixType    = reflect.TypeFor[netip.Prefix]()
+	netipAddrType      = reflect.TypeFor[netip.Addr]()
+	jsonRawMessageType = reflect.TypeFor[json.RawMessage]()
 
-	driverValuerType  = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
-	queryAppenderType = reflect.TypeOf((*QueryAppender)(nil)).Elem()
-	jsonMarshalerType = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
+	driverValuerType  = reflect.TypeFor[driver.Valuer]()
+	queryAppenderType = reflect.TypeFor[QueryAppender]()
+	jsonMarshalerType = reflect.TypeFor[json.Marshaler]()
 )
 
 func indirectType(t reflect.Type) reflect.Type {

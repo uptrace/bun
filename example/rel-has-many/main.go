@@ -59,7 +59,7 @@ func main() {
 }
 
 func createSchema(ctx context.Context, db *bun.DB) error {
-	models := []interface{}{
+	models := []any{
 		(*User)(nil),
 		(*Profile)(nil),
 	}

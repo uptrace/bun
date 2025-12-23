@@ -6,7 +6,8 @@ test:
 	  echo "go test in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go test && \
-	    env GOOS=linux GOARCH=386 go test && \
+	    go test -race && \
+	    env GOOS=linux GOARCH=386 TZ= go test && \
 	    go vet); \
 	done
 
@@ -15,7 +16,7 @@ go_mod_tidy:
 	  echo "go mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
 	    go get -u ./... && \
-	    go mod tidy -go=1.21); \
+	    go mod tidy); \
 	done
 
 fmt:

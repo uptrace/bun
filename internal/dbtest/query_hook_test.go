@@ -28,7 +28,7 @@ func testQueryHook(t *testing.T, dbName string, db *bun.DB) {
 			require.Equal(
 				t, "SELECT * FROM (SELECT 1 AS c) AS t WHERE (1 = 2)", string(event.Query))
 
-			b, err := event.IQuery.AppendQuery(schema.NewNopFormatter(), nil)
+			b, err := event.IQuery.AppendQuery(schema.NewNopQueryGen(), nil)
 			require.NoError(t, err)
 			require.Equal(t, "SELECT * FROM (SELECT 1 AS c) AS t WHERE (? = ?)", string(b))
 

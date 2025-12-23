@@ -13,7 +13,9 @@ import (
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dbfixture"
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/schema"
 )
 
 func TestORM(t *testing.T) {
@@ -32,6 +34,9 @@ func TestORM(t *testing.T) {
 		{testM2MRelationExcludeColumn},
 		{testRelationBelongsToSelf},
 		{testCompositeHasMany},
+		{testCompositeM2M},
+		{testHasOneRelationWithOpts},
+		{testHasManyRelationWithOpts},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -441,6 +446,227 @@ func testCompositeHasMany(t *testing.T, db *bun.DB) {
 	require.Equal(t, 2, len(department.Employees))
 }
 
+func testCompositeM2M(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip()
+	}
+
+	type Item struct {
+		ID     int64 `bun:",pk"`
+		ShopID int64 `bun:",pk"`
+	}
+
+	type Order struct {
+		ID     int64  `bun:",pk"`
+		ShopID int64  `bun:",pk"`
+		Items  []Item `bun:"m2m:orders_to_items,join:Order=Item"`
+	}
+
+	type OrderToItem struct {
+		bun.BaseModel `bun:"table:orders_to_items"`
+
+		ShopID int64 `bun:""`
+
+		OrderID int64  `bun:""`
+		Order   *Order `bun:"rel:belongs-to,join:shop_id=shop_id,join:order_id=id"`
+		ItemID  int64  `bun:""`
+		Item    *Item  `bun:"rel:belongs-to,join:shop_id=shop_id,join:item_id=id"`
+	}
+
+	db.RegisterModel((*OrderToItem)(nil))
+	mustResetModel(t, ctx, db, (*Order)(nil), (*Item)(nil), (*OrderToItem)(nil))
+
+	items := []Item{
+		{ID: 1, ShopID: 22},
+		{ID: 2, ShopID: 22},
+		{ID: 3, ShopID: 22},
+	}
+	_, err := db.NewInsert().Model(&items).Exec(ctx)
+	require.NoError(t, err)
+
+	orders := []Order{
+		{ID: 12, ShopID: 22},
+		{ID: 13, ShopID: 22},
+	}
+	_, err = db.NewInsert().Model(&orders).Exec(ctx)
+	require.NoError(t, err)
+
+	orderItems := []OrderToItem{
+		{OrderID: 12, ItemID: 1, ShopID: 22},
+		{OrderID: 12, ItemID: 2, ShopID: 22},
+		{OrderID: 13, ItemID: 3, ShopID: 22},
+	}
+	_, err = db.NewInsert().Model(&orderItems).Exec(ctx)
+	require.NoError(t, err)
+
+	var ordersOut []Order
+
+	err = db.NewSelect().
+		Model(&ordersOut).
+		Where("id = ?", 12).
+		Relation("Items").
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(ordersOut))
+	require.Equal(t, 2, len(ordersOut[0].Items))
+
+	var ordersOut2 []Order
+
+	err = db.NewSelect().
+		Model(&ordersOut2).
+		Where("id = ?", 13).
+		Relation("Items").
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(ordersOut2))
+	require.Equal(t, 1, len(ordersOut2[0].Items))
+}
+
+func testHasOneRelationWithOpts(t *testing.T, db *bun.DB) {
+	type Profile struct {
+		ID     int64 `bun:",pk"`
+		Lang   string
+		UserID int64
+	}
+
+	type User struct {
+		bun.BaseModel `bun:"alias:u"`
+		ID            int64 `bun:",pk"`
+		Name          string
+		Profile       *Profile `bun:"rel:has-one,join:id=user_id"`
+	}
+
+	mustResetModel(t, ctx, db, (*User)(nil), (*Profile)(nil))
+
+	users := []*User{
+		{ID: 1, Name: "user 1"},
+		{ID: 2, Name: "user 2"},
+		{ID: 3, Name: "user 3"},
+	}
+	_, err := db.NewInsert().Model(&users).Exec(ctx)
+	require.NoError(t, err)
+
+	profiles := []*Profile{
+		{ID: 1, Lang: "en", UserID: 1},
+		{ID: 2, Lang: "ru", UserID: 2},
+		{ID: 3, Lang: "md", UserID: 3},
+	}
+	_, err = db.NewInsert().Model(&profiles).Exec(ctx)
+	require.NoError(t, err)
+
+	var outUsers1 []*User
+	err = db.
+		NewSelect().
+		Model(&outUsers1).
+		RelationWithOpts("Profile", bun.RelationOpts{
+			AdditionalJoinOnConditions: []schema.QueryWithArgs{
+				{
+					Query: "profile.lang = ?",
+					Args:  []any{"ru"},
+				},
+			},
+		}).
+		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, outUsers1, 2)
+	require.ElementsMatch(t, []*User{
+		{ID: 1, Name: "user 1", Profile: nil},
+		{ID: 2, Name: "user 2", Profile: &Profile{ID: 2, Lang: "ru", UserID: 2}},
+	}, outUsers1)
+
+	var outUsers2 []*User
+	err = db.
+		NewSelect().
+		Model(&outUsers2).
+		RelationWithOpts("Profile", bun.RelationOpts{
+			Apply: func(q *bun.SelectQuery) *bun.SelectQuery {
+				return q.Where("profile.lang = ?", "ru")
+			},
+		}).
+		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, outUsers2, 1)
+	require.ElementsMatch(t, []*User{
+		{ID: 2, Name: "user 2", Profile: &Profile{ID: 2, Lang: "ru", UserID: 2}},
+	}, outUsers2)
+}
+
+func testHasManyRelationWithOpts(t *testing.T, db *bun.DB) {
+	type Profile struct {
+		ID     int64 `bun:",pk"`
+		Name   string
+		Lang   string
+		Active bool
+		UserID int64
+	}
+
+	type User struct {
+		bun.BaseModel `bun:"alias:u"`
+		ID            int64 `bun:",pk"`
+		Name          string
+		Profiles      []*Profile `bun:"rel:has-many,join:id=user_id"`
+	}
+
+	mustResetModel(t, ctx, db, (*User)(nil), (*Profile)(nil))
+
+	users := []*User{
+		{ID: 1, Name: "user 1"},
+		{ID: 2, Name: "user 2"},
+		{ID: 3, Name: "user 3"},
+	}
+	_, err := db.NewInsert().Model(&users).Exec(ctx)
+	require.NoError(t, err)
+
+	profiles := []*Profile{
+		{ID: 1, Name: "name1-en", Lang: "en", UserID: 1},
+		{ID: 2, Name: "name2-ru", Lang: "ru", UserID: 2},
+		{ID: 3, Name: "name2-ja", Lang: "ja", UserID: 2},
+		{ID: 4, Name: "name3-md", Lang: "md", UserID: 3},
+		{ID: 5, Name: "name3-en", Lang: "en", UserID: 3},
+	}
+	_, err = db.NewInsert().Model(&profiles).Exec(ctx)
+	require.NoError(t, err)
+
+	var outUsers1 []*User
+	err = db.
+		NewSelect().
+		Model(&outUsers1).
+		RelationWithOpts("Profiles", bun.RelationOpts{
+			AdditionalJoinOnConditions: []schema.QueryWithArgs{
+				{
+					Query: "profile.lang = ?",
+					Args:  []any{"ru"},
+				},
+			},
+		}).
+		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []*User{
+		{ID: 1, Name: "user 1", Profiles: nil},
+		{ID: 2, Name: "user 2", Profiles: []*Profile{{ID: 2, Name: "name2-ru", Lang: "ru", UserID: 2}}},
+	}, outUsers1)
+
+	var outUsers2 []*User
+	err = db.
+		NewSelect().
+		Model(&outUsers2).
+		RelationWithOpts("Profiles", bun.RelationOpts{
+			Apply: func(q *bun.SelectQuery) *bun.SelectQuery {
+				return q.Where("profile.lang = ?", "ru")
+			},
+		}).
+		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []*User{
+		{ID: 1, Name: "user 1", Profiles: nil},
+		{ID: 2, Name: "user 2", Profiles: []*Profile{{ID: 2, Name: "name2-ru", Lang: "ru", UserID: 2}}},
+	}, outUsers2)
+}
+
 type Genre struct {
 	ID     int `bun:",pk"`
 	Name   string
@@ -557,9 +783,9 @@ type Employee struct {
 }
 
 func createTestSchema(t *testing.T, db *bun.DB) {
-	_ = db.Table(reflect.TypeOf((*BookGenre)(nil)).Elem())
+	_ = db.Table(reflect.TypeFor[BookGenre]())
 
-	models := []interface{}{
+	models := []any{
 		(*Image)(nil),
 		(*Author)(nil),
 		(*Book)(nil),

@@ -5,16 +5,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
+// CreateTableQuery builds CREATE TABLE statements.
 type CreateTableQuery struct {
 	baseQuery
 
@@ -31,15 +33,16 @@ type CreateTableQuery struct {
 	fks         []schema.QueryWithArgs
 	partitionBy schema.QueryWithArgs
 	tablespace  schema.QueryWithArgs
+	comment     string
 }
 
 var _ Query = (*CreateTableQuery)(nil)
 
+// NewCreateTableQuery returns a CreateTableQuery bound to the provided DB.
 func NewCreateTableQuery(db *DB) *CreateTableQuery {
 	q := &CreateTableQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 		varchar: db.Dialect().DefaultVarcharLen(),
 	}
@@ -51,7 +54,7 @@ func (q *CreateTableQuery) Conn(db IConn) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) Model(model interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) Model(model any) *CreateTableQuery {
 	q.setModel(model)
 	return q
 }
@@ -70,17 +73,17 @@ func (q *CreateTableQuery) Table(tables ...string) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) TableExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) TableExpr(query string, args ...any) *CreateTableQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *CreateTableQuery) ModelTableExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ModelTableExpr(query string, args ...any) *CreateTableQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
 }
 
-func (q *CreateTableQuery) ColumnExpr(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ColumnExpr(query string, args ...any) *CreateTableQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
@@ -107,12 +110,12 @@ func (q *CreateTableQuery) Varchar(n int) *CreateTableQuery {
 	return q
 }
 
-func (q *CreateTableQuery) ForeignKey(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) ForeignKey(query string, args ...any) *CreateTableQuery {
 	q.fks = append(q.fks, schema.SafeQuery(query, args))
 	return q
 }
 
-func (q *CreateTableQuery) PartitionBy(query string, args ...interface{}) *CreateTableQuery {
+func (q *CreateTableQuery) PartitionBy(query string, args ...any) *CreateTableQuery {
 	q.partitionBy = schema.SafeQuery(query, args)
 	return q
 }
@@ -128,16 +131,27 @@ func (q *CreateTableQuery) WithForeignKeys() *CreateTableQuery {
 	return q
 }
 
+//------------------------------------------------------------------------------
+
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *CreateTableQuery) Comment(comment string) *CreateTableQuery {
+	q.comment = comment
+	return q
+}
+
 // ------------------------------------------------------------------------------
 
 func (q *CreateTableQuery) Operation() string {
 	return "CREATE TABLE"
 }
 
-func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (q *CreateTableQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
 	}
+
+	b = appendComment(b, q.comment)
+
 	if q.table == nil {
 		return nil, errNilModel
 	}
@@ -147,10 +161,10 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, "TEMP "...)
 	}
 	b = append(b, "TABLE "...)
-	if q.ifNotExists && fmter.HasFeature(feature.TableNotExists) {
+	if q.ifNotExists && gen.HasFeature(feature.TableNotExists) {
 		b = append(b, "IF NOT EXISTS "...)
 	}
-	b, err = q.appendFirstTable(fmter, b)
+	b, err = q.appendFirstTable(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -165,12 +179,12 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		b = append(b, field.SQLName...)
 		b = append(b, " "...)
 		b = q.appendSQLType(b, field)
-		if field.NotNull {
+		if field.NotNull && q.db.dialect.Name() != dialect.Oracle {
 			b = append(b, " NOT NULL"...)
 		}
 
-		if (field.Identity && fmter.HasFeature(feature.GeneratedIdentity)) ||
-			(field.AutoIncrement && (fmter.HasFeature(feature.AutoIncrement) || fmter.HasFeature(feature.Identity))) {
+		if (field.Identity && gen.HasFeature(feature.GeneratedIdentity)) ||
+			(field.AutoIncrement && (gen.HasFeature(feature.AutoIncrement) || gen.HasFeature(feature.Identity))) {
 			b = q.db.dialect.AppendSequence(b, q.table, field)
 		}
 
@@ -187,7 +201,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 		if i > 0 || len(q.table.Fields) > 0 {
 			b = append(b, ", "...)
 		}
-		b, err = col.AppendQuery(fmter, b)
+		b, err = col.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -199,15 +213,15 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 	if len(q.table.PKs) > 0 && !bytes.Contains(b, []byte("PRIMARY KEY")) {
 		b = q.appendPKConstraint(b, q.table.PKs)
 	}
-	b = q.appendUniqueConstraints(fmter, b)
+	b = q.appendUniqueConstraints(gen, b)
 
 	if q.fksFromRel {
-		b, err = q.appendFKConstraintsRel(fmter, b)
+		b, err = q.appendFKConstraintsRel(gen, b)
 		if err != nil {
 			return nil, err
 		}
 	}
-	b, err = q.appendFKConstraints(fmter, b)
+	b, err = q.appendFKConstraints(gen, b)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +230,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 	if !q.partitionBy.IsZero() {
 		b = append(b, " PARTITION BY "...)
-		b, err = q.partitionBy.AppendQuery(fmter, b)
+		b, err = q.partitionBy.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +238,7 @@ func (q *CreateTableQuery) AppendQuery(fmter schema.Formatter, b []byte) (_ []by
 
 	if !q.tablespace.IsZero() {
 		b = append(b, " TABLESPACE "...)
-		b, err = q.tablespace.AppendQuery(fmter, b)
+		b, err = q.tablespace.AppendQuery(gen, b)
 		if err != nil {
 			return nil, err
 		}
@@ -246,41 +260,45 @@ func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
 		return append(b, field.CreateTableSQLType...)
 	}
 
-	b = append(b, sqltype.VarChar...)
+	if q.db.dialect.Name() == dialect.Oracle {
+		b = append(b, "VARCHAR2"...)
+	} else {
+		b = append(b, sqltype.VarChar...)
+	}
 	b = append(b, "("...)
 	b = strconv.AppendInt(b, int64(q.varchar), 10)
 	b = append(b, ")"...)
 	return b
 }
 
-func (q *CreateTableQuery) appendUniqueConstraints(fmter schema.Formatter, b []byte) []byte {
+func (q *CreateTableQuery) appendUniqueConstraints(gen schema.QueryGen, b []byte) []byte {
 	unique := q.table.Unique
 
 	keys := make([]string, 0, len(unique))
 	for key := range unique {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	for _, key := range keys {
 		if key == "" {
 			for _, field := range unique[key] {
-				b = q.appendUniqueConstraint(fmter, b, key, field)
+				b = q.appendUniqueConstraint(gen, b, key, field)
 			}
 			continue
 		}
-		b = q.appendUniqueConstraint(fmter, b, key, unique[key]...)
+		b = q.appendUniqueConstraint(gen, b, key, unique[key]...)
 	}
 
 	return b
 }
 
 func (q *CreateTableQuery) appendUniqueConstraint(
-	fmter schema.Formatter, b []byte, name string, fields ...*schema.Field,
+	gen schema.QueryGen, b []byte, name string, fields ...*schema.Field,
 ) []byte {
 	if name != "" {
 		b = append(b, ", CONSTRAINT "...)
-		b = fmter.AppendIdent(b, name)
+		b = gen.AppendIdent(b, name)
 	} else {
 		b = append(b, ","...)
 	}
@@ -291,18 +309,34 @@ func (q *CreateTableQuery) appendUniqueConstraint(
 }
 
 // appendFKConstraintsRel appends a FOREIGN KEY clause for each of the model's existing relations.
-func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []byte) (_ []byte, err error) {
-	for _, rel := range q.tableModel.Table().Relations {
-		if rel.References() {
-			b, err = q.appendFK(fmter, b, schema.QueryWithArgs{
-				Query: "(?) REFERENCES ? (?) ? ?",
-				Args: []interface{}{
-					Safe(appendColumns(nil, "", rel.BaseFields)),
-					rel.JoinTable.SQLName,
-					Safe(appendColumns(nil, "", rel.JoinFields)),
-					Safe(rel.OnUpdate),
-					Safe(rel.OnDelete),
-				},
+func (q *CreateTableQuery) appendFKConstraintsRel(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+	relations := q.tableModel.Table().Relations
+
+	keys := make([]string, 0, len(relations))
+	for key := range relations {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	for _, key := range keys {
+		if rel := relations[key]; rel.References() {
+			query := "(?) REFERENCES ? (?)"
+			args := []any{
+				Safe(appendColumns(nil, "", rel.BasePKs)),
+				rel.JoinTable.SQLName,
+				Safe(appendColumns(nil, "", rel.JoinPKs)),
+			}
+			if len(rel.OnUpdate) > 0 {
+				query += " ?"
+				args = append(args, Safe(rel.OnUpdate))
+			}
+			if len(rel.OnDelete) > 0 {
+				query += " ?"
+				args = append(args, Safe(rel.OnDelete))
+			}
+			b, err = q.appendFK(gen, b, schema.QueryWithArgs{
+				Query: query,
+				Args:  args,
 			})
 			if err != nil {
 				return nil, err
@@ -312,16 +346,16 @@ func (q *CreateTableQuery) appendFKConstraintsRel(fmter schema.Formatter, b []by
 	return b, nil
 }
 
-func (q *CreateTableQuery) appendFK(fmter schema.Formatter, b []byte, fk schema.QueryWithArgs) (_ []byte, err error) {
+func (q *CreateTableQuery) appendFK(gen schema.QueryGen, b []byte, fk schema.QueryWithArgs) (_ []byte, err error) {
 	b = append(b, ", FOREIGN KEY "...)
-	return fk.AppendQuery(fmter, b)
+	return fk.AppendQuery(gen, b)
 }
 
 func (q *CreateTableQuery) appendFKConstraints(
-	fmter schema.Formatter, b []byte,
+	gen schema.QueryGen, b []byte,
 ) (_ []byte, err error) {
 	for _, fk := range q.fks {
-		if b, err = q.appendFK(fmter, b, fk); err != nil {
+		if b, err = q.appendFK(gen, b, fk); err != nil {
 			return nil, err
 		}
 	}
@@ -337,12 +371,15 @@ func (q *CreateTableQuery) appendPKConstraint(b []byte, pks []*schema.Field) []b
 
 // ------------------------------------------------------------------------------
 
-func (q *CreateTableQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *CreateTableQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	if err := q.beforeCreateTableHook(ctx); err != nil {
 		return nil, err
 	}
 
-	queryBytes, err := q.AppendQuery(q.db.fmter, q.db.makeQueryBytes())
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
+
+	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -381,11 +418,12 @@ func (q *CreateTableQuery) afterCreateTableHook(ctx context.Context) error {
 	return nil
 }
 
+// String returns the generated SQL query string. The CreateTableQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
 func (q *CreateTableQuery) String() string {
-	buf, err := q.AppendQuery(q.db.Formatter(), nil)
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
 	if err != nil {
 		panic(err)
 	}
-
 	return string(buf)
 }

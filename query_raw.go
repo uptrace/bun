@@ -7,30 +7,20 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// RawQuery executes a plain SQL query using Bun formatting and hooks.
 type RawQuery struct {
 	baseQuery
 
-	query string
-	args  []interface{}
+	query   string
+	args    []any
+	comment string
 }
 
-// Deprecated: Use NewRaw instead. When add it to IDB, it conflicts with the sql.Conn#Raw
-func (db *DB) Raw(query string, args ...interface{}) *RawQuery {
+// NewRawQuery creates a RawQuery with the provided SQL template and arguments.
+func NewRawQuery(db *DB, query string, args ...any) *RawQuery {
 	return &RawQuery{
 		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
-		},
-		query: query,
-		args:  args,
-	}
-}
-
-func NewRawQuery(db *DB, query string, args ...interface{}) *RawQuery {
-	return &RawQuery{
-		baseQuery: baseQuery{
-			db:   db,
-			conn: db.DB,
+			db: db,
 		},
 		query: query,
 		args:  args,
@@ -47,17 +37,23 @@ func (q *RawQuery) Err(err error) *RawQuery {
 	return q
 }
 
-func (q *RawQuery) Exec(ctx context.Context, dest ...interface{}) (sql.Result, error) {
+func (q *RawQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
 
-func (q *RawQuery) Scan(ctx context.Context, dest ...interface{}) error {
+func (q *RawQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
+// Comment adds a comment to the query, wrapped by /* ... */.
+func (q *RawQuery) Comment(comment string) *RawQuery {
+	q.comment = comment
+	return q
+}
+
 func (q *RawQuery) scanOrExec(
-	ctx context.Context, dest []interface{}, hasDest bool,
+	ctx context.Context, dest []any, hasDest bool,
 ) (sql.Result, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -72,6 +68,9 @@ func (q *RawQuery) scanOrExec(
 			return nil, err
 		}
 	}
+
+	// if a comment is propagated via the context, use it
+	setCommentFromContext(ctx, q)
 
 	query := q.db.format(q.query, q.args)
 	var res sql.Result
@@ -89,10 +88,22 @@ func (q *RawQuery) scanOrExec(
 	return res, nil
 }
 
-func (q *RawQuery) AppendQuery(fmter schema.Formatter, b []byte) ([]byte, error) {
-	return fmter.AppendQuery(b, q.query, q.args...), nil
+func (q *RawQuery) AppendQuery(gen schema.QueryGen, b []byte) ([]byte, error) {
+	b = appendComment(b, q.comment)
+
+	return gen.AppendQuery(b, q.query, q.args...), nil
 }
 
 func (q *RawQuery) Operation() string {
 	return "SELECT"
+}
+
+// String returns the generated SQL query string. The RawQuery instance must not be
+// modified during query generation to ensure multiple calls to String() return identical results.
+func (q *RawQuery) String() string {
+	buf, err := q.AppendQuery(q.db.QueryGen(), nil)
+	if err != nil {
+		panic(err)
+	}
+	return string(buf)
 }

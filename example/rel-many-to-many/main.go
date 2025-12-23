@@ -90,7 +90,7 @@ func main() {
 }
 
 func createSchema(ctx context.Context, db *bun.DB) error {
-	models := []interface{}{
+	models := []any{
 		(*Order)(nil),
 		(*Item)(nil),
 		(*OrderToItem)(nil),
@@ -101,7 +101,7 @@ func createSchema(ctx context.Context, db *bun.DB) error {
 		}
 	}
 
-	values := []interface{}{
+	values := []any{
 		&Item{ID: 1},
 		&Item{ID: 2},
 		&Order{ID: 1},

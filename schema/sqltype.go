@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	bunNullTimeType = reflect.TypeOf((*NullTime)(nil)).Elem()
-	nullTimeType    = reflect.TypeOf((*sql.NullTime)(nil)).Elem()
-	nullBoolType    = reflect.TypeOf((*sql.NullBool)(nil)).Elem()
-	nullFloatType   = reflect.TypeOf((*sql.NullFloat64)(nil)).Elem()
-	nullIntType     = reflect.TypeOf((*sql.NullInt64)(nil)).Elem()
-	nullStringType  = reflect.TypeOf((*sql.NullString)(nil)).Elem()
+	bunNullTimeType = reflect.TypeFor[NullTime]()
+	nullTimeType    = reflect.TypeFor[sql.NullTime]()
+	nullBoolType    = reflect.TypeFor[sql.NullBool]()
+	nullFloatType   = reflect.TypeFor[sql.NullFloat64]()
+	nullIntType     = reflect.TypeFor[sql.NullInt64]()
+	nullStringType  = reflect.TypeFor[sql.NullString]()
 )
 
 var sqlTypes = []string{
@@ -104,14 +104,14 @@ func (tm *NullTime) UnmarshalJSON(b []byte) error {
 	return tm.Time.UnmarshalJSON(b)
 }
 
-func (tm NullTime) AppendQuery(fmter Formatter, b []byte) ([]byte, error) {
+func (tm NullTime) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 	if tm.IsZero() {
 		return dialect.AppendNull(b), nil
 	}
-	return fmter.Dialect().AppendTime(b, tm.Time), nil
+	return gen.Dialect().AppendTime(b, tm.Time), nil
 }
 
-func (tm *NullTime) Scan(src interface{}) error {
+func (tm *NullTime) Scan(src any) error {
 	if src == nil {
 		tm.Time = time.Time{}
 		return nil

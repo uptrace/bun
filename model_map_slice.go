@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"sort"
+	"slices"
 
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/schema"
@@ -12,14 +12,14 @@ import (
 
 type mapSliceModel struct {
 	mapModel
-	dest *[]map[string]interface{}
+	dest *[]map[string]any
 
 	keys []string
 }
 
 var _ Model = (*mapSliceModel)(nil)
 
-func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
+func newMapSliceModel(db *DB, dest *[]map[string]any) *mapSliceModel {
 	return &mapSliceModel{
 		mapModel: mapModel{
 			db: db,
@@ -28,7 +28,7 @@ func newMapSliceModel(db *DB, dest *[]map[string]interface{}) *mapSliceModel {
 	}
 }
 
-func (m *mapSliceModel) Value() interface{} {
+func (m *mapSliceModel) Value() any {
 	return m.dest
 }
 
@@ -37,7 +37,7 @@ func (m *mapSliceModel) SetCap(cap int) {
 		cap = 100
 	}
 	if slice := *m.dest; len(slice) < cap {
-		*m.dest = make([]map[string]interface{}, 0, cap)
+		*m.dest = make([]map[string]any, 0, cap)
 	}
 }
 
@@ -59,7 +59,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	var n int
 
 	for rows.Next() {
-		m.m = make(map[string]interface{}, len(m.columns))
+		m.m = make(map[string]any, len(m.columns))
 
 		m.scanIndex = 0
 		if err := rows.Scan(dest...); err != nil {
@@ -77,7 +77,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 	return n, nil
 }
 
-func (m *mapSliceModel) appendColumns(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
@@ -86,26 +86,19 @@ func (m *mapSliceModel) appendColumns(fmter schema.Formatter, b []byte) (_ []byt
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = fmter.AppendIdent(b, k)
+		b = gen.AppendIdent(b, k)
 	}
 
 	return b, nil
 }
 
-func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte, err error) {
+func (m *mapSliceModel) appendValues(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if err := m.initKeys(); err != nil {
 		return nil, err
 	}
 	slice := *m.dest
 
-	b = append(b, "VALUES "...)
-	if m.db.features.Has(feature.ValuesRow) {
-		b = append(b, "ROW("...)
-	} else {
-		b = append(b, '(')
-	}
-
-	if fmter.IsNop() {
+	if gen.IsNop() {
 		for i := range m.keys {
 			if i > 0 {
 				b = append(b, ", "...)
@@ -118,7 +111,7 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 	for i, el := range slice {
 		if i > 0 {
 			b = append(b, "), "...)
-			if m.db.features.Has(feature.ValuesRow) {
+			if m.db.HasFeature(feature.ValuesRow) {
 				b = append(b, "ROW("...)
 			} else {
 				b = append(b, '(')
@@ -129,11 +122,9 @@ func (m *mapSliceModel) appendValues(fmter schema.Formatter, b []byte) (_ []byte
 			if j > 0 {
 				b = append(b, ", "...)
 			}
-			b = schema.Append(fmter, b, el[key])
+			b = gen.Append(b, el[key])
 		}
 	}
-
-	b = append(b, ')')
 
 	return b, nil
 }
@@ -155,7 +146,7 @@ func (m *mapSliceModel) initKeys() error {
 		keys = append(keys, k)
 	}
 
-	sort.Strings(keys)
+	slices.Sort(keys)
 	m.keys = keys
 
 	return nil

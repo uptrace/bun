@@ -1,52 +1,143 @@
-# Example for Bun's OpenTelemetry instrumentation
+# Bun SQL Client OpenTelemetry Monitoring Example
 
-This example demonstrates how to monitor Bun SQL client using OpenTelemetry and
-[Uptrace](https://github.com/uptrace/uptrace). It requires Docker to start PostgreSQL and Uptrace.
+A complete example demonstrating how to instrument and monitor Bun SQL client performance using
+OpenTelemetry and [Uptrace](https://github.com/uptrace/uptrace). This setup provides real-time
+observability into your database operations, including query performance, errors, and connection
+metrics.
 
-See
-[SQL performance and errors monitoring](https://bun.uptrace.dev/guide/performance-monitoring.html)
-for details.
+## 🚀 Features
 
-**Step 1**. Download the example using Git:
+- **SQL Query Monitoring**: Track query execution times, errors, and patterns
+- **Database Performance Insights**: Identify slow queries and bottlenecks
+- **Distributed Tracing**: Full request-to-database visibility
+- **Real-time Metrics**: Connection pools, query counts, and error rates
+- **Visual Dashboards**: Interactive UI for exploring traces and metrics
 
-```shell
+## 📋 Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- [Go](https://golang.org/doc/install) (for running the example)
+- Git
+
+## 🛠️ Quick Start
+
+### 1. Clone the Repository
+
+```bash
 git clone https://github.com/uptrace/bun.git
 cd example/opentelemetry
 ```
 
-**Step 2**. Start the services using Docker:
+### 2. Start Infrastructure Services
 
-```shell
-docker-compose pull
-docker-compose up -d
+Launch PostgreSQL, ClickHouse, and Uptrace using Docker Compose:
+
+```bash
+docker compose pull
+docker compose up -d
 ```
 
-**Step 3**. Make sure Uptrace is running:
+**Note**: Remove `sudo` if your user is in the `docker` group.
 
-```shell
-docker-compose logs uptrace
+### 3. Verify Uptrace is Running
+
+Check the Uptrace service logs to ensure it started successfully:
+
+```bash
+docker compose logs uptrace
 ```
 
-**Step 4**. Run the Bun client example:
+You should see logs indicating Uptrace is ready and listening on port 14318.
 
-```shell
-UPTRACE_DSN=http://project2_secret_token@localhost:14317/2 go run client.go
+### 4. Run the Example Application
+
+Execute the Bun client example with OpenTelemetry instrumentation:
+
+```bash
+UPTRACE_DSN="http://project1_secret@localhost:14318?grpc=14317" go run client.go
 ```
 
-**Step 5**. Follow the link from the CLI to view the trace:
+The application will:
 
-```shell
-UPTRACE_DSN=http://project2_secret_token@localhost:14318?grpc=14317 go run client.go
+- Connect to PostgreSQL
+- Execute sample SQL operations
+- Send telemetry data to Uptrace
+- Display a trace URL in the console
+
+### 5. View the Results
+
+The CLI will output a direct link to view the generated trace:
+
+```
 trace: http://localhost:14318/traces/ee029d8782242c8ed38b16d961093b35
 ```
 
-![Bun trace](./image/bun-trace.png)
+Click the link or copy it to your browser to see the detailed trace visualization.
 
-You can also open Uptrace UI at [http://localhost:14318](http://localhost:14318) to view available
-spans, logs, and metrics.
+![Bun OpenTelemetry Trace Visualization](./image/bun-trace.png)
 
-## Links
+### 6. Explore the Uptrace Dashboard
 
-- [Uptrace open-source APM](https://uptrace.dev/get/open-source-apm.html)
-- [OpenTelemetry Go instrumentations](https://uptrace.dev/opentelemetry/instrumentations/?lang=go)
-- [OpenTelemetry Go Tracing API](https://uptrace.dev/opentelemetry/go-tracing.html)
+Open the main Uptrace UI at [http://localhost:14318](http://localhost:14318) to explore:
+
+- **Traces**: Detailed request flows and SQL operations
+- **Metrics**: Database performance statistics
+- **Logs**: Application and database logs
+- **Service Map**: Visual representation of service dependencies
+
+## 📊 What You'll See
+
+The example demonstrates monitoring of common database operations:
+
+- **Connection establishment** and pool management
+- **Query execution** with timing and parameters
+- **Transaction handling** and rollback scenarios
+- **Error tracking** for failed operations
+- **Batch operations** and prepared statements
+
+## 🔧 Configuration
+
+The example uses these key configuration values:
+
+| Parameter   | Value                                               | Description                   |
+| ----------- | --------------------------------------------------- | ----------------------------- |
+| Uptrace DSN | `http://project1_secret@localhost:14318?grpc=14317` | Connection string for Uptrace |
+| PostgreSQL  | `localhost:5432`                                    | Database server endpoint      |
+| Uptrace UI  | `http://localhost:14318`                            | Web interface URL             |
+
+## 🚀 Next Steps
+
+- **Customize the example**: Modify `client.go` to test your specific use cases
+- **Add more databases**: Extend monitoring to MySQL, SQLite, or other supported databases
+- **Production setup**: Review the
+  [production deployment guide](https://bun.uptrace.dev/guide/performance-monitoring.html#production)
+- **Advanced features**: Explore custom metrics, alerts, and dashboards
+
+## 🧹 Cleanup
+
+To stop and remove all services:
+
+```bash
+docker compose down -v
+```
+
+This removes containers, networks, and volumes created by the example.
+
+## 📚 Additional Resources
+
+- **[Bun Performance Monitoring Guide](https://bun.uptrace.dev/guide/performance-monitoring.html)** -
+  Comprehensive monitoring documentation
+- **[Uptrace Documentation](https://uptrace.dev/get/hosted/open-source-apm)** - Open-source APM
+  platform guide
+- **[OpenTelemetry Go](https://uptrace.dev/get/opentelemetry-go/tracing)** - Go tracing
+  instrumentation
+- **[Bun ORM Documentation](https://bun.uptrace.dev/)** - Complete Bun usage guide
+
+## 🤝 Contributing
+
+Found an issue or want to improve this example? Please open an issue or submit a pull request on the
+[Bun repository](https://github.com/uptrace/bun).
+
+---
+
+**⭐ Star the project** on GitHub if this example helped you!

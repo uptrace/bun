@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +13,10 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/uptrace/bun/internal"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func init() {
@@ -21,14 +24,14 @@ func init() {
 }
 
 type logging interface {
-	Printf(ctx context.Context, format string, v ...interface{})
+	Printf(ctx context.Context, format string, v ...any)
 }
 
 type logger struct {
 	log *log.Logger
 }
 
-func (l *logger) Printf(ctx context.Context, format string, v ...interface{}) {
+func (l *logger) Printf(ctx context.Context, format string, v ...any) {
 	_ = l.log.Output(2, fmt.Sprintf(format, v...))
 }
 
@@ -67,13 +70,13 @@ func (d Driver) Open(name string) (driver.Conn, error) {
 //------------------------------------------------------------------------------
 
 type Connector struct {
-	cfg *Config
+	conf *Config
 }
 
 func NewConnector(opts ...Option) *Connector {
-	c := &Connector{cfg: newDefaultConfig()}
+	c := &Connector{conf: newDefaultConfig()}
 	for _, opt := range opts {
-		opt(c.cfg)
+		opt(c.conf)
 	}
 	return c
 }
@@ -81,10 +84,10 @@ func NewConnector(opts ...Option) *Connector {
 var _ driver.Connector = (*Connector)(nil)
 
 func (c *Connector) Connect(ctx context.Context) (driver.Conn, error) {
-	if err := c.cfg.verify(); err != nil {
+	if err := c.conf.verify(); err != nil {
 		return nil, err
 	}
-	return newConn(ctx, c.cfg)
+	return newConn(ctx, c.conf)
 }
 
 func (c *Connector) Driver() driver.Driver {
@@ -92,13 +95,13 @@ func (c *Connector) Driver() driver.Driver {
 }
 
 func (c *Connector) Config() *Config {
-	return c.cfg
+	return c.conf
 }
 
 //------------------------------------------------------------------------------
 
 type Conn struct {
-	cfg *Config
+	conf *Config
 
 	netConn net.Conn
 	rd      *reader
@@ -111,20 +114,20 @@ type Conn struct {
 	closed int32
 }
 
-func newConn(ctx context.Context, cfg *Config) (*Conn, error) {
-	netConn, err := cfg.Dialer(ctx, cfg.Network, cfg.Addr)
+func newConn(ctx context.Context, conf *Config) (*Conn, error) {
+	netConn, err := conf.Dialer(ctx, conf.Network, conf.Addr)
 	if err != nil {
 		return nil, err
 	}
 
 	cn := &Conn{
-		cfg:     cfg,
+		conf:    conf,
 		netConn: netConn,
-		rd:      newReader(netConn),
+		rd:      newReader(netConn, conf.BufferSize),
 	}
 
-	if cfg.TLSConfig != nil {
-		if err := enableSSL(ctx, cn, cfg.TLSConfig); err != nil {
+	if conf.TLSConfig != nil {
+		if err := enableSSL(ctx, cn, conf.TLSConfig); err != nil {
 			return nil, err
 		}
 	}
@@ -133,20 +136,37 @@ func newConn(ctx context.Context, cfg *Config) (*Conn, error) {
 		return nil, err
 	}
 
-	for k, v := range cfg.ConnParams {
-		if v != nil {
-			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
-				{Value: v},
-			})
-		} else {
-			_, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO DEFAULT", k), nil)
+	for k, v := range conf.ConnParams {
+		if v == nil {
+			continue
 		}
-		if err != nil {
+
+		switch {
+		case !conf.UnsafeStrings && k == "standard_conforming_strings" && v != "on":
+			return nil, errRequiresParameter
+		case !conf.UnsafeStrings && k == "client_encoding" && v != "UTF8":
+			return nil, errRequiresParameter
+		}
+
+		if _, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
+			{Value: v},
+		}); err != nil {
 			return nil, err
 		}
 	}
 
 	return cn, nil
+}
+
+func (cn *Conn) Close() error {
+	if !atomic.CompareAndSwapInt32(&cn.closed, 0, 1) {
+		return nil
+	}
+	return cn.netConn.Close()
+}
+
+func (cn *Conn) isClosed() bool {
+	return atomic.LoadInt32(&cn.closed) == 1
 }
 
 func (cn *Conn) reader(ctx context.Context, timeout time.Duration) *reader {
@@ -173,11 +193,16 @@ func (cn *Conn) write(ctx context.Context, wb *writeBuffer) error {
 var _ driver.Conn = (*Conn)(nil)
 
 func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
+	return cn.PrepareContext(context.Background(), query)
+}
+
+var _ driver.ConnPrepareContext = (*Conn)(nil)
+
+func (cn *Conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
 	if cn.isClosed() {
 		return nil, driver.ErrBadConn
 	}
-
-	ctx := context.TODO()
+	cn.trace(ctx)
 
 	name := fmt.Sprintf("pgdriver-%d", cn.stmtCount)
 	cn.stmtCount++
@@ -194,17 +219,6 @@ func (cn *Conn) Prepare(query string) (driver.Stmt, error) {
 	return newStmt(cn, name, rowDesc), nil
 }
 
-func (cn *Conn) Close() error {
-	if !atomic.CompareAndSwapInt32(&cn.closed, 0, 1) {
-		return nil
-	}
-	return cn.netConn.Close()
-}
-
-func (cn *Conn) isClosed() bool {
-	return atomic.LoadInt32(&cn.closed) == 1
-}
-
 func (cn *Conn) Begin() (driver.Tx, error) {
 	return cn.BeginTx(context.Background(), driver.TxOptions{})
 }
@@ -212,16 +226,32 @@ func (cn *Conn) Begin() (driver.Tx, error) {
 var _ driver.ConnBeginTx = (*Conn)(nil)
 
 func (cn *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	if cn.isClosed() {
+		return nil, driver.ErrBadConn
+	}
+	cn.trace(ctx)
+
 	// No need to check if the conn is closed. ExecContext below handles that.
+	isolation := sql.IsolationLevel(opts.Isolation)
 
-	if sql.IsolationLevel(opts.Isolation) != sql.LevelDefault {
-		return nil, errors.New("pgdriver: custom IsolationLevel is not supported")
+	var command string
+	switch isolation {
+	case sql.LevelDefault:
+		command = "BEGIN"
+	case sql.LevelReadUncommitted,
+		sql.LevelReadCommitted,
+		sql.LevelRepeatableRead,
+		sql.LevelSerializable:
+		command = fmt.Sprintf("BEGIN; SET TRANSACTION ISOLATION LEVEL %s", isolation.String())
+	default:
+		return nil, fmt.Errorf("pgdriver: unsupported transaction isolation: %s", isolation.String())
 	}
+
 	if opts.ReadOnly {
-		return nil, errors.New("pgdriver: ReadOnly transactions are not supported")
+		command = fmt.Sprintf("%s READ ONLY", command)
 	}
 
-	if _, err := cn.ExecContext(ctx, "BEGIN", nil); err != nil {
+	if _, err := cn.ExecContext(ctx, command, nil); err != nil {
 		return nil, err
 	}
 	return tx{cn: cn}, nil
@@ -235,6 +265,8 @@ func (cn *Conn) ExecContext(
 	if cn.isClosed() {
 		return nil, driver.ErrBadConn
 	}
+	cn.trace(ctx)
+
 	res, err := cn.exec(ctx, query, args)
 	if err != nil {
 		return nil, cn.checkBadConn(err)
@@ -263,6 +295,8 @@ func (cn *Conn) QueryContext(
 	if cn.isClosed() {
 		return nil, driver.ErrBadConn
 	}
+	cn.trace(ctx)
+
 	rows, err := cn.query(ctx, query, args)
 	if err != nil {
 		return nil, cn.checkBadConn(err)
@@ -292,14 +326,14 @@ func (cn *Conn) Ping(ctx context.Context) error {
 
 func (cn *Conn) setReadDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.cfg.ReadTimeout
+		timeout = cn.conf.ReadTimeout
 	}
 	_ = cn.netConn.SetReadDeadline(cn.deadline(ctx, timeout))
 }
 
 func (cn *Conn) setWriteDeadline(ctx context.Context, timeout time.Duration) {
 	if timeout == -1 {
-		timeout = cn.cfg.WriteTimeout
+		timeout = cn.conf.WriteTimeout
 	}
 	_ = cn.netConn.SetWriteDeadline(cn.deadline(ctx, timeout))
 }
@@ -334,8 +368,8 @@ func (cn *Conn) ResetSession(ctx context.Context) error {
 	if cn.isClosed() {
 		return driver.ErrBadConn
 	}
-	if cn.cfg.ResetSessionFunc != nil {
-		return cn.cfg.ResetSessionFunc(ctx, cn)
+	if cn.conf.ResetSessionFunc != nil {
+		return cn.conf.ResetSessionFunc(ctx, cn)
 	}
 	return nil
 }
@@ -350,6 +384,19 @@ func (cn *Conn) checkBadConn(err error) error {
 }
 
 func (cn *Conn) Conn() net.Conn { return cn.netConn }
+
+func (cn *Conn) trace(ctx context.Context) {
+	if !cn.conf.EnableTracing {
+		return
+	}
+	if span := trace.SpanFromContext(ctx); span.IsRecording() {
+		span.SetAttributes(
+			semconv.DBUserKey.String(cn.conf.User),
+			semconv.DBNameKey.String(cn.conf.Database),
+			semconv.ServerAddressKey.String(cn.conf.Addr),
+		)
+	}
+}
 
 //------------------------------------------------------------------------------
 
@@ -508,7 +555,7 @@ func parseResult(b []byte) (driver.RowsAffected, error) {
 	}
 
 	b = b[i+1 : len(b)-1]
-	affected, err := strconv.ParseUint(bytesToString(b), 10, 64)
+	affected, err := strconv.ParseUint(internal.String(b), 10, 64)
 	if err != nil {
 		return 0, nil
 	}

@@ -1,0 +1,1 @@
+INSERT INTO "models" ("name") VALUES (N'name1') ON CONFLICT DO UPDATE SET "bar" = NULL, "foo" = N'string'

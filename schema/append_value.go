@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/extra/bunjson"
@@ -18,7 +18,7 @@ import (
 )
 
 type (
-	AppenderFunc   func(fmter Formatter, b []byte, v reflect.Value) []byte
+	AppenderFunc   func(gen QueryGen, b []byte, v reflect.Value) []byte
 	CustomAppender func(typ reflect.Type) AppenderFunc
 )
 
@@ -51,7 +51,7 @@ var appenders = []AppenderFunc{
 	reflect.UnsafePointer: nil,
 }
 
-var appenderMap sync.Map
+var appenderCache = xsync.NewMapOf[reflect.Type, AppenderFunc]()
 
 func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 	if field.Tag.HasOption("msgpack") {
@@ -67,7 +67,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 		}
 
 		if fieldType.Kind() != reflect.Ptr {
-			if reflect.PtrTo(fieldType).Implements(driverValuerType) {
+			if reflect.PointerTo(fieldType).Implements(driverValuerType) {
 				return addrAppender(appendDriverValue)
 			}
 		}
@@ -79,14 +79,14 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 }
 
 func Appender(dialect Dialect, typ reflect.Type) AppenderFunc {
-	if v, ok := appenderMap.Load(typ); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.Load(typ); ok {
+		return v
 	}
 
 	fn := appender(dialect, typ)
 
-	if v, ok := appenderMap.LoadOrStore(typ, fn); ok {
-		return v.(AppenderFunc)
+	if v, ok := appenderCache.LoadOrStore(typ, fn); ok {
+		return v
 	}
 	return fn
 }
@@ -99,10 +99,10 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		return appendTimeValue
 	case timePtrType:
 		return PtrAppender(appendTimeValue)
-	case ipType:
-		return appendIPValue
 	case ipNetType:
 		return appendIPNetValue
+	case ipType, netipPrefixType, netipAddrType:
+		return appendStringer
 	case jsonRawMessageType:
 		return appendJSONRawMessageValue
 	}
@@ -123,7 +123,7 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	}
 
 	if kind != reflect.Ptr {
-		ptr := reflect.PtrTo(typ)
+		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(queryAppenderType) {
 			return addrAppender(appendQueryAppenderValue)
 		}
@@ -155,81 +155,81 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	return appenders[typ.Kind()]
 }
 
-func ifaceAppenderFunc(fmter Formatter, b []byte, v reflect.Value) []byte {
+func ifaceAppenderFunc(gen QueryGen, b []byte, v reflect.Value) []byte {
 	if v.IsNil() {
 		return dialect.AppendNull(b)
 	}
 	elem := v.Elem()
-	appender := Appender(fmter.Dialect(), elem.Type())
-	return appender(fmter, b, elem)
+	appender := Appender(gen.Dialect(), elem.Type())
+	return appender(gen, b, elem)
 }
 
 func nilAwareAppender(fn AppenderFunc) AppenderFunc {
-	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
+	return func(gen QueryGen, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
 			return dialect.AppendNull(b)
 		}
-		return fn(fmter, b, v)
+		return fn(gen, b, v)
 	}
 }
 
 func PtrAppender(fn AppenderFunc) AppenderFunc {
-	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
+	return func(gen QueryGen, b []byte, v reflect.Value) []byte {
 		if v.IsNil() {
 			return dialect.AppendNull(b)
 		}
-		return fn(fmter, b, v.Elem())
+		return fn(gen, b, v.Elem())
 	}
 }
 
-func AppendBoolValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return fmter.Dialect().AppendBool(b, v.Bool())
+func AppendBoolValue(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendBool(b, v.Bool())
 }
 
-func AppendIntValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendIntValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	return strconv.AppendInt(b, v.Int(), 10)
 }
 
-func AppendUintValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendUintValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	return strconv.AppendUint(b, v.Uint(), 10)
 }
 
-func appendUint32Value(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return fmter.Dialect().AppendUint32(b, uint32(v.Uint()))
+func appendUint32Value(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendUint32(b, uint32(v.Uint()))
 }
 
-func appendUint64Value(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return fmter.Dialect().AppendUint64(b, v.Uint())
+func appendUint64Value(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendUint64(b, v.Uint())
 }
 
-func AppendFloat32Value(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendFloat32Value(gen QueryGen, b []byte, v reflect.Value) []byte {
 	return dialect.AppendFloat32(b, float32(v.Float()))
 }
 
-func AppendFloat64Value(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendFloat64Value(gen QueryGen, b []byte, v reflect.Value) []byte {
 	return dialect.AppendFloat64(b, float64(v.Float()))
 }
 
-func appendBytesValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return fmter.Dialect().AppendBytes(b, v.Bytes())
+func appendBytesValue(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendBytes(b, v.Bytes())
 }
 
-func appendArrayBytesValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendArrayBytesValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	if v.CanAddr() {
-		return fmter.Dialect().AppendBytes(b, v.Slice(0, v.Len()).Bytes())
+		return gen.Dialect().AppendBytes(b, v.Slice(0, v.Len()).Bytes())
 	}
 
 	tmp := make([]byte, v.Len())
 	reflect.Copy(reflect.ValueOf(tmp), v)
-	b = fmter.Dialect().AppendBytes(b, tmp)
+	b = gen.Dialect().AppendBytes(b, tmp)
 	return b
 }
 
-func AppendStringValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return fmter.Dialect().AppendString(b, v.String())
+func AppendStringValue(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendString(b, v.String())
 }
 
-func AppendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func AppendJSONValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	bb, err := bunjson.Marshal(v.Interface())
 	if err != nil {
 		return dialect.AppendError(b, err)
@@ -239,37 +239,36 @@ func AppendJSONValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 		bb = bb[:len(bb)-1]
 	}
 
-	return fmter.Dialect().AppendJSON(b, bb)
+	return gen.Dialect().AppendJSON(b, bb)
 }
 
-func appendTimeValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendTimeValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	tm := v.Interface().(time.Time)
-	return fmter.Dialect().AppendTime(b, tm)
+	return gen.Dialect().AppendTime(b, tm)
 }
 
-func appendIPValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	ip := v.Interface().(net.IP)
-	return fmter.Dialect().AppendString(b, ip.String())
-}
-
-func appendIPNetValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendIPNetValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	ipnet := v.Interface().(net.IPNet)
-	return fmter.Dialect().AppendString(b, ipnet.String())
+	return gen.Dialect().AppendString(b, ipnet.String())
 }
 
-func appendJSONRawMessageValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendStringer(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return gen.Dialect().AppendString(b, v.Interface().(fmt.Stringer).String())
+}
+
+func appendJSONRawMessageValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	bytes := v.Bytes()
 	if bytes == nil {
 		return dialect.AppendNull(b)
 	}
-	return fmter.Dialect().AppendString(b, internal.String(bytes))
+	return gen.Dialect().AppendString(b, internal.String(bytes))
 }
 
-func appendQueryAppenderValue(fmter Formatter, b []byte, v reflect.Value) []byte {
-	return AppendQueryAppender(fmter, b, v.Interface().(QueryAppender))
+func appendQueryAppenderValue(gen QueryGen, b []byte, v reflect.Value) []byte {
+	return AppendQueryAppender(gen, b, v.Interface().(QueryAppender))
 }
 
-func appendDriverValue(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendDriverValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	value, err := v.Interface().(driver.Valuer).Value()
 	if err != nil {
 		return dialect.AppendError(b, err)
@@ -277,20 +276,20 @@ func appendDriverValue(fmter Formatter, b []byte, v reflect.Value) []byte {
 	if _, ok := value.(driver.Valuer); ok {
 		return dialect.AppendError(b, fmt.Errorf("driver.Valuer returns unsupported type %T", value))
 	}
-	return Append(fmter, b, value)
+	return gen.Append(b, value)
 }
 
 func addrAppender(fn AppenderFunc) AppenderFunc {
-	return func(fmter Formatter, b []byte, v reflect.Value) []byte {
+	return func(gen QueryGen, b []byte, v reflect.Value) []byte {
 		if !v.CanAddr() {
 			err := fmt.Errorf("bun: Append(nonaddressable %T)", v.Interface())
 			return dialect.AppendError(b, err)
 		}
-		return fn(fmter, b, v.Addr())
+		return fn(gen, b, v.Addr())
 	}
 }
 
-func appendMsgpack(fmter Formatter, b []byte, v reflect.Value) []byte {
+func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
 	hexEnc := internal.NewHexEncoder(b)
 
 	enc := msgpack.GetEncoder()
@@ -308,8 +307,8 @@ func appendMsgpack(fmter Formatter, b []byte, v reflect.Value) []byte {
 	return hexEnc.Bytes()
 }
 
-func AppendQueryAppender(fmter Formatter, b []byte, app QueryAppender) []byte {
-	bb, err := app.AppendQuery(fmter, b)
+func AppendQueryAppender(gen QueryGen, b []byte, app QueryAppender) []byte {
+	bb, err := app.AppendQuery(gen, b)
 	if err != nil {
 		return dialect.AppendError(b, err)
 	}

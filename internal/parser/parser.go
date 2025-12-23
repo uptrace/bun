@@ -2,6 +2,8 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/uptrace/bun/internal"
@@ -22,21 +24,41 @@ func NewString(s string) *Parser {
 	return New(internal.Bytes(s))
 }
 
+func (p *Parser) Reset(b []byte) {
+	p.b = b
+	p.i = 0
+}
+
 func (p *Parser) Valid() bool {
 	return p.i < len(p.b)
 }
 
-func (p *Parser) Bytes() []byte {
+func (p *Parser) Remaining() []byte {
 	return p.b[p.i:]
+}
+
+func (p *Parser) ReadByte() (byte, error) {
+	if p.Valid() {
+		ch := p.b[p.i]
+		p.Advance()
+		return ch, nil
+	}
+	return 0, io.ErrUnexpectedEOF
 }
 
 func (p *Parser) Read() byte {
 	if p.Valid() {
-		c := p.b[p.i]
+		ch := p.b[p.i]
 		p.Advance()
-		return c
+		return ch
 	}
 	return 0
+}
+
+func (p *Parser) Unread() {
+	if p.i > 0 {
+		p.i--
+	}
 }
 
 func (p *Parser) Peek() byte {
@@ -50,19 +72,25 @@ func (p *Parser) Advance() {
 	p.i++
 }
 
-func (p *Parser) Skip(skip byte) bool {
-	if p.Peek() == skip {
+func (p *Parser) Skip(skip byte) error {
+	ch := p.Peek()
+	if ch == skip {
 		p.Advance()
-		return true
+		return nil
 	}
-	return false
+	return fmt.Errorf("got %q, wanted %q", ch, skip)
 }
 
-func (p *Parser) SkipBytes(skip []byte) bool {
-	if len(skip) > len(p.b[p.i:]) {
-		return false
+func (p *Parser) SkipPrefix(skip []byte) error {
+	if !bytes.HasPrefix(p.b[p.i:], skip) {
+		return fmt.Errorf("got %q, wanted prefix %q", p.b, skip)
 	}
-	if !bytes.Equal(p.b[p.i:p.i+len(skip)], skip) {
+	p.i += len(skip)
+	return nil
+}
+
+func (p *Parser) CutPrefix(skip []byte) bool {
+	if !bytes.HasPrefix(p.b[p.i:], skip) {
 		return false
 	}
 	p.i += len(skip)

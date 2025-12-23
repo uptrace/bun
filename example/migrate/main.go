@@ -27,14 +27,17 @@ func main() {
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
-		bundebug.FromEnv(""),
+		bundebug.FromEnv(),
 	))
 
+	templateData := map[string]string{
+		"Prefix": "example_",
+	}
 	app := &cli.App{
 		Name: "bun",
 
 		Commands: []*cli.Command{
-			newDBCommand(migrate.NewMigrator(db, migrations.Migrations)),
+			newDBCommand(migrate.NewMigrator(db, migrations.Migrations, migrate.WithTemplateData(templateData))),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

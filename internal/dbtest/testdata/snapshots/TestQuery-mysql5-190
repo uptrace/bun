@@ -1,0 +1,1 @@
+UPDATE `models` AS `model` SET `name` = 'name1', updated_at = [TIME] WHERE (id = 1)

@@ -9,8 +9,13 @@ import (
 	"time"
 
 	"github.com/bradleyjkemp/cupaloy"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/internal"
+	"github.com/uptrace/bun/migrate"
+	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -250,7 +255,7 @@ func TestQuery(t *testing.T) {
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.
 					NewInsert().
-					Model(&map[string]interface{}{
+					Model(&map[string]any{
 						"id":  42,
 						"str": "hello",
 					}).
@@ -260,7 +265,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 25,
 			query: func(db *bun.DB) schema.QueryAppender {
-				src := db.NewValues(&[]map[string]interface{}{
+				src := db.NewValues(&[]map[string]any{
 					{"id": 42, "str": "hello"},
 					{"id": 43, "str": "world"},
 				})
@@ -299,7 +304,7 @@ func TestQuery(t *testing.T) {
 			id: 29,
 			query: func(db *bun.DB) schema.QueryAppender {
 				return db.NewUpdate().
-					Model(&map[string]interface{}{"str": "hello"}).
+					Model(&map[string]any{"str": "hello"}).
 					Table("models").
 					Where("id = 42")
 			},
@@ -307,7 +312,7 @@ func TestQuery(t *testing.T) {
 		{
 			id: 30,
 			query: func(db *bun.DB) schema.QueryAppender {
-				src := db.NewValues(&[]map[string]interface{}{
+				src := db.NewValues(&[]map[string]any{
 					{"id": 42, "str": "hello"},
 					{"id": 43, "str": "world"},
 				})
@@ -336,7 +341,7 @@ func TestQuery(t *testing.T) {
 				type Model struct {
 					ID     uint64 `bun:",pk,autoincrement"`
 					Struct struct{}
-					Map    map[string]interface{}
+					Map    map[string]any
 					Slice  []string
 					Array  []string `bun:",array"`
 				}
@@ -1545,6 +1550,335 @@ func TestQuery(t *testing.T) {
 				return db.NewInsert().Model(new(Model))
 			},
 		},
+		{
+			id: 167,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// specified option names
+				type Model struct {
+					bun.BaseModel `bun:"table:table"`
+					IsDefault     bool `bun:"column:default"`
+				}
+				return db.NewInsert().Model(new(Model))
+			},
+		},
+		{
+			id: 168,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... ORDER BY ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Model)).WherePK().Order("id")
+			},
+		},
+		{
+			id: 169,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Model)).WherePK().Order("id").Limit(1)
+			},
+		},
+		{
+			id: 170,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// DELETE ... USING ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewDelete().Model(new(Story)).TableExpr("archived_stories AS src").
+					Where("src.id = story.id").Order("src.id").Limit(1)
+			},
+		},
+		{
+			id: 171,
+			query: func(db *bun.DB) schema.QueryAppender {
+				// UPDATE ... SET ... ORDER BY ... LIMIT ... (MySQL, MariaDB)
+				return db.NewUpdate().Model(new(Story)).Set("name = ?", "new-name").WherePK().Order("id").Limit(1)
+			},
+		},
+		{
+			id: 172,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDelete().Model(&Model{}).WherePK().Returning("*")
+			},
+		},
+		{
+			id: 173,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewAddColumn().
+					Model(&Model{}).
+					Comment("test").
+					ColumnExpr("column_name VARCHAR(123)")
+			},
+		},
+		{
+			id: 174,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropColumn().
+					Model(&Model{}).
+					Comment("test").
+					Column("column_name")
+			},
+		},
+		{
+			id: 175,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDelete().
+					Model(&Model{}).
+					WherePK().
+					Comment("test")
+			},
+		},
+		{
+			id: 176,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewCreateIndex().
+					Model(&Model{}).
+					Unique().
+					Index("index_name").
+					Comment("test").
+					Column("column_name")
+			},
+		},
+		{
+			id: 177,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropIndex().
+					Model(&Model{}).
+					Comment("test").
+					Index("index_name").
+					Comment("test")
+			},
+		},
+		{
+			id: 178,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewInsert().
+					Model(&Model{}).
+					Comment("test").
+					Value("column_name", "value")
+			},
+		},
+		{
+			id: 179,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					ID    int64 `bun:",pk,autoincrement"`
+					Name  string
+					Value string
+				}
+
+				newModels := []*Model{
+					{Name: "A", Value: "world"},
+					{Name: "B", Value: "test"},
+				}
+
+				return db.NewMerge().
+					Model(new(Model)).
+					With("_data", db.NewValues(&newModels)).
+					Using("_data").
+					On("?TableAlias.name = _data.name").
+					WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+						return q.Set("value = _data.value")
+					}).
+					WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+						return q.Value("name", "_data.name").Value("value", "_data.value")
+					}).
+					Comment("test").
+					Returning("$action")
+			},
+		},
+		{
+			id: 180,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewRaw("SELECT 1").Comment("test")
+			},
+		},
+		{
+			id: 181,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 182,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewCreateTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 183,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDropTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 184,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewTruncateTable().
+					Model(&Model{}).
+					Comment("test")
+			},
+		},
+		{
+			id: 185,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewUpdate().
+					Model(&Model{}).
+					Comment("test").
+					Set("name = ?", "new-name").
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 186,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewValues(&[]Model{{1, "hello"}}).
+					Comment("test")
+			},
+		},
+		{
+			id: 187,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type AcronymPDF struct {
+					UserID         string `bun:",pk"`
+					InnerHTML      string
+					HTTPProxy      string
+					MaxCPU         int
+					SSLCertificate []byte
+				}
+				return db.NewCreateTable().Model(new(AcronymPDF))
+			},
+		},
+		{
+			id: 188,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					Column("name").
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 189,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					Column("name").
+					Value("name", "name2").
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 190,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				return db.NewUpdate().
+					Model(model).
+					ExcludeColumn().
+					Set("updated_at = ?", time.Now()).
+					Where("id = ?", 1)
+			},
+		},
+		{
+			id: 191,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				type Values struct {
+					Foo *string
+					Bar *int64
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				values := &Values{
+					Foo: new(string),
+				}
+				return db.NewInsert().
+					Model(model).
+					On("CONFLICT DO UPDATE").
+					SetValues(db.NewValues(values).OmitZero())
+			},
+		},
+		{
+			id: 192,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					Name string
+				}
+				type Values struct {
+					Foo *string
+					Bar *int64
+				}
+				model := &Model{
+					Name: "name1",
+				}
+				values := map[string]any{
+					"foo": "string",
+					"bar": nil,
+				}
+				return db.NewInsert().
+					Model(model).
+					On("CONFLICT DO UPDATE").
+					SetValues(db.NewValues(&values))
+			},
+		},
+		{
+			id: 193,
+			query: func(db *bun.DB) schema.QueryAppender {
+				type Model struct {
+					ID    int64 `bun:",pk,autoincrement"`
+					Name  string
+					Value string
+				}
+				newModels := []*Model{
+					{Name: "A", Value: "world"},
+					{Name: "B", Value: "test"},
+				}
+				return db.NewMerge().
+					Model(new(Model)).
+					With("_data", db.NewValues(&newModels)).
+					Using("_data").
+					On("?TableAlias.name = _data.name").
+					WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+						return q.Set("value = _data.value")
+					}).
+					WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+						return q.Value("name", "_data.name").Value("value", "_data.value")
+					}).
+					Returning("merge_action(), ?TableAlias.*")
+			},
+		},
+		{
+			id: 194,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().
+					OrderBy("foo", bun.OrderAsc).
+					OrderBy("foo.bar", bun.OrderDesc).
+					OrderBy("xxx", bun.Order("bad"))
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
@@ -1554,12 +1888,199 @@ func TestQuery(t *testing.T) {
 			t.Run(fmt.Sprintf("%d", tt.id), func(t *testing.T) {
 				q := tt.query(db)
 
-				query, err := q.AppendQuery(db.Formatter(), nil)
+				query, err := q.AppendQuery(db.QueryGen(), nil)
 				if err != nil {
 					cupaloy.SnapshotT(t, err.Error())
 				} else {
 					query = timeRE.ReplaceAll(query, []byte("[TIME]"))
 					cupaloy.SnapshotT(t, string(query))
+				}
+			})
+		}
+	})
+}
+
+func TestAlterTable(t *testing.T) {
+	type Movie struct {
+		bun.BaseModel `bun:"table:hobbies.movies"`
+		ID            string
+		Director      string `bun:"director,notnull"`
+		Budget        int32
+		ReleaseDate   time.Time
+		HasOscar      bool
+		Genre         string
+	}
+
+	schemaName := "hobbies"
+	tableName := "movies"
+
+	tests := []struct {
+		name      string
+		operation any
+	}{
+		{name: "create table", operation: &migrate.CreateTableOp{
+			TableName: tableName,
+			Model:     (*Movie)(nil),
+		}},
+		{name: "drop table", operation: &migrate.DropTableOp{
+			TableName: tableName,
+		}},
+		{name: "rename table", operation: &migrate.RenameTableOp{
+			TableName: tableName,
+			NewName:   "films",
+		}},
+		{name: "rename column", operation: &migrate.RenameColumnOp{
+			TableName: tableName,
+			OldName:   "has_oscar",
+			NewName:   "has_awards",
+		}},
+		{name: "add column with default value", operation: &migrate.AddColumnOp{
+			TableName:  tableName,
+			ColumnName: "language",
+			Column: &sqlschema.BaseColumn{
+				SQLType:      "varchar",
+				VarcharLen:   20,
+				IsNullable:   false,
+				DefaultValue: "'en-GB'",
+			},
+		}},
+		{name: "add column with identity", operation: &migrate.AddColumnOp{
+			TableName:  tableName,
+			ColumnName: "n",
+			Column: &sqlschema.BaseColumn{
+				SQLType:    sqltype.BigInt,
+				IsNullable: false,
+				IsIdentity: true,
+			},
+		}},
+		{name: "drop column", operation: &migrate.DropColumnOp{
+			TableName:  tableName,
+			ColumnName: "director",
+			Column: &sqlschema.BaseColumn{
+				SQLType:    sqltype.VarChar,
+				IsNullable: false,
+			},
+		}},
+		{name: "add unique constraint", operation: &migrate.AddUniqueConstraintOp{
+			TableName: tableName,
+			Unique: sqlschema.Unique{
+				Name:    "one_genre_per_director",
+				Columns: sqlschema.NewColumns("genre", "director"),
+			},
+		}},
+		{name: "drop unique constraint", operation: &migrate.DropUniqueConstraintOp{
+			TableName: tableName,
+			Unique: sqlschema.Unique{
+				Name:    "one_genre_per_director",
+				Columns: sqlschema.NewColumns("genre", "director"),
+			},
+		}},
+		{name: "change column type int to bigint", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{SQLType: sqltype.Integer},
+			To:        &sqlschema.BaseColumn{SQLType: sqltype.BigInt},
+		}},
+		{name: "add default", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{DefaultValue: ""},
+			To:        &sqlschema.BaseColumn{DefaultValue: "100"},
+		}},
+		{name: "drop default", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{DefaultValue: "100"},
+			To:        &sqlschema.BaseColumn{DefaultValue: ""},
+		}},
+		{name: "make nullable", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "director",
+			From:      &sqlschema.BaseColumn{IsNullable: false},
+			To:        &sqlschema.BaseColumn{IsNullable: true},
+		}},
+		{name: "add notnull", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "budget",
+			From:      &sqlschema.BaseColumn{IsNullable: true},
+			To:        &sqlschema.BaseColumn{IsNullable: false},
+		}},
+		{name: "increase varchar length", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "language",
+			From:      &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 20},
+			To:        &sqlschema.BaseColumn{SQLType: "varchar", VarcharLen: 255},
+		}},
+		{name: "add identity", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "id",
+			From:      &sqlschema.BaseColumn{IsIdentity: false},
+			To:        &sqlschema.BaseColumn{IsIdentity: true},
+		}},
+		{name: "drop identity", operation: &migrate.ChangeColumnTypeOp{
+			TableName: tableName,
+			Column:    "id",
+			From:      &sqlschema.BaseColumn{IsIdentity: true},
+			To:        &sqlschema.BaseColumn{IsIdentity: false},
+		}},
+		{name: "add primary key", operation: &migrate.AddPrimaryKeyOp{
+			TableName: tableName,
+			PrimaryKey: sqlschema.PrimaryKey{
+				Name:    "new_pk",
+				Columns: sqlschema.NewColumns("id"),
+			},
+		}},
+		{name: "drop primary key", operation: &migrate.DropPrimaryKeyOp{
+			TableName: tableName,
+			PrimaryKey: sqlschema.PrimaryKey{
+				Name:    "new_pk",
+				Columns: sqlschema.NewColumns("id"),
+			},
+		}},
+		{name: "change primary key", operation: &migrate.ChangePrimaryKeyOp{
+			TableName: tableName,
+			Old: sqlschema.PrimaryKey{
+				Name:    "old_pk",
+				Columns: sqlschema.NewColumns("id"),
+			},
+			New: sqlschema.PrimaryKey{
+				Name:    "new_pk",
+				Columns: sqlschema.NewColumns("director", "genre"),
+			},
+		}},
+		{name: "add foreign key", operation: &migrate.AddForeignKeyOp{
+			ConstraintName: "genre_description",
+			ForeignKey: sqlschema.ForeignKey{
+				From: sqlschema.NewColumnReference("movies", "genre"),
+				To:   sqlschema.NewColumnReference("film_genres", "id"),
+			},
+		}},
+		{name: "drop foreign key", operation: &migrate.DropForeignKeyOp{
+			ConstraintName: "genre_description",
+			ForeignKey: sqlschema.ForeignKey{
+				From: sqlschema.NewColumnReference("movies", "genre"),
+				To:   sqlschema.NewColumnReference("film_genres", "id"),
+			},
+		}},
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		migrator, err := sqlschema.NewMigrator(db, schemaName)
+		if err != nil {
+			t.Skip(err)
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				b := internal.MakeQueryBytes()
+
+				b, err := migrator.AppendSQL(b, tt.operation)
+				require.NoError(t, err, "append sql")
+
+				if err == nil {
+					cupaloy.SnapshotT(t, string(b))
+				} else {
+					cupaloy.SnapshotT(t, err.Error())
 				}
 			})
 		}
