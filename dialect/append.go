@@ -7,13 +7,6 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-func AppendError(b []byte, err error) []byte {
-	b = append(b, "?!("...)
-	b = append(b, err.Error()...)
-	b = append(b, ')')
-	return b
-}
-
 func AppendNull(b []byte) []byte {
 	return append(b, "NULL"...)
 }

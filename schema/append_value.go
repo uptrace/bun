@@ -232,7 +232,7 @@ func AppendStringValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 func AppendJSONValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	bb, err := bunjson.Marshal(v.Interface())
 	if err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 
 	if len(bb) > 0 && bb[len(bb)-1] == '\n' {
@@ -271,10 +271,10 @@ func appendQueryAppenderValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 func appendDriverValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 	value, err := v.Interface().(driver.Valuer).Value()
 	if err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 	if _, ok := value.(driver.Valuer); ok {
-		return dialect.AppendError(b, fmt.Errorf("driver.Valuer returns unsupported type %T", value))
+		return gen.AppendError(b, fmt.Errorf("driver.Valuer returns unsupported type %T", value))
 	}
 	return gen.Append(b, value)
 }
@@ -283,7 +283,7 @@ func addrAppender(fn AppenderFunc) AppenderFunc {
 	return func(gen QueryGen, b []byte, v reflect.Value) []byte {
 		if !v.CanAddr() {
 			err := fmt.Errorf("bun: Append(nonaddressable %T)", v.Interface())
-			return dialect.AppendError(b, err)
+			return gen.AppendError(b, err)
 		}
 		return fn(gen, b, v.Addr())
 	}
@@ -297,11 +297,11 @@ func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
 
 	enc.Reset(hexEnc)
 	if err := enc.EncodeValue(v); err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 
 	if err := hexEnc.Close(); err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 
 	return hexEnc.Bytes()
@@ -310,7 +310,7 @@ func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
 func AppendQueryAppender(gen QueryGen, b []byte, app QueryAppender) []byte {
 	bb, err := app.AppendQuery(gen, b)
 	if err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 	return bb
 }

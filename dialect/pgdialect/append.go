@@ -55,7 +55,7 @@ func (d *Dialect) hstoreAppender(typ reflect.Type) schema.AppenderFunc {
 
 	return func(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
 		err := fmt.Errorf("bun: Hstore(unsupported %s)", v.Type())
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
 }
 
