@@ -37,7 +37,7 @@ const (
 	// OrderAsc sorts values in ascending order.
 	OrderAsc = schema.OrderAsc
 	// OrderAscNullsFirst sorts ascending with NULL values first.
-	OrderAscNullsFirst = schema.OrderDesc
+	OrderAscNullsFirst = schema.OrderAscNullsFirst
 	// OrderAscNullsLast sorts ascending with NULL values last.
 	OrderAscNullsLast = schema.OrderAscNullsLast
 	// OrderDesc sorts values in descending order.
