@@ -151,6 +151,9 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 		}()
 
 		execErr = migrator.exec(ctx, idb, migration, queries)
+		if execErr != nil {
+			return execErr
+		}
 		return retErr
 	}
 }
