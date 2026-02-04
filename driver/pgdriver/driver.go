@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"reflect"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -599,4 +600,22 @@ func (stmt *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (d
 		return nil, err
 	}
 	return readExtQueryData(ctx, stmt.cn, stmt.rowDesc)
+}
+
+// ColumnTypeScanType implements driver.RowsColumnTypeScanType.
+func (r *rows) ColumnTypeScanType(index int) reflect.Type {
+	if r.closed || r.rowDesc == nil || index < 0 || index >= len(r.rowDesc.types) {
+		return reflect.TypeOf([]byte(nil))
+	}
+	_, scanType := columnTypeByOID(r.rowDesc.types[index])
+	return scanType
+}
+
+// ColumnTypeDatabaseTypeName implements driver.RowsColumnTypeDatabaseTypeName.
+func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
+	if r.closed || r.rowDesc == nil || index < 0 || index >= len(r.rowDesc.types) {
+		return "UNKNOWN"
+	}
+	dbTypeName, _ := columnTypeByOID(r.rowDesc.types[index])
+	return dbTypeName
 }
