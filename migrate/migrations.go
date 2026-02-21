@@ -11,14 +11,17 @@ import (
 	"strings"
 )
 
+// MigrationsOption configures a Migrations instance.
 type MigrationsOption func(m *Migrations)
 
+// WithMigrationsDirectory sets the directory where migration files are stored.
 func WithMigrationsDirectory(directory string) MigrationsOption {
 	return func(m *Migrations) {
 		m.explicitDirectory = directory
 	}
 }
 
+// Migrations is a collection of registered migrations.
 type Migrations struct {
 	ms MigrationSlice
 
@@ -26,6 +29,7 @@ type Migrations struct {
 	implicitDirectory string
 }
 
+// NewMigrations creates a new collection of migrations.
 func NewMigrations(opts ...MigrationsOption) *Migrations {
 	m := new(Migrations)
 	for _, opt := range opts {
@@ -35,6 +39,7 @@ func NewMigrations(opts ...MigrationsOption) *Migrations {
 	return m
 }
 
+// Sorted returns a copy of the migrations sorted by name in ascending order.
 func (m *Migrations) Sorted() MigrationSlice {
 	migrations := make(MigrationSlice, len(m.ms))
 	copy(migrations, m.ms)
@@ -42,12 +47,14 @@ func (m *Migrations) Sorted() MigrationSlice {
 	return migrations
 }
 
+// MustRegister is like Register but panics on error.
 func (m *Migrations) MustRegister(up, down MigrationFunc) {
 	if err := m.Register(up, down); err != nil {
 		panic(err)
 	}
 }
 
+// Register registers up and down migration functions derived from the caller's file name.
 func (m *Migrations) Register(up, down MigrationFunc) error {
 	fpath := migrationFile()
 	name, comment, err := extractMigrationName(fpath)
@@ -65,6 +72,7 @@ func (m *Migrations) Register(up, down MigrationFunc) error {
 	return nil
 }
 
+// Add appends a migration to the collection.
 func (m *Migrations) Add(migration Migration) {
 	if migration.Name == "" {
 		panic("migration name is required")
@@ -72,11 +80,13 @@ func (m *Migrations) Add(migration Migration) {
 	m.ms = append(m.ms, migration)
 }
 
+// DiscoverCaller discovers SQL migration files in the caller's directory.
 func (m *Migrations) DiscoverCaller() error {
 	dir := filepath.Dir(migrationFile())
 	return m.Discover(os.DirFS(dir))
 }
 
+// Discover discovers SQL migration files in the given filesystem.
 func (m *Migrations) Discover(fsys fs.FS) error {
 	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

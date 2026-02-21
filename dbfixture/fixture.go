@@ -25,8 +25,10 @@ var (
 	tplRE      = regexp.MustCompile(`\{\{ .+ \}\}`)
 )
 
+// FixtureOption configures a Fixture.
 type FixtureOption func(l *Fixture)
 
+// WithRecreateTables drops and re-creates tables before loading fixtures.
 func WithRecreateTables() FixtureOption {
 	return func(l *Fixture) {
 		if l.truncateTables {
@@ -37,6 +39,7 @@ func WithRecreateTables() FixtureOption {
 	}
 }
 
+// WithTruncateTables truncates tables before loading fixtures.
 func WithTruncateTables() FixtureOption {
 	return func(l *Fixture) {
 		if l.recreateTables {
@@ -47,6 +50,7 @@ func WithTruncateTables() FixtureOption {
 	}
 }
 
+// WithTemplateFuncs merges the given template functions into the fixture's function map.
 func WithTemplateFuncs(funcMap template.FuncMap) FixtureOption {
 	return func(l *Fixture) {
 		for k, v := range funcMap {
@@ -55,19 +59,23 @@ func WithTemplateFuncs(funcMap template.FuncMap) FixtureOption {
 	}
 }
 
+// BeforeInsertData holds the context passed to BeforeInsertFunc callbacks.
 type BeforeInsertData struct {
 	Query *bun.InsertQuery
 	Model any
 }
 
+// BeforeInsertFunc is a callback invoked before each fixture row is inserted.
 type BeforeInsertFunc func(ctx context.Context, data *BeforeInsertData) error
 
+// WithBeforeInsert registers a callback that runs before inserting each fixture row.
 func WithBeforeInsert(fn BeforeInsertFunc) FixtureOption {
 	return func(f *Fixture) {
 		f.beforeInsert = append(f.beforeInsert, fn)
 	}
 }
 
+// Fixture loads YAML fixtures into a database.
 type Fixture struct {
 	db bun.IDB
 
@@ -81,6 +89,7 @@ type Fixture struct {
 	modelRows map[string]map[string]any
 }
 
+// New creates a Fixture for the given database.
 func New(db bun.IDB, opts ...FixtureOption) *Fixture {
 	f := &Fixture{
 		db: db,
@@ -94,6 +103,7 @@ func New(db bun.IDB, opts ...FixtureOption) *Fixture {
 	return f
 }
 
+// Row returns a previously loaded fixture row by its "model.id" identifier.
 func (f *Fixture) Row(id string) (any, error) {
 	ss := strings.Split(id, ".")
 	if len(ss) != 2 {
@@ -114,6 +124,7 @@ func (f *Fixture) Row(id string) (any, error) {
 	return row, nil
 }
 
+// MustRow is like Row but panics on error.
 func (f *Fixture) MustRow(id string) any {
 	row, err := f.Row(id)
 	if err != nil {
@@ -122,6 +133,7 @@ func (f *Fixture) MustRow(id string) any {
 	return row
 }
 
+// Load reads YAML fixture files from fsys and inserts rows into the database.
 func (f *Fixture) Load(ctx context.Context, fsys fs.FS, names ...string) error {
 	for _, name := range names {
 		if err := f.load(ctx, fsys, name); err != nil {

@@ -31,6 +31,7 @@ func (ds BaseDatabase) GetForeignKeys() map[ForeignKey]string {
 	return ds.ForeignKeys
 }
 
+// ForeignKey represents a foreign key constraint between two tables.
 type ForeignKey struct {
 	From ColumnReference
 	To   ColumnReference
@@ -120,6 +121,7 @@ func (u Unique) Equals(other Unique) bool {
 	return u.Columns == other.Columns
 }
 
+// ColumnReference identifies a column or set of columns in a table.
 type ColumnReference struct {
 	TableName string
 	Column    Columns

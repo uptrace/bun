@@ -50,6 +50,7 @@ func isZero(v any) bool {
 	}
 }
 
+// IsZeroerFunc reports whether a reflect.Value is a zero value.
 type IsZeroerFunc func(reflect.Value) bool
 
 func zeroChecker(typ reflect.Type) IsZeroerFunc {

@@ -266,16 +266,19 @@ func NewWithQuery(name string, query Query) *WithQuery {
 	}
 }
 
+// Recursive marks the CTE as recursive, enabling self-referential queries.
 func (q *WithQuery) Recursive() *WithQuery {
 	q.recursive = true
 	return q
 }
 
+// Materialized hints the planner to evaluate the CTE once and store the results.
 func (q *WithQuery) Materialized() *WithQuery {
 	q.materialized = true
 	return q
 }
 
+// NotMaterialized hints the planner to inline the CTE, potentially re-evaluating it.
 func (q *WithQuery) NotMaterialized() *WithQuery {
 	q.notMaterialized = true
 	return q

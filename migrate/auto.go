@@ -15,6 +15,7 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// AutoMigratorOption configures an AutoMigrator.
 type AutoMigratorOption func(m *AutoMigrator)
 
 // WithModel adds a bun.Model to the migration scope.
@@ -151,6 +152,7 @@ type AutoMigrator struct {
 	migrationsOpts []MigrationsOption
 }
 
+// NewAutoMigrator creates an AutoMigrator that detects schema differences and generates migrations.
 func NewAutoMigrator(db *bun.DB, opts ...AutoMigratorOption) (*AutoMigrator, error) {
 	am := &AutoMigrator{
 		db:         db,

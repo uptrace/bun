@@ -98,8 +98,10 @@ func NewBunModelInspector(tables *schema.Tables, options ...InspectorOption) *Bu
 	return bmi
 }
 
+// InspectorOption configures an Inspector.
 type InspectorOption func(*InspectorConfig)
 
+// ApplyInspectorOptions applies the given options to an InspectorConfig.
 func ApplyInspectorOptions(cfg *InspectorConfig, options ...InspectorOption) {
 	if cfg.ExcludeForeignKeys == nil {
 		cfg.ExcludeForeignKeys = make(map[ForeignKey]string)

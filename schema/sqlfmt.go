@@ -7,10 +7,12 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
+// QueryAppender is implemented by types that can append themselves to a SQL query.
 type QueryAppender interface {
 	AppendQuery(gen QueryGen, b []byte) ([]byte, error)
 }
 
+// ColumnsAppender is implemented by types that can append column definitions to a SQL query.
 type ColumnsAppender interface {
 	AppendColumns(gen QueryGen, b []byte) ([]byte, error)
 }
@@ -51,6 +53,7 @@ func (s Ident) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
+// QueryWithArgs is a query string paired with its arguments.
 // NOTE: It should not be modified after creation.
 type QueryWithArgs struct {
 	Query string
@@ -88,6 +91,7 @@ func (q QueryWithArgs) AppendQuery(gen QueryGen, b []byte) ([]byte, error) {
 
 //------------------------------------------------------------------------------
 
+// Order represents a SQL sort direction.
 type Order string
 
 const (
@@ -120,6 +124,7 @@ func AppendOrder(b []byte, sortDir Order) []byte {
 
 //------------------------------------------------------------------------------
 
+// QueryWithSep is a QueryWithArgs with an additional separator.
 type QueryWithSep struct {
 	QueryWithArgs
 	Sep string

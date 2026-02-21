@@ -19,6 +19,7 @@ const (
 	defaultLocksTable = "bun_migration_locks"
 )
 
+// MigratorOption configures a Migrator.
 type MigratorOption func(m *Migrator)
 
 // WithTableName overrides default migrations table name.
@@ -52,26 +53,31 @@ func WithUpsert(enabled bool) MigratorOption {
 	}
 }
 
+// WithTemplateData sets data passed to SQL migration templates during rendering.
 func WithTemplateData(data any) MigratorOption {
 	return func(m *Migrator) {
 		m.templateData = data
 	}
 }
 
+// MigrationHook is a callback invoked before or after each migration runs.
 type MigrationHook func(ctx context.Context, db bun.IConn, migration *Migration) error
 
+// BeforeMigration registers a hook that runs before each migration.
 func BeforeMigration(hook MigrationHook) MigratorOption {
 	return func(m *Migrator) {
 		m.beforeMigrationHook = hook
 	}
 }
 
+// AfterMigration registers a hook that runs after each migration.
 func AfterMigration(hook MigrationHook) MigratorOption {
 	return func(m *Migrator) {
 		m.afterMigrationHook = hook
 	}
 }
 
+// Migrator manages the lifecycle of database migrations.
 type Migrator struct {
 	db         *bun.DB
 	migrations *Migrations
@@ -86,6 +92,7 @@ type Migrator struct {
 	afterMigrationHook  MigrationHook
 }
 
+// NewMigrator creates a new Migrator for the given database and migrations.
 func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Migrator {
 	m := &Migrator{
 		db:         db,
@@ -100,6 +107,7 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 	return m
 }
 
+// DB returns the underlying bun.DB.
 func (m *Migrator) DB() *bun.DB {
 	return m.db
 }
@@ -131,6 +139,7 @@ func (m *Migrator) migrationsWithStatus(ctx context.Context) (MigrationSlice, in
 	return sorted, applied.LastGroupID(), nil
 }
 
+// Init creates the migration tables if they do not already exist.
 func (m *Migrator) Init(ctx context.Context) error {
 	if _, err := m.db.NewCreateTable().
 		Model((*Migration)(nil)).
@@ -160,6 +169,7 @@ func (m *Migrator) Init(ctx context.Context) error {
 	return nil
 }
 
+// Reset drops and re-creates the migration tables.
 func (m *Migrator) Reset(ctx context.Context) error {
 	if _, err := m.db.NewDropTable().
 		Model((*Migration)(nil)).
@@ -287,6 +297,7 @@ func (m *Migrator) RunMigration(
 	return nil
 }
 
+// Rollback rolls back the last migration group.
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	cfg := newMigrationConfig(opts)
 
@@ -333,14 +344,17 @@ type goMigrationConfig struct {
 	goTemplate  string
 }
 
+// GoMigrationOption configures Go migration file generation.
 type GoMigrationOption func(cfg *goMigrationConfig)
 
+// WithPackageName sets the Go package name used in generated migration files.
 func WithPackageName(name string) GoMigrationOption {
 	return func(cfg *goMigrationConfig) {
 		cfg.packageName = name
 	}
 }
 
+// WithGoTemplate sets the Go template string used for generated migration files.
 func WithGoTemplate(template string) GoMigrationOption {
 	return func(cfg *goMigrationConfig) {
 		cfg.goTemplate = template
@@ -511,6 +525,7 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) erro
 	return err
 }
 
+// TruncateTable removes all rows from the migrations table.
 func (m *Migrator) TruncateTable(ctx context.Context) error {
 	_, err := m.db.NewTruncateTable().
 		Model((*Migration)(nil)).
@@ -595,6 +610,7 @@ type migrationLock struct {
 	TableName string `bun:",unique"`
 }
 
+// Lock acquires an advisory lock on the migration table to prevent concurrent migrations.
 func (m *Migrator) Lock(ctx context.Context) error {
 	lock := &migrationLock{
 		TableName: m.formattedTableName(m.db),
@@ -608,6 +624,7 @@ func (m *Migrator) Lock(ctx context.Context) error {
 	return nil
 }
 
+// Unlock releases the advisory lock on the migration table.
 func (m *Migrator) Unlock(ctx context.Context) error {
 	tableName := m.formattedTableName(m.db)
 	_, err := m.db.NewDelete().

@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// Relation type constants define the possible types of table relationships.
 const (
 	InvalidRelation = iota
 	HasOneRelation
@@ -12,6 +13,7 @@ const (
 	ManyToManyRelation
 )
 
+// Relation describes how two tables are related (has-one, belongs-to, has-many, or many-to-many).
 type Relation struct {
 	Type  int
 	Field *Field // Has the bun tag defining this relation.

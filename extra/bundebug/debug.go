@@ -59,6 +59,7 @@ func FromEnv(keys ...string) Option {
 	}
 }
 
+// QueryHook is a bun.QueryHook that logs executed queries to stderr.
 type QueryHook struct {
 	enabled bool
 	verbose bool
@@ -67,6 +68,7 @@ type QueryHook struct {
 
 var _ bun.QueryHook = (*QueryHook)(nil)
 
+// NewQueryHook creates a new QueryHook with the given options.
 func NewQueryHook(opts ...Option) *QueryHook {
 	h := &QueryHook{
 		enabled: true,

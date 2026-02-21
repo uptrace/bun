@@ -21,6 +21,7 @@ import (
 	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 )
 
+// QueryHook is a bun.QueryHook that reports query timing via OpenTelemetry.
 type QueryHook struct {
 	attrs            []attribute.KeyValue
 	formatQueries    bool
@@ -32,6 +33,7 @@ type QueryHook struct {
 
 var _ bun.QueryHook = (*QueryHook)(nil)
 
+// NewQueryHook creates a new QueryHook with the given options.
 func NewQueryHook(opts ...Option) *QueryHook {
 	h := new(QueryHook)
 	for _, opt := range opts {

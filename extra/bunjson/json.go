@@ -7,6 +7,7 @@ import (
 
 var _ Provider = (*StdProvider)(nil)
 
+// StdProvider implements the JSON Provider interface using the standard encoding/json package.
 type StdProvider struct{}
 
 func (StdProvider) Marshal(v any) ([]byte, error) {

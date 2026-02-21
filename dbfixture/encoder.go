@@ -14,11 +14,13 @@ type fixtureRows struct {
 	Rows  any    `yaml:"rows"`
 }
 
+// Encoder writes fixture data as YAML.
 type Encoder struct {
 	db  bun.IDB
 	enc *yaml.Encoder
 }
 
+// NewEncoder creates an Encoder that writes YAML to w.
 func NewEncoder(db bun.IDB, w io.Writer) *Encoder {
 	return &Encoder{
 		db:  db,
@@ -26,6 +28,7 @@ func NewEncoder(db bun.IDB, w io.Writer) *Encoder {
 	}
 }
 
+// Encode encodes the given model slices as YAML fixture data.
 func (e *Encoder) Encode(multiRows ...any) error {
 	fixtures := make([]fixtureRows, len(multiRows))
 

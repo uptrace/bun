@@ -1,5 +1,6 @@
 package bunbig
 
+// Cmp provides comparison operations for numeric types.
 type Cmp interface {
 	// equal
 	Eq() bool

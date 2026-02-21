@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// QueryHook is a bun.QueryHook that reports query segments to New Relic.
 type QueryHook struct {
 	baseSegment newrelic.DatastoreSegment
 }

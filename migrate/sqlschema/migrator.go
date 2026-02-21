@@ -7,11 +7,13 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
+// MigratorDialect is a Dialect that can create a Migrator for executing schema changes.
 type MigratorDialect interface {
 	schema.Dialect
 	NewMigrator(db *bun.DB, schemaName string) Migrator
 }
 
+// Migrator renders schema-change operations as SQL.
 type Migrator interface {
 	AppendSQL(b []byte, operation any) ([]byte, error)
 }

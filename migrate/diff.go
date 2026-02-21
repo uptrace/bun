@@ -309,6 +309,7 @@ func (d detector) makeTargetColDef(current, target sqlschema.Column) sqlschema.C
 	return target
 }
 
+// CompareTypeFunc compares two column definitions and reports whether they have the same SQL type.
 type CompareTypeFunc func(sqlschema.Column, sqlschema.Column) bool
 
 // equalSignatures determines if two tables have the same "signature".

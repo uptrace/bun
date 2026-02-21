@@ -15,6 +15,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// Migration represents a single database migration with up and down functions.
 type Migration struct {
 	bun.BaseModel
 
@@ -28,14 +29,17 @@ type Migration struct {
 	Down internalMigrationFunc `bun:"-"`
 }
 
+// String returns the migration name and comment.
 func (m Migration) String() string {
 	return fmt.Sprintf("%s_%s", m.Name, m.Comment)
 }
 
+// IsApplied reports whether the migration has been applied.
 func (m Migration) IsApplied() bool {
 	return m.ID > 0
 }
 
+// MigrationFunc is a function that executes a migration against a database.
 type MigrationFunc func(ctx context.Context, db *bun.DB) error
 
 type internalMigrationFunc func(ctx context.Context, migrator *Migrator, migration *Migration) error
@@ -210,6 +214,7 @@ SELECT 1;
 
 //------------------------------------------------------------------------------
 
+// MigrationSlice is a slice of migrations that provides helper methods for filtering and grouping.
 type MigrationSlice []Migration
 
 func (ms MigrationSlice) String() string {
@@ -288,11 +293,13 @@ func (ms MigrationSlice) LastGroup() *MigrationGroup {
 	return group
 }
 
+// MigrationGroup is a group of migrations that were applied together in a single Migrate call.
 type MigrationGroup struct {
 	ID         int64
 	Migrations MigrationSlice
 }
 
+// IsZero reports whether the group is empty.
 func (g MigrationGroup) IsZero() bool {
 	return g.ID == 0 && len(g.Migrations) == 0
 }
@@ -304,6 +311,7 @@ func (g MigrationGroup) String() string {
 	return fmt.Sprintf("group #%d (%s)", g.ID, g.Migrations)
 }
 
+// MigrationFile represents a generated migration file on disk.
 type MigrationFile struct {
 	Name    string
 	Path    string
@@ -324,8 +332,10 @@ func newMigrationConfig(opts []MigrationOption) *migrationConfig {
 	return cfg
 }
 
+// MigrationOption configures how a migration is executed.
 type MigrationOption func(cfg *migrationConfig)
 
+// WithNopMigration creates a no-op migration that marks itself as applied without running.
 func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.nop = true
