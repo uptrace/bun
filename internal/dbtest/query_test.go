@@ -1879,6 +1879,54 @@ func TestQuery(t *testing.T) {
 					OrderBy("xxx", bun.Order("bad"))
 			},
 		},
+		{
+			id: 195,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN (?)", bun.List([]int{1, 2, 3}))
+			},
+		},
+		{
+			id: 196,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple([]int{1, 2, 3}))
+			},
+		},
+		{
+			id: 197,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("(id1, id2) IN (?)", bun.List([][]int{{1, 2}, {3, 4}}))
+			},
+		},
+		{
+			id: 198,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple([][]int{{1, 2}, {3, 4}}))
+			},
+		},
+		{
+			id: 199,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("name IN (?)", bun.List([]string{"foo", "bar"}))
+			},
+		},
+		{
+			id: 200,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN (?)", bun.List([]int{}))
+			},
+		},
+		{
+			id: 201,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple([]int{}))
+			},
+		},
+		{
+			id: 202,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple(nil))
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
