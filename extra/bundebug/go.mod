@@ -8,7 +8,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/uptrace/bun v1.2.16
+	github.com/uptrace/bun v1.2.17
 )
 
 require (
@@ -19,5 +19,5 @@ require (
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )
