@@ -245,22 +245,30 @@ func (m *Migrator) RunMigration(
 		return fmt.Errorf("%s: up: %w", migration.Name, err)
 	}
 
-	// Remove existing applied record (if any) so rollback won't see
-	// duplicate entries for the same migration.
-	if err := m.MarkUnapplied(ctx, migration); err != nil {
+	// Atomically replace the existing applied record (if any) with a new
+	// one in a fresh migration group. Using a transaction ensures the old
+	// row is preserved if the insert fails.
+	oldID := migration.ID
+	return m.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if oldID != 0 {
+			if _, err := tx.NewDelete().
+				Model(migration).
+				ModelTableExpr(m.table).
+				Where("id = ?", oldID).
+				Exec(ctx); err != nil {
+				return err
+			}
+		}
+
+		migration.ID = 0
+		migration.GroupID = lastGroupID + 1
+
+		_, err := tx.NewInsert().
+			Model(migration).
+			ModelTableExpr(m.table).
+			Exec(ctx)
 		return err
-	}
-
-	// Assign a new group and reset ID so the re-run is recorded as its
-	// own migration group with a fresh auto-increment key.
-	migration.ID = 0
-	migration.GroupID = lastGroupID + 1
-
-	if err := m.MarkApplied(ctx, migration); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
