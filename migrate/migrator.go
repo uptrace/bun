@@ -66,8 +66,6 @@ type Migrator struct {
 	db         *bun.DB
 	migrations *Migrations
 
-	ms MigrationSlice
-
 	table                string
 	locksTable           string
 	markAppliedOnSuccess bool
@@ -81,8 +79,6 @@ func NewMigrator(db *bun.DB, migrations *Migrations, opts ...MigratorOption) *Mi
 	m := &Migrator{
 		db:         db,
 		migrations: migrations,
-
-		ms: migrations.ms,
 
 		table:      defaultTable,
 		locksTable: defaultLocksTable,
@@ -501,7 +497,7 @@ func (m *Migrator) formattedTableName(db *bun.DB) string {
 }
 
 func (m *Migrator) validate() error {
-	if len(m.ms) == 0 {
+	if len(m.migrations.ms) == 0 {
 		return errors.New("migrate: there are no migrations")
 	}
 	return nil
