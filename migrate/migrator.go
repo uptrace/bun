@@ -245,13 +245,30 @@ func (m *Migrator) RunMigration(
 		return fmt.Errorf("%s: up: %w", migration.Name, err)
 	}
 
-	// Insert a new applied record in its own migration group.
-	// The original applied record (if any) is kept so that rolling back
-	// this group does not lose the migration's prior applied state.
-	migration.ID = 0
-	migration.GroupID = lastGroupID + 1
+	// Atomically replace the existing applied record (if any) with a new
+	// one in a fresh migration group. Using a transaction ensures the old
+	// row is preserved if the insert fails.
+	oldID := migration.ID
+	return m.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if oldID != 0 {
+			if _, err := tx.NewDelete().
+				Model(migration).
+				ModelTableExpr(m.table).
+				Where("id = ?", oldID).
+				Exec(ctx); err != nil {
+				return err
+			}
+		}
 
-	return m.MarkApplied(ctx, migration)
+		migration.ID = 0
+		migration.GroupID = lastGroupID + 1
+
+		_, err := tx.NewInsert().
+			Model(migration).
+			ModelTableExpr(m.table).
+			Exec(ctx)
+		return err
+	})
 }
 
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
@@ -552,9 +569,7 @@ func migrationMap(ms MigrationSlice) map[string]*Migration {
 	mp := make(map[string]*Migration)
 	for i := range ms {
 		m := &ms[i]
-		if existing, ok := mp[m.Name]; !ok || m.GroupID > existing.GroupID {
-			mp[m.Name] = m
-		}
+		mp[m.Name] = m
 	}
 	return mp
 }
