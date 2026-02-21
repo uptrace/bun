@@ -45,7 +45,7 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 
 // WithUpsert enables upsert (ON CONFLICT / ON DUPLICATE KEY / MERGE) in MarkApplied.
 // This is required when re-running already-applied migrations via RunMigration.
-// Only enable this if your bun_migrations table has a unique constraint on the name column.
+// Init automatically creates a unique index on the name column.
 func WithUpsert(enabled bool) MigratorOption {
 	return func(m *Migrator) {
 		m.useUpsert = enabled
@@ -138,6 +138,17 @@ func (m *Migrator) Init(ctx context.Context) error {
 		IfNotExists().
 		Exec(ctx); err != nil {
 		return err
+	}
+	if m.useUpsert {
+		if _, err := m.db.NewCreateIndex().
+			Unique().
+			TableExpr(m.table).
+			Index(m.table + "_name_unique").
+			Column("name").
+			IfNotExists().
+			Exec(ctx); err != nil && !isIndexAlreadyExistsError(err) {
+			return err
+		}
 	}
 	if _, err := m.db.NewCreateTable().
 		Model((*migrationLock)(nil)).
@@ -605,6 +616,17 @@ func (m *Migrator) Unlock(ctx context.Context) error {
 		Where("? = ?", bun.Ident("table_name"), tableName).
 		Exec(ctx)
 	return err
+}
+
+// isIndexAlreadyExistsError checks whether err indicates the index already exists.
+// This is needed for dialects that do not support CREATE INDEX IF NOT EXISTS
+// (e.g. MySQL, MSSQL), where a duplicate-index error is expected on repeated Init calls.
+func isIndexAlreadyExistsError(err error) bool {
+	s := strings.ToLower(err.Error())
+	// MySQL:  Error 1061: Duplicate key name '...'
+	// MSSQL:  The index '...' already exists on table '...'
+	// Oracle: ORA-00955: name is already used by an existing object
+	return strings.Contains(s, "duplicate key name") || strings.Contains(s, "already exist")
 }
 
 func migrationMap(ms MigrationSlice) map[string]*Migration {

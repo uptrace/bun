@@ -59,7 +59,8 @@ func New(opts ...DialectOption) *Dialect {
 		feature.DeleteReturning |
 		feature.Merge |
 		feature.MergeReturning |
-		feature.AlterColumnExists
+		feature.AlterColumnExists |
+		feature.CreateIndexIfNotExists
 
 	for _, opt := range opts {
 		opt(d)

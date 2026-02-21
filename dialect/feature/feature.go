@@ -43,7 +43,8 @@ const (
 	MergeReturning
 	AlterColumnExists // ADD/DROP COLUMN IF NOT EXISTS/IF EXISTS
 	FKDefaultOnAction // FK ON UPDATE/ON DELETE has default value: NO ACTION
-	Merge             // MERGE ... USING ... ON ... WHEN ...
+	Merge              // MERGE ... USING ... ON ... WHEN ...
+	CreateIndexIfNotExists // CREATE INDEX IF NOT EXISTS
 )
 
 type NotSupportError struct {
@@ -96,5 +97,6 @@ var flag2str = map[Feature]string{
 	MergeReturning:       "MergeReturning",
 	AlterColumnExists:    "AlterColumnExists",
 	FKDefaultOnAction:    "FKDefaultOnAction",
-	Merge:                "Merge",
+	Merge:                  "Merge",
+	CreateIndexIfNotExists: "CreateIndexIfNotExists",
 }
