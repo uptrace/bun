@@ -146,7 +146,7 @@ func (m *Migrator) Init(ctx context.Context) error {
 			Index(m.table + "_name_unique").
 			Column("name").
 			IfNotExists().
-			Exec(ctx); err != nil && m.db.HasFeature(feature.CreateIndexIfNotExists) {
+			Exec(ctx); err != nil && !isIndexAlreadyExistsError(err) {
 			return err
 		}
 	}
@@ -616,6 +616,17 @@ func (m *Migrator) Unlock(ctx context.Context) error {
 		Where("? = ?", bun.Ident("table_name"), tableName).
 		Exec(ctx)
 	return err
+}
+
+// isIndexAlreadyExistsError checks whether err indicates the index already exists.
+// This is needed for dialects that do not support CREATE INDEX IF NOT EXISTS
+// (e.g. MySQL, MSSQL), where a duplicate-index error is expected on repeated Init calls.
+func isIndexAlreadyExistsError(err error) bool {
+	s := strings.ToLower(err.Error())
+	// MySQL:  Error 1061: Duplicate key name '...'
+	// MSSQL:  The index '...' already exists on table '...'
+	// Oracle: ORA-00955: name is already used by an existing object
+	return strings.Contains(s, "duplicate key name") || strings.Contains(s, "already exist")
 }
 
 func migrationMap(ms MigrationSlice) map[string]*Migration {
