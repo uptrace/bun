@@ -10,41 +10,102 @@ import (
 type Feature = internal.Flag
 
 const (
+	// Common query features.
+
+	// CTE enables Common Table Expressions (WITH ... AS ...) syntax.
 	CTE Feature = 1 << iota
+	// WithValues enables WITH ... (VALUES ...) syntax for inline value lists.
 	WithValues
+	// Returning enables the RETURNING clause to return rows affected by DML statements.
 	Returning
-	InsertReturning
-	Output // mssql
+	// Output enables the OUTPUT clause, the MSSQL equivalent of RETURNING.
+	Output
+	// DefaultPlaceholder enables the DEFAULT keyword as a placeholder in INSERT value lists.
 	DefaultPlaceholder
+	// DoubleColonCast enables PostgreSQL-style :: type cast syntax.
 	DoubleColonCast
+	// ValuesRow enables VALUES ROW(...) syntax.
 	ValuesRow
-	UpdateMultiTable
-	InsertTableAlias
-	UpdateTableAlias
-	DeleteTableAlias
-	AutoIncrement
-	Identity
-	TableCascade
-	TableIdentity
-	TableTruncate
-	InsertOnConflict     // INSERT ... ON CONFLICT
-	InsertOnDuplicateKey // INSERT ... ON DUPLICATE KEY
-	InsertIgnore         // INSERT IGNORE ...
-	TableNotExists
+	// CompositeIn enables WHERE (A, B) IN ((N, NN), (N, NN), ...) composite comparison syntax.
+	CompositeIn
+
+	// SELECT features.
+
+	// OffsetFetch enables OFFSET ... FETCH NEXT syntax (MSSQL).
 	OffsetFetch
+	// SelectExists enables EXISTS subquery expressions.
 	SelectExists
+
+	// INSERT features.
+
+	// InsertReturning enables INSERT ... RETURNING syntax.
+	InsertReturning
+	// InsertTableAlias enables table alias support in INSERT statements.
+	InsertTableAlias
+	// InsertOnConflict enables INSERT ... ON CONFLICT syntax (PostgreSQL, SQLite).
+	InsertOnConflict
+	// InsertOnDuplicateKey enables INSERT ... ON DUPLICATE KEY syntax (MySQL).
+	InsertOnDuplicateKey
+	// InsertIgnore enables INSERT IGNORE syntax to silently skip conflicting rows (MySQL).
+	InsertIgnore
+
+	// UPDATE features.
+
+	// UpdateFromTable enables UPDATE ... FROM ... syntax for joining tables in updates.
 	UpdateFromTable
-	MSSavepoint
-	GeneratedIdentity
-	CompositeIn      // ... WHERE (A,B) IN ((N, NN), (N, NN)...)
-	UpdateOrderLimit // UPDATE ... ORDER BY ... LIMIT ...
-	DeleteOrderLimit // DELETE ... ORDER BY ... LIMIT ...
+	// UpdateMultiTable enables multi-table UPDATE syntax (MySQL).
+	UpdateMultiTable
+	// UpdateTableAlias enables table alias support in UPDATE statements.
+	UpdateTableAlias
+	// UpdateOrderLimit enables UPDATE ... ORDER BY ... LIMIT syntax.
+	UpdateOrderLimit
+
+	// DELETE features.
+
+	// DeleteReturning enables DELETE ... RETURNING syntax.
 	DeleteReturning
+	// DeleteTableAlias enables table alias support in DELETE statements.
+	DeleteTableAlias
+	// DeleteOrderLimit enables DELETE ... ORDER BY ... LIMIT syntax.
+	DeleteOrderLimit
+
+	// MERGE features.
+
+	// Merge enables MERGE ... USING ... ON ... WHEN syntax for upsert operations.
+	Merge
+	// MergeReturning enables MERGE ... RETURNING syntax.
 	MergeReturning
-	AlterColumnExists // ADD/DROP COLUMN IF NOT EXISTS/IF EXISTS
-	FKDefaultOnAction // FK ON UPDATE/ON DELETE has default value: NO ACTION
-	Merge              // MERGE ... USING ... ON ... WHEN ...
-	CreateIndexIfNotExists // CREATE INDEX IF NOT EXISTS
+
+	// Table DDL features.
+
+	// TableCascade enables CASCADE support for DROP TABLE and related operations.
+	TableCascade
+	// TableIdentity enables table-level IDENTITY property (MSSQL).
+	TableIdentity
+	// TableTruncate enables TRUNCATE TABLE support.
+	TableTruncate
+	// TableNotExists enables IF NOT EXISTS / IF EXISTS syntax for CREATE TABLE and DROP TABLE.
+	TableNotExists
+	// AlterColumnExists enables ADD/DROP COLUMN IF NOT EXISTS / IF EXISTS syntax.
+	AlterColumnExists
+	// CreateIndexIfNotExists enables CREATE INDEX IF NOT EXISTS syntax.
+	CreateIndexIfNotExists
+
+	// Column definition features.
+
+	// AutoIncrement enables AUTO_INCREMENT syntax for auto-generated columns (MySQL).
+	AutoIncrement
+	// Identity enables IDENTITY column syntax for auto-generated columns (MSSQL).
+	Identity
+	// GeneratedIdentity enables GENERATED ALWAYS AS IDENTITY syntax (PostgreSQL).
+	GeneratedIdentity
+
+	// Dialect-specific features.
+
+	// FKDefaultOnAction indicates that FK ON UPDATE/ON DELETE has the default value NO ACTION.
+	FKDefaultOnAction
+	// MSSavepoint enables Microsoft SQL Server savepoint support.
+	MSSavepoint
 )
 
 type NotSupportError struct {
@@ -64,39 +125,56 @@ func NewNotSupportError(flag Feature) *NotSupportError {
 }
 
 var flag2str = map[Feature]string{
-	CTE:                  "CTE",
-	WithValues:           "WithValues",
-	Returning:            "Returning",
+	// Common query features.
+	CTE:                "CTE",
+	WithValues:         "WithValues",
+	Returning:          "Returning",
+	Output:             "Output",
+	DefaultPlaceholder: "DefaultPlaceholder",
+	DoubleColonCast:    "DoubleColonCast",
+	ValuesRow:          "ValuesRow",
+	CompositeIn:        "CompositeIn",
+
+	// SELECT features.
+	OffsetFetch:  "OffsetFetch",
+	SelectExists: "SelectExists",
+
+	// INSERT features.
 	InsertReturning:      "InsertReturning",
-	Output:               "Output",
-	DefaultPlaceholder:   "DefaultPlaceholder",
-	DoubleColonCast:      "DoubleColonCast",
-	ValuesRow:            "ValuesRow",
-	UpdateMultiTable:     "UpdateMultiTable",
 	InsertTableAlias:     "InsertTableAlias",
-	UpdateTableAlias:     "UpdateTableAlias",
-	DeleteTableAlias:     "DeleteTableAlias",
-	AutoIncrement:        "AutoIncrement",
-	Identity:             "Identity",
-	TableCascade:         "TableCascade",
-	TableIdentity:        "TableIdentity",
-	TableTruncate:        "TableTruncate",
 	InsertOnConflict:     "InsertOnConflict",
 	InsertOnDuplicateKey: "InsertOnDuplicateKey",
 	InsertIgnore:         "InsertIgnore",
-	TableNotExists:       "TableNotExists",
-	OffsetFetch:          "OffsetFetch",
-	SelectExists:         "SelectExists",
-	UpdateFromTable:      "UpdateFromTable",
-	MSSavepoint:          "MSSavepoint",
-	GeneratedIdentity:    "GeneratedIdentity",
-	CompositeIn:          "CompositeIn",
-	UpdateOrderLimit:     "UpdateOrderLimit",
-	DeleteOrderLimit:     "DeleteOrderLimit",
-	DeleteReturning:      "DeleteReturning",
-	MergeReturning:       "MergeReturning",
-	AlterColumnExists:    "AlterColumnExists",
-	FKDefaultOnAction:    "FKDefaultOnAction",
-	Merge:                  "Merge",
+
+	// UPDATE features.
+	UpdateFromTable:  "UpdateFromTable",
+	UpdateMultiTable: "UpdateMultiTable",
+	UpdateTableAlias: "UpdateTableAlias",
+	UpdateOrderLimit: "UpdateOrderLimit",
+
+	// DELETE features.
+	DeleteReturning:  "DeleteReturning",
+	DeleteTableAlias: "DeleteTableAlias",
+	DeleteOrderLimit: "DeleteOrderLimit",
+
+	// MERGE features.
+	Merge:          "Merge",
+	MergeReturning: "MergeReturning",
+
+	// Table DDL features.
+	TableCascade:           "TableCascade",
+	TableIdentity:          "TableIdentity",
+	TableTruncate:          "TableTruncate",
+	TableNotExists:         "TableNotExists",
+	AlterColumnExists:      "AlterColumnExists",
 	CreateIndexIfNotExists: "CreateIndexIfNotExists",
+
+	// Column definition features.
+	AutoIncrement:     "AutoIncrement",
+	Identity:          "Identity",
+	GeneratedIdentity: "GeneratedIdentity",
+
+	// Dialect-specific features.
+	FKDefaultOnAction: "FKDefaultOnAction",
+	MSSavepoint:       "MSSavepoint",
 }
