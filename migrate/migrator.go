@@ -43,6 +43,15 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 	}
 }
 
+// WithUpsert enables upsert (ON CONFLICT / ON DUPLICATE KEY / MERGE) in MarkApplied.
+// This is required when re-running already-applied migrations via RunMigration.
+// Only enable this if your bun_migrations table has a unique constraint on the name column.
+func WithUpsert(enabled bool) MigratorOption {
+	return func(m *Migrator) {
+		m.useUpsert = enabled
+	}
+}
+
 func WithTemplateData(data any) MigratorOption {
 	return func(m *Migrator) {
 		m.templateData = data
@@ -70,6 +79,7 @@ type Migrator struct {
 	table                string
 	locksTable           string
 	markAppliedOnSuccess bool
+	useUpsert            bool
 	templateData         any
 
 	beforeMigrationHook MigrationHook
@@ -218,6 +228,9 @@ func (m *Migrator) RunMigration(
 	}
 	if migrationName == "" {
 		return errors.New("migrate: migration name cannot be empty")
+	}
+	if !m.useUpsert {
+		return errors.New("migrate: RunMigration requires WithUpsert(true)")
 	}
 
 	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
@@ -437,39 +450,40 @@ func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error 
 	q := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table)
 
-	switch {
-	case m.db.HasFeature(feature.InsertOnConflict):
-		q = q.On("CONFLICT (name) DO UPDATE").
-			Set("group_id = EXCLUDED.group_id").
-			Set("migrated_at = EXCLUDED.migrated_at")
-	case m.db.HasFeature(feature.InsertOnDuplicateKey):
-		q = q.On("DUPLICATE KEY UPDATE").
-			Set("group_id = VALUES(group_id)").
-			Set("migrated_at = VALUES(migrated_at)")
-
-	case m.db.HasFeature(feature.Merge):
-		source := MigrationSlice{*migration}
-		_, err := m.db.NewMerge().
-			Model(migration).
-			ModelTableExpr("? AS migration", bun.Name(m.table)).
-			With("_data", m.db.NewValues(&source)).
-			Using("_data").
-			On("migration.name = _data.name").
-			WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
-				return q.
-					Set("group_id = _data.group_id").
-					Set("migrated_at = _data.migrated_at")
-			}).
-			WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
-				return q.
-					Value("name", "_data.name").
-					Value("group_id", "_data.group_id").
-					Value("migrated_at", "_data.migrated_at")
-			}).
-			Exec(ctx)
-		return err
-	default:
-		return errors.New("migrate: dialect does not support upsert or merge")
+	if m.useUpsert {
+		switch {
+		case m.db.HasFeature(feature.InsertOnConflict):
+			q = q.On("CONFLICT (name) DO UPDATE").
+				Set("group_id = EXCLUDED.group_id").
+				Set("migrated_at = EXCLUDED.migrated_at")
+		case m.db.HasFeature(feature.InsertOnDuplicateKey):
+			q = q.On("DUPLICATE KEY UPDATE").
+				Set("group_id = VALUES(group_id)").
+				Set("migrated_at = VALUES(migrated_at)")
+		case m.db.HasFeature(feature.Merge):
+			source := MigrationSlice{*migration}
+			_, err := m.db.NewMerge().
+				Model(migration).
+				ModelTableExpr("? AS migration", bun.Name(m.table)).
+				With("_data", m.db.NewValues(&source)).
+				Using("_data").
+				On("migration.name = _data.name").
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+					return q.
+						Set("group_id = _data.group_id").
+						Set("migrated_at = _data.migrated_at")
+				}).
+				WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+					return q.
+						Value("name", "_data.name").
+						Value("group_id", "_data.group_id").
+						Value("migrated_at", "_data.migrated_at")
+				}).
+				Exec(ctx)
+			return err
+		default:
+			return errors.New("migrate: dialect does not support upsert or merge")
+		}
 	}
 
 	_, err := q.Exec(ctx)
