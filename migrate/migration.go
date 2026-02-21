@@ -18,8 +18,8 @@ import (
 type Migration struct {
 	bun.BaseModel
 
-	ID         int64 `bun:",pk,autoincrement"`
-	Name       string
+	ID   int64  `bun:",pk,autoincrement"`
+	Name string `bun:",unique"`
 	Comment    string `bun:"-"`
 	GroupID    int64
 	MigratedAt time.Time `bun:",notnull,nullzero,default:current_timestamp"`

@@ -50,6 +50,7 @@ func New(opts ...DialectOption) *Dialect {
 		feature.Output |
 		feature.OffsetFetch |
 		feature.FKDefaultOnAction |
+		feature.Merge |
 		feature.UpdateFromTable |
 		feature.MSSavepoint
 

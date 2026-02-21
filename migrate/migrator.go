@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/feature"
 )
 
 const (
@@ -241,34 +242,25 @@ func (m *Migrator) RunMigration(
 		return nil
 	}
 
+	migration.GroupID = lastGroupID + 1
+
+	if !m.markAppliedOnSuccess {
+		if err := m.MarkApplied(ctx, migration); err != nil {
+			return err
+		}
+	}
+
 	if err := migration.Up(ctx, m, migration); err != nil {
 		return fmt.Errorf("%s: up: %w", migration.Name, err)
 	}
 
-	// Atomically replace the existing applied record (if any) with a new
-	// one in a fresh migration group. Using a transaction ensures the old
-	// row is preserved if the insert fails.
-	oldID := migration.ID
-	return m.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		if oldID != 0 {
-			if _, err := tx.NewDelete().
-				Model(migration).
-				ModelTableExpr(m.table).
-				Where("id = ?", oldID).
-				Exec(ctx); err != nil {
-				return err
-			}
+	if m.markAppliedOnSuccess {
+		if err := m.MarkApplied(ctx, migration); err != nil {
+			return err
 		}
+	}
 
-		migration.ID = 0
-		migration.GroupID = lastGroupID + 1
-
-		_, err := tx.NewInsert().
-			Model(migration).
-			ModelTableExpr(m.table).
-			Exec(ctx)
-		return err
-	})
+	return nil
 }
 
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
@@ -442,9 +434,45 @@ func genMigrationName(name string) (string, error) {
 
 // MarkApplied marks the migration as applied (completed).
 func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error {
-	_, err := m.db.NewInsert().Model(migration).
-		ModelTableExpr(m.table).
-		Exec(ctx)
+	q := m.db.NewInsert().Model(migration).
+		ModelTableExpr(m.table)
+
+	switch {
+	case m.db.HasFeature(feature.InsertOnConflict):
+		q = q.On("CONFLICT (name) DO UPDATE").
+			Set("group_id = EXCLUDED.group_id").
+			Set("migrated_at = EXCLUDED.migrated_at")
+	case m.db.HasFeature(feature.InsertOnDuplicateKey):
+		q = q.On("DUPLICATE KEY UPDATE").
+			Set("group_id = VALUES(group_id)").
+			Set("migrated_at = VALUES(migrated_at)")
+
+	case m.db.HasFeature(feature.Merge):
+		source := MigrationSlice{*migration}
+		_, err := m.db.NewMerge().
+			Model(migration).
+			ModelTableExpr("? AS migration", bun.Name(m.table)).
+			With("_data", m.db.NewValues(&source)).
+			Using("_data").
+			On("migration.name = _data.name").
+			WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+				return q.
+					Set("group_id = _data.group_id").
+					Set("migrated_at = _data.migrated_at")
+			}).
+			WhenInsert("NOT MATCHED", func(q *bun.InsertQuery) *bun.InsertQuery {
+				return q.
+					Value("name", "_data.name").
+					Value("group_id", "_data.group_id").
+					Value("migrated_at", "_data.migrated_at")
+			}).
+			Exec(ctx)
+		return err
+	default:
+		return errors.New("migrate: dialect does not support upsert or merge")
+	}
+
+	_, err := q.Exec(ctx)
 	return err
 }
 
