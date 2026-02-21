@@ -114,9 +114,9 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 
 func (m *Migrations) getOrCreateMigration(name string) *Migration {
 	for i := range m.ms {
-		m := &m.ms[i]
-		if m.Name == name {
-			return m
+		mig := &m.ms[i]
+		if mig.Name == name {
+			return mig
 		}
 	}
 

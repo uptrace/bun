@@ -56,6 +56,8 @@ func TestMigrate(t *testing.T) {
 		{run: testMigrateUpAndDown},
 		{run: testMigrateUpError},
 		{run: testRunMigration},
+		{run: testRunMigrationAssignsNewGroup},
+		{run: testRunMigrationUpErrorPreservesAppliedState},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -168,7 +170,7 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 
 	group, err := m.Migrate(ctx)
 	require.Error(t, err)
-	require.Equal(t, "failed", err.Error())
+	require.Equal(t, "20060102160405: up: failed", err.Error())
 	require.Equal(t, int64(1), group.ID)
 	require.Len(t, group.Migrations, 2)
 	require.Equal(t, []string{"up1", "up2"}, history)
@@ -206,6 +208,7 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 	m := migrate.NewMigrator(db, migrations,
 		migrate.WithTableName(migrationsTable),
 		migrate.WithLocksTableName(migrationLocksTable),
+		migrate.WithUpsert(true),
 	)
 	require.NoError(t, m.Reset(ctx))
 
@@ -215,13 +218,6 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 
 	appliedBefore, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
-	migrationIDs := func(ms migrate.MigrationSlice) []int64 {
-		ids := make([]int64, len(ms))
-		for i := range ms {
-			ids[i] = ms[i].ID
-		}
-		return ids
-	}
 	migrationsWithStatus, err := m.MigrationsWithStatus(ctx)
 	require.NoError(t, err)
 	require.Len(t, migrationsWithStatus, 2)
@@ -233,7 +229,105 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 
 	appliedAfter, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
-	require.ElementsMatch(t, migrationIDs(appliedBefore), migrationIDs(appliedAfter))
+	require.Len(t, appliedAfter, len(appliedBefore))
+}
+
+func testRunMigrationAssignsNewGroup(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	migrations := migrate.NewMigrations()
+	migrations.Add(migrate.Migration{
+		Name: "20060102150405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+	})
+	migrations.Add(migrate.Migration{
+		Name: "20060102160405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+	})
+
+	m := migrate.NewMigrator(db, migrations,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationLocksTable),
+		migrate.WithUpsert(true),
+	)
+	require.NoError(t, m.Reset(ctx))
+
+	// Apply both migrations in group 1.
+	group, err := m.Migrate(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), group.ID)
+
+	// Re-run a migration: it should get a new group ID (2), not reuse group 1 or be 0.
+	err = m.RunMigration(ctx, "20060102150405")
+	require.NoError(t, err)
+
+	applied, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+
+	var rerunGroupID int64
+	for _, a := range applied {
+		if a.Name == "20060102150405" {
+			rerunGroupID = a.GroupID
+		}
+	}
+	require.Equal(t, int64(2), rerunGroupID, "re-run migration should be in a new group")
+
+	// Rollback should only affect the last group (the re-run), not group 1.
+	lastGroup := applied.LastGroup()
+	require.Equal(t, int64(2), lastGroup.ID)
+	require.Len(t, lastGroup.Migrations, 1)
+	require.Equal(t, "20060102150405", lastGroup.Migrations[0].Name)
+}
+
+func testRunMigrationUpErrorPreservesAppliedState(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	upErr := errors.New("up failed")
+	shouldFail := false
+
+	migrations := migrate.NewMigrations()
+	migrations.Add(migrate.Migration{
+		Name: "20060102150405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			if shouldFail {
+				return upErr
+			}
+			return nil
+		},
+	})
+
+	m := migrate.NewMigrator(db, migrations,
+		migrate.WithTableName(migrationsTable),
+		migrate.WithLocksTableName(migrationLocksTable),
+		migrate.WithMarkAppliedOnSuccess(true),
+		migrate.WithUpsert(true),
+	)
+	require.NoError(t, m.Reset(ctx))
+
+	// Apply the migration successfully first.
+	_, err := m.Migrate(ctx)
+	require.NoError(t, err)
+
+	appliedBefore, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+	require.Len(t, appliedBefore, 1)
+
+	// Now make Up fail and re-run.
+	shouldFail = true
+	err = m.RunMigration(ctx, "20060102150405")
+	require.Error(t, err)
+	require.ErrorIs(t, err, upErr)
+
+	// The migration should still be recorded as applied — the old record must not be lost.
+	appliedAfter, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+	require.Len(t, appliedAfter, 1, "failed re-run must not delete the existing applied record")
 }
 
 // newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
