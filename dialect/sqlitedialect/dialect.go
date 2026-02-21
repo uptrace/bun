@@ -42,7 +42,8 @@ func New(opts ...DialectOption) *Dialect {
 		feature.AutoIncrement |
 		feature.CompositeIn |
 		feature.FKDefaultOnAction |
-		feature.DeleteReturning
+		feature.DeleteReturning |
+		feature.CreateIndexIfNotExists
 
 	for _, opt := range opts {
 		opt(d)

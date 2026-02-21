@@ -86,6 +86,7 @@ func (d *Dialect) Init(db *sql.DB) {
 
 	if strings.Contains(version, "MariaDB") {
 		version = semver.MajorMinor("v" + cleanupVersion(version))
+		d.features |= feature.CreateIndexIfNotExists
 		if semver.Compare(version, "v10.0.5") >= 0 {
 			d.features |= feature.DeleteReturning
 		}

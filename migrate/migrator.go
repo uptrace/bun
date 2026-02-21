@@ -45,7 +45,7 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 
 // WithUpsert enables upsert (ON CONFLICT / ON DUPLICATE KEY / MERGE) in MarkApplied.
 // This is required when re-running already-applied migrations via RunMigration.
-// Only enable this if your bun_migrations table has a unique constraint on the name column.
+// Init automatically creates a unique index on the name column.
 func WithUpsert(enabled bool) MigratorOption {
 	return func(m *Migrator) {
 		m.useUpsert = enabled
@@ -138,6 +138,17 @@ func (m *Migrator) Init(ctx context.Context) error {
 		IfNotExists().
 		Exec(ctx); err != nil {
 		return err
+	}
+	if m.useUpsert {
+		if _, err := m.db.NewCreateIndex().
+			Unique().
+			TableExpr(m.table).
+			Index(m.table + "_name_unique").
+			Column("name").
+			IfNotExists().
+			Exec(ctx); err != nil && m.db.HasFeature(feature.CreateIndexIfNotExists) {
+			return err
+		}
 	}
 	if _, err := m.db.NewCreateTable().
 		Model((*migrationLock)(nil)).
