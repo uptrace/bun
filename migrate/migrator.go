@@ -219,7 +219,7 @@ func (m *Migrator) RunMigration(
 		return errors.New("migrate: migration name cannot be empty")
 	}
 
-	migrations, _, err := m.migrationsWithStatus(ctx)
+	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
 	if err != nil {
 		return err
 	}
@@ -241,29 +241,23 @@ func (m *Migrator) RunMigration(
 		return nil
 	}
 
+	if err := migration.Up(ctx, m, migration); err != nil {
+		return fmt.Errorf("%s: up: %w", migration.Name, err)
+	}
+
 	// Remove existing applied record (if any) so rollback won't see
 	// duplicate entries for the same migration.
 	if err := m.MarkUnapplied(ctx, migration); err != nil {
 		return err
 	}
 
-	// Reset ID so auto-increment assigns a new one.
+	// Assign a new group and reset ID so the re-run is recorded as its
+	// own migration group with a fresh auto-increment key.
 	migration.ID = 0
+	migration.GroupID = lastGroupID + 1
 
-	if !m.markAppliedOnSuccess {
-		if err := m.MarkApplied(ctx, migration); err != nil {
-			return err
-		}
-	}
-
-	if err := migration.Up(ctx, m, migration); err != nil {
-		return fmt.Errorf("%s: up: %w", migration.Name, err)
-	}
-
-	if m.markAppliedOnSuccess {
-		if err := m.MarkApplied(ctx, migration); err != nil {
-			return err
-		}
+	if err := m.MarkApplied(ctx, migration); err != nil {
+		return err
 	}
 
 	return nil
