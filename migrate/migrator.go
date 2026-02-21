@@ -241,11 +241,14 @@ func (m *Migrator) RunMigration(
 		return nil
 	}
 
-	// Remove existing applied record (if any) to avoid duplicate key errors
-	// when re-applying a migration that was already marked as applied.
+	// Remove existing applied record (if any) so rollback won't see
+	// duplicate entries for the same migration.
 	if err := m.MarkUnapplied(ctx, migration); err != nil {
 		return err
 	}
+
+	// Reset ID so auto-increment assigns a new one.
+	migration.ID = 0
 
 	if !m.markAppliedOnSuccess {
 		if err := m.MarkApplied(ctx, migration); err != nil {

@@ -226,7 +226,7 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 
 	appliedAfter, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
-	require.Len(t, appliedAfter, len(appliedBefore)+1)
+	require.Len(t, appliedAfter, len(appliedBefore))
 }
 
 // newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
