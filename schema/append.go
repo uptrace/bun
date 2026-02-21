@@ -7,6 +7,7 @@ import (
 	"github.com/uptrace/bun/dialect"
 )
 
+// Deprecated: Use List or Tuple instead.
 func In(slice any) QueryAppender {
 	v := reflect.ValueOf(slice)
 	if v.Kind() != reflect.Slice {

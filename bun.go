@@ -2,6 +2,8 @@ package bun
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
@@ -119,6 +121,8 @@ func SetLogger(logger internal.Logging) {
 }
 
 // In wraps a slice so it can be used with the IN clause.
+//
+// Deprecated: Use bun.List or bun.Tuple instead.
 func In(slice any) schema.QueryAppender {
 	return schema.In(slice)
 }
@@ -126,4 +130,93 @@ func In(slice any) schema.QueryAppender {
 // NullZero forces zero values to be treated as NULL when building queries.
 func NullZero(value any) schema.QueryAppender {
 	return schema.NullZero(value)
+}
+
+//------------------------------------------------------------------------------
+
+// ListValues formats a Go slice as a comma-separated SQL list (e.g., "1, 2, 3").
+type ListValues struct {
+	slice any
+}
+
+var _ schema.QueryAppender = ListValues{}
+
+// List creates a ListValues from a Go slice for use in SQL IN expressions.
+func List(slice any) ListValues {
+	return ListValues{
+		slice: slice,
+	}
+}
+
+// AppendQuery appends the comma-separated list values to the byte slice.
+func (in ListValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+	v := reflect.ValueOf(in.slice)
+	if v.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("ch: List(non-slice %T)", in.slice)
+	}
+
+	b = appendList(gen, b, v)
+	return b, nil
+}
+
+//------------------------------------------------------------------------------
+
+// TupleValues formats a Go slice as a parenthesized SQL tuple (e.g., "(1, 2, 3)").
+type TupleValues struct {
+	slice any
+}
+
+var _ schema.QueryAppender = TupleValues{}
+
+// Tuple creates a TupleValues from a slice for use in SQL expressions.
+func Tuple(slice any) TupleValues {
+	return TupleValues{
+		slice: slice,
+	}
+}
+
+// AppendQuery appends the parenthesized tuple to the byte slice.
+func (in TupleValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+	v := reflect.ValueOf(in.slice)
+	if !v.IsValid() {
+		b = append(b, "(NULL)"...)
+		return b, nil
+	}
+	if v.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("ch: Tuple(non-slice %T)", in.slice)
+	}
+
+	b = append(b, '(')
+	b = appendList(gen, b, v)
+	b = append(b, ')')
+	return b, nil
+}
+
+func appendList(gen schema.QueryGen, b []byte, slice reflect.Value) []byte {
+	sliceLen := slice.Len()
+
+	if sliceLen == 0 {
+		return append(b, "NULL"...)
+	}
+
+	for i := range sliceLen {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+
+		elem := slice.Index(i)
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		switch elem.Kind() {
+		case reflect.Array, reflect.Slice:
+			b = append(b, '(')
+			b = appendList(gen, b, elem)
+			b = append(b, ')')
+		default:
+			b = gen.AppendValue(b, elem)
+		}
+	}
+	return b
 }
