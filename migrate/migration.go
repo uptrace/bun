@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"sort"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -335,13 +335,13 @@ func WithNopMigration() MigrationOption {
 //------------------------------------------------------------------------------
 
 func sortAsc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Name < ms[j].Name
+	slices.SortFunc(ms, func(a, b Migration) int {
+		return strings.Compare(a.Name, b.Name)
 	})
 }
 
 func sortDesc(ms MigrationSlice) {
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].Name > ms[j].Name
+	slices.SortFunc(ms, func(a, b Migration) int {
+		return strings.Compare(b.Name, a.Name)
 	})
 }

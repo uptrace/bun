@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -514,6 +515,9 @@ func (m *Migrator) exec(
 	}
 
 	for _, query := range queries {
+		if strings.TrimSpace(query) == "" {
+			continue
+		}
 		if _, err := db.ExecContext(ctx, query); err != nil {
 			return err
 		}
