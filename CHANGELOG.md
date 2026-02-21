@@ -1,3 +1,22 @@
+## [1.2.17](github.com/uptrace/bun/compare/v1.2.16...v1.2.17) (2026-02-21)
+
+
+### Bug Fixes
+
+* migrator exec error propagation ([#1320](/github.com/uptrace/bun/issues/1320)) ([b40f603](github.com/uptrace/bun/commits/b40f603ffc4595894c2178ab1841122abaead50d))
+* OrderAscNullsFirst mapping (fixes [#1305](/github.com/uptrace/bun/issues/1305)) ([43b6af2](github.com/uptrace/bun/commits/43b6af233feebed72a911b03dbccd63247c262de))
+* panic in indirectAsKey when loading complex models. TypeOf(v) returns nil ([2788c5b](github.com/uptrace/bun/commits/2788c5b2e052b21cb1abf9af2a6da8a6ad43993c))
+* RunMigration marks migration as applied after running ([#1330](/github.com/uptrace/bun/issues/1330)) ([990c2eb](github.com/uptrace/bun/commits/990c2ebf34e3e2c59979943fabdda2892c2c3dcc))
+
+
+### Features
+
+* add Tuple and List ([#1331](/github.com/uptrace/bun/issues/1331)) ([5c2b3d1](github.com/uptrace/bun/commits/5c2b3d150688ca6861d20fd590ea20cd415749a3))
+* create unique index on migration name column in Migrator.Init ([#1332](/github.com/uptrace/bun/issues/1332)) ([44ac056](github.com/uptrace/bun/commits/44ac056ac35dc396dcbb09252ce69f1ccd9b0250))
+* **update:** use DEFAULT instead of NULL on databases that support it ([#1315](/github.com/uptrace/bun/issues/1315)) ([cabcffd](github.com/uptrace/bun/commits/cabcffd47e35141064e4e6e15ea97675393098a0))
+
+
+
 ## [1.2.16](github.com/uptrace/bun/compare/v1.2.15...v1.2.16) (2025-11-20)
 
 
