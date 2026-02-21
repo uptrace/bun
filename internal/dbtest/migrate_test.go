@@ -208,6 +208,7 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 	m := migrate.NewMigrator(db, migrations,
 		migrate.WithTableName(migrationsTable),
 		migrate.WithLocksTableName(migrationLocksTable),
+		migrate.WithUpsert(true),
 	)
 	require.NoError(t, m.Reset(ctx))
 
@@ -252,6 +253,7 @@ func testRunMigrationAssignsNewGroup(t *testing.T, db *bun.DB) {
 	m := migrate.NewMigrator(db, migrations,
 		migrate.WithTableName(migrationsTable),
 		migrate.WithLocksTableName(migrationLocksTable),
+		migrate.WithUpsert(true),
 	)
 	require.NoError(t, m.Reset(ctx))
 
@@ -304,6 +306,7 @@ func testRunMigrationUpErrorPreservesAppliedState(t *testing.T, db *bun.DB) {
 		migrate.WithTableName(migrationsTable),
 		migrate.WithLocksTableName(migrationLocksTable),
 		migrate.WithMarkAppliedOnSuccess(true),
+		migrate.WithUpsert(true),
 	)
 	require.NoError(t, m.Reset(ctx))
 
