@@ -1,3 +1,6 @@
+// Package feature defines flags that represent optional SQL dialect capabilities.
+// Each dialect (PostgreSQL, MySQL, SQLite, MSSQL) declares which features it supports
+// by combining flags with the bitwise OR operator.
 package feature
 
 import (
@@ -7,6 +10,7 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
+// Feature is a bit flag representing an optional SQL dialect capability.
 type Feature = internal.Flag
 
 const (
@@ -108,6 +112,8 @@ const (
 	MSSavepoint
 )
 
+// NotSupportError is returned when an operation requires a feature
+// that the current dialect does not support.
 type NotSupportError struct {
 	Flag Feature
 }
@@ -120,6 +126,7 @@ func (err *NotSupportError) Error() string {
 	return fmt.Sprintf("bun: feature %s is not supported by current dialect", name)
 }
 
+// NewNotSupportError returns a NotSupportError for the given feature flag.
 func NewNotSupportError(flag Feature) *NotSupportError {
 	return &NotSupportError{Flag: flag}
 }
