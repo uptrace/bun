@@ -164,17 +164,17 @@ func (m *Migrator) Reset(ctx context.Context) error {
 func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	cfg := newMigrationConfig(opts)
 
+	group := new(MigrationGroup)
+
 	if err := m.validate(); err != nil {
-		return nil, err
+		return group, err
 	}
 
 	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
 	if err != nil {
-		return nil, err
+		return group, err
 	}
 	migrations = migrations.Unapplied()
-
-	group := new(MigrationGroup)
 	if len(migrations) == 0 {
 		return group, nil
 	}
@@ -194,7 +194,7 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 
 		if !cfg.nop && migration.Up != nil {
 			if err := migration.Up(ctx, m, migration); err != nil {
-				return group, err
+				return group, fmt.Errorf("%s: up: %w", migration.Name, err)
 			}
 		}
 
@@ -258,7 +258,7 @@ func (m *Migrator) RunMigration(
 	}
 
 	if err := migration.Up(ctx, m, migration); err != nil {
-		return err
+		return fmt.Errorf("%s: up: %w", migration.Name, err)
 	}
 
 	if m.markAppliedOnSuccess {
@@ -273,16 +273,18 @@ func (m *Migrator) RunMigration(
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
 	cfg := newMigrationConfig(opts)
 
+	lastGroup := new(MigrationGroup)
+
 	if err := m.validate(); err != nil {
-		return nil, err
+		return lastGroup, err
 	}
 
 	migrations, err := m.MigrationsWithStatus(ctx)
 	if err != nil {
-		return nil, err
+		return lastGroup, err
 	}
 
-	lastGroup := migrations.LastGroup()
+	lastGroup = migrations.LastGroup()
 
 	for i := len(lastGroup.Migrations) - 1; i >= 0; i-- {
 		migration := &lastGroup.Migrations[i]
@@ -295,7 +297,7 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 
 		if !cfg.nop && migration.Down != nil {
 			if err := migration.Down(ctx, m, migration); err != nil {
-				return lastGroup, err
+				return lastGroup, fmt.Errorf("%s: down: %w", migration.Name, err)
 			}
 		}
 

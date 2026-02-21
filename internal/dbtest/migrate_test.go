@@ -168,7 +168,7 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 
 	group, err := m.Migrate(ctx)
 	require.Error(t, err)
-	require.Equal(t, "failed", err.Error())
+	require.Equal(t, "20060102160405: up: failed", err.Error())
 	require.Equal(t, int64(1), group.ID)
 	require.Len(t, group.Migrations, 2)
 	require.Equal(t, []string{"up1", "up2"}, history)
