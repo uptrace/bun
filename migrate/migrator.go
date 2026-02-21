@@ -207,8 +207,9 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 	return group, nil
 }
 
-// RunMigration runs the up migration with the given ID without marking it as applied.
+// RunMigration runs the up migration with the given name and marks it as applied.
 // It runs the migration even if it is already marked as applied.
+// The migration is added as a new applied record, creating a separate migration group.
 func (m *Migrator) RunMigration(
 	ctx context.Context, migrationName string, opts ...MigrationOption,
 ) error {
@@ -243,7 +244,29 @@ func (m *Migrator) RunMigration(
 		return nil
 	}
 
-	return migration.Up(ctx, m, migration)
+	// Remove existing applied record (if any) to avoid duplicate key errors
+	// when re-applying a migration that was already marked as applied.
+	if err := m.MarkUnapplied(ctx, migration); err != nil {
+		return err
+	}
+
+	if !m.markAppliedOnSuccess {
+		if err := m.MarkApplied(ctx, migration); err != nil {
+			return err
+		}
+	}
+
+	if err := migration.Up(ctx, m, migration); err != nil {
+		return err
+	}
+
+	if m.markAppliedOnSuccess {
+		if err := m.MarkApplied(ctx, migration); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {

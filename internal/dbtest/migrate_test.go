@@ -215,13 +215,6 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 
 	appliedBefore, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
-	migrationIDs := func(ms migrate.MigrationSlice) []int64 {
-		ids := make([]int64, len(ms))
-		for i := range ms {
-			ids[i] = ms[i].ID
-		}
-		return ids
-	}
 	migrationsWithStatus, err := m.MigrationsWithStatus(ctx)
 	require.NoError(t, err)
 	require.Len(t, migrationsWithStatus, 2)
@@ -233,7 +226,7 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 
 	appliedAfter, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
-	require.ElementsMatch(t, migrationIDs(appliedBefore), migrationIDs(appliedAfter))
+	require.Len(t, appliedAfter, len(appliedBefore)+1)
 }
 
 // newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
