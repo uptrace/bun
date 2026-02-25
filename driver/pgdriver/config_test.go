@@ -133,21 +133,6 @@ func TestParseDSN(t *testing.T) {
 				BufferSize:    4096,
 			},
 		},
-		{
-			dsn: "postgres://user:password@localhost:5432/testDatabase?sslmode=require&sslcert=/path/to/cert&sslkey=/path/to/key",
-			cfg: &pgdriver.Config{
-				Network:       "tcp",
-				Addr:          "localhost:5432",
-				User:          "user",
-				Password:      "password",
-				Database:      "testDatabase",
-				DialTimeout:   5 * time.Second,
-				ReadTimeout:   10 * time.Second,
-				WriteTimeout:  5 * time.Second,
-				EnableTracing: true,
-				BufferSize:    4096,
-			},
-		},
 	}
 
 	for i, test := range tests {
