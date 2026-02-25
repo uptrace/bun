@@ -1,7 +1,16 @@
 package pgdriver_test
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -137,4 +146,60 @@ func TestParseDSN(t *testing.T) {
 			require.Equal(t, test.cfg, cfg)
 		})
 	}
+}
+
+func TestParseSSLClientCertInDSN(t *testing.T) {
+	cert, key := generateTestCertFiles(t)
+	pair, err := tls.LoadX509KeyPair(cert, key)
+	require.NoError(t, err)
+
+	dsn := fmt.Sprintf("postgres://user:password@localhost:5432/testDatabase?sslmode=require&sslcert=%s&sslkey=%s", cert, key)
+	c := pgdriver.NewConnector(pgdriver.WithDSN(dsn))
+
+	cfg := c.Config()
+	require.NotNil(t, cfg.TLSConfig)
+	require.Len(t, cfg.TLSConfig.Certificates, 1)
+	require.Len(t, cfg.TLSConfig.Certificates[0].Certificate, 1)
+	require.Equal(t, pair.Certificate[0], cfg.TLSConfig.Certificates[0].Certificate[0])
+}
+
+func generateTestCertFiles(t *testing.T) (certPath, keyPath string) {
+	t.Helper()
+
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "test"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(time.Hour),
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir() // automatically cleaned up after test
+
+	certPath = filepath.Join(dir, "client.crt")
+	keyPath = filepath.Join(dir, "client.key")
+
+	if err := os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	return certPath, keyPath
 }

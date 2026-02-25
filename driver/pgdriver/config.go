@@ -372,6 +372,14 @@ func parseDSN(dsn string) ([]Option, error) {
 			}
 			tlsConfig.RootCAs = certPool
 		}
+		// support client certs (see https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-SSLCERT)
+		if sslCert, sslKey := q.string("sslcert"), q.string("sslkey"); sslCert != "" && sslKey != "" && tlsConfig != nil {
+			cert, err := tls.LoadX509KeyPair(sslCert, sslKey)
+			if err != nil {
+				return nil, fmt.Errorf("pgdriver: failed to load client certificate: %w", err)
+			}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		}
 		opts = append(opts, WithTLSConfig(tlsConfig))
 	}
 
