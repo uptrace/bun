@@ -115,8 +115,10 @@ func (p *Parser) ReadIdentifier() (string, bool) {
 		s := p.i + 1
 		if ind := bytes.IndexByte(p.b[s:], ')'); ind != -1 {
 			b := p.b[s : s+ind]
-			p.i = s + ind + 1
-			return internal.String(b), false
+			if isIdent(b) {
+				p.i = s + ind + 1
+				return internal.String(b), false
+			}
 		}
 	}
 
@@ -166,4 +168,27 @@ func isNum(c byte) bool {
 
 func isAlpha(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+// isIdent reports whether b is a valid identifier consisting of
+// letters, digits, and underscores, with at least one letter.
+func isIdent(b []byte) bool {
+	if len(b) == 0 {
+		return false
+	}
+	hasAlpha := false
+	for i, c := range b {
+		if isAlpha(c) {
+			hasAlpha = true
+			continue
+		}
+		if isNum(c) {
+			continue
+		}
+		if c == '_' && i > 0 {
+			continue
+		}
+		return false
+	}
+	return hasAlpha
 }

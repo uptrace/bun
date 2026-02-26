@@ -333,12 +333,30 @@ func TestParser_ReadIdentifier(t *testing.T) {
 		numeric bool
 	}{
 		{
-			name: "read identifier closed by parenthesis",
+			name: "read valid parenthesized identifier",
+			fields: fields{
+				b: []byte("(name)"),
+				i: 0,
+			},
+			want:    "name",
+			numeric: false,
+		},
+		{
+			name: "skip invalid parenthesized content with placeholders",
+			fields: fields{
+				b: []byte("(?, ?)"),
+				i: 0,
+			},
+			want:    "",
+			numeric: false,
+		},
+		{
+			name: "skip parenthesized content with special chars",
 			fields: fields{
 				b: []byte("(?)"),
 				i: 0,
 			},
-			want:    "?",
+			want:    "",
 			numeric: false,
 		},
 		{
@@ -432,6 +450,29 @@ func TestParser_ReadIdentifier(t *testing.T) {
 			got, gotNumeric := p.ReadIdentifier()
 			require.Equal(t, tt.want, got)
 			require.Equal(t, tt.numeric, gotNumeric)
+		})
+	}
+}
+
+func Test_isIdent(t *testing.T) {
+	tests := []struct {
+		name string
+		b    []byte
+		want bool
+	}{
+		{"valid alpha", []byte("name"), true},
+		{"valid mixed", []byte("Table1"), true},
+		{"valid with underscore", []byte("my_var"), true},
+		{"empty", []byte(""), false},
+		{"only digits", []byte("123"), false},
+		{"contains question mark", []byte("?, ?"), false},
+		{"single question mark", []byte("?"), false},
+		{"starts with underscore", []byte("_name"), false},
+		{"contains space", []byte("a b"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, isIdent(tt.b))
 		})
 	}
 }
