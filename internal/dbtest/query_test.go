@@ -1927,6 +1927,24 @@ func TestQuery(t *testing.T) {
 				return db.NewSelect().Where("id IN ?", bun.Tuple(nil))
 			},
 		},
+		{
+			id: 203,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple([][]byte{
+					[]byte("hello"),
+					[]byte("world"),
+				}))
+			},
+		},
+		{
+			id: 204,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Where("id IN ?", bun.Tuple([][16]byte{
+					{0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8},
+					{0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8},
+				}))
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
