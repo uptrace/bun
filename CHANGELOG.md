@@ -1,3 +1,13 @@
+## [1.2.18](github.com/uptrace/bun/compare/v1.2.17...v1.2.18) (2026-02-28)
+
+
+### Bug Fixes
+
+* handle []byte and [N]byte in Tuple, separate List from Tuple imp… ([#1340](/github.com/uptrace/bun/issues/1340)) ([bec98b9](github.com/uptrace/bun/commits/bec98b975ad093cd34c0a7821120350e475b901b))
+* validate parenthesized content in ReadIdentifier to prevent ?(?, ?) misparse ([#1338](/github.com/uptrace/bun/issues/1338)) ([b8da15b](github.com/uptrace/bun/commits/b8da15b391fd3b78f543125dc574ad32a240780c)), closes [#1337](github.com/uptrace/bun/issues/1337)
+
+
+
 ## [1.2.17](github.com/uptrace/bun/compare/v1.2.16...v1.2.17) (2026-02-21)
 
 
