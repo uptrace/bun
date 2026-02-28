@@ -8,7 +8,7 @@ replace github.com/uptrace/bun => ../..
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/uptrace/bun v1.2.17
+	github.com/uptrace/bun v1.2.18
 )
 
 require (
