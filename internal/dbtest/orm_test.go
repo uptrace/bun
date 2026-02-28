@@ -566,7 +566,7 @@ func testHasOneRelationWithOpts(t *testing.T, db *bun.DB) {
 				},
 			},
 		}).
-		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Where("u.id IN ?", bun.Tuple([]int64{1, 2})).
 		Scan(ctx)
 	require.NoError(t, err)
 	require.Len(t, outUsers1, 2)
@@ -584,7 +584,7 @@ func testHasOneRelationWithOpts(t *testing.T, db *bun.DB) {
 				return q.Where("profile.lang = ?", "ru")
 			},
 		}).
-		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Where("u.id IN ?", bun.Tuple([]int64{1, 2})).
 		Scan(ctx)
 	require.NoError(t, err)
 	require.Len(t, outUsers2, 1)
@@ -641,7 +641,7 @@ func testHasManyRelationWithOpts(t *testing.T, db *bun.DB) {
 				},
 			},
 		}).
-		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Where("u.id IN ?", bun.Tuple([]int64{1, 2})).
 		Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, []*User{
@@ -658,7 +658,7 @@ func testHasManyRelationWithOpts(t *testing.T, db *bun.DB) {
 				return q.Where("profile.lang = ?", "ru")
 			},
 		}).
-		Where("u.id IN (?)", bun.In([]int64{1, 2})).
+		Where("u.id IN ?", bun.Tuple([]int64{1, 2})).
 		Scan(ctx)
 	require.NoError(t, err)
 	require.Equal(t, []*User{

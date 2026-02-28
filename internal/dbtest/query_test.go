@@ -407,13 +407,13 @@ func TestQuery(t *testing.T) {
 		{
 			id: 40,
 			query: func(db *bun.DB) schema.QueryAppender {
-				return db.NewSelect().Where("id IN (?)", bun.In([]int{1, 2, 3}))
+				return db.NewSelect().Where("id IN ?", bun.Tuple([]int{1, 2, 3}))
 			},
 		},
 		{
 			id: 41,
 			query: func(db *bun.DB) schema.QueryAppender {
-				return db.NewSelect().Where("(id1, id2) IN (?)", bun.In([][]int{{1, 2}, {3, 4}}))
+				return db.NewSelect().Where("(id1, id2) IN ?", bun.Tuple([][]int{{1, 2}, {3, 4}}))
 			},
 		},
 		{
@@ -1051,7 +1051,7 @@ func TestQuery(t *testing.T) {
 					[]byte("foo"),
 					[]byte("bar"),
 				}
-				return db.NewSelect().Where("x IN (?)", bun.In(values))
+				return db.NewSelect().Where("x IN ?", bun.Tuple(values))
 			},
 		},
 		{

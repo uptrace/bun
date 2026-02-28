@@ -38,17 +38,17 @@ func (in *Inspector) Inspect(ctx context.Context) (sqlschema.Database, error) {
 
 	exclude := in.ExcludeTables
 	if len(exclude) == 0 {
-		// Avoid getting NOT LIKE ALL (ARRAY[NULL]) if bun.In() is called with an empty slice.
+		// Avoid getting NOT LIKE ALL (ARRAY[NULL]) if bun.List() is called with an empty slice.
 		exclude = []string{""}
 	}
 
 	var tables []*InformationSchemaTable
-	if err := in.db.NewRaw(sqlInspectTables, in.SchemaName, bun.In(exclude)).Scan(ctx, &tables); err != nil {
+	if err := in.db.NewRaw(sqlInspectTables, in.SchemaName, bun.List(exclude)).Scan(ctx, &tables); err != nil {
 		return dbSchema, err
 	}
 
 	var fks []*ForeignKey
-	if err := in.db.NewRaw(sqlInspectForeignKeys, in.SchemaName, bun.In(exclude), bun.In(exclude)).Scan(ctx, &fks); err != nil {
+	if err := in.db.NewRaw(sqlInspectForeignKeys, in.SchemaName, bun.List(exclude), bun.List(exclude)).Scan(ctx, &fks); err != nil {
 		return dbSchema, err
 	}
 	dbSchema.ForeignKeys = make(map[sqlschema.ForeignKey]string, len(fks))
@@ -165,7 +165,7 @@ type PrimaryKey struct {
 
 const (
 	// sqlInspectTables retrieves all user-defined tables in the selected schema.
-	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
+	// Pass bun.List([]string{...}) to exclude tables from this inspection or bun.List([]string{''}) to include all results.
 	sqlInspectTables = `
 SELECT
 	"t".table_schema,
@@ -258,7 +258,7 @@ ORDER BY "table_schema", "table_name", "column_name"
 `
 
 	// sqlInspectForeignKeys get FK definitions for user-defined tables.
-	// Pass bun.In([]string{...}) to exclude tables from this inspection or bun.In([]string{''}) to include all results.
+	// Pass bun.List([]string{...}) to exclude tables from this inspection or bun.List([]string{''}) to include all results.
 	sqlInspectForeignKeys = `
 WITH
 	"schemas" AS (

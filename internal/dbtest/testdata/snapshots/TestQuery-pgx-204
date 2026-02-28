@@ -1,0 +1,1 @@
+SELECT * WHERE (id IN ('\x6ba7b8109dad11d180b400c04fd430c8', '\x6ba7b8119dad11d180b400c04fd430c8'))
