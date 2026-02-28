@@ -155,8 +155,30 @@ func (in ListValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err e
 		return nil, fmt.Errorf("ch: List(non-slice %T)", in.slice)
 	}
 
-	b = appendList(gen, b, v)
+	b = appendValues(gen, b, v)
 	return b, nil
+}
+
+func appendValues(gen schema.QueryGen, b []byte, slice reflect.Value) []byte {
+	sliceLen := slice.Len()
+
+	if sliceLen == 0 {
+		return append(b, "NULL"...)
+	}
+
+	for i := range sliceLen {
+		if i > 0 {
+			b = append(b, ", "...)
+		}
+
+		elem := slice.Index(i)
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		b = gen.AppendValue(b, elem)
+	}
+	return b
 }
 
 //------------------------------------------------------------------------------
@@ -187,12 +209,12 @@ func (in TupleValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 	}
 
 	b = append(b, '(')
-	b = appendList(gen, b, v)
+	b = appendTuples(gen, b, v)
 	b = append(b, ')')
 	return b, nil
 }
 
-func appendList(gen schema.QueryGen, b []byte, slice reflect.Value) []byte {
+func appendTuples(gen schema.QueryGen, b []byte, slice reflect.Value) []byte {
 	sliceLen := slice.Len()
 
 	if sliceLen == 0 {
@@ -211,9 +233,13 @@ func appendList(gen schema.QueryGen, b []byte, slice reflect.Value) []byte {
 
 		switch elem.Kind() {
 		case reflect.Array, reflect.Slice:
-			b = append(b, '(')
-			b = appendList(gen, b, elem)
-			b = append(b, ')')
+			if elem.Type().Elem().Kind() == reflect.Uint8 {
+				b = gen.AppendValue(b, elem)
+			} else {
+				b = append(b, '(')
+				b = appendTuples(gen, b, elem)
+				b = append(b, ')')
+			}
 		default:
 			b = gen.AppendValue(b, elem)
 		}
