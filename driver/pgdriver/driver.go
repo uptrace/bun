@@ -219,6 +219,10 @@ func (cn *Conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, 
 	return newStmt(cn, name, rowDesc), nil
 }
 
+// Begin starts a transaction with default options using a background context.
+//
+// Deprecated: Begin uses context.Background() which loses cancellation, timeout,
+// and tracing propagation. Use BeginTx with an explicit context instead.
 func (cn *Conn) Begin() (driver.Tx, error) {
 	return cn.BeginTx(context.Background(), driver.TxOptions{})
 }

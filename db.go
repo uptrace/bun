@@ -629,6 +629,9 @@ func (db *DB) RunInTx(
 }
 
 // Begin starts a transaction with default options using a background context.
+//
+// Deprecated: Begin uses context.Background() which loses cancellation, timeout,
+// and tracing propagation. Use BeginTx with an explicit context instead.
 func (db *DB) Begin() (Tx, error) {
 	return db.BeginTx(context.Background(), nil)
 }
