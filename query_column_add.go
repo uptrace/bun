@@ -140,7 +140,7 @@ func (q *AddColumnQuery) Exec(ctx context.Context, dest ...any) (sql.Result, err
 	}
 
 	// if a comment is propagated via the context, use it
-	setCommentFromContext(ctx, q)
+	setCommentFromContext[*AddColumnQuery](ctx, q)
 
 	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
