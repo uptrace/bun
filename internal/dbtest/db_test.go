@@ -262,6 +262,7 @@ func TestDB(t *testing.T) {
 		{testSelectMap},
 		{testSelectMapSlice},
 		{testSelectStruct},
+		{testSelectStructNilPtr},
 		{testSelectNestedStructValue},
 		{testSelectNestedStructPtr},
 		{testSelectStructSlice},
@@ -442,6 +443,48 @@ func testSelectStruct(t *testing.T, db *bun.DB) {
 	err = db.NewSelect().ColumnExpr("1 as unknown_column").Scan(ctx, model)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Model does not have column")
+}
+
+func testSelectStructNilPtr(t *testing.T, db *bun.DB) {
+	type Model struct {
+		Num int
+		Str string
+	}
+
+	// Scan a row into a nil **Model: the inner pointer should be allocated and populated.
+	var model *Model
+	err := db.NewSelect().
+		ColumnExpr("10 AS num, 'hello' AS str").
+		Scan(ctx, &model)
+	require.NoError(t, err)
+	require.NotNil(t, model)
+	require.Equal(t, 10, model.Num)
+	require.Equal(t, "hello", model.Str)
+
+	// No rows + nil **Model: should NOT return ErrNoRows; inner pointer stays nil.
+	var empty *Model
+	err = db.NewSelect().
+		TableExpr("(SELECT 42 AS num) AS t").
+		Where("1 = 2").
+		Scan(ctx, &empty)
+	require.NoError(t, err)
+	require.Nil(t, empty)
+
+	err = db.NewSelect().
+		Model(&empty).
+		TableExpr("(SELECT 42 AS num) AS t").
+		Where("1 = 2").
+		Scan(ctx)
+	require.NoError(t, err)
+	require.Nil(t, empty)
+
+	// Regression: a non-nil *Model (existing behaviour) must still return ErrNoRows.
+	nonNil := new(Model)
+	err = db.NewSelect().
+		TableExpr("(SELECT 42 AS num) AS t").
+		Where("1 = 2").
+		Scan(ctx, nonNil)
+	require.Equal(t, sql.ErrNoRows, err)
 }
 
 func testSelectNestedStructValue(t *testing.T, db *bun.DB) {

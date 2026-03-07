@@ -122,7 +122,7 @@ func _newModel(db *DB, dest any, scan bool) (Model, error) {
 		}
 		mapPtr := v.Addr().Interface().(*map[string]any)
 		return newMapModel(db, mapPtr), nil
-	case reflect.Struct:
+	case reflect.Struct, reflect.Pointer:
 		return newStructTableModelValue(db, dest, v), nil
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {

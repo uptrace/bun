@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -630,7 +631,24 @@ func (q *baseQuery) _scan(
 	}
 
 	if numRow == 0 && hasDest && isSingleRowModel(model) {
-		return nil, sql.ErrNoRows
+		var rv reflect.Value
+		if v, ok := model.Value().(reflect.Value); ok {
+			rv = v
+		} else {
+			rv = reflect.ValueOf(model.Value())
+		}
+		for rv.Kind() == reflect.Pointer {
+			rv = rv.Elem()
+		}
+		switch rv.Kind() {
+		case reflect.Invalid:
+		case reflect.Map, reflect.Slice:
+			if !rv.IsNil() {
+				return nil, sql.ErrNoRows
+			}
+		default:
+			return nil, sql.ErrNoRows
+		}
 	}
 	return driver.RowsAffected(numRow), nil
 }
