@@ -376,7 +376,7 @@ func testSelectCount(t *testing.T, db *bun.DB) {
 
 	count, err := q.Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 3, count)
+	require.Equal(t, int64(3), count)
 }
 
 func testSelectMap(t *testing.T, db *bun.DB) {
@@ -920,7 +920,7 @@ func testFKViolation(t *testing.T, db *bun.DB) {
 
 	n, err := db.NewSelect().Model((*Deck)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 }
 
 func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
@@ -971,7 +971,7 @@ func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
 
 	n, err := db.NewSelect().Model((*Deck)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 
 	_, err = db.NewInsert().Model(&User{ID: 1, Type: "admin", Name: "root"}).Exec(ctx)
 	require.NoError(t, err)
@@ -992,11 +992,11 @@ func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
 
 	n, err = db.NewSelect().Model(&Deck{}).Where("user_id = 1").Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 
 	n, err = db.NewSelect().Model(&Deck{}).Where("user_id = 2").Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, n)
+	require.Equal(t, int64(1), n)
 
 	// Delete user and check for FK delete
 	_, err = db.NewDelete().Model(&User{}).Where("id = ?", 2).Exec(ctx)
@@ -1004,7 +1004,7 @@ func testWithForeignKeysAndRules(t *testing.T, db *bun.DB) {
 
 	n, err = db.NewSelect().Model(&Deck{}).Where("user_id = 2").Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 }
 
 func testWithForeignKeys(t *testing.T, db *bun.DB) {
@@ -1056,7 +1056,7 @@ func testWithForeignKeys(t *testing.T, db *bun.DB) {
 
 	n, err := db.NewSelect().Model((*Deck)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 
 	_, err = db.NewInsert().Model(&User{ID: 1, Type: "admin", Name: "root"}).Exec(ctx)
 	require.NoError(t, err)
@@ -1502,7 +1502,7 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 				var models []Model
 				count, err := tx.NewSelect().Model(&models).ScanAndCount(ctx)
 				require.NoError(t, err)
-				require.Equal(t, 0, count)
+				require.Equal(t, int64(0), count)
 				return err
 			})
 			require.NoError(t, err)
@@ -1513,7 +1513,7 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 		models := []Model{}
 		count, err := db.NewSelect().Table("models").Limit(10).ScanAndCount(ctx, &models)
 		require.NoError(t, err)
-		require.Equal(t, 0, count)
+		require.Equal(t, int64(0), count)
 		require.Equal(t, 0, len(models))
 	})
 
@@ -1528,7 +1528,7 @@ func testScanAndCount(t *testing.T, db *bun.DB) {
 		var dest []Model
 		count, err := db.NewSelect().Model(&dest).ScanAndCount(ctx)
 		require.NoError(t, err)
-		require.Equal(t, 2, count)
+		require.Equal(t, int64(2), count)
 		require.Equal(t, 2, len(dest))
 	})
 }
@@ -1737,10 +1737,10 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 	})
 	require.Error(t, err)
 
-	var count int
+	var count int64
 	err = db.NewSelect().Model((*Counter)(nil)).Scan(ctx, &count)
 	require.NoError(t, err)
-	require.Equal(t, 0, count)
+	require.Equal(t, int64(0), count)
 
 	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		err := tx.RunInTx(ctx, nil, func(ctx context.Context, sp bun.Tx) error {
@@ -1767,7 +1767,7 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 
 	count, err = db.NewSelect().Model((*Counter)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 2, count)
+	require.Equal(t, int64(2), count)
 
 	err = db.ResetModel(ctx, (*Counter)(nil))
 	require.NoError(t, err)
@@ -1805,7 +1805,7 @@ func testRunInTxAndSavepoint(t *testing.T, db *bun.DB) {
 
 	count, err = db.NewSelect().Model((*Counter)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 4, count)
+	require.Equal(t, int64(4), count)
 }
 
 type anotherString string

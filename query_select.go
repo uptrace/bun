@@ -337,13 +337,13 @@ func (q *SelectQuery) OrderExpr(query string, args ...any) *SelectQuery {
 }
 
 // Limit sets the maximum number of rows to return.
-func (q *SelectQuery) Limit(n int) *SelectQuery {
+func (q *SelectQuery) Limit(n int64) *SelectQuery {
 	q.setLimit(n)
 	return q
 }
 
 // Offset sets the number of rows to skip before returning results.
-func (q *SelectQuery) Offset(n int) *SelectQuery {
+func (q *SelectQuery) Offset(n int64) *SelectQuery {
 	q.setOffset(n)
 	return q
 }
@@ -996,7 +996,7 @@ func (q *SelectQuery) afterSelectHook(ctx context.Context) error {
 }
 
 // Count executes the query and returns the number of rows that match.
-func (q *SelectQuery) Count(ctx context.Context) (int, error) {
+func (q *SelectQuery) Count(ctx context.Context) (int64, error) {
 	if q.err != nil {
 		return 0, q.err
 	}
@@ -1014,7 +1014,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 	query := internal.String(queryBytes)
 	ctx, event := q.db.beforeQuery(ctx, qq, query, nil, query, q.model)
 
-	var num int
+	var num int64
 	err = q.resolveConn(ctx, q).QueryRowContext(ctx, query).Scan(&num)
 
 	q.db.afterQuery(ctx, event, nil, err)
@@ -1023,7 +1023,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int, error) {
 }
 
 // ScanAndCount executes the query, scans results into dest, and returns the total count.
-func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int, error) {
+func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int64, error) {
 	if q.offset == 0 && q.limit == 0 {
 		// If there is no limit and offset, we can use a single query to get the count and scan
 		if res, err := q.scanResult(ctx, dest...); err != nil {
@@ -1031,7 +1031,7 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int, error
 		} else if n, err := res.RowsAffected(); err != nil {
 			return 0, err
 		} else {
-			return int(n), nil
+			return n, nil
 		}
 	}
 	if q.conn == nil {
@@ -1042,8 +1042,8 @@ func (q *SelectQuery) ScanAndCount(ctx context.Context, dest ...any) (int, error
 
 func (q *SelectQuery) scanAndCountConcurrently(
 	ctx context.Context, dest ...any,
-) (int, error) {
-	var count int
+) (int64, error) {
+	var count int64
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var firstErr error
@@ -1087,7 +1087,7 @@ func (q *SelectQuery) scanAndCountConcurrently(
 	return count, firstErr
 }
 
-func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...any) (int, error) {
+func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...any) (int64, error) {
 	var firstErr error
 
 	// Don't scan results if the user explicitly set Limit(-1).

@@ -227,7 +227,7 @@ func (q *UpdateQuery) OrderExpr(query string, args ...any) *UpdateQuery {
 	return q
 }
 
-func (q *UpdateQuery) Limit(n int) *UpdateQuery {
+func (q *UpdateQuery) Limit(n int64) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
 		return q

@@ -156,7 +156,7 @@ func (q *DeleteQuery) ForceDelete() *DeleteQuery {
 }
 
 // ------------------------------------------------------------------------------
-func (q *DeleteQuery) Limit(n int) *DeleteQuery {
+func (q *DeleteQuery) Limit(n int64) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
