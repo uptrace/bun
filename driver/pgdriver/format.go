@@ -53,6 +53,18 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 			} else {
 				dst = append(dst, '\'')
 			}
+		case '-':
+			dst = append(dst, '-')
+			if p.Valid() && p.b[p.i] == '-' {
+				// Line comment: copy until end of line without processing its contents.
+				for p.Valid() {
+					ch := p.Next()
+					dst = append(dst, ch)
+					if ch == '\n' {
+						break
+					}
+				}
+			}
 		default:
 			dst = append(dst, c)
 		}
