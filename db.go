@@ -698,7 +698,7 @@ func (tx Tx) rollbackSP() error {
 
 // Exec executes a query without returning rows within this transaction.
 func (tx Tx) Exec(query string, args ...any) (sql.Result, error) {
-	return tx.ExecContext(context.TODO(), query, args...)
+	return tx.ExecContext(tx.ctx, query, args...)
 }
 
 // ExecContext executes a query without returning rows within this transaction.
@@ -714,7 +714,7 @@ func (tx Tx) ExecContext(
 
 // Query executes a query returning rows within this transaction.
 func (tx Tx) Query(query string, args ...any) (*sql.Rows, error) {
-	return tx.QueryContext(context.TODO(), query, args...)
+	return tx.QueryContext(tx.ctx, query, args...)
 }
 
 // QueryContext executes a query returning rows within this transaction.
@@ -730,7 +730,7 @@ func (tx Tx) QueryContext(
 
 // QueryRow executes a query expected to return at most one row within this transaction.
 func (tx Tx) QueryRow(query string, args ...any) *sql.Row {
-	return tx.QueryRowContext(context.TODO(), query, args...)
+	return tx.QueryRowContext(tx.ctx, query, args...)
 }
 
 // QueryRowContext executes a query expected to return at most one row within this transaction.
