@@ -152,7 +152,7 @@ func List(slice any) ListValues {
 func (in ListValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	v := reflect.ValueOf(in.slice)
 	if v.Kind() != reflect.Slice {
-		return nil, fmt.Errorf("ch: List(non-slice %T)", in.slice)
+		return nil, fmt.Errorf("bun: List(non-slice %T)", in.slice)
 	}
 
 	b = appendValues(gen, b, v)
@@ -205,7 +205,7 @@ func (in TupleValues) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 		return b, nil
 	}
 	if v.Kind() != reflect.Slice {
-		return nil, fmt.Errorf("ch: Tuple(non-slice %T)", in.slice)
+		return nil, fmt.Errorf("bun: Tuple(non-slice %T)", in.slice)
 	}
 
 	b = append(b, '(')
