@@ -21,10 +21,8 @@ func main() {
 	}
 
 	// Create a Bun db on top of it.
-	db := bun.NewDB(sqldb, mssqldialect.New())
-
-	// Print all queries to stdout.
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqldb, mssqldialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	var rnd float64
 

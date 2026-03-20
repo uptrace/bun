@@ -34,12 +34,12 @@ func main() {
 	dsn := "postgres://uptrace:uptrace@localhost:5432/uptrace?sslmode=disable"
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
-	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bunotel.NewQueryHook(
-		bunotel.WithDBName("uptrace"),
-		bunotel.WithFormattedQueries(true),
-	))
-	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqldb, pgdialect.New()).
+		WithQueryHook(bunotel.NewQueryHook(
+			bunotel.WithDBName("uptrace"),
+			bunotel.WithFormattedQueries(true),
+		))
+	// db.WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	if err := db.ResetModel(ctx, (*TestModel)(nil)); err != nil {
 		panic(err)

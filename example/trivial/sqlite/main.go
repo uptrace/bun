@@ -21,10 +21,8 @@ func main() {
 	}
 
 	// Create a Bun db on top of it.
-	db := bun.NewDB(sqlite, sqlitedialect.New())
-
-	// Print all queries to stdout.
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqlite, sqlitedialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	var rnd int64
 

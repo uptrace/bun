@@ -18,8 +18,8 @@ func main() {
 	dsn := "postgres://postgres:@localhost:5432/postgres?sslmode=disable"
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
-	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqldb, pgdialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	ln := pgdriver.NewListener(db)
 
