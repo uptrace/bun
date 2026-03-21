@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -25,8 +26,8 @@ type Migration struct {
 	GroupID    int64
 	MigratedAt time.Time `bun:",notnull,nullzero,default:current_timestamp"`
 
-	Up   internalMigrationFunc `bun:"-"`
-	Down internalMigrationFunc `bun:"-"`
+	Up   MigrationFunc `bun:"-"`
+	Down MigrationFunc `bun:"-"`
 }
 
 // String returns the migration name and comment.
@@ -42,45 +43,26 @@ func (m Migration) IsApplied() bool {
 // MigrationFunc is a function that executes a migration against a database.
 type MigrationFunc func(ctx context.Context, db *bun.DB) error
 
-type internalMigrationFunc func(ctx context.Context, migrator *Migrator, migration *Migration) error
-
-func wrapGoMigrationFunc(fn MigrationFunc) internalMigrationFunc {
-	return func(ctx context.Context, migrator *Migrator, migration *Migration) error {
-		if migrator.beforeMigrationHook != nil {
-			if err := migrator.beforeMigrationHook(ctx, migrator.db, migration); err != nil {
-				return err
-			}
-		}
-
-		if err := fn(ctx, migrator.db); err != nil {
-			return err
-		}
-
-		if migrator.afterMigrationHook != nil {
-			if err := migrator.afterMigrationHook(ctx, migrator.db, migration); err != nil {
-				return err
-			}
-		}
-
-		return nil
+func newSQLMigrationFunc(fsys fs.FS, name string) (MigrationFunc, error) {
+	sqlFile, err := fsys.Open(name)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
-	return func(ctx context.Context, migrator *Migrator, migration *Migration) error {
-		sqlFile, err := fsys.Open(name)
-		if err != nil {
-			return err
-		}
+	contents, err := io.ReadAll(sqlFile)
+	if err != nil {
+		return nil, err
+	}
 
-		contents, err := io.ReadAll(sqlFile)
-		if err != nil {
-			return err
-		}
+	tmpl := sync.OnceValues(func() (*template.Template, error) {
+		return template.New(name).Parse(string(contents))
+	})
 
+	return func(ctx context.Context, db *bun.DB) error {
 		var reader io.Reader = bytes.NewReader(contents)
-		if migrator.templateData != nil {
-			buf, err := renderTemplate(contents, migrator.templateData)
+
+		if data := ctx.Value(templateDataKey); data != nil {
+			buf, err := renderTemplate(tmpl, data)
 			if err != nil {
 				return err
 			}
@@ -118,15 +100,16 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 
 		var idb bun.IConn
 
-		isTx := strings.HasSuffix(name, ".tx.up.sql") || strings.HasSuffix(name, ".tx.down.sql")
+		isTx := strings.HasSuffix(name, ".tx.up.sql") ||
+			strings.HasSuffix(name, ".tx.down.sql")
 		if isTx {
-			tx, err := migrator.db.BeginTx(ctx, nil)
+			tx, err := db.BeginTx(ctx, nil)
 			if err != nil {
 				return err
 			}
 			idb = tx
 		} else {
-			conn, err := migrator.db.Conn(ctx)
+			conn, err := db.Conn(ctx)
 			if err != nil {
 				return err
 			}
@@ -154,25 +137,34 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 			panic("not reached")
 		}()
 
-		execErr = migrator.exec(ctx, idb, migration, queries)
-		if execErr != nil {
-			return execErr
+		for _, query := range queries {
+			if strings.TrimSpace(query) == "" {
+				continue
+			}
+			if _, execErr = db.ExecContext(ctx, query); execErr != nil {
+				return execErr
+			}
 		}
+
 		return retErr
-	}
+	}, nil
 }
 
-func renderTemplate(contents []byte, templateData any) (*bytes.Buffer, error) {
-	tmpl, err := template.New("migration").Parse(string(contents))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse template: %w", err)
-	}
+//------------------------------------------------------------------------------
 
+type contextKey struct{}
+
+var templateDataKey = contextKey{}
+
+func renderTemplate(parseFunc func() (*template.Template, error), templateData any) (*bytes.Buffer, error) {
+	tmpl, err := parseFunc()
+	if err != nil {
+		return nil, fmt.Errorf("parse template: %w", err)
+	}
 	var rendered bytes.Buffer
 	if err := tmpl.Execute(&rendered, templateData); err != nil {
-		return nil, fmt.Errorf("failed to execute template: %w", err)
+		return nil, fmt.Errorf("execute template: %w", err)
 	}
-
 	return &rendered, nil
 }
 
@@ -293,6 +285,15 @@ func (ms MigrationSlice) LastGroup() *MigrationGroup {
 	return group
 }
 
+func (ms MigrationSlice) Index(migrationName string) int {
+	for i := range ms {
+		if ms[i].Name == migrationName {
+			return i
+		}
+	}
+	return -1
+}
+
 // MigrationGroup is a group of migrations that were applied together in a single Migrate call.
 type MigrationGroup struct {
 	ID         int64
@@ -321,7 +322,8 @@ type MigrationFile struct {
 //------------------------------------------------------------------------------
 
 type migrationConfig struct {
-	nop bool
+	nop          bool
+	templateData any
 }
 
 func newMigrationConfig(opts []MigrationOption) *migrationConfig {
@@ -339,6 +341,13 @@ type MigrationOption func(cfg *migrationConfig)
 func WithNopMigration() MigrationOption {
 	return func(cfg *migrationConfig) {
 		cfg.nop = true
+	}
+}
+
+// WithSQLTemplateData provides data for templated SQL migrations.
+func WithSQLTemplateData(templateData any) MigrationOption {
+	return func(cfg *migrationConfig) {
+		cfg.templateData = templateData
 	}
 }
 

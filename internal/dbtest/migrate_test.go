@@ -79,22 +79,22 @@ func testMigrateUpAndDown(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up1")
 			return nil
 		},
-		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Down: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "down1")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up2")
 			return nil
 		},
-		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Down: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "down2")
 			return nil
 		},
@@ -129,33 +129,33 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up1")
 			return nil
 		},
-		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Down: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "down1")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up2")
 			return errors.New("failed")
 		},
-		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Down: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "down2")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102170405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up3")
 			return errors.New("failed")
 		},
-		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Down: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "down3")
 			return nil
 		},
@@ -192,14 +192,14 @@ func testRunMigration(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up1")
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			history = append(history, "up2")
 			return nil
 		},
@@ -239,13 +239,13 @@ func testRunMigrationAssignsNewGroup(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			return nil
 		},
 	})
 	migrations.Add(migrate.Migration{
 		Name: "20060102160405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			return nil
 		},
 	})
@@ -294,7 +294,7 @@ func testRunMigrationUpErrorPreservesAppliedState(t *testing.T, db *bun.DB) {
 	migrations := migrate.NewMigrations()
 	migrations.Add(migrate.Migration{
 		Name: "20060102150405",
-		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+		Up: func(ctx context.Context, db *bun.DB) error {
 			if shouldFail {
 				return upErr
 			}
