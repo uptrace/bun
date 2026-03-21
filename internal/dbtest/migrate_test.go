@@ -59,6 +59,7 @@ func TestMigrate(t *testing.T) {
 		{run: testRunMigrationAssignsNewGroup},
 		{run: testRunMigrationUpErrorPreservesAppliedState},
 		{run: testHooks},
+		{run: testSQLMigrations},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -380,7 +381,7 @@ func testHooks(t *testing.T, db *bun.DB) {
 					hooks++
 					return nil
 				}))
-			require.NoError(t, m.Reset(ctx))
+			require.NoError(t, m.Reset(t.Context()))
 
 			require.NoError(t, tt.run(t.Context(), m))
 			require.Equal(t, tt.wantHooks, hooks, "beforeMigrationHook must run on Migrate")
@@ -388,6 +389,66 @@ func testHooks(t *testing.T, db *bun.DB) {
 			_, err := m.Rollback(t.Context())
 			require.NoError(t, err, "rollback")
 			require.Equal(t, tt.wantHooks*2, hooks, "beforeMigrationHook must run on Rollback")
+		})
+	}
+}
+
+func testSQLMigrations(t *testing.T, db *bun.DB) {
+	for _, tt := range []struct {
+		name         string
+		up, down     string
+		templateData any
+		table        string
+	}{
+		{
+			name:  "plain sql migration",
+			up:    "CREATE TABLE books (isbn CHAR)",
+			down:  "DROP TABLE books",
+			table: "books",
+		},
+		{
+			name: "with template data",
+			up:   "CREATE TABLE {{ .Prefix }}books (isbn CHAR)",
+			down: "DROP TABLE {{ .Prefix }}books",
+			templateData: map[string]string{
+				"Prefix": "my_",
+			},
+			table: "my_books",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer db.NewDropTable().Table(tt.table).Exec(t.Context())
+
+			tmp := t.TempDir()
+			name := "20060102150405_test"
+			var err error
+
+			err = os.WriteFile(filepath.Join(tmp, name+".up.sql"), []byte(tt.up), 0o644)
+			require.NoError(t, err, "create up migration")
+
+			err = os.WriteFile(filepath.Join(tmp, name+".down.sql"), []byte(tt.down), 0o644)
+			require.NoError(t, err, "create down migration")
+
+			migrations := migrate.NewMigrations()
+			err = migrations.Discover(os.DirFS(tmp))
+			require.NoError(t, err, "discover")
+
+			m := migrate.NewMigrator(db, migrations,
+				migrate.WithTableName(migrationsTable),
+				migrate.WithLocksTableName(migrationLocksTable))
+			require.NoError(t, m.Reset(t.Context()))
+
+			_, err = m.Migrate(t.Context(), migrate.WithSQLTemplateData(tt.templateData))
+			require.NoError(t, err, "migrate")
+
+			_, err = db.NewSelect().Table(tt.table).Exec(t.Context())
+			require.NoError(t, err, "books table must exist after migration")
+
+			_, err = m.Rollback(t.Context(), migrate.WithSQLTemplateData(tt.templateData))
+			require.NoError(t, err, "rollback")
+
+			_, err = db.NewSelect().Table(tt.table).Exec(t.Context())
+			require.Error(t, err, "books table must not exist after rollback")
 		})
 	}
 }

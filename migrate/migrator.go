@@ -336,6 +336,9 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 		}
 
 		if !cfg.nop && migration.Down != nil {
+			if cfg.templateData != nil {
+				ctx = context.WithValue(ctx, templateDataKey, cfg.templateData)
+			}
 			if err := migration.Down(ctx, m.db); err != nil {
 				return lastGroup, fmt.Errorf("%s: down: %w", migration.Name, err)
 			}
