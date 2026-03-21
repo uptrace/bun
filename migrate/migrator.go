@@ -54,6 +54,7 @@ func WithUpsert(enabled bool) MigratorOption {
 }
 
 // WithTemplateData sets data passed to SQL migration templates during rendering.
+// Use [WithSQLTemplateData] to re-use the [Migrator] instance with different data.
 func WithTemplateData(data any) MigratorOption {
 	return func(m *Migrator) {
 		m.templateData = data
@@ -248,7 +249,7 @@ func (m *Migrator) RunMigration(
 }
 
 func (m *Migrator) migrateGroup(ctx context.Context, group *MigrationGroup, opts ...MigrationOption) error {
-	cfg := newMigrationConfig(opts)
+	cfg := m.newMigrationConfig(opts)
 
 	migrations := group.Migrations[:]
 	group.Migrations = group.Migrations[:0]
@@ -305,7 +306,7 @@ func (m *Migrator) migrateGroup(ctx context.Context, group *MigrationGroup, opts
 
 // Rollback rolls back the last migration group.
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
-	cfg := newMigrationConfig(opts)
+	cfg := m.newMigrationConfig(opts)
 
 	lastGroup := new(MigrationGroup)
 

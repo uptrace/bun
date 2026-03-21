@@ -326,8 +326,10 @@ type migrationConfig struct {
 	templateData any
 }
 
-func newMigrationConfig(opts []MigrationOption) *migrationConfig {
-	cfg := new(migrationConfig)
+func (m *Migrator) newMigrationConfig(opts []MigrationOption) *migrationConfig {
+	cfg := &migrationConfig{
+		templateData: m.templateData,
+	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
