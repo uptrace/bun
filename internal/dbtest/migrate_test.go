@@ -58,6 +58,7 @@ func TestMigrate(t *testing.T) {
 		{run: testRunMigration},
 		{run: testRunMigrationAssignsNewGroup},
 		{run: testRunMigrationUpErrorPreservesAppliedState},
+		{run: testHooks},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -169,8 +170,7 @@ func testMigrateUpError(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 
 	group, err := m.Migrate(ctx)
-	require.Error(t, err)
-	require.Equal(t, "20060102160405: up: failed", err.Error())
+	require.ErrorContains(t, err, "20060102160405: up: failed")
 	require.Equal(t, int64(1), group.ID)
 	require.Len(t, group.Migrations, 2)
 	require.Equal(t, []string{"up1", "up2"}, history)
@@ -328,6 +328,68 @@ func testRunMigrationUpErrorPreservesAppliedState(t *testing.T, db *bun.DB) {
 	appliedAfter, err := m.AppliedMigrations(ctx)
 	require.NoError(t, err)
 	require.Len(t, appliedAfter, 1, "failed re-run must not delete the existing applied record")
+}
+
+// testHooks tests that BeforeHook and AfterHook are executed before each migration and rollback.
+func testHooks(t *testing.T, db *bun.DB) {
+	nop := func(ctx context.Context, db *bun.DB) error {
+		return nil
+	}
+	for _, tt := range []struct {
+		name      string                                               // Test case name.
+		ms        migrate.MigrationSlice                               // Migrations to register.
+		run       func(ctx context.Context, m *migrate.Migrator) error // Run UP migrations.
+		wantHooks int                                                  // How many hooks tt.run is supposed to trigger.
+	}{
+		{
+			name: "migrate",
+			ms: migrate.MigrationSlice{
+				{Name: "20060102150405", Up: nop, Down: nop},
+				{Name: "20060102150406", Up: nop, Down: nop},
+			},
+			run: func(ctx context.Context, m *migrate.Migrator) error {
+				_, err := m.Migrate(t.Context())
+				return err
+			},
+			wantHooks: 2,
+		},
+		{
+			name: "run migration",
+			ms: migrate.MigrationSlice{
+				{Name: "20060102150405", Up: nop, Down: nop},
+				{Name: "20060102150406", Up: nop, Down: nop},
+			},
+			run: func(ctx context.Context, m *migrate.Migrator) error {
+				return m.RunMigration(ctx, "20060102150405")
+			},
+			wantHooks: 1,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			migrations := migrate.NewMigrations()
+			for _, m := range tt.ms {
+				migrations.Add(m)
+			}
+
+			var hooks int
+			m := migrate.NewMigrator(db, migrations,
+				migrate.WithTableName(migrationsTable),
+				migrate.WithLocksTableName(migrationLocksTable),
+				migrate.WithUpsert(true),
+				migrate.BeforeMigration(func(context.Context, bun.IConn, *migrate.Migration) error {
+					hooks++
+					return nil
+				}))
+			require.NoError(t, m.Reset(ctx))
+
+			require.NoError(t, tt.run(t.Context(), m))
+			require.Equal(t, tt.wantHooks, hooks, "beforeMigrationHook must run on Migrate")
+
+			_, err := m.Rollback(t.Context())
+			require.NoError(t, err, "rollback")
+			require.Equal(t, tt.wantHooks*2, hooks, "beforeMigrationHook must run on Rollback")
+		})
+	}
 }
 
 // newAutoMigratorOrSkip creates an AutoMigrator configured to use test migratins/locks
