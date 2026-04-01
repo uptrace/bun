@@ -41,12 +41,6 @@ func (j *relationJoin) applyTo(q *SelectQuery) {
 	j.columns, q.columns = q.columns, columns
 }
 
-func (j *relationJoin) Select(ctx context.Context, q *SelectQuery) error {
-	switch j.Relation.Type {
-	}
-	panic("not reached")
-}
-
 func (j *relationJoin) selectMany(ctx context.Context, q *SelectQuery) error {
 	q = j.manyQuery(q)
 	if q == nil {
