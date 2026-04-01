@@ -39,7 +39,7 @@ func main() {
 			bunotel.WithDBName("uptrace"),
 			bunotel.WithFormattedQueries(true),
 		))
-	// db.WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	// db = db.WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	if err := db.ResetModel(ctx, (*TestModel)(nil)); err != nil {
 		panic(err)
