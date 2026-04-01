@@ -311,7 +311,7 @@ func (db *DB) WithQueryHook(hook QueryHook) *DB {
 	return clone
 }
 
-// DEPRECATED: use WithQueryHook instead
+// Deprecated: use WithQueryHook instead
 func (db *DB) AddQueryHook(hook QueryHook) {
 	if initer, ok := hook.(queryHookIniter); ok {
 		initer.Init(db)
@@ -319,7 +319,7 @@ func (db *DB) AddQueryHook(hook QueryHook) {
 	db.queryHooks = append(db.queryHooks, hook)
 }
 
-// DEPRECATED: use WithQueryHook instead
+// Deprecated: use WithQueryHook instead
 func (db *DB) ResetQueryHooks() {
 	for i := range db.queryHooks {
 		db.queryHooks[i] = nil
