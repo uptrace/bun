@@ -106,7 +106,15 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 		}
 
 		migration := m.getOrCreateMigration(name)
+
+		if migration.Comment != "" && migration.Comment != comment {
+			return fmt.Errorf(
+				"migrate: duplicate migration ID %s (files %s and %s)",
+				name, migration.Comment, comment,
+			)
+		}
 		migration.Comment = comment
+
 		migrationFunc := newSQLMigrationFunc(fsys, path)
 
 		if strings.HasSuffix(path, ".up.sql") {
