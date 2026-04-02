@@ -26,8 +26,8 @@ func main() {
 	}
 	sqlite.SetMaxOpenConns(1)
 
-	db := bun.NewDB(sqlite, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqlite, sqlitedialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	var tableName, tableAlias, pks, tablePKs, columns, tableColumns string
 

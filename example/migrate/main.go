@@ -24,11 +24,11 @@ func main() {
 		panic(err)
 	}
 
-	db := bun.NewDB(sqldb, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(
-		bundebug.WithEnabled(false),
-		bundebug.FromEnv(),
-	))
+	db := bun.NewDB(sqldb, sqlitedialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(
+			bundebug.WithEnabled(false),
+			bundebug.FromEnv(),
+		))
 
 	templateData := map[string]string{
 		"Prefix": "example_",

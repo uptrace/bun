@@ -46,8 +46,8 @@ func main() {
 	dsn := "postgres://postgres:@localhost:5432/test?sslmode=disable"
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
-	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqldb, pgdialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	// Register models for the fixture.
 	db.RegisterModel((*Book)(nil))
