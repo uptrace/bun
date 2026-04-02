@@ -53,6 +53,12 @@ func formatQuery(query string, args []driver.NamedValue) (string, error) {
 			} else {
 				dst = append(dst, '\'')
 			}
+		case '-':
+			if b, ok := p.LineComment(); ok {
+				dst = append(dst, b...)
+			} else {
+				dst = append(dst, '-')
+			}
 		default:
 			dst = append(dst, c)
 		}
@@ -198,6 +204,29 @@ func (p *parser) QuotedString() ([]byte, bool) {
 			break
 		}
 		c = next
+	}
+
+	p.i = end
+	b := p.b[start:end]
+
+	return b, true
+}
+
+// LineComment checks if the next byte is '-' and, if so, returns the full line
+// comment (including both '-' characters) without processing its contents.
+func (p *parser) LineComment() ([]byte, bool) {
+	if p.i >= len(p.b) || p.b[p.i] != '-' {
+		return nil, false
+	}
+
+	start := p.i - 1
+	end := len(p.b)
+
+	for i := p.i; i < len(p.b); i++ {
+		if p.b[i] == '\n' {
+			end = i + 1
+			break
+		}
 	}
 
 	p.i = end

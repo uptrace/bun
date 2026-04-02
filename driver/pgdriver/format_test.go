@@ -58,6 +58,11 @@ SELECT * FROM passwords;--'`,
 			args:   []any{int64(-1)},
 			wanted: "-1",
 		},
+		{
+			query:  "-- comment with quote (don't)\nselect $1",
+			args:   []any{"hello"},
+			wanted: "-- comment with quote (don't)\nselect 'hello'",
+		},
 	}
 
 	for _, test := range tests {
