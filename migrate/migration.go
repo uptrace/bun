@@ -107,8 +107,10 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 				return fmt.Errorf("bun: unknown directive: %q", b)
 			}
 
-			query = append(query, b...)
-			query = append(query, '\n')
+			if len(bytes.TrimSpace(b)) > 0 {
+				query = append(query, b...)
+				query = append(query, '\n')
+			}
 		}
 
 		if len(query) > 0 {
