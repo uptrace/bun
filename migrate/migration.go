@@ -98,8 +98,10 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 			if bytes.HasPrefix(b, []byte(prefix)) {
 				b = b[len(prefix):]
 				if bytes.Equal(b, []byte("split")) {
-					queries = append(queries, string(query))
-					query = query[:0]
+					if len(query) > 0 {
+						queries = append(queries, string(query))
+						query = query[:0]
+					}
 					continue
 				}
 				return fmt.Errorf("bun: unknown directive: %q", b)
