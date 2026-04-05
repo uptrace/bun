@@ -141,7 +141,7 @@ func (bmi *BunModelInspector) Inspect(ctx context.Context) (Database, error) {
 		}
 
 		var columns []Column
-		for _, f := range t.Fields {
+		for _, f := range t.FieldMap {
 
 			sqlType, length, err := parseLen(f.CreateTableSQLType)
 			if err != nil {
