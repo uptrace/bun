@@ -668,26 +668,21 @@ func (q *SelectQuery) appendQuery(
 		}
 	}
 
-	if hasUnion {
+	if wrapUnion {
+		b = append(b, ')')
+	}
+
+	for _, u := range q.union {
+		b = append(b, u.expr...)
+		if wrapUnion {
+			b = append(b, '(')
+		}
+		b, err = u.query.AppendQuery(gen, b)
+		if err != nil {
+			return nil, err
+		}
 		if wrapUnion {
 			b = append(b, ')')
-		}
-
-		for _, u := range q.union {
-			b = append(b, u.expr...)
-
-			if wrapUnion {
-				b = append(b, '(')
-			}
-
-			b, err = u.query.AppendQuery(gen, b)
-			if err != nil {
-				return nil, err
-			}
-
-			if wrapUnion {
-				b = append(b, ')')
-			}
 		}
 	}
 

@@ -1408,8 +1408,6 @@ func testUnion(t *testing.T, db *bun.DB) {
 		TableExpr("(?) as n", union).
 		Order("n")
 
-	fmt.Println(query.String())
-
 	var got []int
 	require.NoError(t, query.Scan(ctx, &got))
 	require.Len(t, got, 3)
