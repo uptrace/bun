@@ -340,7 +340,7 @@ func TestPostgresTransaction(t *testing.T) {
 
 	n, err := db.NewSelect().Conn(tx).Model((*Model)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, n)
+	require.Equal(t, int64(0), n)
 
 	err = tx.Rollback()
 	require.NoError(t, err)

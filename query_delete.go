@@ -156,7 +156,7 @@ func (q *DeleteQuery) ForceDelete() *DeleteQuery {
 }
 
 // ------------------------------------------------------------------------------
-func (q *DeleteQuery) Limit(n int) *DeleteQuery {
+func (q *DeleteQuery) Limit(n int64) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
 		return q
@@ -172,7 +172,7 @@ func (q *DeleteQuery) Limit(n int) *DeleteQuery {
 // To suppress the auto-generated RETURNING clause, use `Returning("NULL")`.
 func (q *DeleteQuery) Returning(query string, args ...any) *DeleteQuery {
 	if !q.hasFeature(feature.DeleteReturning) {
-		q.setErr(feature.NewNotSupportError(feature.DeleteOrderLimit))
+		q.setErr(feature.NewNotSupportError(feature.DeleteReturning))
 		return q
 	}
 

@@ -61,7 +61,7 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 	// Count visible videos.
 	count, err := db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, count)
+	require.Equal(t, int64(1), count)
 
 	// Soft delete.
 	_, err = db.NewDelete().Model(video1).Where("id = ?", video1.ID).Exec(ctx)
@@ -70,12 +70,12 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 	// Count visible videos.
 	count, err = db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, count)
+	require.Equal(t, int64(0), count)
 
 	// Count deleted videos.
 	count, err = db.NewSelect().Model((*Video)(nil)).WhereDeleted().Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, count)
+	require.Equal(t, int64(1), count)
 
 	// Undelete.
 	_, err = db.NewUpdate().
@@ -89,7 +89,7 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 	// Count visible videos.
 	count, err = db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, count)
+	require.Equal(t, int64(1), count)
 
 	// Force delete.
 	_, err = db.NewDelete().Model(video1).Where("id = ?", video1.ID).ForceDelete().Exec(ctx)
@@ -98,7 +98,7 @@ func testSoftDeleteAPI(t *testing.T, db *bun.DB) {
 	// Count deleted.
 	count, err = db.NewSelect().Model((*Video)(nil)).WhereDeleted().Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, count)
+	require.Equal(t, int64(0), count)
 }
 
 func testSoftDeleteForce(t *testing.T, db *bun.DB) {
@@ -149,7 +149,7 @@ func testSoftDeleteForce(t *testing.T, db *bun.DB) {
 	// Check no remaining videos.
 	count, err := db.NewSelect().Model((*Video)(nil)).WhereAllWithDeleted().Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, count)
+	require.Equal(t, int64(0), count)
 }
 
 func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
@@ -177,5 +177,5 @@ func testSoftDeleteBulk(t *testing.T, db *bun.DB) {
 
 	count, err := db.NewSelect().Model((*Video)(nil)).Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 0, count)
+	require.Equal(t, int64(0), count)
 }

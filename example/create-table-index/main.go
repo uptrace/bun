@@ -36,8 +36,8 @@ func main() {
 	}
 	sqlite.SetMaxOpenConns(1)
 
-	db := bun.NewDB(sqlite, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	db := bun.NewDB(sqlite, sqlitedialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	if _, err := db.NewCreateTable().Model((*Book)(nil)).Exec(ctx); err != nil {
 		panic(err)

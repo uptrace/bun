@@ -53,13 +53,13 @@ type Table struct {
 	Alias             string
 	SQLAlias          Safe
 
-	allFields  []*Field // all fields including scanonly
+	allFields  []*Field // All fields, including scanonly
 	Fields     []*Field // PKs + DataFields
 	PKs        []*Field
 	DataFields []*Field
 	relFields  []*Field
 
-	FieldMap  map[string]*Field
+	FieldMap  map[string]*Field // Fields keyed by Go field name, excl. rel and m2m fields.
 	StructMap map[string]*structField
 
 	IsM2MTable bool // If true, this table is the "junction table" of an m2m relation.

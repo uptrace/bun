@@ -22,11 +22,11 @@ func main() {
 	}
 	sqlite.SetMaxOpenConns(1)
 
-	db := bun.NewDB(sqlite, sqlitedialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(
-		bundebug.WithVerbose(true),
-		bundebug.FromEnv("BUNDEBUG"),
-	))
+	db := bun.NewDB(sqlite, sqlitedialect.New()).
+		WithQueryHook(bundebug.NewQueryHook(
+			bundebug.WithVerbose(true),
+			bundebug.FromEnv("BUNDEBUG"),
+		))
 
 	src := Now()
 	var dest Time
