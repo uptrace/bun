@@ -1,4 +1,4 @@
-module github.com/uptrace/bun
+module github.com/yassi-com/bun
 
 go 1.24.0
 
