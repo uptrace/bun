@@ -537,8 +537,8 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, "WITH _count_wrapper AS ("...)
 	}
 
-	hasUnion := len(q.union) > 0
-	wrapUnion := hasUnion && gen.Dialect().Name() != dialect.SQLite
+	// SQLite requires UNION parts to be emitted without extra parentheses.
+	wrapUnion := len(q.union) > 0 && gen.Dialect().Name() != dialect.SQLite
 
 	if wrapUnion {
 		b = append(b, '(')
