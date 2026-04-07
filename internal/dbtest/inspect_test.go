@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -587,6 +588,7 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				return
 			}
 		})
+
 		t.Run("collects primary keys", func(t *testing.T) {
 			type Model struct {
 				ID       string    `bun:",pk"`
@@ -656,6 +658,30 @@ func TestBunModelInspector_Inspect(t *testing.T) {
 				require.Equal(t, "keep_me", table.GetName(), "wrong table name")
 				return
 			}
+		})
+
+		t.Run("includes scanonly columns", func(t *testing.T) {
+			type Number struct {
+				Positive int
+				Negative int `bun:",scanonly"` // SELECT positive, -positive as negative
+			}
+
+			tables := schema.NewTables(dialect)
+			tables.Register((*Number)(nil))
+			inspector := sqlschema.NewBunModelInspector(tables, sqlschema.WithSchemaName(dialect.DefaultSchema()))
+
+			got, err := inspector.Inspect(t.Context())
+			require.NoError(t, err)
+
+			gotTables := got.GetTables()
+			require.Len(t, gotTables, 1)
+
+			var columns []string
+			for _, c := range gotTables[0].GetColumns() {
+				columns = append(columns, c.GetName())
+			}
+			assert.Len(t, columns, 2)
+			require.Subset(t, []string{"positive", "negative"}, columns)
 		})
 	})
 }
