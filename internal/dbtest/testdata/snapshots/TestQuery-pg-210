@@ -1,0 +1,1 @@
+UPDATE "soft_deletes" AS "soft_delete" SET id = id WHERE ((id = 1) OR (id = 2)) AND "soft_delete"."deleted_at" IS NULL

@@ -109,13 +109,13 @@ func (q *DeleteQuery) WhereOr(query string, args ...any) *DeleteQuery {
 }
 
 func (q *DeleteQuery) WhereGroup(sep string, fn func(*DeleteQuery) *DeleteQuery) *DeleteQuery {
-	saved := q.where
-	q.where = nil
+	saved, savedHasOr := q.where, q.whereHasOr
+	q.where, q.whereHasOr = nil, false
 
 	q = fn(q)
 
 	where := q.where
-	q.where = saved
+	q.where, q.whereHasOr = saved, savedHasOr
 
 	q.addWhereGroup(sep, where)
 
