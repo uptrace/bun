@@ -291,6 +291,8 @@ func TestDB(t *testing.T) {
 		{testScanRawMessage},
 		{testPointers},
 		{testExists},
+		{testUnion},
+		{testRecursiveCTEUnion},
 		{testScanTimeIntoString},
 		{testModelNonPointer},
 		{testBinaryData},
@@ -1345,6 +1347,71 @@ func testExists(t *testing.T, db *bun.DB) {
 	exists, err = db.NewSelect().ColumnExpr("1").Where("1 = 2").Exists(ctx)
 	require.NoError(t, err)
 	require.False(t, exists)
+}
+
+func testRecursiveCTEUnion(t *testing.T, db *bun.DB) {
+	if !db.Dialect().Features().Has(feature.CTE) {
+		t.Skip("CTE is not supported")
+		return
+	}
+
+	if db.Dialect().Name() == dialect.MSSQL {
+		t.Skip("MSSQL uses a different recursive CTE syntax")
+		return
+	}
+
+	type Model struct {
+		bun.BaseModel `bun:"test_models,alias:m"`
+		ID            int64  `bun:",pk,autoincrement"`
+		Name          string `bun:",notnull"`
+		ParentID      *int64
+	}
+
+	mustResetModel(t, ctx, db, (*Model)(nil))
+
+	root := &Model{Name: "root"}
+	_, err := db.NewInsert().Model(root).Exec(ctx)
+	require.NoError(t, err)
+	child := &Model{Name: "child", ParentID: &root.ID}
+	_, err = db.NewInsert().Model(child).Exec(ctx)
+	require.NoError(t, err)
+	grand := &Model{Name: "grand", ParentID: &child.ID}
+	_, err = db.NewInsert().Model(grand).Exec(ctx)
+	require.NoError(t, err)
+
+	query := db.NewSelect().
+		WithRecursive("category_tree", db.NewSelect().
+			Model((*Model)(nil)).
+			Where("name LIKE ?", "%roo%").
+			UnionAll(
+				db.NewSelect().
+					Model((*Model)(nil)).
+					Join("JOIN ? AS ?", bun.Ident("category_tree"), bun.Ident("ct")).
+					JoinOn("?TableAlias.? = ?", bun.Ident("parent_id"), bun.Ident("ct.id")),
+			),
+		).
+		TableExpr("?", bun.Ident("category_tree")).
+		OrderExpr("id")
+
+	var got []Model
+	require.NoError(t, query.Scan(ctx, &got))
+	require.Len(t, got, 3)
+	require.Equal(t, []string{"root", "child", "grand"}, []string{got[0].Name, got[1].Name, got[2].Name})
+}
+
+func testUnion(t *testing.T, db *bun.DB) {
+	union := db.NewSelect().ColumnExpr("1 as n").
+		Union(db.NewSelect().ColumnExpr("2 as n")).
+		Union(db.NewSelect().ColumnExpr("3 as n"))
+
+	query := db.NewSelect().
+		TableExpr("(?) as n", union).
+		Order("n")
+
+	var got []int
+	require.NoError(t, query.Scan(ctx, &got))
+	require.Len(t, got, 3)
+	require.Equal(t, []int{1, 2, 3}, got)
 }
 
 func testScanTimeIntoString(t *testing.T, db *bun.DB) {
