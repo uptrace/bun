@@ -48,6 +48,13 @@ func (m *Migrations) Sorted() MigrationSlice {
 }
 
 // MustRegister is like Register but panics on error.
+func (m *Migrations) MustRegisterWithName(up, down MigrationFunc, migrationName string) {
+	if err := m.RegisterWithName(up, down, migrationName); err != nil {
+		panic(err)
+	}
+}
+
+// MustRegister is like Register but panics on error.
 func (m *Migrations) MustRegister(up, down MigrationFunc) {
 	if err := m.Register(up, down); err != nil {
 		panic(err)
@@ -58,6 +65,23 @@ func (m *Migrations) MustRegister(up, down MigrationFunc) {
 func (m *Migrations) Register(up, down MigrationFunc) error {
 	fpath := migrationFile()
 	name, comment, err := extractMigrationName(fpath)
+	if err != nil {
+		return err
+	}
+
+	m.Add(Migration{
+		Name:    name,
+		Comment: comment,
+		Up:      wrapGoMigrationFunc(up),
+		Down:    wrapGoMigrationFunc(down),
+	})
+
+	return nil
+}
+
+// RegisterWithName registers up and down migration functions with user defined alias
+func (m *Migrations) RegisterWithName(up, down MigrationFunc, migrationName string) error {
+	name, comment, err := extractMigrationName(migrationName)
 	if err != nil {
 		return err
 	}
