@@ -547,7 +547,7 @@ func (c Conn) RunInTx(
 		}
 	}()
 
-	if err := fn(ctx, tx); err != nil {
+	if err := fn(tx.ctx, tx); err != nil {
 		return err
 	}
 
@@ -620,7 +620,7 @@ func (db *DB) RunInTx(
 		}
 	}()
 
-	if err := fn(ctx, tx); err != nil {
+	if err := fn(tx.ctx, tx); err != nil {
 		return err
 	}
 
@@ -793,7 +793,7 @@ func (tx Tx) RunInTx(
 		}
 	}()
 
-	if err := fn(ctx, sp); err != nil {
+	if err := fn(tx.ctx, sp); err != nil {
 		return err
 	}
 
