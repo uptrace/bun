@@ -8,9 +8,23 @@ import (
 )
 
 func AppendError(b []byte, err error) []byte {
-	b = append(b, "?!("...)
-	b = append(b, err.Error()...)
-	b = append(b, ')')
+	b = append(b, "?!('"...)
+	b = appendSanitizedError(b, err.Error())
+	b = append(b, "')"...)
+	return b
+}
+
+// appendSanitizedError escapes single quotes in error messages to prevent
+// SQL injection when driver.Valuer returns an error that gets embedded in
+// the query string.
+func appendSanitizedError(b []byte, s string) []byte {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\'' {
+			b = append(b, '\'', '\'')
+		} else {
+			b = append(b, s[i])
+		}
+	}
 	return b
 }
 
