@@ -141,11 +141,10 @@ func newConn(ctx context.Context, conf *Config) (*Conn, error) {
 			continue
 		}
 
-		switch {
-		case !conf.UnsafeStrings && k == "standard_conforming_strings" && v != "on":
-			return nil, errRequiresParameter
-		case !conf.UnsafeStrings && k == "client_encoding" && v != "UTF8":
-			return nil, errRequiresParameter
+		if !conf.UnsafeStrings {
+			if err := checkRequiredConnParam(k, v); err != nil {
+				return nil, err
+			}
 		}
 
 		if _, err = cn.ExecContext(ctx, fmt.Sprintf("SET %s TO $1", k), []driver.NamedValue{
