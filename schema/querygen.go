@@ -48,7 +48,7 @@ func (gen QueryGen) Append(b []byte, v any) []byte {
 	case nil:
 		return dialect.AppendNull(b)
 	case bool:
-		return dialect.AppendBool(b, v)
+		return gen.Dialect().AppendBool(b, v)
 	case int:
 		return strconv.AppendInt(b, int64(v), 10)
 	case int32:
