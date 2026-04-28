@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -65,8 +64,8 @@ func (m *Migrations) Register(up, down MigrationFunc) error {
 	m.Add(Migration{
 		Name:    name,
 		Comment: comment,
-		Up:      wrapGoMigrationFunc(up),
-		Down:    wrapGoMigrationFunc(down),
+		Up:      up,
+		Down:    down,
 	})
 
 	return nil
@@ -115,7 +114,10 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 		}
 		migration.Comment = comment
 
-		migrationFunc := newSQLMigrationFunc(fsys, path)
+		migrationFunc, err := newSQLMigrationFunc(fsys, path)
+		if err != nil {
+			return err
+		}
 
 		if strings.HasSuffix(path, ".up.sql") {
 			migration.Up = migrationFunc
@@ -126,7 +128,7 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 			return nil
 		}
 
-		return errors.New("migrate: not reached")
+		panic("unreachable")
 	})
 }
 
