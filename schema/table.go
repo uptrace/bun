@@ -935,7 +935,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 	}
 
 	leftRel := m2mTable.belongsToRelation(leftField)
-	rel.BasePKs = leftRel.JoinPKs
+	rel.BasePKs = baseTablePKs(t, leftRel.JoinPKs)
 	rel.M2MBasePKs = leftRel.BasePKs
 
 	rightRel := m2mTable.belongsToRelation(rightField)
@@ -1055,6 +1055,21 @@ func parseRelationJoin(join []string) ([]string, []string) {
 		joinColumns[i] = ss[1]
 	}
 	return baseColumns, joinColumns
+}
+
+func baseTablePKs(t *Table, pks []*Field) []*Field {
+	out := make([]*Field, len(pks))
+
+	for i, f := range pks {
+		if local, ok := t.FieldMap[f.Name]; ok {
+			out[i] = local
+			continue
+		}
+
+		out[i] = f
+	}
+
+	return out
 }
 
 //------------------------------------------------------------------------------
