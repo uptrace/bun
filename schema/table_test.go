@@ -335,4 +335,48 @@ func TestTable(t *testing.T) {
 		require.True(t, counter.AutoIncrement, "autoincrement")
 		require.True(t, counter.NotNull, "not null")
 	})
+
+	t.Run("m2m on embedded base", func(t *testing.T) {
+		type Item struct {
+			ID int64 `bun:",pk"`
+		}
+
+		type Order struct {
+			BaseModel `bun:"orders"`
+
+			ID    int64  `bun:",pk"`
+			Items []Item `bun:"m2m:order_to_items,join:Order=Item"`
+		}
+
+		type OrderToItem struct {
+			BaseModel `bun:"order_to_items"`
+
+			OrderID int64  `bun:",pk"`
+			Order   *Order `bun:"rel:belongs-to,join:order_id=id"`
+			ItemID  int64  `bun:",pk"`
+			Item    *Item  `bun:"rel:belongs-to,join:item_id=id"`
+		}
+
+		type OrderWrap struct {
+			BaseModel `bun:"orders,alias:orders"`
+			*Order
+
+			Extra bool `bun:"extra"`
+		}
+
+		dialect := newNopDialect()
+		dialect.Tables().Register((*OrderToItem)(nil))
+
+		outer := dialect.Tables().Get(reflect.TypeOf((*OrderWrap)(nil)).Elem())
+
+		id, ok := outer.FieldMap["id"]
+		require.True(t, ok)
+		require.Equal(t, []int{1, 1}, id.Index)
+
+		rel, ok := outer.Relations["Items"]
+		require.True(t, ok)
+		require.Equal(t, ManyToManyRelation, rel.Type)
+		require.Len(t, rel.BasePKs, 1)
+		require.Same(t, id, rel.BasePKs[0])
+	})
 }
