@@ -132,7 +132,7 @@ func (q *DropColumnQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, 
 
 func (q *DropColumnQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	// if a comment is propagated via the context, use it
-	setCommentFromContext(ctx, q)
+	setCommentFromContext[*DropColumnQuery](ctx, q)
 
 	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
 	if err != nil {
