@@ -79,6 +79,10 @@ type structField struct {
 }
 
 func (table *Table) init(dialect Dialect, typ reflect.Type) {
+	if table.initStarted {
+		return
+	}
+	table.initStarted = true
 	table.dialect = dialect
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()

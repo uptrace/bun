@@ -11,46 +11,46 @@ import (
 // These must be at package level to allow circular type references
 // between Business and Lead via shared embedded relation structs.
 
-type issue1243IDField struct {
+type idField struct {
 	ID int64 `bun:",pk,autoincrement"`
 }
 
-type issue1243Business struct {
-	issue1243IDField
-	issue1243LeadRelation
+type business struct {
+	idField
+	leadRelation
 }
 
-type issue1243BusinessRelation struct {
-	BusinessID int64              `bun:",nullzero"`
-	Business   *issue1243Business `bun:"rel:belongs-to,join:business_id=id"`
+type businessRelation struct {
+	BusinessID int64     `bun:",nullzero"`
+	Business   *business `bun:"rel:belongs-to,join:business_id=id"`
 }
 
-type issue1243Lead struct {
-	issue1243IDField
-	issue1243BusinessRelation
+type lead struct {
+	idField
+	businessRelation
 }
 
-type issue1243LeadRelation struct {
-	LeadID int64          `bun:",nullzero"`
-	Lead   *issue1243Lead `bun:"rel:belongs-to,join:lead_id=id"`
+type leadRelation struct {
+	LeadID int64 `bun:",nullzero"`
+	Lead   *lead `bun:"rel:belongs-to,join:lead_id=id"`
 }
 
-type issue1243Agent struct {
-	issue1243IDField
-	issue1243BusinessRelation
+type agent struct {
+	idField
+	businessRelation
 
-	Associations []*issue1243Link `bun:"rel:has-many,join:id=agent_id"`
+	Associations []*link `bun:"rel:has-many,join:id=agent_id"`
 }
 
-type issue1243AgentRelation struct {
-	AgentID int64           `bun:",nullzero"`
-	Agent   *issue1243Agent `bun:"rel:belongs-to,join:agent_id=id"`
+type agentRelation struct {
+	AgentID int64  `bun:",nullzero"`
+	Agent   *agent `bun:"rel:belongs-to,join:agent_id=id"`
 }
 
-type issue1243Link struct {
-	issue1243IDField
-	issue1243AgentRelation
-	issue1243LeadRelation
+type link struct {
+	idField
+	agentRelation
+	leadRelation
 }
 
 func TestNestedRelationWithSharedComposition(t *testing.T) {
@@ -60,7 +60,7 @@ func TestNestedRelationWithSharedComposition(t *testing.T) {
 	// Initialize Link table, which triggers circular initialization:
 	// Link -> AgentRelation -> Agent -> BusinessRelation -> Business
 	//   -> LeadRelation -> Lead -> BusinessRelation -> Business (cycle)
-	linkTable := tables.Get(reflect.TypeFor[*issue1243Link]())
+	linkTable := tables.Get(reflect.TypeFor[*link]())
 
 	require.Contains(t, linkTable.StructMap, "lead",
 		"Link should have 'lead' in StructMap from embedded LeadRelation")
