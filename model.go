@@ -124,6 +124,10 @@ func _newModel(db *DB, dest any, scan bool) (Model, error) {
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
 		return newStructTableModelValue(db, dest, v), nil
+	case reflect.Pointer:
+		if v.Type().Elem().Kind() == reflect.Struct {
+			return newStructTableModelValue(db, dest, v), nil
+		}
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:
@@ -200,8 +204,7 @@ func validMap(typ reflect.Type) error {
 
 func isSingleRowModel(m Model) bool {
 	switch m.(type) {
-	case *mapModel,
-		*structTableModel,
+	case *structTableModel,
 		*scanModel:
 		return true
 	default:
