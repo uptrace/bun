@@ -204,10 +204,17 @@ func validMap(typ reflect.Type) error {
 
 func isSingleRowModel(m Model) bool {
 	switch m.(type) {
-	case *structTableModel,
+	case *mapModel,
+		*structTableModel,
 		*scanModel:
 		return true
 	default:
 		return false
 	}
+}
+
+// nilModel is implemented by models whose destination may be a nil pointer
+// that should not be treated as "no rows" when an empty result is scanned.
+type nilModel interface {
+	isNil() bool
 }
