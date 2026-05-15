@@ -39,6 +39,10 @@ func (m *mapModel) Value() any {
 	return m.dest
 }
 
+func (m *mapModel) isNil() bool {
+	return m.dest == nil || *m.dest == nil
+}
+
 func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
 		return 0, rows.Err()
