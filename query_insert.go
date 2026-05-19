@@ -40,16 +40,19 @@ func NewInsertQuery(db *DB) *InsertQuery {
 	return q
 }
 
+// Conn sets the database connection for this query.
 func (q *InsertQuery) Conn(db IConn) *InsertQuery {
 	q.setConn(db)
 	return q
 }
 
+// Model sets the model whose values will be inserted.
 func (q *InsertQuery) Model(model any) *InsertQuery {
 	q.setModel(model)
 	return q
 }
 
+// Err sets an error on the query, causing subsequent operations to fail.
 func (q *InsertQuery) Err(err error) *InsertQuery {
 	q.setErr(err)
 	return q
@@ -65,16 +68,19 @@ func (q *InsertQuery) Apply(fns ...func(*InsertQuery) *InsertQuery) *InsertQuery
 	return q
 }
 
+// With adds a WITH clause (Common Table Expression) to the query.
 func (q *InsertQuery) With(name string, query Query) *InsertQuery {
 	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
+// WithRecursive adds a WITH RECURSIVE clause to the query.
 func (q *InsertQuery) WithRecursive(name string, query Query) *InsertQuery {
 	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
+// WithQuery adds a pre-configured WITH clause to the query.
 func (q *InsertQuery) WithQuery(query *WithQuery) *InsertQuery {
 	q.addWith(query)
 	return q
@@ -83,6 +89,7 @@ func (q *InsertQuery) WithQuery(query *WithQuery) *InsertQuery {
 
 //------------------------------------------------------------------------------
 
+// Table specifies the table(s) to insert into.
 func (q *InsertQuery) Table(tables ...string) *InsertQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
@@ -90,11 +97,13 @@ func (q *InsertQuery) Table(tables ...string) *InsertQuery {
 	return q
 }
 
+// TableExpr adds a table expression for the INSERT target with arguments.
 func (q *InsertQuery) TableExpr(query string, args ...any) *InsertQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
+// ModelTableExpr overrides the table name derived from the model.
 func (q *InsertQuery) ModelTableExpr(query string, args ...any) *InsertQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
@@ -102,6 +111,7 @@ func (q *InsertQuery) ModelTableExpr(query string, args ...any) *InsertQuery {
 
 //------------------------------------------------------------------------------
 
+// Column adds columns to the INSERT statement's column list.
 func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	for _, column := range columns {
 		q.addColumn(schema.UnsafeIdent(column))
@@ -109,11 +119,13 @@ func (q *InsertQuery) Column(columns ...string) *InsertQuery {
 	return q
 }
 
+// ColumnExpr adds a column expression to the INSERT statement with arguments.
 func (q *InsertQuery) ColumnExpr(query string, args ...any) *InsertQuery {
 	q.addColumn(schema.SafeQuery(query, args))
 	return q
 }
 
+// ExcludeColumn excludes specific columns from being inserted.
 func (q *InsertQuery) ExcludeColumn(columns ...string) *InsertQuery {
 	q.excludeColumn(columns)
 	return q
@@ -129,11 +141,13 @@ func (q *InsertQuery) Value(column string, expr string, args ...any) *InsertQuer
 	return q
 }
 
+// Where adds a WHERE condition for the upsert UPDATE branch, combined with AND.
 func (q *InsertQuery) Where(query string, args ...any) *InsertQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
+// WhereOr adds a WHERE condition for the upsert UPDATE branch, combined with OR.
 func (q *InsertQuery) WhereOr(query string, args ...any) *InsertQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
@@ -180,6 +194,7 @@ func (q *InsertQuery) Comment(comment string) *InsertQuery {
 
 //------------------------------------------------------------------------------
 
+// Operation returns the query operation name ("INSERT").
 func (q *InsertQuery) Operation() string {
 	return "INSERT"
 }
@@ -462,16 +477,19 @@ func (q *InsertQuery) appendFields(
 
 //------------------------------------------------------------------------------
 
+// On adds an ON clause for upsert behavior (e.g., "CONFLICT (id) DO UPDATE", "DUPLICATE KEY UPDATE").
 func (q *InsertQuery) On(s string, args ...any) *InsertQuery {
 	q.on = schema.SafeQuery(s, args)
 	return q
 }
 
+// Set adds a SET expression for the upsert UPDATE branch with arguments.
 func (q *InsertQuery) Set(query string, args ...any) *InsertQuery {
 	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
+// SetValues attaches a ValuesQuery used to populate SET expressions for the upsert UPDATE branch.
 func (q *InsertQuery) SetValues(values *ValuesQuery) *InsertQuery {
 	q.setValues = values
 	return q
@@ -562,11 +580,13 @@ func (q *InsertQuery) appendSetValues(b []byte, fields []*schema.Field) []byte {
 
 //------------------------------------------------------------------------------
 
+// Scan executes the INSERT and scans RETURNING/OUTPUT results into dest.
 func (q *InsertQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
+// Exec executes the INSERT and optionally scans RETURNING/OUTPUT results into dest when provided.
 func (q *InsertQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
