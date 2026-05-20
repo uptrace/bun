@@ -28,6 +28,19 @@ func (m *scanModel) Value() any {
 	return m.dest
 }
 
+func (m *scanModel) isNil() bool {
+	if len(m.dest) == 0 {
+		return false
+	}
+	for _, item := range m.dest {
+		itemVal := reflect.ValueOf(item).Elem()
+		if isNil := itemVal.Type().Kind() == reflect.Pointer && itemVal.IsNil(); !isNil {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *scanModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 	if !rows.Next() {
 		return 0, rows.Err()
