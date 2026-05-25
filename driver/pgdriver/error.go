@@ -15,6 +15,13 @@ type Error struct {
 	m map[byte]string
 }
 
+// NewError creates an Error with the given field map.
+//
+// https://www.postgresql.org/docs/current/static/protocol-error-fields.html
+func NewError(fields map[byte]string) Error {
+	return Error{m: fields}
+}
+
 // Field returns a string value associated with an error field.
 //
 // https://www.postgresql.org/docs/current/static/protocol-error-fields.html
