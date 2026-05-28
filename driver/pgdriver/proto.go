@@ -15,6 +15,7 @@ import (
 	"io"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -223,10 +224,28 @@ func writeStartup(ctx context.Context, cn *Conn) error {
 		wb.WriteString("application_name")
 		wb.WriteString(cn.conf.AppName)
 	}
+	writeStartupConnParams(wb, cn.conf)
 	wb.WriteString("")
 	wb.FinishMessage()
 
 	return cn.write(ctx, wb)
+}
+
+func writeStartupConnParams(wb *writeBuffer, conf *Config) {
+	for k, v := range conf.ConnParams {
+		if v == nil || !isRequiredParameter(k) {
+			continue
+		}
+
+		// These parameters must be effective before startup ParameterStatus messages
+		// are validated; the later SET path runs too late for that check.
+		value := startupParamValue(v)
+		if !conf.UnsafeStrings {
+			value = canonicalRequiredParameterValue(k, value)
+		}
+		wb.WriteString(k)
+		wb.WriteString(value)
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -1143,15 +1162,7 @@ func checkParameterStatus(b []byte) error {
 		return nil
 	}
 
-	var mustBe []byte
-	switch {
-	case bytes.Equal(b[:i], []byte("standard_conforming_strings")):
-		mustBe = []byte("on")
-	case bytes.Equal(b[:i], []byte("client_encoding")):
-		mustBe = []byte("UTF8")
-	default:
-		return nil
-	}
+	name := string(b[:i])
 
 	// Move past the parameter key and the first null byte to get to the value.
 	b = b[i+1:]
@@ -1159,8 +1170,80 @@ func checkParameterStatus(b []byte) error {
 	if i = bytes.IndexByte(b, 0x00); i == -1 {
 		return nil
 	}
-	if !bytes.Equal(b[:i], mustBe) {
-		return errRequiresParameter
+	return checkRequiredParameter(name, string(b[:i]))
+}
+
+func checkRequiredConnParam(k string, v any) error {
+	if v == nil {
+		return nil
+	}
+	return checkRequiredParameter(k, startupParamValue(v))
+}
+
+func checkRequiredParameter(k, v string) error {
+	switch k {
+	case "standard_conforming_strings":
+		if !isStandardConformingStringsOn(v) {
+			return errRequiresParameter
+		}
+	case "client_encoding":
+		if !isClientEncodingUTF8(v) {
+			return errRequiresParameter
+		}
 	}
 	return nil
+}
+
+func isRequiredParameter(k string) bool {
+	switch k {
+	case "standard_conforming_strings", "client_encoding":
+		return true
+	default:
+		return false
+	}
+}
+
+func canonicalRequiredParameterValue(k, v string) string {
+	// PostgreSQL accepts equivalent spellings, but it reports canonical values.
+	// Sending canonical values keeps startup validation independent of aliases.
+	switch k {
+	case "standard_conforming_strings":
+		if isStandardConformingStringsOn(v) {
+			return "on"
+		}
+	case "client_encoding":
+		if isClientEncodingUTF8(v) {
+			return "UTF8"
+		}
+	}
+	return v
+}
+
+func isStandardConformingStringsOn(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "on", "true", "yes", "1":
+		return true
+	default:
+		return false
+	}
+}
+
+func isClientEncodingUTF8(s string) bool {
+	switch strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), "-", "")) {
+	case "UTF8", "UNICODE":
+		return true
+	default:
+		return false
+	}
+}
+
+func startupParamValue(v any) string {
+	switch v := v.(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return fmt.Sprint(v)
+	}
 }
