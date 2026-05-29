@@ -37,6 +37,7 @@ func TestORM(t *testing.T) {
 		{testCompositeM2M},
 		{testHasOneRelationWithOpts},
 		{testHasManyRelationWithOpts},
+		{testM2MRelationOnEmbeddedBaseModel},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -665,6 +666,73 @@ func testHasManyRelationWithOpts(t *testing.T, db *bun.DB) {
 		{ID: 1, Name: "user 1", Profiles: nil},
 		{ID: 2, Name: "user 2", Profiles: []*Profile{{ID: 2, Name: "name2-ru", Lang: "ru", UserID: 2}}},
 	}, outUsers2)
+}
+
+func testM2MRelationOnEmbeddedBaseModel(t *testing.T, db *bun.DB) {
+	type Item struct {
+		ID int64 `bun:",pk"`
+	}
+
+	type Order struct {
+		bun.BaseModel `bun:"table:orders"`
+
+		ID    int64  `bun:",pk"`
+		Items []Item `bun:"m2m:order_to_items,join:Order=Item"`
+	}
+
+	type OrderToItem struct {
+		bun.BaseModel `bun:"table:order_to_items"`
+
+		OrderID int64  `bun:",pk"`
+		Order   *Order `bun:"rel:belongs-to,join:order_id=id"`
+		ItemID  int64  `bun:",pk"`
+		Item    *Item  `bun:"rel:belongs-to,join:item_id=id"`
+	}
+
+	type OrderWrap struct {
+		bun.BaseModel `bun:"table:orders,alias:orders"`
+		*Order
+
+		Extra bool `bun:"extra,scanonly"`
+	}
+
+	db.RegisterModel((*OrderToItem)(nil))
+	mustResetModel(t, ctx, db, (*Item)(nil), (*Order)(nil), (*OrderToItem)(nil))
+
+	items := []Item{
+		{ID: 1},
+		{ID: 2},
+	}
+	_, err := db.NewInsert().Model(&items).Exec(ctx)
+	require.NoError(t, err)
+
+	orders := []Order{
+		{ID: 10},
+		{ID: 11},
+	}
+	_, err = db.NewInsert().Model(&orders).Exec(ctx)
+	require.NoError(t, err)
+
+	orderItems := []OrderToItem{
+		{OrderID: 10, ItemID: 1},
+		{OrderID: 10, ItemID: 2},
+		{OrderID: 11, ItemID: 2},
+	}
+	_, err = db.NewInsert().Model(&orderItems).Exec(ctx)
+	require.NoError(t, err)
+
+	var bare []Order
+	err = db.NewSelect().Model(&bare).Relation("Items").Order("id").Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, bare, 2)
+	require.Len(t, bare[0].Items, 2)
+	require.Len(t, bare[1].Items, 1)
+
+	var wrapped []OrderWrap
+	err = db.NewSelect().Model(&wrapped).Relation("Items").Order("id").Scan(ctx)
+	require.NoError(t, err)
+	require.Len(t, wrapped, 2)
+	require.Len(t, wrapped[1].Items, 1)
 }
 
 type Genre struct {

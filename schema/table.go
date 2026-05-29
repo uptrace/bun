@@ -608,6 +608,15 @@ func (t *Table) addRelation(rel *Relation) {
 
 func (t *Table) belongsToRelation(field *Field) *Relation {
 	joinTable := t.dialect.Tables().InProgress(field.IndirectType)
+	return t.belongsToRelationWithTables(field, joinTable, joinTable)
+}
+
+func (t *Table) belongsToRelationWithJoinTable(field *Field, joinPKTable *Table) *Relation {
+	joinTable := t.dialect.Tables().InProgress(field.IndirectType)
+	return t.belongsToRelationWithTables(field, joinTable, joinPKTable)
+}
+
+func (t *Table) belongsToRelationWithTables(field *Field, joinTable, joinPKTable *Table) *Relation {
 	if err := joinTable.CheckPKs(); err != nil {
 		panic(err)
 	}
@@ -615,7 +624,7 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 	rel := &Relation{
 		Type:      BelongsToRelation,
 		Field:     field,
-		JoinTable: joinTable,
+		JoinTable: joinPKTable,
 	}
 
 	if field.Tag.HasOption("join_on") {
@@ -667,21 +676,36 @@ func (t *Table) belongsToRelation(field *Field) *Relation {
 				))
 			}
 
-			if f := joinTable.FieldMap[joinColumn]; f != nil {
+			if f := joinTable.FieldMap[joinColumn]; f == nil {
+				panic(fmt.Errorf(
+					"bun: %s belongs-to %s: %s must have column %s",
+					t.TypeName, field.GoName, joinTable.TypeName, joinColumn,
+				))
+			}
+
+			if f := joinPKTable.FieldMap[joinColumn]; f != nil {
 				rel.JoinPKs = append(rel.JoinPKs, f)
 			} else {
 				panic(fmt.Errorf(
 					"bun: %s belongs-to %s: %s must have column %s",
-					t.TypeName, field.GoName, joinTable.TypeName, joinColumn,
+					t.TypeName, field.GoName, joinPKTable.TypeName, joinColumn,
 				))
 			}
 		}
 		return rel
 	}
 
-	rel.JoinPKs = joinTable.PKs
 	fkPrefix := internal.Underscore(field.GoName) + "_"
 	for _, joinPK := range joinTable.PKs {
+		if f := joinPKTable.FieldMap[joinPK.Name]; f != nil {
+			rel.JoinPKs = append(rel.JoinPKs, f)
+		} else {
+			panic(fmt.Errorf(
+				"bun: %s belongs-to %s: %s must have column %s",
+				t.TypeName, field.GoName, joinPKTable.TypeName, joinPK.Name,
+			))
+		}
+
 		fkName := fkPrefix + joinPK.Name
 		if fk := t.FieldMap[fkName]; fk != nil {
 			rel.BasePKs = append(rel.BasePKs, fk)
@@ -934,7 +958,7 @@ func (t *Table) m2mRelation(field *Field) *Relation {
 		))
 	}
 
-	leftRel := m2mTable.belongsToRelation(leftField)
+	leftRel := m2mTable.belongsToRelationWithJoinTable(leftField, t)
 	rel.BasePKs = leftRel.JoinPKs
 	rel.M2MBasePKs = leftRel.BasePKs
 
