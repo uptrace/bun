@@ -379,4 +379,39 @@ func TestTable(t *testing.T) {
 		require.Len(t, rel.BasePKs, 1)
 		require.Same(t, id, rel.BasePKs[0])
 	})
+
+	t.Run("m2m validates base join pks", func(t *testing.T) {
+		type Item struct {
+			ID int64 `bun:",pk"`
+		}
+
+		type Order struct {
+			BaseModel `bun:"orders"`
+
+			ID int64 `bun:",pk"`
+		}
+
+		type OrderToItem struct {
+			BaseModel `bun:"order_to_items"`
+
+			OrderID int64  `bun:",pk"`
+			Order   *Order `bun:"rel:belongs-to,join:order_id=id"`
+			ItemID  int64  `bun:",pk"`
+			Item    *Item  `bun:"rel:belongs-to,join:item_id=id"`
+		}
+
+		type OrderWrap struct {
+			BaseModel `bun:"orders,alias:orders"`
+
+			OtherID int64  `bun:"other_id,pk"`
+			Items   []Item `bun:"m2m:order_to_items,join:Order=Item"`
+		}
+
+		dialect := newNopDialect()
+		dialect.Tables().Register((*OrderToItem)(nil))
+
+		require.PanicsWithError(t, "bun: OrderToItem belongs-to Order: OrderWrap must have column id", func() {
+			dialect.Tables().Get(reflect.TypeOf((*OrderWrap)(nil)).Elem())
+		})
+	})
 }
