@@ -331,6 +331,10 @@ func scanScanner(dest reflect.Value, src any) error {
 	return dest.Interface().(sql.Scanner).Scan(src)
 }
 
+// scanMsgpack decodes a msgpack-encoded value. The msgpack struct tag is only
+// supported by the PostgreSQL dialect; on other dialects appendMsgpack rejects
+// the value at insert time, so a corrupted value never reaches this scanner
+// (see issues #1219 and #519).
 func scanMsgpack(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)

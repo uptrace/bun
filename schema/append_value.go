@@ -2,6 +2,7 @@ package schema
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -289,7 +290,18 @@ func addrAppender(fn AppenderFunc) AppenderFunc {
 	}
 }
 
+// appendMsgpack encodes v as msgpack and appends it as a PostgreSQL bytea hex
+// literal (\x...). The msgpack struct tag is only supported by the PostgreSQL
+// dialect: other dialects store the \x literal verbatim as text, so the value
+// fails to decode on scan (see issues #1219 and #519). For non-PostgreSQL
+// dialects use a custom type (driver.Valuer / sql.Scanner) instead.
 func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
+	if gen.Dialect().Name() != dialect.PG {
+		return dialect.AppendError(b, errors.New(
+			"bun: the msgpack struct tag is only supported by the PostgreSQL dialect; "+
+				"for other dialects use a custom type (driver.Valuer / sql.Scanner)"))
+	}
+
 	hexEnc := internal.NewHexEncoder(b)
 
 	enc := msgpack.GetEncoder()
