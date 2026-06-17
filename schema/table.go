@@ -69,7 +69,8 @@ type Table struct {
 	SoftDeleteField       *Field
 	UpdateSoftDeleteField func(fv reflect.Value, tm time.Time) error
 
-	flags internal.Flag
+	flags       internal.Flag
+	initStarted bool
 }
 
 type structField struct {
@@ -78,6 +79,10 @@ type structField struct {
 }
 
 func (table *Table) init(dialect Dialect, typ reflect.Type) {
+	if table.initStarted {
+		return
+	}
+	table.initStarted = true
 	table.dialect = dialect
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()
@@ -233,10 +238,16 @@ func (t *Table) processFields(typ reflect.Type) {
 			if t.StructMap == nil {
 				t.StructMap = make(map[string]*structField)
 			}
+			// Register the StructMap entry with a placeholder table BEFORE
+			// triggering recursive initialization. This ensures that types in
+			// a circular dependency can find this entry during their own
+			// processFields, even if this table's init hasn't completed yet.
+			placeholder := t.dialect.Tables().Placeholder(field.IndirectType)
 			t.StructMap[field.Name] = &structField{
 				Index: field.Index,
-				Table: t.dialect.Tables().InProgress(field.IndirectType),
+				Table: placeholder,
 			}
+			t.dialect.Tables().InProgress(field.IndirectType)
 		}
 	}
 

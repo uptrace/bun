@@ -65,15 +65,25 @@ func (t *Tables) Get(typ reflect.Type) *Table {
 	return table
 }
 
+// InProgress returns the in-progress table for typ, initializing it
+// if it has not been initialized yet. The Placeholder + init() split
+// lets callers register StructMap entries with the table pointer
+// before triggering recursive initialization, preventing missing
+// entries in circular dependency chains.
 func (t *Tables) InProgress(typ reflect.Type) *Table {
-	if table, ok := t.inProgress[typ]; ok {
-		return table
-	}
-
-	table := new(Table)
-	t.inProgress[typ] = table
+	table := t.Placeholder(typ)
 	table.init(t.dialect, typ)
+	return table
+}
 
+// Placeholder returns an existing in-progress table or creates a new
+// uninitialized placeholder entry.
+func (t *Tables) Placeholder(typ reflect.Type) *Table {
+	table, ok := t.inProgress[typ]
+	if !ok {
+		table = new(Table)
+		t.inProgress[typ] = table
+	}
 	return table
 }
 
