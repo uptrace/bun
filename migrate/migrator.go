@@ -54,6 +54,7 @@ func WithUpsert(enabled bool) MigratorOption {
 }
 
 // WithTemplateData sets data passed to SQL migration templates during rendering.
+// Use [WithSQLTemplateData] to re-use the [Migrator] instance with different data.
 func WithTemplateData(data any) MigratorOption {
 	return func(m *Migrator) {
 		m.templateData = data
@@ -190,49 +191,23 @@ func (m *Migrator) Reset(ctx context.Context) error {
 
 // Migrate runs unapplied migrations. If a migration fails, migrate immediately exits.
 func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
-	cfg := newMigrationConfig(opts)
-
-	group := new(MigrationGroup)
-
 	if err := m.validate(); err != nil {
-		return group, err
+		return nil, err
 	}
 
 	migrations, lastGroupID, err := m.migrationsWithStatus(ctx)
 	if err != nil {
-		return group, err
-	}
-	migrations = migrations.Unapplied()
-	if len(migrations) == 0 {
-		return group, nil
-	}
-	group.ID = lastGroupID + 1
-
-	for i := range migrations {
-		migration := &migrations[i]
-		migration.GroupID = group.ID
-
-		if !m.markAppliedOnSuccess {
-			if err := m.MarkApplied(ctx, migration); err != nil {
-				return group, err
-			}
-		}
-
-		group.Migrations = migrations[:i+1]
-
-		if !cfg.nop && migration.Up != nil {
-			if err := migration.Up(ctx, m, migration); err != nil {
-				return group, fmt.Errorf("%s: up: %w", migration.Name, err)
-			}
-		}
-
-		if m.markAppliedOnSuccess {
-			if err := m.MarkApplied(ctx, migration); err != nil {
-				return group, err
-			}
-		}
+		return nil, err
 	}
 
+	group := &MigrationGroup{
+		ID:         lastGroupID + 1,
+		Migrations: migrations.Unapplied(),
+	}
+
+	if err := m.migrateGroup(ctx, group, opts...); err != nil {
+		return group, fmt.Errorf("migrate: %w", err)
+	}
 	return group, nil
 }
 
@@ -242,8 +217,6 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 func (m *Migrator) RunMigration(
 	ctx context.Context, migrationName string, opts ...MigrationOption,
 ) error {
-	cfg := newMigrationConfig(opts)
-
 	if err := m.validate(); err != nil {
 		return err
 	}
@@ -259,38 +232,72 @@ func (m *Migrator) RunMigration(
 		return err
 	}
 
-	var migration *Migration
-	for i := range migrations {
-		if migrations[i].Name == migrationName {
-			migration = &migrations[i]
-			break
-		}
-	}
-	if migration == nil {
+	idx := migrations.Index(migrationName)
+	if idx == -1 {
 		return fmt.Errorf("migrate: migration with name %q not found", migrationName)
 	}
-	if migration.Up == nil {
-		return fmt.Errorf("migrate: migration %s does not have up migration", migration.Name)
-	}
-	if cfg.nop {
-		return nil
+
+	group := &MigrationGroup{
+		ID:         lastGroupID + 1,
+		Migrations: migrations[idx : idx+1],
 	}
 
-	migration.GroupID = lastGroupID + 1
+	if err := m.migrateGroup(ctx, group, opts...); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	return nil
+}
 
-	if !m.markAppliedOnSuccess {
-		if err := m.MarkApplied(ctx, migration); err != nil {
-			return err
+func (m *Migrator) migrateGroup(ctx context.Context, group *MigrationGroup, opts ...MigrationOption) error {
+	cfg := m.newMigrationConfig(opts)
+
+	migrations := group.Migrations[:]
+	group.Migrations = group.Migrations[:0]
+
+	for i := range migrations {
+		migration := &migrations[i]
+		migration.GroupID = group.ID
+
+		if migration.Up == nil {
+			return fmt.Errorf("migrate: migration %s does not have up migration", migration.Name)
 		}
-	}
 
-	if err := migration.Up(ctx, m, migration); err != nil {
-		return fmt.Errorf("%s: up: %w", migration.Name, err)
-	}
+		if !m.markAppliedOnSuccess {
+			if err := m.MarkApplied(ctx, migration); err != nil {
+				return err
+			}
+		}
 
-	if m.markAppliedOnSuccess {
-		if err := m.MarkApplied(ctx, migration); err != nil {
-			return err
+		group.Migrations = group.Migrations[:i+1]
+
+		// TODO(dyma): Migrate marks a migration applied even in a nop run; RunMigration
+		// doesn't MarkApplied on a nop run. Is this intentional?
+		if !cfg.nop {
+			if cfg.templateData != nil {
+				ctx = context.WithValue(ctx, templateDataKey, cfg.templateData)
+			}
+
+			if m.beforeMigrationHook != nil {
+				if err := m.beforeMigrationHook(ctx, m.db, migration); err != nil {
+					return err
+				}
+			}
+
+			if err := migration.Up(ctx, m.db); err != nil {
+				return fmt.Errorf("%s: up: %w", migration.Name, err)
+			}
+
+			if m.afterMigrationHook != nil {
+				if err := m.afterMigrationHook(ctx, m.db, migration); err != nil {
+					return err
+				}
+			}
+		}
+
+		if m.markAppliedOnSuccess {
+			if err := m.MarkApplied(ctx, migration); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -299,7 +306,7 @@ func (m *Migrator) RunMigration(
 
 // Rollback rolls back the last migration group.
 func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*MigrationGroup, error) {
-	cfg := newMigrationConfig(opts)
+	cfg := m.newMigrationConfig(opts)
 
 	lastGroup := new(MigrationGroup)
 
@@ -323,9 +330,24 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 			}
 		}
 
+		if m.beforeMigrationHook != nil {
+			if err := m.beforeMigrationHook(ctx, m.db, migration); err != nil {
+				return lastGroup, fmt.Errorf("before migration: %w", err)
+			}
+		}
+
 		if !cfg.nop && migration.Down != nil {
-			if err := migration.Down(ctx, m, migration); err != nil {
+			if cfg.templateData != nil {
+				ctx = context.WithValue(ctx, templateDataKey, cfg.templateData)
+			}
+			if err := migration.Down(ctx, m.db); err != nil {
 				return lastGroup, fmt.Errorf("%s: down: %w", migration.Name, err)
+			}
+		}
+
+		if m.afterMigrationHook != nil {
+			if err := m.afterMigrationHook(ctx, m.db, migration); err != nil {
+				return lastGroup, fmt.Errorf("after migration: %w", err)
 			}
 		}
 
@@ -573,33 +595,6 @@ func (m *Migrator) validate() error {
 	if len(m.migrations.ms) == 0 {
 		return errors.New("migrate: there are no migrations")
 	}
-	return nil
-}
-
-func (m *Migrator) exec(
-	ctx context.Context, db bun.IConn, migration *Migration, queries []string,
-) error {
-	if m.beforeMigrationHook != nil {
-		if err := m.beforeMigrationHook(ctx, db, migration); err != nil {
-			return err
-		}
-	}
-
-	for _, query := range queries {
-		if strings.TrimSpace(query) == "" {
-			continue
-		}
-		if _, err := db.ExecContext(ctx, query); err != nil {
-			return err
-		}
-	}
-
-	if m.afterMigrationHook != nil {
-		if err := m.afterMigrationHook(ctx, db, migration); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
