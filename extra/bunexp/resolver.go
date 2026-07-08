@@ -26,7 +26,7 @@ var _ (bun.ConnResolver) = (*ReadWriteConnResolver)(nil)
 
 // TODO:
 //   - make monitoring interval configurable
-//   - make ping timeout configutable
+//   - make ping timeout configurable
 //   - allow adding read/write replicas for multi-master replication
 type ReadWriteConnResolver struct {
 	rw     replicas // for read-write queries

@@ -76,7 +76,7 @@ func (c *Columns) Split() []string {
 	return strings.Split(c.String(), ",")
 }
 
-// ContainsColumns checks that columns in "other" are a subset of current colums.
+// ContainsColumns checks that columns in "other" are a subset of current columns.
 func (c *Columns) ContainsColumns(other Columns) bool {
 	columns := c.Split()
 Outer:

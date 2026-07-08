@@ -155,7 +155,7 @@ func (d *Dialect) CompareType(col1, col2 sqlschema.Column) bool {
 }
 
 // checkVarcharLen returns true if columns have the same VarcharLen, or,
-// if one specifies no VarcharLen and the other one has the default lenght for pgdialect.
+// if one specifies no VarcharLen and the other one has the default length for pgdialect.
 // We assume that the types are otherwise equivalent and that any non-character column
 // would have VarcharLen == 0;
 func checkVarcharLen(col1, col2 sqlschema.Column, defaultLen int) bool {

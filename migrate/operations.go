@@ -250,7 +250,7 @@ func (op *DropUniqueConstraintOp) GetReverse() Operation {
 
 // ChangeColumnTypeOp set a new data type for the column.
 // The two types should be such that the data can be auto-casted from one to another.
-// E.g. reducing VARCHAR lenght is not possible in most dialects.
+// E.g. reducing VARCHAR length is not possible in most dialects.
 // AutoMigrator does not enforce or validate these rules.
 type ChangeColumnTypeOp struct {
 	TableName string
