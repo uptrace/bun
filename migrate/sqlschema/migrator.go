@@ -33,7 +33,7 @@ func NewMigrator(db *bun.DB, schemaName string) (Migrator, error) {
 	}, nil
 }
 
-// BaseMigrator can be embeded by dialect's Migrator implementations to re-use some of the existing bun queries.
+// BaseMigrator can be embedded by dialect's Migrator implementations to re-use some of the existing bun queries.
 type BaseMigrator struct {
 	db *bun.DB
 }

@@ -40,7 +40,7 @@ func WithExcludeTable(tables ...string) AutoMigratorOption {
 	}
 }
 
-// WithExcludeForeignKeys tells AutoMigrator to exclude a foreign key constaint
+// WithExcludeForeignKeys tells AutoMigrator to exclude a foreign key constraint
 // from the migration scope. This prevents AutoMigrator from dropping foreign keys
 // that are defined manually via CreateTableQuery.ForeignKey().
 func WithExcludeForeignKeys(fks ...sqlschema.ForeignKey) AutoMigratorOption {
