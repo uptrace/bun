@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -67,7 +68,7 @@ func wrapGoMigrationFunc(fn MigrationFunc) internalMigrationFunc {
 }
 
 func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
-	return func(ctx context.Context, migrator *Migrator, migration *Migration) error {
+	return func(ctx context.Context, migrator *Migrator, migration *Migration) (err error) {
 		sqlFile, err := fsys.Open(name)
 		if err != nil {
 			return err
@@ -137,21 +138,25 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 			idb = conn
 		}
 
-		var retErr error
 		var execErr error
 
 		defer func() {
+			// The migration body ran via a named return, so the finalizer's
+			// error can be reported back to Migrator.Migrate instead of being
+			// discarded (the previous unnamed return evaluated `return` before
+			// this deferred function assigned to it). When the body already
+			// failed, keep that error and preserve the finalizer error too.
 			if tx, ok := idb.(bun.Tx); ok {
 				if execErr != nil {
-					retErr = tx.Rollback()
+					err = errors.Join(execErr, tx.Rollback())
 				} else {
-					retErr = tx.Commit()
+					err = tx.Commit()
 				}
 				return
 			}
 
 			if conn, ok := idb.(bun.Conn); ok {
-				retErr = conn.Close()
+				err = errors.Join(execErr, conn.Close())
 				return
 			}
 
@@ -159,10 +164,7 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 		}()
 
 		execErr = migrator.exec(ctx, idb, migration, queries)
-		if execErr != nil {
-			return execErr
-		}
-		return retErr
+		return execErr
 	}
 }
 
