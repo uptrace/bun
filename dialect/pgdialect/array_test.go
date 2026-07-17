@@ -39,6 +39,14 @@ func TestArrayAppend(t *testing.T) {
 			input: []*string{ptr("foo"), ptr("bar")},
 			out:   `'{"foo","bar"}'`,
 		},
+		{
+			input: [][]byte{{1, 2, 3}, {4, 5, 6}},
+			out:   `'{"\\x010203","\\x040506"}'`,
+		},
+		{
+			input: [][3]byte{{1, 2, 3}, {4, 5, 6}},
+			out:   `'{"\\x010203","\\x040506"}'`,
+		},
 	}
 
 	for _, tcase := range tcases {
