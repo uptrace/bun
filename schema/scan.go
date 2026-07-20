@@ -352,6 +352,9 @@ func scanJSON(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
 	}
+	if !dest.CanAddr() {
+		return fmt.Errorf("bun: Scan(nonaddressable %s)", dest.Type())
+	}
 
 	b, err := toBytes(src)
 	if err != nil {
@@ -364,6 +367,9 @@ func scanJSON(dest reflect.Value, src any) error {
 func scanJSONUseNumber(dest reflect.Value, src any) error {
 	if src == nil {
 		return scanNull(dest)
+	}
+	if !dest.CanAddr() {
+		return fmt.Errorf("bun: Scan(nonaddressable %s)", dest.Type())
 	}
 
 	b, err := toBytes(src)
@@ -531,6 +537,9 @@ func scanJSONIntoInterface(dest reflect.Value, src any) error {
 	}
 
 	dest = dest.Elem()
+	if !dest.CanAddr() {
+		return fmt.Errorf("bun: Scan(nonaddressable %s)", dest.Type())
+	}
 	if fn := Scanner(dest.Type()); fn != nil {
 		return fn(dest, src)
 	}
