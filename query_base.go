@@ -772,9 +772,13 @@ type whereBaseQuery struct {
 
 	where       []schema.QueryWithSep
 	whereFields []*schema.Field
+	whereHasOr  bool
 }
 
 func (q *whereBaseQuery) addWhere(where schema.QueryWithSep) {
+	if strings.Contains(where.Sep, "OR") {
+		q.whereHasOr = true
+	}
 	q.where = append(q.where, where)
 }
 
@@ -844,10 +848,18 @@ func (q *whereBaseQuery) appendWhere(
 	b = append(b, " WHERE "...)
 	startLen := len(b)
 
+	needsExtraCondition := q.isSoftDelete() || q.whereFields != nil
 	if len(q.where) > 0 {
+		wrapParens := needsExtraCondition && q.whereHasOr
+		if wrapParens {
+			b = append(b, '(')
+		}
 		b, err = appendWhere(gen, b, q.where)
 		if err != nil {
 			return nil, err
+		}
+		if wrapParens {
+			b = append(b, ')')
 		}
 	}
 

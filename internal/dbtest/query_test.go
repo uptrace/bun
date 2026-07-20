@@ -1945,6 +1945,56 @@ func TestQuery(t *testing.T) {
 				}))
 			},
 		},
+		{
+			id: 205,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(SoftDelete1)).
+					Where("id = 1").
+					WhereOr("id = 2")
+			},
+		},
+		{
+			id: 206,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(SoftDelete1)).
+					WhereOr("id = 1").
+					WhereOr("id = 2")
+			},
+		},
+		{
+			id: 207,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(SoftDelete1)).
+					Where("id = 1").
+					WhereOr("id = 2").
+					WhereDeleted()
+			},
+		},
+		{
+			id: 208,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewSelect().Model(new(SoftDelete1)).
+					Where("id = 1").
+					Where("id = 2")
+			},
+		},
+		{
+			id: 209,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewDelete().Model(new(SoftDelete1)).
+					Where("id = 1").
+					WhereOr("id = 2")
+			},
+		},
+		{
+			id: 210,
+			query: func(db *bun.DB) schema.QueryAppender {
+				return db.NewUpdate().Model(new(SoftDelete1)).
+					Set("id = id").
+					Where("id = 1").
+					WhereOr("id = 2")
+			},
+		},
 	}
 
 	timeRE := regexp.MustCompile(`'2\d{3}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?'`)
