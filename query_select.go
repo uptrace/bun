@@ -1193,6 +1193,14 @@ func (q *SelectQuery) Clone() *SelectQuery {
 		copy(clone, args)
 		return clone
 	}
+	cloneWhereFields := func(fields []*schema.Field) []*schema.Field {
+		if fields == nil {
+			return nil
+		}
+		clone := make([]*schema.Field, len(fields))
+		copy(clone, fields)
+		return clone
+	}
 	cloneHints := func(hints *indexHints) *indexHints {
 		if hints == nil {
 			return nil
@@ -1213,15 +1221,19 @@ func (q *SelectQuery) Clone() *SelectQuery {
 		whereBaseQuery: whereBaseQuery{
 			baseQuery: baseQuery{
 				db:             q.db,
+				conn:           q.conn,
 				table:          q.table,
 				model:          q.model,
+				err:            q.err,
 				tableModel:     tableModel,
 				with:           make([]WithQuery, len(q.with)),
 				tables:         cloneArgs(q.tables),
 				columns:        cloneArgs(q.columns),
 				modelTableName: q.modelTableName,
+				flags:          q.flags,
 			},
-			where: make([]schema.QueryWithSep, len(q.where)),
+			where:       make([]schema.QueryWithSep, len(q.where)),
+			whereFields: cloneWhereFields(q.whereFields),
 		},
 
 		idxHintsQuery: idxHintsQuery{
@@ -1246,9 +1258,11 @@ func (q *SelectQuery) Clone() *SelectQuery {
 
 	for i, w := range q.with {
 		clone.with[i] = WithQuery{
-			name:      w.name,
-			recursive: w.recursive,
-			query:     w.query, // TODO: maybe clone is need
+			name:            w.name,
+			recursive:       w.recursive,
+			materialized:    w.materialized,
+			notMaterialized: w.notMaterialized,
+			query:           w.query, // TODO: maybe clone is need
 		}
 	}
 
