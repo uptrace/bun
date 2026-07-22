@@ -128,14 +128,34 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 	}
 }
 
+// WithInsecure configures how the connection is protected.
+//
+//   - WithInsecure(true) disables TLS entirely (plaintext connection).
+//   - WithInsecure(false) enables TLS *with* server-certificate verification.
+//     ServerName is derived from the connection address at connect time.
+//
+// Note: previously WithInsecure(false) enabled TLS but skipped certificate
+// verification (InsecureSkipVerify: true), which left the connection open to
+// active man-in-the-middle attacks. To intentionally skip verification (e.g. a
+// self-signed certificate in development) pass an explicit config via
+// WithTLSConfig(&tls.Config{InsecureSkipVerify: true}).
 func WithInsecure(on bool) Option {
 	return func(conf *Config) {
 		if on {
 			conf.TLSConfig = nil
 		} else {
-			conf.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+			conf.TLSConfig = &tls.Config{}
 		}
 	}
+}
+
+// hostWithoutPort returns the host portion of a "host:port" address, or the
+// address unchanged if it has no port.
+func hostWithoutPort(addr string) string {
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
+	}
+	return addr
 }
 
 func WithUser(user string) Option {
