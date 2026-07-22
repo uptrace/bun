@@ -187,7 +187,7 @@ func AppendBoolValue(gen QueryGen, b []byte, v reflect.Value) []byte {
 }
 
 func AppendIntValue(gen QueryGen, b []byte, v reflect.Value) []byte {
-	return strconv.AppendInt(b, v.Int(), 10)
+	return strconv.AppendInt(guardLineComment(b, v.Int() < 0), v.Int(), 10)
 }
 
 func AppendUintValue(gen QueryGen, b []byte, v reflect.Value) []byte {
@@ -203,11 +203,11 @@ func appendUint64Value(gen QueryGen, b []byte, v reflect.Value) []byte {
 }
 
 func AppendFloat32Value(gen QueryGen, b []byte, v reflect.Value) []byte {
-	return dialect.AppendFloat32(b, float32(v.Float()))
+	return dialect.AppendFloat32(guardLineComment(b, v.Float() < 0), float32(v.Float()))
 }
 
 func AppendFloat64Value(gen QueryGen, b []byte, v reflect.Value) []byte {
-	return dialect.AppendFloat64(b, float64(v.Float()))
+	return dialect.AppendFloat64(guardLineComment(b, v.Float() < 0), float64(v.Float()))
 }
 
 func appendBytesValue(gen QueryGen, b []byte, v reflect.Value) []byte {
