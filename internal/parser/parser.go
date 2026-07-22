@@ -110,6 +110,100 @@ func (p *Parser) ReadSep(sep byte) ([]byte, bool) {
 	return b, true
 }
 
+// ReadUntilPlaceholder reads up to the next '?' placeholder that is NOT inside a
+// single-quoted string literal or a "--" / "/* */" comment, returning the text
+// before it. The bool reports whether a placeholder was found (and, if so,
+// consumed). It is the literal/comment-aware counterpart of ReadSep('?').
+//
+// This prevents a '?' that appears inside a string literal or comment in the
+// query template from being mistaken for a bind placeholder, which would shift
+// every subsequent positional argument.
+//
+// Double-quoted identifiers are intentionally NOT skipped: bun uses named
+// placeholders inside quoted identifiers (e.g. multi-tenant "?tenant".table via
+// WithNamedArg), so a '?' there must still be treated as a placeholder.
+//
+// Scope/limitations (intentional, to avoid ever skipping a real placeholder):
+//   - Backslash escaping inside string literals is NOT interpreted. This matches
+//     PostgreSQL with standard_conforming_strings=on (the default since 9.1),
+//     where '\' is an ordinary character.
+//   - Dollar-quoted strings ($tag$...$tag$) and escape strings (E'...') are not
+//     specially tracked.
+//
+// In those unhandled cases the behaviour degrades to the previous (ReadSep)
+// behaviour rather than skipping a genuine placeholder.
+func (p *Parser) ReadUntilPlaceholder() ([]byte, bool) {
+	b := p.b
+	start := p.i
+	i := p.i
+	for i < len(b) {
+		switch b[i] {
+		case '?':
+			p.i = i + 1
+			return b[start:i], true
+		case '\'':
+			i = skipQuoted(b, i, '\'')
+		case '-':
+			if i+1 < len(b) && b[i+1] == '-' {
+				i += 2
+				for i < len(b) && b[i] != '\n' {
+					i++
+				}
+			} else {
+				i++
+			}
+		case '/':
+			if i+1 < len(b) && b[i+1] == '*' {
+				i = skipBlockComment(b, i)
+			} else {
+				i++
+			}
+		default:
+			i++
+		}
+	}
+	p.i = len(b)
+	return b[start:], false
+}
+
+// skipQuoted returns the index just past a string literal that starts at
+// b[i]==quote. A doubled quote (”) is treated as an escaped quote and does not
+// terminate the literal. If the literal is unterminated, the end of input is
+// returned.
+func skipQuoted(b []byte, i int, quote byte) int {
+	i++ // opening quote
+	for i < len(b) {
+		if b[i] == quote {
+			if i+1 < len(b) && b[i+1] == quote {
+				i += 2
+				continue
+			}
+			return i + 1
+		}
+		i++
+	}
+	return i
+}
+
+// skipBlockComment returns the index just past a /* */ comment that starts at
+// b[i:]=="/*". Block comments nest, matching PostgreSQL.
+func skipBlockComment(b []byte, i int) int {
+	i += 2
+	depth := 1
+	for i < len(b) && depth > 0 {
+		if b[i] == '/' && i+1 < len(b) && b[i+1] == '*' {
+			depth++
+			i += 2
+		} else if b[i] == '*' && i+1 < len(b) && b[i+1] == '/' {
+			depth--
+			i += 2
+		} else {
+			i++
+		}
+	}
+	return i
+}
+
 func (p *Parser) ReadIdentifier() (string, bool) {
 	if p.i < len(p.b) && p.b[p.i] == '(' {
 		s := p.i + 1
