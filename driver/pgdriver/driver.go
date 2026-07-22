@@ -174,6 +174,14 @@ func (cn *Conn) reader(ctx context.Context, timeout time.Duration) *reader {
 }
 
 func (cn *Conn) write(ctx context.Context, wb *writeBuffer) error {
+	// Refuse to send a message that failed to build (e.g. it exceeded the
+	// protocol size limit); sending it would desync the connection.
+	if wb.err != nil {
+		err := wb.err
+		wb.Reset()
+		return err
+	}
+
 	cn.setWriteDeadline(ctx, -1)
 
 	n, err := cn.netConn.Write(wb.Bytes)

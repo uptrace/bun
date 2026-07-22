@@ -94,6 +94,9 @@ func newReader(r io.Reader, size int) *reader {
 }
 
 func (r *reader) ReadTemp(n int) ([]byte, error) {
+	if n < 0 {
+		return nil, errInvalidMessageLength
+	}
 	if n <= len(r.buf) {
 		b := r.buf[:n]
 		_, err := io.ReadFull(r.Reader, b)
@@ -827,6 +830,10 @@ func writeBindExecute(ctx context.Context, cn *Conn, name string, args []driver.
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
+	if len(args) > math.MaxInt16 {
+		return fmt.Errorf("pgdriver: too many bind parameters: %d (max %d)", len(args), math.MaxInt16)
+	}
+
 	wb.StartMessage(bindMsg)
 	wb.WriteString("")
 	wb.WriteString(name)
@@ -1019,6 +1026,12 @@ func readMessageType(rd *reader) (byte, int, error) {
 	l, err := readInt32(rd)
 	if err != nil {
 		return 0, 0, err
+	}
+	if l < 4 {
+		// The length field includes its own 4 bytes, so it can never be < 4.
+		// A smaller value would yield a negative body length and panic callers
+		// that allocate/slice with it.
+		return 0, 0, errInvalidMessageLength
 	}
 	return c, int(l) - 4, nil
 }
