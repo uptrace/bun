@@ -3,6 +3,7 @@ package schema
 import (
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -11,6 +12,11 @@ import (
 	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/internal/parser"
 )
+
+// errStringNul is reported when a string value contains a NUL byte (0x00).
+// Silently stripping it (the previous behavior) would store a value different
+// from the one the caller supplied; PostgreSQL rejects NUL in text outright.
+var errStringNul = errors.New("bun: string contains a NUL byte (0x00)")
 
 type Dialect interface {
 	Init(db *sql.DB)
@@ -67,7 +73,9 @@ func (BaseDialect) AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
 	for _, r := range s {
 		if r == '\000' {
-			continue
+			// Fail closed instead of silently dropping the NUL, which would
+			// persist a value different from the one that was validated.
+			return dialect.AppendError(b, errStringNul)
 		}
 
 		if r == '\'' {
