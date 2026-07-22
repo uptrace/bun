@@ -61,6 +61,13 @@ func readColumnValue(rd *reader, dataType int32, dataLen int) (any, error) {
 		return readBytesCol(rd, dataLen)
 	}
 
+	if dataLen < 0 {
+		// dataLen == -1 signals SQL NULL; any other negative value is invalid
+		// and must not reach make([]byte, dataLen) (would panic). dataLen == 0
+		// is fine and keeps its previous behavior (empty value).
+		return nil, nil
+	}
+
 	b := make([]byte, dataLen)
 	if _, err := io.ReadFull(rd, b); err != nil {
 		return nil, err
