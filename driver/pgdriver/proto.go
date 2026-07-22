@@ -125,6 +125,13 @@ func enableSSL(ctx context.Context, cn *Conn, tlsConf *tls.Config) error {
 		return errors.New("pgdriver: SSL is not enabled on the server")
 	}
 
+	// A verifying config needs a ServerName; derive it from the address if the
+	// caller did not set one (e.g. the config produced by WithInsecure(false)).
+	if !tlsConf.InsecureSkipVerify && tlsConf.ServerName == "" {
+		tlsConf = tlsConf.Clone()
+		tlsConf.ServerName = hostWithoutPort(cn.conf.Addr)
+	}
+
 	tlsCN := tls.Client(cn.netConn, tlsConf)
 	if err := tlsCN.HandshakeContext(ctx); err != nil {
 		return fmt.Errorf("pgdriver: TLS handshake failed: %w", err)
