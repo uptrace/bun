@@ -132,10 +132,11 @@ func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
 			if p.CutPrefix([]byte("u0000")) {
 				b = append(b, `\\u0000`...)
 			} else {
+				// Emit the backslash but do NOT consume the next byte here: let
+				// the loop escape it. Consuming it raw bypassed the '' quote
+				// doubling, so a "\'" byte pair produced an un-doubled quote that
+				// could break out of the SQL string literal.
 				b = append(b, '\\')
-				if p.Valid() {
-					b = append(b, p.Read())
-				}
 			}
 		default:
 			b = append(b, c)
