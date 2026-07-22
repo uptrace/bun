@@ -143,7 +143,7 @@ func (f QueryGen) append(dst []byte, p *parser.Parser, args []any) []byte {
 
 	var argIndex int
 	for p.Valid() {
-		b, ok := p.ReadSep('?')
+		b, ok := p.ReadUntilPlaceholder()
 		if !ok {
 			dst = append(dst, b...)
 			continue
