@@ -149,7 +149,7 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 	switch typ.Kind() {
 	case reflect.String:
 		return appendStringElemValue
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return appendBytesElemValue
 		}
