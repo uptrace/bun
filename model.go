@@ -124,6 +124,10 @@ func _newModel(db *DB, dest any, scan bool) (Model, error) {
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
 		return newStructTableModelValue(db, dest, v), nil
+	case reflect.Pointer:
+		if v.Type().Elem().Kind() == reflect.Struct {
+			return newStructTableModelValue(db, dest, v), nil
+		}
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:
@@ -207,4 +211,10 @@ func isSingleRowModel(m Model) bool {
 	default:
 		return false
 	}
+}
+
+// nilModel is implemented by models whose destination may be a nil pointer
+// that should not be treated as "no rows" when an empty result is scanned.
+type nilModel interface {
+	isNil() bool
 }
