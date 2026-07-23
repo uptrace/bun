@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/inflection"
 
 	"github.com/uptrace/bun/dialect/feature"
+	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/internal/tagparser"
 )
@@ -565,6 +566,13 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 		field.UserSQLType = s
 	}
 	field.DiscoveredSQLType = DiscoverSQLType(field.IndirectType)
+	if field.Tag.HasOption("msgpack") {
+		// A msgpack column holds the encoded bytes, not the Go type's own
+		// representation, so it needs a binary column whatever the field is
+		// declared as. Without this the type is discovered from the struct and
+		// the column ends up textual, which cannot store arbitrary msgpack.
+		field.DiscoveredSQLType = sqltype.Blob
+	}
 	field.Append = FieldAppender(t.dialect, field)
 	field.Scan = FieldScanner(t.dialect, field)
 	field.IsZero = zeroChecker(field.StructField.Type)
