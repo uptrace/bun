@@ -1,12 +1,14 @@
 package schema
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/puzpuzpuz/xsync/v3"
@@ -289,22 +291,68 @@ func addrAppender(fn AppenderFunc) AppenderFunc {
 	}
 }
 
+// maxPooledMsgpackBuffer bounds what the pool keeps alive between queries.
+// bytes.Buffer.Reset keeps its backing array, so a writer grown past this by one
+// oversized value is dropped instead of retained.
+const maxPooledMsgpackBuffer = 64 << 10
+
+var msgpackWriterPool = sync.Pool{
+	New: func() any { return new(msgpackWriter) },
+}
+
+// msgpackWriter stages encoder output and records whether the encoder wrote at
+// all. A msgpack.CustomEncoder may return successfully without touching the
+// writer, which is SQL NULL, and that is a different outcome from an encoder
+// that wrote zero bytes, which is an empty value. Buffer emptiness cannot tell
+// the two apart, so the bit is tracked explicitly.
+type msgpackWriter struct {
+	buf     bytes.Buffer
+	written bool
+}
+
+func (w *msgpackWriter) Write(b []byte) (int, error) {
+	w.written = true
+	return w.buf.Write(b)
+}
+
+func (w *msgpackWriter) reset() {
+	w.buf.Reset()
+	w.written = false
+}
+
 func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
-	hexEnc := internal.NewHexEncoder(b)
+	// The dialect needs the whole encoded value to wrap it in its own byte
+	// literal syntax, so the msgpack output is staged rather than streamed
+	// straight into the query.
+	w := msgpackWriterPool.Get().(*msgpackWriter)
+	defer func() {
+		if w.buf.Cap() <= maxPooledMsgpackBuffer {
+			w.reset()
+			msgpackWriterPool.Put(w)
+		}
+	}()
 
 	enc := msgpack.GetEncoder()
 	defer msgpack.PutEncoder(enc)
 
-	enc.Reset(hexEnc)
+	enc.Reset(w)
 	if err := enc.EncodeValue(v); err != nil {
 		return dialect.AppendError(b, err)
 	}
 
-	if err := hexEnc.Close(); err != nil {
-		return dialect.AppendError(b, err)
+	if !w.written {
+		return dialect.AppendNull(b)
 	}
 
-	return hexEnc.Bytes()
+	// The encoder did write, so this is a value even when it wrote no bytes.
+	// Bytes() is still nil after a zero-length write, and AppendBytes maps nil
+	// to NULL, so spell the empty case explicitly.
+	bs := w.buf.Bytes()
+	if bs == nil {
+		bs = []byte{}
+	}
+
+	return gen.Dialect().AppendBytes(b, bs)
 }
 
 func AppendQueryAppender(gen QueryGen, b []byte, app QueryAppender) []byte {
