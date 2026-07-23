@@ -1,8 +1,6 @@
 package internal
 
-import (
-	fasthex "github.com/tmthrgd/go-hex"
-)
+import "encoding/hex"
 
 type HexEncoder struct {
 	b       []byte
@@ -27,8 +25,8 @@ func (enc *HexEncoder) Write(b []byte) (int, error) {
 	}
 
 	i := len(enc.b)
-	enc.b = append(enc.b, make([]byte, fasthex.EncodedLen(len(b)))...)
-	fasthex.Encode(enc.b[i:], b)
+	enc.b = append(enc.b, make([]byte, hex.EncodedLen(len(b)))...)
+	hex.Encode(enc.b[i:], b)
 
 	return len(b), nil
 }
