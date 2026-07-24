@@ -425,6 +425,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 	}
 
 	var strct reflect.Value
+	var slice reflect.Value
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
@@ -433,7 +434,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 		if model.sliceLen == 0 {
 			return nil, fmt.Errorf("bun: Insert(empty %T)", model.slice.Type())
 		}
-		strct = indirect(model.slice.Index(0))
+		slice = model.slice
 	default:
 		return nil, errNilModel
 	}
@@ -445,7 +446,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 			q.addReturningField(f)
 			continue
 		}
-		if f.NotNull && q.marshalsToDefault(f, strct) {
+		if f.NotNull && q.marshalsToDefaultForInsert(f, strct, slice) {
 			q.addReturningField(f)
 			continue
 		}
@@ -453,6 +454,24 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 	}
 
 	return fields, nil
+}
+
+// marshalsToDefaultForInsert reports whether f marshals to DEFAULT/NULL for
+// every row being inserted. For a single-struct model it checks the one
+// struct; for a slice model it checks every element, so that a field is only
+// moved to RETURNING when no element carries a real value. Otherwise a later
+// element's value would be silently dropped from the INSERT (issue #1394).
+func (q InsertQuery) marshalsToDefaultForInsert(f *schema.Field, strct, slice reflect.Value) bool {
+	if !slice.IsValid() {
+		return q.marshalsToDefault(f, strct)
+	}
+	n := slice.Len()
+	for i := 0; i < n; i++ {
+		if !q.marshalsToDefault(f, indirect(slice.Index(i))) {
+			return false
+		}
+	}
+	return true
 }
 
 // marshalsToDefault checks if the value will be marshaled as DEFAULT or NULL (if DEFAULT placeholder is not supported)
