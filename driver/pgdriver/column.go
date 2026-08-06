@@ -31,7 +31,12 @@ const (
 )
 
 func readColumnValue(rd *reader, dataType int32, dataLen int) (any, error) {
-	if dataLen == -1 {
+	if dataLen < 0 {
+		if dataLen == -1 {
+			return nil, nil
+		}
+		return nil, errInvalidMessageLength // TODO or nil?
+	}
 		return nil, nil
 	}
 
