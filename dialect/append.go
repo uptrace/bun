@@ -7,9 +7,20 @@ import (
 	"github.com/uptrace/bun/internal"
 )
 
-func AppendError(b []byte, err error) []byte {
+// StringEscaper appends s to b as a properly quoted and escaped SQL string
+// literal. schema.Dialect satisfies this interface.
+type StringEscaper interface {
+	AppendString(b []byte, s string) []byte
+}
+
+// AppendError appends err inside a "?!(...)" marker so a formatting failure
+// is visible in the generated query. err.Error() is untrusted: it can come
+// from a driver.Valuer, JSON/msgpack encoder, etc., so it must go through
+// escaper instead of being appended raw, or a crafted message could break
+// out of the marker and inject SQL.
+func AppendError(b []byte, escaper StringEscaper, err error) []byte {
 	b = append(b, "?!("...)
-	b = append(b, err.Error()...)
+	b = escaper.AppendString(b, err.Error())
 	b = append(b, ')')
 	return b
 }

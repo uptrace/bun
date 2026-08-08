@@ -178,9 +178,9 @@ func appendBytesElemValue(gen schema.QueryGen, b []byte, v reflect.Value) []byte
 func arrayAppendDriverValue(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
 	iface, err := v.Interface().(driver.Valuer).Value()
 	if err != nil {
-		return dialect.AppendError(b, err)
+		return dialect.AppendError(b, gen.Dialect(), err)
 	}
-	return appendElem(b, iface)
+	return appendElem(b, gen.Dialect(), iface)
 }
 
 func appendStringSliceValue(gen schema.QueryGen, b []byte, v reflect.Value) []byte {

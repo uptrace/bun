@@ -11,7 +11,7 @@ import (
 	"github.com/uptrace/bun/dialect"
 )
 
-func appendElem(buf []byte, val any) []byte {
+func appendElem(buf []byte, escaper dialect.StringEscaper, val any) []byte {
 	switch val := val.(type) {
 	case int64:
 		return strconv.AppendInt(buf, val, 10)
@@ -32,12 +32,12 @@ func appendElem(buf []byte, val any) []byte {
 		val2, err := val.Value()
 		if err != nil {
 			err := fmt.Errorf("pgdialect: can't append elem value: %w", err)
-			return dialect.AppendError(buf, err)
+			return dialect.AppendError(buf, escaper, err)
 		}
-		return appendElem(buf, val2)
+		return appendElem(buf, escaper, val2)
 	default:
 		err := fmt.Errorf("pgdialect: can't append elem %T", val)
-		return dialect.AppendError(buf, err)
+		return dialect.AppendError(buf, escaper, err)
 	}
 }
 

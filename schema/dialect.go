@@ -69,13 +69,16 @@ func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
-func (BaseDialect) AppendString(b []byte, s string) []byte {
+func (d BaseDialect) AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
 	for _, r := range s {
 		if r == '\000' {
 			// Fail closed instead of silently dropping the NUL, which would
-			// persist a value different from the one that was validated.
-			return dialect.AppendError(b, errStringNul)
+			// persist a value different from the one that was validated. The
+			// marker text is a fixed constant (no attacker-controlled bytes),
+			// but it still goes through AppendString for a consistently
+			// quoted/escaped "?!(...)" marker.
+			return dialect.AppendError(b, d, errStringNul)
 		}
 
 		if r == '\'' {

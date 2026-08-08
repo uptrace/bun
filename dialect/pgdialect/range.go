@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
@@ -128,14 +129,14 @@ func (r *Range[T]) Scan(raw any) (err error) {
 
 var _ schema.QueryAppender = (*Range[any])(nil)
 
-func (r Range[T]) AppendQuery(_ schema.QueryGen, buf []byte) ([]byte, error) {
+func (r Range[T]) AppendQuery(gen schema.QueryGen, buf []byte) ([]byte, error) {
 	buf = append(buf, '\'')
-	buf = appendRange(buf, r)
+	buf = appendRange(buf, gen.Dialect(), r)
 	buf = append(buf, '\'')
 	return buf, nil
 }
 
-func appendRange[T any](buf []byte, r Range[T]) []byte {
+func appendRange[T any](buf []byte, escaper dialect.StringEscaper, r Range[T]) []byte {
 	if r.IsEmpty() {
 		buf = append(buf, []byte("empty")...)
 		return buf
@@ -147,13 +148,13 @@ func appendRange[T any](buf []byte, r Range[T]) []byte {
 		buf = append(buf, byte(RangeBoundExclusiveLeft))
 	} else {
 		buf = append(buf, byte(r.LowerBound))
-		buf = appendElem(buf, r.Lower)
+		buf = appendElem(buf, escaper, r.Lower)
 	}
 	buf = append(buf, ',')
 	if r.UpperBound == RangeBoundUnset {
 		buf = append(buf, byte(RangeBoundExclusiveRight))
 	} else {
-		buf = appendElem(buf, r.Upper)
+		buf = appendElem(buf, escaper, r.Upper)
 		buf = append(buf, byte(r.UpperBound))
 	}
 	return buf
@@ -170,14 +171,14 @@ func (m *MultiRange[T]) IsZero() bool {
 	return m.Len() == 0
 }
 
-func (m MultiRange[T]) AppendQuery(_ schema.QueryGen, buf []byte) ([]byte, error) {
+func (m MultiRange[T]) AppendQuery(gen schema.QueryGen, buf []byte) ([]byte, error) {
 	if m == nil {
 		return append(buf, []byte("'{}'")...), nil
 	}
 	rs := ([]Range[T])(m)
 	buf = append(buf, '\'', '{')
 	for _, r := range rs {
-		buf = appendRange(buf, r)
+		buf = appendRange(buf, gen.Dialect(), r)
 		buf = append(buf, ',')
 	}
 	if len(rs) > 0 {

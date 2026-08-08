@@ -220,7 +220,7 @@ func (gen QueryGen) appendArg(b []byte, arg any) []byte {
 	case QueryAppender:
 		bb, err := arg.AppendQuery(gen, b)
 		if err != nil {
-			return dialect.AppendError(b, err)
+			return dialect.AppendError(b, gen.Dialect(), err)
 		}
 		return bb
 	default:
