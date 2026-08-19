@@ -93,6 +93,18 @@ func testModelHook(t *testing.T, dbName string, db *bun.DB) {
 		require.Equal(t, []string{"BeforeDelete", "AfterDelete"}, events.Flush())
 	}
 
+	t.Run("count", func(t *testing.T) {
+		_, err := db.NewSelect().Model((*ModelHookTest)(nil)).Count(ctx)
+		require.NoError(t, err)
+		require.Equal(t, []string{"BeforeSelect"}, events.Flush())
+	})
+
+	t.Run("exists", func(t *testing.T) {
+		_, err := db.NewSelect().Model((*ModelHookTest)(nil)).Exists(ctx)
+		require.NoError(t, err)
+		require.Equal(t, []string{"BeforeSelect"}, events.Flush())
+	})
+
 	t.Run("insertSlice", func(t *testing.T) {
 		hooks := []ModelHookTest{{ID: 1}, {ID: 2}}
 		_, err := db.NewInsert().Model(&hooks).Exec(ctx)
@@ -206,6 +218,80 @@ func (t *ModelHookTest) AfterDelete(ctx context.Context, query *bun.DeleteQuery)
 	assertQueryModel(query)
 	events.Add("AfterDelete")
 	return nil
+}
+
+// TenantFilterModel uses BeforeSelect to add a WHERE clause, simulating
+// multi-tenant row filtering. This verifies that Count and Exists honour
+// the hook — the bug that motivated this test is that they previously
+// skipped BeforeSelect entirely (see https://github.com/uptrace/bun/issues/1289).
+type TenantFilterModel struct {
+	bun.BaseModel `bun:"table:tenant_filter_models"`
+
+	ID       int64  `bun:",pk,autoincrement"`
+	TenantID int64
+	Value    string
+}
+
+// tenantKey is a context key for the tenant ID used in BeforeSelect.
+type tenantKey struct{}
+
+var _ bun.BeforeSelectHook = (*TenantFilterModel)(nil)
+
+func (m *TenantFilterModel) BeforeSelect(ctx context.Context, query *bun.SelectQuery) error {
+	if tid, ok := ctx.Value(tenantKey{}).(int64); ok {
+		query.Where("tenant_id = ?", tid)
+	}
+	return nil
+}
+
+func TestBeforeSelectHookOnCountAndExists(t *testing.T) {
+	testEachDB(t, testBeforeSelectHookOnCountAndExists)
+}
+
+func testBeforeSelectHookOnCountAndExists(t *testing.T, dbName string, db *bun.DB) {
+	mustResetModel(t, ctx, db, (*TenantFilterModel)(nil))
+
+	// Seed two tenants with different row counts.
+	models := []TenantFilterModel{
+		{TenantID: 1, Value: "a"},
+		{TenantID: 1, Value: "b"},
+		{TenantID: 1, Value: "c"},
+		{TenantID: 2, Value: "d"},
+	}
+	_, err := db.NewInsert().Model(&models).Exec(ctx)
+	require.NoError(t, err)
+
+	t.Run("count_with_tenant_filter", func(t *testing.T) {
+		tenant1Ctx := context.WithValue(ctx, tenantKey{}, int64(1))
+		count, err := db.NewSelect().Model((*TenantFilterModel)(nil)).Count(tenant1Ctx)
+		require.NoError(t, err)
+		require.Equal(t, int64(3), count, "Count must return only tenant 1's rows")
+
+		tenant2Ctx := context.WithValue(ctx, tenantKey{}, int64(2))
+		count, err = db.NewSelect().Model((*TenantFilterModel)(nil)).Count(tenant2Ctx)
+		require.NoError(t, err)
+		require.Equal(t, int64(1), count, "Count must return only tenant 2's rows")
+	})
+
+	t.Run("count_without_tenant_filter", func(t *testing.T) {
+		// No tenant in context — hook adds no WHERE, so all rows are counted.
+		count, err := db.NewSelect().Model((*TenantFilterModel)(nil)).Count(ctx)
+		require.NoError(t, err)
+		require.Equal(t, int64(4), count)
+	})
+
+	t.Run("exists_with_tenant_filter", func(t *testing.T) {
+		tenant1Ctx := context.WithValue(ctx, tenantKey{}, int64(1))
+		exists, err := db.NewSelect().Model((*TenantFilterModel)(nil)).Exists(tenant1Ctx)
+		require.NoError(t, err)
+		require.True(t, exists, "Exists must find tenant 1's rows")
+
+		// Tenant 99 has no rows.
+		tenant99Ctx := context.WithValue(ctx, tenantKey{}, int64(99))
+		exists, err = db.NewSelect().Model((*TenantFilterModel)(nil)).Exists(tenant99Ctx)
+		require.NoError(t, err)
+		require.False(t, exists, "Exists must not find rows for a tenant with none")
+	})
 }
 
 func assertQueryModel(query interface{ GetModel() bun.Model }) {

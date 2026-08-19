@@ -1008,6 +1008,12 @@ func (q *SelectQuery) Count(ctx context.Context) (int64, error) {
 		return 0, q.err
 	}
 
+	if q.table != nil {
+		if err := q.beforeSelectHook(ctx); err != nil {
+			return 0, err
+		}
+	}
+
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
@@ -1114,6 +1120,12 @@ func (q *SelectQuery) scanAndCountSeq(ctx context.Context, dest ...any) (int64, 
 func (q *SelectQuery) Exists(ctx context.Context) (bool, error) {
 	if q.err != nil {
 		return false, q.err
+	}
+
+	if q.table != nil {
+		if err := q.beforeSelectHook(ctx); err != nil {
+			return false, err
+		}
 	}
 
 	if q.hasFeature(feature.SelectExists) {
