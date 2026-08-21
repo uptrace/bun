@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.25.x, 1.26.x]
+        go-version: [1.26.x, 1.27.x]
 
     services:
       postgres:
