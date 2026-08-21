@@ -44,7 +44,7 @@ var appenders = []AppenderFunc{
 	reflect.Func:          nil,
 	reflect.Interface:     nil,
 	reflect.Map:           AppendJSONValue,
-	reflect.Ptr:           nil,
+	reflect.Pointer:       nil,
 	reflect.Slice:         AppendJSONValue,
 	reflect.String:        AppendStringValue,
 	reflect.Struct:        AppendJSONValue,
@@ -66,7 +66,7 @@ func FieldAppender(dialect Dialect, field *Field) AppenderFunc {
 			return appendDriverValue
 		}
 
-		if fieldType.Kind() != reflect.Ptr {
+		if fieldType.Kind() != reflect.Pointer {
 			if reflect.PointerTo(fieldType).Implements(driverValuerType) {
 				return addrAppender(appendDriverValue)
 			}
@@ -110,19 +110,19 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	kind := typ.Kind()
 
 	if typ.Implements(queryAppenderType) {
-		if kind == reflect.Ptr {
+		if kind == reflect.Pointer {
 			return nilAwareAppender(appendQueryAppenderValue)
 		}
 		return appendQueryAppenderValue
 	}
 	if typ.Implements(driverValuerType) {
-		if kind == reflect.Ptr {
+		if kind == reflect.Pointer {
 			return nilAwareAppender(appendDriverValue)
 		}
 		return appendDriverValue
 	}
 
-	if kind != reflect.Ptr {
+	if kind != reflect.Pointer {
 		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(queryAppenderType) {
 			return addrAppender(appendQueryAppenderValue)
@@ -135,7 +135,7 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 	switch kind {
 	case reflect.Interface:
 		return ifaceAppenderFunc
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if typ.Implements(jsonMarshalerType) {
 			return nilAwareAppender(AppendJSONValue)
 		}

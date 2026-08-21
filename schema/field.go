@@ -70,7 +70,7 @@ func (f *Field) HasNilValue(v reflect.Value) bool {
 	}
 
 	for _, index := range f.Index {
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				return true
 			}

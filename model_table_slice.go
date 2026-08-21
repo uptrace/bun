@@ -42,7 +42,7 @@ func newSliceTableModel(
 
 func (m *sliceTableModel) init(sliceType reflect.Type) {
 	switch sliceType.Elem().Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		m.sliceOfPtr = true
 	}
 }

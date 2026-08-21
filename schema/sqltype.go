@@ -41,7 +41,7 @@ var sqlTypes = []string{
 	reflect.Array:      "",
 	reflect.Interface:  "",
 	reflect.Map:        sqltype.VarChar,
-	reflect.Ptr:        "",
+	reflect.Pointer:    "",
 	reflect.Slice:      sqltype.VarChar,
 	reflect.String:     sqltype.VarChar,
 	reflect.Struct:     sqltype.VarChar,

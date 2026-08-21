@@ -60,7 +60,7 @@ func zeroChecker(typ reflect.Type) IsZeroerFunc {
 
 	kind := typ.Kind()
 
-	if kind != reflect.Ptr {
+	if kind != reflect.Pointer {
 		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(isZeroerType) {
 			return addrChecker(isZeroInterface)
@@ -83,7 +83,7 @@ func zeroChecker(typ reflect.Type) IsZeroerFunc {
 		return isZeroUint
 	case reflect.Float32, reflect.Float64:
 		return isZeroFloat
-	case reflect.Interface, reflect.Ptr, reflect.Slice, reflect.Map:
+	case reflect.Interface, reflect.Pointer, reflect.Slice, reflect.Map:
 		return isNil
 	}
 
@@ -104,14 +104,14 @@ func addrChecker(fn IsZeroerFunc) IsZeroerFunc {
 }
 
 func isZeroInterface(v reflect.Value) bool {
-	if v.Kind() == reflect.Ptr && v.IsNil() {
+	if v.Kind() == reflect.Pointer && v.IsNil() {
 		return true
 	}
 	return v.Interface().(isZeroer).IsZero()
 }
 
 func isZeroDriverValue(v reflect.Value) bool {
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		return v.IsNil()
 	}
 

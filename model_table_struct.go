@@ -77,7 +77,7 @@ func (m *structTableModel) initStruct() error {
 		m.strct = m.strct.Elem()
 	}
 
-	if m.strct.Kind() == reflect.Ptr {
+	if m.strct.Kind() == reflect.Pointer {
 		if m.strct.IsNil() {
 			m.strct.Set(reflect.New(m.strct.Type().Elem()))
 			m.strct = m.strct.Elem()
@@ -328,7 +328,7 @@ func (m *structTableModel) scanColumn(column string, src any) (bool, error) {
 }
 
 func (m *structTableModel) isNil() bool {
-	return m.strct.Kind() == reflect.Ptr && m.strct.IsNil()
+	return m.strct.Kind() == reflect.Pointer && m.strct.IsNil()
 }
 
 func (m *structTableModel) AppendNamedArg(

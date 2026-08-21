@@ -46,7 +46,7 @@ func init() {
 		reflect.Array:         nil,
 		reflect.Interface:     scanInterface,
 		reflect.Map:           scanJSON,
-		reflect.Ptr:           nil,
+		reflect.Pointer:       nil,
 		reflect.Slice:         scanJSON,
 		reflect.String:        scanString,
 		reflect.Struct:        scanJSON,
@@ -88,7 +88,7 @@ func Scanner(typ reflect.Type) ScannerFunc {
 func scanner(typ reflect.Type) ScannerFunc {
 	kind := typ.Kind()
 
-	if kind == reflect.Ptr {
+	if kind == reflect.Pointer {
 		if fn := Scanner(typ.Elem()); fn != nil {
 			return PtrScanner(fn)
 		}
@@ -115,7 +115,7 @@ func scanner(typ reflect.Type) ScannerFunc {
 		return scanScanner
 	}
 
-	if kind != reflect.Ptr {
+	if kind != reflect.Pointer {
 		ptr := reflect.PointerTo(typ)
 		if ptr.Implements(scannerType) {
 			return addrScanner(scanScanner)
@@ -564,7 +564,7 @@ func scanInterface(dest reflect.Value, src any) error {
 
 func nilable(kind reflect.Kind) bool {
 	switch kind {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
 		return true
 	}
 	return false

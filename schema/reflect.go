@@ -25,7 +25,7 @@ var (
 )
 
 func indirectType(t reflect.Type) reflect.Type {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t
@@ -38,7 +38,7 @@ func fieldByIndex(v reflect.Value, index []int) (_ reflect.Value, ok bool) {
 
 	for i, idx := range index {
 		if i > 0 {
-			if v.Kind() == reflect.Ptr {
+			if v.Kind() == reflect.Pointer {
 				if v.IsNil() {
 					return v, false
 				}

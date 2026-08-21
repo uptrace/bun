@@ -57,7 +57,7 @@ func (a *ArrayValue) Scan(src any) error {
 	if a.scan == nil {
 		return fmt.Errorf("bun: Array(unsupported %s)", a.v.Type())
 	}
-	if a.v.Kind() != reflect.Ptr {
+	if a.v.Kind() != reflect.Pointer {
 		return fmt.Errorf("bun: Array(non-pointer %s)", a.v.Type())
 	}
 	return a.scan(a.v, src)
@@ -76,7 +76,7 @@ func (d *Dialect) arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()
 
 	switch kind {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if fn := d.arrayAppender(typ.Elem()); fn != nil {
 			return schema.PtrAppender(fn)
 		}
@@ -111,13 +111,13 @@ func (d *Dialect) arrayAppender(typ reflect.Type) schema.AppenderFunc {
 	return func(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
 		kind := v.Kind()
 		switch kind {
-		case reflect.Ptr, reflect.Slice:
+		case reflect.Pointer, reflect.Slice:
 			if v.IsNil() {
 				return dialect.AppendNull(b)
 			}
 		}
 
-		if kind == reflect.Ptr {
+		if kind == reflect.Pointer {
 			v = v.Elem()
 		}
 
@@ -153,7 +153,7 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return appendBytesElemValue
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return schema.PtrAppender(d.arrayElemAppender(typ.Elem()))
 	}
 	return schema.Appender(d, typ)
@@ -340,7 +340,7 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	kind := typ.Kind()
 
 	switch kind {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if fn := arrayScanner(typ.Elem()); fn != nil {
 			return schema.PtrScanner(fn)
 		}

@@ -28,7 +28,7 @@ func HStore(vi any) *HStoreValue {
 	}
 
 	typ := v.Type()
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	if typ.Kind() != reflect.Map {
@@ -59,7 +59,7 @@ func (h *HStoreValue) Scan(src any) error {
 	if h.scan == nil {
 		return fmt.Errorf("bun: HStore(unsupported %s)", h.v.Type())
 	}
-	if h.v.Kind() != reflect.Ptr {
+	if h.v.Kind() != reflect.Pointer {
 		return fmt.Errorf("bun: HStore(non-pointer %s)", h.v.Type())
 	}
 	return h.scan(h.v.Elem(), src)

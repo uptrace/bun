@@ -11,7 +11,7 @@ func hstoreScanner(typ reflect.Type) schema.ScannerFunc {
 	kind := typ.Kind()
 
 	switch kind {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if fn := hstoreScanner(typ.Elem()); fn != nil {
 			return schema.PtrScanner(fn)
 		}

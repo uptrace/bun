@@ -87,7 +87,7 @@ func (gen QueryGen) Append(b []byte, v any) []byte {
 		return AppendQueryAppender(gen, b, v)
 	default:
 		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.Ptr && vv.IsNil() {
+		if vv.Kind() == reflect.Pointer && vv.IsNil() {
 			return dialect.AppendNull(b)
 		}
 		appender := Appender(gen.Dialect(), vv.Type())
@@ -104,7 +104,7 @@ func (f QueryGen) AppendIdent(b []byte, ident string) []byte {
 }
 
 func (f QueryGen) AppendValue(b []byte, v reflect.Value) []byte {
-	if v.Kind() == reflect.Ptr && v.IsNil() {
+	if v.Kind() == reflect.Pointer && v.IsNil() {
 		return dialect.AppendNull(b)
 	}
 	appender := Appender(f.dialect, v.Type())

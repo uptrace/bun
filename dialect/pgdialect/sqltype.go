@@ -86,7 +86,7 @@ func fieldSQLType(field *schema.Field) string {
 }
 
 func sqlType(typ reflect.Type) string {
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 

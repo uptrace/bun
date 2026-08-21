@@ -39,7 +39,7 @@ func (d *Dialect) hstoreAppender(typ reflect.Type) schema.AppenderFunc {
 	kind := typ.Kind()
 
 	switch kind {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if fn := d.hstoreAppender(typ.Elem()); fn != nil {
 			return schema.PtrAppender(fn)
 		}

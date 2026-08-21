@@ -16,7 +16,7 @@ func MakeSliceNextElemFunc(v reflect.Value) func() reflect.Value {
 
 	elemType := v.Type().Elem()
 
-	if elemType.Kind() == reflect.Ptr {
+	if elemType.Kind() == reflect.Pointer {
 		elemType = elemType.Elem()
 		return func() reflect.Value {
 			if v.Len() < v.Cap() {
@@ -71,7 +71,7 @@ func FieldByIndexAlloc(v reflect.Value, index []int) reflect.Value {
 }
 
 func indirectNil(v reflect.Value) reflect.Value {
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
 		}

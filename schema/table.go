@@ -158,7 +158,7 @@ func (t *Table) processFields(typ reflect.Type) {
 			}
 
 			sfType := sf.Type
-			if sfType.Kind() == reflect.Ptr {
+			if sfType.Kind() == reflect.Pointer {
 				sfType = sfType.Elem()
 			}
 
@@ -554,7 +554,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	field := &Field{
 		Table:       t,
 		StructField: sf,
-		IsPtr:       sf.Type.Kind() == reflect.Ptr,
+		IsPtr:       sf.Type.Kind() == reflect.Pointer,
 
 		Tag:          tag,
 		IndirectType: indirectType(sf.Type),
@@ -1150,7 +1150,7 @@ func softDeleteFieldUpdater(field *Field) func(fv reflect.Value, tm time.Time) e
 			*ptr = tm.UnixNano()
 			return nil
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		typ = typ.Elem()
 	default:
 		return softDeleteFieldUpdaterFallback(field)

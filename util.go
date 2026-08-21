@@ -11,7 +11,7 @@ func indirect(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Interface:
 		return indirect(v.Elem())
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return v.Elem()
 	default:
 		return v
@@ -35,7 +35,7 @@ func visitField(v reflect.Value, index []int, fn func(reflect.Value)) {
 	v = reflect.Indirect(v)
 	if len(index) > 0 {
 		v = v.Field(index[0])
-		if v.Kind() == reflect.Ptr && v.IsNil() {
+		if v.Kind() == reflect.Pointer && v.IsNil() {
 			return
 		}
 		walk(v, index[1:], fn)
@@ -47,7 +47,7 @@ func visitField(v reflect.Value, index []int, fn func(reflect.Value)) {
 func typeByIndex(t reflect.Type, index []int) reflect.Type {
 	for _, x := range index {
 		switch t.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			t = t.Elem()
 		case reflect.Slice:
 			t = indirectType(t.Elem())
@@ -58,7 +58,7 @@ func typeByIndex(t reflect.Type, index []int) reflect.Type {
 }
 
 func indirectType(t reflect.Type) reflect.Type {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t

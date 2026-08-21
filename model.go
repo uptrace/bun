@@ -59,7 +59,7 @@ func newModel(db *DB, dest []any) (Model, error) {
 
 	for i, el := range dest {
 		v := reflect.ValueOf(el)
-		if v.Kind() != reflect.Ptr {
+		if v.Kind() != reflect.Pointer {
 			return nil, fmt.Errorf("bun: Scan(non-pointer %T)", dest)
 		}
 
@@ -95,7 +95,7 @@ func _newModel(db *DB, dest any, scan bool) (Model, error) {
 	if !v.IsValid() {
 		return nil, errNilModel
 	}
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return nil, fmt.Errorf("bun: Model(non-pointer %T)", dest)
 	}
 
