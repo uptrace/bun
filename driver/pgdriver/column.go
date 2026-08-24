@@ -37,8 +37,6 @@ func readColumnValue(rd *reader, dataType int32, dataLen int) (any, error) {
 		}
 		return nil, errInvalidMessageLength // TODO or nil?
 	}
-		return nil, nil
-	}
 
 	switch dataType {
 	case pgBool:
