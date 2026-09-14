@@ -18,7 +18,7 @@ type arrayParser struct {
 func newArrayParser(b []byte) *arrayParser {
 	p := new(arrayParser)
 
-	if b[0] == 'n' {
+	if len(b) > 0 && b[0] == 'n' {
 		p.p.Reset(nil)
 		return p
 	}

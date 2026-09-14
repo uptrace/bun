@@ -45,3 +45,13 @@ func TestArrayParser(t *testing.T) {
 		})
 	}
 }
+
+func TestArrayParserInvalid(t *testing.T) {
+	for _, s := range []string{"", "{", "}", "1"} {
+		t.Run(fmt.Sprintf("%q", s), func(t *testing.T) {
+			p := newArrayParser([]byte(s))
+			require.False(t, p.Next())
+			require.Error(t, p.Err())
+		})
+	}
+}
