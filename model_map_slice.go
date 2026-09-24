@@ -47,8 +47,14 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 		return 0, err
 	}
 
-	m.rows = rows
+	// See mapModel.ScanRows.
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return 0, err
+	}
+
 	m.columns = columns
+	m.columnTypes = columnTypes
 	dest := makeDest(m, len(columns))
 
 	slice := *m.dest
