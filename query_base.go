@@ -630,6 +630,9 @@ func (q *baseQuery) _scan(
 	}
 
 	if numRow == 0 && hasDest && isSingleRowModel(model) {
+		if nm, ok := model.(nilModel); ok && nm.isNil() {
+			return driver.RowsAffected(numRow), nil
+		}
 		return nil, sql.ErrNoRows
 	}
 	return driver.RowsAffected(numRow), nil
