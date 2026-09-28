@@ -2,6 +2,7 @@ package pgdialect
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 
@@ -35,5 +36,13 @@ func TestHStoreAppender(t *testing.T) {
 			got := appendFunc(schema.NewQueryGen(pgDialect), []byte{}, reflect.ValueOf(test.input))
 			require.Contains(t, test.expectedIn, string(got))
 		})
+	}
+}
+
+func TestAppendUintAsInt(t *testing.T) {
+	gen := schema.NewQueryGen(New(WithAppendUintAsInt(true)))
+
+	for _, v := range []any{uint(math.MaxUint64), uint64(math.MaxUint64)} {
+		require.Equal(t, "-1", gen.FormatQuery("?", v), "%T", v)
 	}
 }
