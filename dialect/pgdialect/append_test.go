@@ -42,7 +42,8 @@ func TestHStoreAppender(t *testing.T) {
 func TestAppendUintAsInt(t *testing.T) {
 	gen := schema.NewQueryGen(New(WithAppendUintAsInt(true)))
 
-	for _, v := range []any{uint(math.MaxUint64), uint64(math.MaxUint64)} {
-		require.Equal(t, "-1", gen.FormatQuery("?", v), "%T", v)
-	}
+	require.Equal(t, "-1", gen.FormatQuery("?", uint64(math.MaxUint64)))
+	// uint takes the same path as uint64.
+	u := uint(math.MaxUint)
+	require.Equal(t, gen.FormatQuery("?", uint64(u)), gen.FormatQuery("?", u))
 }

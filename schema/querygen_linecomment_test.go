@@ -2,6 +2,7 @@ package schema
 
 import (
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/uptrace/bun/dialect"
@@ -38,7 +39,7 @@ func TestQueryGen_Append_NegativeNumberDoesNotCreateLineComment(t *testing.T) {
 		// positive values are unaffected.
 		{"positive", "1000-?", int(500), "1000-500"},
 		// uint above MaxInt64 must not wrap to a negative literal.
-		{"uint", "1000-?", uint(math.MaxUint64), "1000-18446744073709551615"},
+		{"uint", "1000-?", uint(math.MaxUint), "1000-" + strconv.FormatUint(math.MaxUint, 10)},
 	}
 
 	for _, tt := range tests {
