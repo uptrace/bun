@@ -39,16 +39,19 @@ func NewUpdateQuery(db *DB) *UpdateQuery {
 	return q
 }
 
+// Conn sets the database connection for this query.
 func (q *UpdateQuery) Conn(db IConn) *UpdateQuery {
 	q.setConn(db)
 	return q
 }
 
+// Model sets the model whose rows are updated and provides the values for the SET clause.
 func (q *UpdateQuery) Model(model any) *UpdateQuery {
 	q.setModel(model)
 	return q
 }
 
+// Err sets an error on the query, causing subsequent operations to fail.
 func (q *UpdateQuery) Err(err error) *UpdateQuery {
 	q.setErr(err)
 	return q
@@ -64,16 +67,19 @@ func (q *UpdateQuery) Apply(fns ...func(*UpdateQuery) *UpdateQuery) *UpdateQuery
 	return q
 }
 
+// With adds a WITH clause (Common Table Expression) to the query.
 func (q *UpdateQuery) With(name string, query Query) *UpdateQuery {
 	q.addWith(NewWithQuery(name, query))
 	return q
 }
 
+// WithRecursive adds a WITH RECURSIVE clause to the query.
 func (q *UpdateQuery) WithRecursive(name string, query Query) *UpdateQuery {
 	q.addWith(NewWithQuery(name, query).Recursive())
 	return q
 }
 
+// WithQuery adds a pre-configured WITH clause to the query.
 func (q *UpdateQuery) WithQuery(query *WithQuery) *UpdateQuery {
 	q.addWith(query)
 	return q
@@ -81,6 +87,7 @@ func (q *UpdateQuery) WithQuery(query *WithQuery) *UpdateQuery {
 
 // ------------------------------------------------------------------------------
 
+// Table adds table(s) to update in addition to the model table.
 func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
@@ -88,11 +95,13 @@ func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	return q
 }
 
+// TableExpr adds a table expression with arguments to the query.
 func (q *UpdateQuery) TableExpr(query string, args ...any) *UpdateQuery {
 	q.addTable(schema.SafeQuery(query, args))
 	return q
 }
 
+// ModelTableExpr overrides the table name derived from the model.
 func (q *UpdateQuery) ModelTableExpr(query string, args ...any) *UpdateQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
 	return q
@@ -100,6 +109,7 @@ func (q *UpdateQuery) ModelTableExpr(query string, args ...any) *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
+// Column restricts the SET clause to the given model columns.
 func (q *UpdateQuery) Column(columns ...string) *UpdateQuery {
 	for _, column := range columns {
 		q.addColumn(schema.UnsafeIdent(column))
@@ -107,16 +117,20 @@ func (q *UpdateQuery) Column(columns ...string) *UpdateQuery {
 	return q
 }
 
+// ExcludeColumn excludes specific model columns from the SET clause.
 func (q *UpdateQuery) ExcludeColumn(columns ...string) *UpdateQuery {
 	q.excludeColumn(columns)
 	return q
 }
 
+// Set adds an expression to the SET clause with optional arguments.
 func (q *UpdateQuery) Set(query string, args ...any) *UpdateQuery {
 	q.addSet(schema.SafeQuery(query, args))
 	return q
 }
 
+// SetColumn adds a "column = expression" assignment to the SET clause.
+// On dialects that support multi-table UPDATE, the column is qualified with the model table alias.
 func (q *UpdateQuery) SetColumn(column string, query string, args ...any) *UpdateQuery {
 	if q.db.HasFeature(feature.UpdateMultiTable) {
 		column = q.table.Alias + "." + column
@@ -135,6 +149,7 @@ func (q *UpdateQuery) Value(column string, query string, args ...any) *UpdateQue
 	return q
 }
 
+// OmitZero omits model fields that hold zero values from the SET clause.
 func (q *UpdateQuery) OmitZero() *UpdateQuery {
 	q.omitZero = true
 	return q
@@ -142,6 +157,7 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
+// Join adds a JOIN clause with the specified join expression.
 func (q *UpdateQuery) Join(join string, args ...any) *UpdateQuery {
 	q.joins = append(q.joins, joinQuery{
 		join: schema.SafeQuery(join, args),
@@ -149,10 +165,12 @@ func (q *UpdateQuery) Join(join string, args ...any) *UpdateQuery {
 	return q
 }
 
+// JoinOn adds an ON condition to the most recent JOIN, combined with AND.
 func (q *UpdateQuery) JoinOn(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " AND ")
 }
 
+// JoinOnOr adds an ON condition to the most recent JOIN, combined with OR.
 func (q *UpdateQuery) JoinOnOr(cond string, args ...any) *UpdateQuery {
 	return q.joinOn(cond, args, " OR ")
 }
@@ -169,21 +187,26 @@ func (q *UpdateQuery) joinOn(cond string, args []any, sep string) *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
+// WherePK adds a WHERE condition on the model's primary key columns.
+// When cols are provided, those columns are used instead of the primary key.
 func (q *UpdateQuery) WherePK(cols ...string) *UpdateQuery {
 	q.addWhereCols(cols)
 	return q
 }
 
+// Where adds a WHERE condition combined with AND.
 func (q *UpdateQuery) Where(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " AND "))
 	return q
 }
 
+// WhereOr adds a WHERE condition combined with OR.
 func (q *UpdateQuery) WhereOr(query string, args ...any) *UpdateQuery {
 	q.addWhere(schema.SafeQueryWithSep(query, args, " OR "))
 	return q
 }
 
+// WhereGroup groups WHERE conditions added by fn with the given separator (AND/OR).
 func (q *UpdateQuery) WhereGroup(sep string, fn func(*UpdateQuery) *UpdateQuery) *UpdateQuery {
 	saved, savedHasOr := q.where, q.whereHasOr
 	q.where, q.whereHasOr = nil, false
@@ -198,17 +221,23 @@ func (q *UpdateQuery) WhereGroup(sep string, fn func(*UpdateQuery) *UpdateQuery)
 	return q
 }
 
+// WhereDeleted adds a WHERE condition to update soft-deleted rows only.
 func (q *UpdateQuery) WhereDeleted() *UpdateQuery {
 	q.whereDeleted()
 	return q
 }
 
+// WhereAllWithDeleted includes both active and soft-deleted rows.
 func (q *UpdateQuery) WhereAllWithDeleted() *UpdateQuery {
 	q.whereAllWithDeleted()
 	return q
 }
 
 // ------------------------------------------------------------------------------
+
+// Order adds an ORDER BY clause with the given columns.
+// It requires a dialect that supports ORDER BY in UPDATE statements and
+// otherwise sets feature.NewNotSupportError on the query.
 func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
@@ -218,6 +247,8 @@ func (q *UpdateQuery) Order(orders ...string) *UpdateQuery {
 	return q
 }
 
+// OrderExpr adds an ORDER BY expression with optional arguments.
+// It has the same dialect requirement as Order.
 func (q *UpdateQuery) OrderExpr(query string, args ...any) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
@@ -227,6 +258,9 @@ func (q *UpdateQuery) OrderExpr(query string, args ...any) *UpdateQuery {
 	return q
 }
 
+// Limit sets the maximum number of rows to update.
+// It requires a dialect that supports LIMIT in UPDATE statements and
+// otherwise sets feature.NewNotSupportError on the query.
 func (q *UpdateQuery) Limit(n int64) *UpdateQuery {
 	if !q.hasFeature(feature.UpdateOrderLimit) {
 		q.setErr(feature.NewNotSupportError(feature.UpdateOrderLimit))
@@ -256,10 +290,12 @@ func (q *UpdateQuery) Comment(comment string) *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
+// Operation returns the query operation name ("UPDATE").
 func (q *UpdateQuery) Operation() string {
 	return "UPDATE"
 }
 
+// AppendQuery appends the generated UPDATE statement to b.
 func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -414,6 +450,9 @@ func (q *UpdateQuery) appendOtherTables(gen schema.QueryGen, b []byte) (_ []byte
 
 //------------------------------------------------------------------------------
 
+// Bulk rewrites the query to update multiple rows from a slice model,
+// joining the model table against the slice values exposed as a WITH clause.
+// The model must be a slice, otherwise an error is set on the query.
 func (q *UpdateQuery) Bulk() *UpdateQuery {
 	model, ok := q.model.(*sliceTableModel)
 	if !ok {
@@ -487,11 +526,13 @@ func (q *UpdateQuery) updateSliceWhere(gen schema.QueryGen, model *sliceTableMod
 
 //------------------------------------------------------------------------------
 
+// Scan executes the UPDATE and scans RETURNING/OUTPUT results into dest.
 func (q *UpdateQuery) Scan(ctx context.Context, dest ...any) error {
 	_, err := q.scanOrExec(ctx, dest, true)
 	return err
 }
 
+// Exec executes the UPDATE and optionally scans RETURNING/OUTPUT results into dest when provided.
 func (q *UpdateQuery) Exec(ctx context.Context, dest ...any) (sql.Result, error) {
 	return q.scanOrExec(ctx, dest, len(dest) > 0)
 }
@@ -605,10 +646,12 @@ func (q *UpdateQuery) String() string {
 
 //------------------------------------------------------------------------------
 
+// QueryBuilder wraps the UpdateQuery in a generic QueryBuilder interface.
 func (q *UpdateQuery) QueryBuilder() QueryBuilder {
 	return &updateQueryBuilder{q}
 }
 
+// ApplyQueryBuilder applies fn to a generic QueryBuilder and returns the modified UpdateQuery.
 func (q *UpdateQuery) ApplyQueryBuilder(fn func(QueryBuilder) QueryBuilder) *UpdateQuery {
 	return fn(q.QueryBuilder()).Unwrap().(*UpdateQuery)
 }
@@ -657,6 +700,7 @@ func (q *updateQueryBuilder) Unwrap() any {
 
 //------------------------------------------------------------------------------
 
+// UseIndex adds a USE INDEX hint for MySQL to suggest index usage.
 func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addUseIndex(indexes...)
@@ -664,6 +708,7 @@ func (q *UpdateQuery) UseIndex(indexes ...string) *UpdateQuery {
 	return q
 }
 
+// IgnoreIndex adds an IGNORE INDEX hint for MySQL to prevent index usage.
 func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addIgnoreIndex(indexes...)
@@ -671,6 +716,7 @@ func (q *UpdateQuery) IgnoreIndex(indexes ...string) *UpdateQuery {
 	return q
 }
 
+// ForceIndex adds a FORCE INDEX hint for MySQL to require index usage.
 func (q *UpdateQuery) ForceIndex(indexes ...string) *UpdateQuery {
 	if q.db.dialect.Name() == dialect.MySQL {
 		q.addForceIndex(indexes...)
