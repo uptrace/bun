@@ -14,11 +14,11 @@ replace github.com/uptrace/bun/driver/sqliteshim => ../../driver/sqliteshim
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/uptrace/bun v1.2.18
-	github.com/uptrace/bun/dbfixture v1.2.18
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.18
-	github.com/uptrace/bun/driver/sqliteshim v1.2.18
-	github.com/uptrace/bun/extra/bundebug v1.2.18
+	github.com/uptrace/bun v1.3.0
+	github.com/uptrace/bun/dbfixture v1.3.0
+	github.com/uptrace/bun/dialect/sqlitedialect v1.3.0
+	github.com/uptrace/bun/driver/sqliteshim v1.3.0
+	github.com/uptrace/bun/extra/bundebug v1.3.0
 )
 
 require (

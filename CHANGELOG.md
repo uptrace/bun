@@ -1,3 +1,56 @@
+# [1.3.0](https://github.com/uptrace/bun/compare/v1.2.18...v1.3.0) (2026-09-30)
+
+
+### Bug Fixes
+
+* add LineComment function for handling line comment in formatQuery ([49b0464](https://github.com/uptrace/bun/commit/49b0464e9b965f902d4c377be6ba744e4324ea2f))
+* **automigrate:** include scanonly fields in the BunModelInspector output ([0a83ffc](https://github.com/uptrace/bun/commit/0a83ffc97f9e0ed8ecd26a15481c8edfc7d24e04))
+* **bunotel:** honor WithMeterProvider when reporting DB stats metrics ([048005b](https://github.com/uptrace/bun/commit/048005b932a10b771bfd0797d18394ce62de36a3)), closes [#1270](https://github.com/uptrace/bun/issues/1270)
+* copy execution state in SelectQuery.Clone ([9dad9ac](https://github.com/uptrace/bun/commit/9dad9acb486b54b4093bfa789ce7221272c9e414))
+* copy whereHasOr field in SelectQuery.Clone() to preserve soft-delete WhereOr state ([e7611b7](https://github.com/uptrace/bun/commit/e7611b7afbc996ee1fba4e5b4bb1fc3f8213ea4a)), closes [#1321](https://github.com/uptrace/bun/issues/1321)
+* correct error message prefix and error type ([89bf06d](https://github.com/uptrace/bun/commit/89bf06d9bddd3fd1aefbb2db784b0124b5385cbd))
+* correct typos in code comments ([44c54f2](https://github.com/uptrace/bun/commit/44c54f24205e2d10c6cff6d0541ad09f59afcf4c))
+* **db:** propagate transaction context into RunInTx callback ([#1381](https://github.com/uptrace/bun/issues/1381)) ([640437e](https://github.com/uptrace/bun/commit/640437e757daecb853027a08d4d6cdb5b6be0d68))
+* detect duplicate migration IDs during Discover ([b8f7b77](https://github.com/uptrace/bun/commit/b8f7b776e31e4e549fd5a71d9430670ed4d80dc8))
+* detect OR separators case-insensitively for whereHasOr ([1110700](https://github.com/uptrace/bun/commit/1110700cea17dd5866a461f4d9ee3803a6df63fa))
+* improve formatQuery in pgdriver for queries with apostrophes in comments (uptrace[#1349](https://github.com/uptrace/bun/issues/1349)) ([93974c9](https://github.com/uptrace/bun/commit/93974c9c250610227d277af720d78226981990cd))
+* **migrate:** do not append blank lines to SQL query ([d32af16](https://github.com/uptrace/bun/commit/d32af163e931679eee18fc5fac67d80123a97cba))
+* **migrate:** ignore --bun:skip with a blank query ([a34fd3a](https://github.com/uptrace/bun/commit/a34fd3ae835cbc04600a06a3a48afc5f1d742baa))
+* **migrate:** surface lost SQL migration finalizer errors ([#1389](https://github.com/uptrace/bun/issues/1389)) ([1a289f8](https://github.com/uptrace/bun/commit/1a289f81f4488a923a288fd3648b499b030877b1))
+* **mssql:** apply the unicode N prefix to JSON literals ([5eb86ee](https://github.com/uptrace/bun/commit/5eb86eeba2c2cc8bf5b11478440eb88a2e854254))
+* **pgdialect:** return an error instead of panicking on empty array input ([a3c48dd](https://github.com/uptrace/bun/commit/a3c48dde686b275803eb03c6aa898f8237869223)), closes [#1431](https://github.com/uptrace/bun/issues/1431)
+* **pgdriver:** add slice of byte array support to pgdialect ([#1391](https://github.com/uptrace/bun/issues/1391)) ([0e5e868](https://github.com/uptrace/bun/commit/0e5e8682686253e24add0e8512d351d5e32dd9bf))
+* **pgdriver:** send required params during startup ([#1374](https://github.com/uptrace/bun/issues/1374)) ([e402298](https://github.com/uptrace/bun/commit/e402298277a4ad028af026cddcadfc04d52d7dff))
+* **pgdriver:** verify server certificate for WithInsecure(false) ([#1402](https://github.com/uptrace/bun/issues/1402)) ([023fe24](https://github.com/uptrace/bun/commit/023fe2412daf533a80fdcd99f54043c0efbafc37))
+* **query:** remove debug print and simplify union wrapping ([4bdf4d8](https://github.com/uptrace/bun/commit/4bdf4d8cc5388adb6c9ba752b7a62875a698a13b))
+* **query:** skip UNION wrapping for SQLite ([777c8e2](https://github.com/uptrace/bun/commit/777c8e23cc25e9e97d929f98227332888ee2f654))
+* **relation:** do not duplicate joined models on a shared base model ([856d4d9](https://github.com/uptrace/bun/commit/856d4d92682dad7fddb796fda6a286d7189f9aca)), closes [#1386](https://github.com/uptrace/bun/issues/1386)
+* resolve map column types before scanning rows ([af3f6dc](https://github.com/uptrace/bun/commit/af3f6dc3cfd5e39f0453f92342e1c9f5fe0eaa2c)), closes [#1434](https://github.com/uptrace/bun/issues/1434)
+* resolve nested Relation() with circular struct composition ([dd2e4c9](https://github.com/uptrace/bun/commit/dd2e4c98621fb28506f48577e9a487326657cbcd)), closes [#1243](https://github.com/uptrace/bun/issues/1243)
+* return an error instead of panicking when scanning JSON into an unaddressable value ([c323fa3](https://github.com/uptrace/bun/commit/c323fa3b4c37968b2fc2182f5f2576b0a7921fc2)), closes [#1306](https://github.com/uptrace/bun/issues/1306)
+* **schema:** do not reject pointers stored in an interface ([cc2cd23](https://github.com/uptrace/bun/commit/cc2cd23a929cd2bad50506f068f1ef65e642eaad))
+* **schema:** escape backslash in AppendJSON without consuming the next byte ([#1405](https://github.com/uptrace/bun/issues/1405)) ([445907b](https://github.com/uptrace/bun/commit/445907b421ad4d55c2d1de1bb9696070163b2792))
+* **schema:** fail closed when a string contains a NUL byte ([#1406](https://github.com/uptrace/bun/issues/1406)) ([276ac9f](https://github.com/uptrace/bun/commit/276ac9fc9354c209049021576b4f44425854eb41))
+* **schema:** prevent line-comment SQL injection with negative numbers (CVE-2024-44906 class) ([#1396](https://github.com/uptrace/bun/issues/1396)) ([13f55cd](https://github.com/uptrace/bun/commit/13f55cd2e8dfcd5a27365d5eeed572533e940115))
+* **schema:** resolve m2m BasePKs through the base table's FieldMap ([#1375](https://github.com/uptrace/bun/issues/1375)) ([9f4d368](https://github.com/uptrace/bun/commit/9f4d368352b903bbb757a672efea357222e8a611))
+* **schema:** return an error when scanning NULL into an unaddressable value ([29e4e6e](https://github.com/uptrace/bun/commit/29e4e6e0abe007e6c69ca07272a535e6d9a9fc7e))
+* **schema:** use dialect-specific AppendBool in QueryGen.Append ([#1373](https://github.com/uptrace/bun/issues/1373)) ([e91aa81](https://github.com/uptrace/bun/commit/e91aa81e96c562e68aef5bfb0c558eca47402f1b))
+* use transaction context instead of context.TODO() in Tx methods ([459f9e7](https://github.com/uptrace/bun/commit/459f9e7a6dff4b807c9e43d1e5a7571d7f524e8b))
+* wrap WHERE conditions in parentheses when soft-delete AND WhereOr are combined ([#1321](https://github.com/uptrace/bun/issues/1321)) ([1f1ec9d](https://github.com/uptrace/bun/commit/1f1ec9df6b87ae471906739e70c35d17124b95b2))
+
+
+### Features
+
+* add pgdriver.NewError ([9000137](https://github.com/uptrace/bun/commit/90001370d50eba5843245bf6f28683b62fcd5bb6))
+* **schema:** support Go 1.27 stdlib uuid.UUID ([#1427](https://github.com/uptrace/bun/issues/1427)) ([e22ddd3](https://github.com/uptrace/bun/commit/e22ddd3e7bf7a938ed68639c6f4720af2cbc2544))
+
+
+### Performance Improvements
+
+* **schema:** memoize LookupField for prefixed column names ([7116c58](https://github.com/uptrace/bun/commit/7116c5860bb8cf6c7cd1fc82175a0a69521cee7f))
+
+
+
 ## [1.2.18](github.com/uptrace/bun/compare/v1.2.17...v1.2.18) (2026-02-28)
 
 
