@@ -1,6 +1,16 @@
 # [1.3.0](https://github.com/uptrace/bun/compare/v1.2.18...v1.3.0) (2026-09-30)
 
 
+### Breaking Changes
+
+Compared with v1.2.18, this release contains four categories of breaking changes. Two are tracked in [#1363](https://github.com/uptrace/bun/issues/1363), and two additional behavioral changes were identified during the release audit.
+
+* **Count, Limit, and Offset use `int64`** ([#1348](https://github.com/uptrace/bun/pull/1348)). `DeleteQuery.Limit`, `SelectQuery.Limit`, `SelectQuery.Offset`, `SelectQuery.Count`, `SelectQuery.ScanAndCount`, and `UpdateQuery.Limit` changed from `int` parameters or return values to `int64`. Update affected variables and assignments to `int64`, or add explicit conversions at call sites.
+* **pgdriver verifies TLS certificates** ([#1398](https://github.com/uptrace/bun/issues/1398), fixed by [#1402](https://github.com/uptrace/bun/pull/1402)). `pgdriver.WithInsecure(false)` now verifies the server certificate and hostname. Configure valid trust roots and a matching server name. Code that intentionally needs unverified TLS must now opt in explicitly with `WithTLSConfig(&tls.Config{InsecureSkipVerify: true})`; this is not recommended for production.
+* **Duplicate migration IDs are rejected** ([#1357](https://github.com/uptrace/bun/pull/1357)). `Migrations.Discover` now returns an error when different migration base filenames share an ID instead of silently overwriting one migration. Rename conflicting migration files so each ID has a single base filename; a matching `.up.sql`/`.down.sql` pair remains valid.
+* **NUL-containing strings are rejected** ([#1406](https://github.com/uptrace/bun/pull/1406)). `schema.BaseDialect.AppendString` now reports a formatting error instead of silently stripping NUL bytes. Reject or sanitize such input before building queries. This affects the PostgreSQL, SQLite, Oracle, and MSSQL base dialect paths; MySQL's override is unchanged.
+
+
 ### Bug Fixes
 
 * add LineComment function for handling line comment in formatQuery ([49b0464](https://github.com/uptrace/bun/commit/49b0464e9b965f902d4c377be6ba744e4324ea2f))
