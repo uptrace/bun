@@ -12,6 +12,13 @@ type arrayParser struct {
 	elem []byte
 	err  error
 
+	// quoted reports whether the current element was written as a quoted
+	// string. An unquoted NULL is an empty element that is not quoted, so
+	// consumers that must tell it apart from a quoted empty string use IsNull.
+	// The element itself may be nil or an empty slice for a quoted empty
+	// string, depending on whether the reusable substring buffer had grown.
+	quoted bool
+
 	isJson bool
 }
 
@@ -52,11 +59,19 @@ func (p *arrayParser) Elem() []byte {
 	return p.elem
 }
 
+// IsNull reports whether the current element is an unquoted NULL, as opposed to
+// a quoted string, which may be empty.
+func (p *arrayParser) IsNull() bool {
+	return p.elem == nil && !p.quoted
+}
+
 func (p *arrayParser) readNext() error {
 	ch := p.p.Read()
 	if ch == 0 {
 		return io.EOF
 	}
+
+	p.quoted = false
 
 	switch ch {
 	case '}', ']':
@@ -71,6 +86,7 @@ func (p *arrayParser) readNext() error {
 			p.p.Advance()
 		}
 
+		p.quoted = true
 		p.elem = b
 		return nil
 	case '[', '(':

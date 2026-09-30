@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/migrate/sqlschema"
 	"github.com/uptrace/bun/schema"
 )
@@ -114,6 +115,11 @@ func sqlType(typ reflect.Type) string {
 		}
 		return sqlType
 	case reflect.Array, reflect.Slice:
+		// The standard library uuid.UUID is discovered as a character type
+		// (and Postgres accepts a UUID literal as an untyped string constant).
+		if typ == internal.TypeUUID {
+			return sqlType
+		}
 		if typ.Elem().Kind() == reflect.Uint8 {
 			return pgTypeBytea
 		}
