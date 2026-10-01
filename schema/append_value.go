@@ -29,7 +29,7 @@ var appenders = []AppenderFunc{
 	reflect.Int16:         AppendIntValue,
 	reflect.Int32:         AppendIntValue,
 	reflect.Int64:         AppendIntValue,
-	reflect.Uint:          AppendUintValue,
+	reflect.Uint:          appendUint64Value,
 	reflect.Uint8:         AppendUintValue,
 	reflect.Uint16:        AppendUintValue,
 	reflect.Uint32:        appendUint32Value,
