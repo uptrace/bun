@@ -87,7 +87,14 @@ func (q *UpdateQuery) WithQuery(query *WithQuery) *UpdateQuery {
 
 // ------------------------------------------------------------------------------
 
-// Table adds table(s) to update in addition to the model table.
+// Table adds table(s) to the query.
+//
+// If the query has no model, the first table becomes the update target.
+// How the other tables are rendered depends on the dialect:
+//   - Dialects that support multi-table UPDATE (MySQL) list all tables
+//     after UPDATE.
+//   - Other dialects (e.g. PostgreSQL, MSSQL) emit the remaining tables in
+//     the FROM clause; they can be used in WHERE/SET but are not updated.
 func (q *UpdateQuery) Table(tables ...string) *UpdateQuery {
 	for _, table := range tables {
 		q.addTable(schema.UnsafeIdent(table))
