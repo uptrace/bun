@@ -7,8 +7,15 @@ Compared with v1.2.18, this release contains four categories of breaking changes
 
 * **Count, Limit, and Offset use `int64`** ([#1348](https://github.com/uptrace/bun/pull/1348)). `DeleteQuery.Limit`, `SelectQuery.Limit`, `SelectQuery.Offset`, `SelectQuery.Count`, `SelectQuery.ScanAndCount`, and `UpdateQuery.Limit` changed from `int` parameters or return values to `int64`. Update affected variables and assignments to `int64`, or add explicit conversions at call sites.
 * **pgdriver verifies TLS certificates** ([#1398](https://github.com/uptrace/bun/issues/1398), fixed by [#1402](https://github.com/uptrace/bun/pull/1402)). `pgdriver.WithInsecure(false)` now verifies the server certificate and hostname. Configure valid trust roots and a matching server name. Code that intentionally needs unverified TLS must now opt in explicitly with `WithTLSConfig(&tls.Config{InsecureSkipVerify: true})`; this is not recommended for production.
-* **Duplicate migration IDs are rejected** ([#1357](https://github.com/uptrace/bun/pull/1357)). `Migrations.Discover` now returns an error when different migration base filenames share an ID instead of silently overwriting one migration. Rename conflicting migration files so each ID has a single base filename; a matching `.up.sql`/`.down.sql` pair remains valid.
+* **Duplicate migration IDs are rejected** ([#1357](https://github.com/uptrace/bun/pull/1357)). `Migrations.Discover` now returns an error when different migration base filenames share an ID instead of silently overwriting one migration. This also rejects a Go migration registered with `MustRegister` or `Register` when `Discover` encounters a differently named SQL migration with the same ID. Rename conflicting migration files so each ID has a single base filename; a matching `.up.sql`/`.down.sql` pair remains valid.
 * **NUL-containing strings are rejected** ([#1406](https://github.com/uptrace/bun/pull/1406)). `schema.BaseDialect.AppendString` now reports a formatting error instead of silently stripping NUL bytes. Reject or sanitize such input before building queries. This affects the PostgreSQL, SQLite, Oracle, and MSSQL base dialect paths; MySQL's override is unchanged.
+
+
+### Security
+
+* **pgdriver:** verify server certificate for WithInsecure(false) ([#1402](https://github.com/uptrace/bun/issues/1402)) ([023fe24](https://github.com/uptrace/bun/commit/023fe2412daf533a80fdcd99f54043c0efbafc37))
+* **schema:** fail closed when a string contains a NUL byte ([#1406](https://github.com/uptrace/bun/issues/1406)) ([276ac9f](https://github.com/uptrace/bun/commit/276ac9fc9354c209049021576b4f44425854eb41))
+* **schema:** prevent line-comment SQL injection with negative numbers (CVE-2024-44906 class) ([#1396](https://github.com/uptrace/bun/issues/1396)) ([13f55cd](https://github.com/uptrace/bun/commit/13f55cd2e8dfcd5a27365d5eeed572533e940115))
 
 
 ### Bug Fixes
@@ -19,11 +26,10 @@ Compared with v1.2.18, this release contains four categories of breaking changes
 * copy execution state in SelectQuery.Clone ([9dad9ac](https://github.com/uptrace/bun/commit/9dad9acb486b54b4093bfa789ce7221272c9e414))
 * copy whereHasOr field in SelectQuery.Clone() to preserve soft-delete WhereOr state ([e7611b7](https://github.com/uptrace/bun/commit/e7611b7afbc996ee1fba4e5b4bb1fc3f8213ea4a)), closes [#1321](https://github.com/uptrace/bun/issues/1321)
 * correct error message prefix and error type ([89bf06d](https://github.com/uptrace/bun/commit/89bf06d9bddd3fd1aefbb2db784b0124b5385cbd))
-* correct typos in code comments ([44c54f2](https://github.com/uptrace/bun/commit/44c54f24205e2d10c6cff6d0541ad09f59afcf4c))
 * **db:** propagate transaction context into RunInTx callback ([#1381](https://github.com/uptrace/bun/issues/1381)) ([640437e](https://github.com/uptrace/bun/commit/640437e757daecb853027a08d4d6cdb5b6be0d68))
 * detect duplicate migration IDs during Discover ([b8f7b77](https://github.com/uptrace/bun/commit/b8f7b776e31e4e549fd5a71d9430670ed4d80dc8))
 * detect OR separators case-insensitively for whereHasOr ([1110700](https://github.com/uptrace/bun/commit/1110700cea17dd5866a461f4d9ee3803a6df63fa))
-* improve formatQuery in pgdriver for queries with apostrophes in comments (uptrace[#1349](https://github.com/uptrace/bun/issues/1349)) ([93974c9](https://github.com/uptrace/bun/commit/93974c9c250610227d277af720d78226981990cd))
+* improve formatQuery in pgdriver for queries with apostrophes in comments ([#1349](https://github.com/uptrace/bun/issues/1349)) ([93974c9](https://github.com/uptrace/bun/commit/93974c9c250610227d277af720d78226981990cd))
 * **migrate:** do not append blank lines to SQL query ([d32af16](https://github.com/uptrace/bun/commit/d32af163e931679eee18fc5fac67d80123a97cba))
 * **migrate:** ignore --bun:skip with a blank query ([a34fd3a](https://github.com/uptrace/bun/commit/a34fd3ae835cbc04600a06a3a48afc5f1d742baa))
 * **migrate:** surface lost SQL migration finalizer errors ([#1389](https://github.com/uptrace/bun/issues/1389)) ([1a289f8](https://github.com/uptrace/bun/commit/1a289f81f4488a923a288fd3648b499b030877b1))
@@ -31,7 +37,6 @@ Compared with v1.2.18, this release contains four categories of breaking changes
 * **pgdialect:** return an error instead of panicking on empty array input ([a3c48dd](https://github.com/uptrace/bun/commit/a3c48dde686b275803eb03c6aa898f8237869223)), closes [#1431](https://github.com/uptrace/bun/issues/1431)
 * **pgdriver:** add slice of byte array support to pgdialect ([#1391](https://github.com/uptrace/bun/issues/1391)) ([0e5e868](https://github.com/uptrace/bun/commit/0e5e8682686253e24add0e8512d351d5e32dd9bf))
 * **pgdriver:** send required params during startup ([#1374](https://github.com/uptrace/bun/issues/1374)) ([e402298](https://github.com/uptrace/bun/commit/e402298277a4ad028af026cddcadfc04d52d7dff))
-* **pgdriver:** verify server certificate for WithInsecure(false) ([#1402](https://github.com/uptrace/bun/issues/1402)) ([023fe24](https://github.com/uptrace/bun/commit/023fe2412daf533a80fdcd99f54043c0efbafc37))
 * **query:** remove debug print and simplify union wrapping ([4bdf4d8](https://github.com/uptrace/bun/commit/4bdf4d8cc5388adb6c9ba752b7a62875a698a13b))
 * **query:** skip UNION wrapping for SQLite ([777c8e2](https://github.com/uptrace/bun/commit/777c8e23cc25e9e97d929f98227332888ee2f654))
 * **relation:** do not duplicate joined models on a shared base model ([856d4d9](https://github.com/uptrace/bun/commit/856d4d92682dad7fddb796fda6a286d7189f9aca)), closes [#1386](https://github.com/uptrace/bun/issues/1386)
@@ -40,13 +45,16 @@ Compared with v1.2.18, this release contains four categories of breaking changes
 * return an error instead of panicking when scanning JSON into an unaddressable value ([c323fa3](https://github.com/uptrace/bun/commit/c323fa3b4c37968b2fc2182f5f2576b0a7921fc2)), closes [#1306](https://github.com/uptrace/bun/issues/1306)
 * **schema:** do not reject pointers stored in an interface ([cc2cd23](https://github.com/uptrace/bun/commit/cc2cd23a929cd2bad50506f068f1ef65e642eaad))
 * **schema:** escape backslash in AppendJSON without consuming the next byte ([#1405](https://github.com/uptrace/bun/issues/1405)) ([445907b](https://github.com/uptrace/bun/commit/445907b421ad4d55c2d1de1bb9696070163b2792))
-* **schema:** fail closed when a string contains a NUL byte ([#1406](https://github.com/uptrace/bun/issues/1406)) ([276ac9f](https://github.com/uptrace/bun/commit/276ac9fc9354c209049021576b4f44425854eb41))
-* **schema:** prevent line-comment SQL injection with negative numbers (CVE-2024-44906 class) ([#1396](https://github.com/uptrace/bun/issues/1396)) ([13f55cd](https://github.com/uptrace/bun/commit/13f55cd2e8dfcd5a27365d5eeed572533e940115))
 * **schema:** resolve m2m BasePKs through the base table's FieldMap ([#1375](https://github.com/uptrace/bun/issues/1375)) ([9f4d368](https://github.com/uptrace/bun/commit/9f4d368352b903bbb757a672efea357222e8a611))
 * **schema:** return an error when scanning NULL into an unaddressable value ([29e4e6e](https://github.com/uptrace/bun/commit/29e4e6e0abe007e6c69ca07272a535e6d9a9fc7e))
 * **schema:** use dialect-specific AppendBool in QueryGen.Append ([#1373](https://github.com/uptrace/bun/issues/1373)) ([e91aa81](https://github.com/uptrace/bun/commit/e91aa81e96c562e68aef5bfb0c558eca47402f1b))
 * use transaction context instead of context.TODO() in Tx methods ([459f9e7](https://github.com/uptrace/bun/commit/459f9e7a6dff4b807c9e43d1e5a7571d7f524e8b))
 * wrap WHERE conditions in parentheses when soft-delete AND WhereOr are combined ([#1321](https://github.com/uptrace/bun/issues/1321)) ([1f1ec9d](https://github.com/uptrace/bun/commit/1f1ec9df6b87ae471906739e70c35d17124b95b2))
+
+
+### Documentation
+
+* correct typos in code comments ([44c54f2](https://github.com/uptrace/bun/commit/44c54f24205e2d10c6cff6d0541ad09f59afcf4c))
 
 
 ### Features
