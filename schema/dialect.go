@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -70,14 +71,12 @@ func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
 }
 
 func (BaseDialect) AppendString(b []byte, s string) []byte {
+	if strings.IndexByte(s, 0) >= 0 {
+		return dialect.AppendError(b, errStringNul)
+	}
+
 	b = append(b, '\'')
 	for _, r := range s {
-		if r == '\000' {
-			// Fail closed instead of silently dropping the NUL, which would
-			// persist a value different from the one that was validated.
-			return dialect.AppendError(b, errStringNul)
-		}
-
 		if r == '\'' {
 			b = append(b, '\'', '\'')
 			continue

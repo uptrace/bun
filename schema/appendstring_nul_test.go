@@ -1,19 +1,15 @@
 package schema
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestBaseDialectAppendString_NulFailsClosed(t *testing.T) {
 	// A NUL byte must NOT be silently stripped; it must produce a formatting
-	// error marker so the query fails instead of storing a mutated value.
-	got := string(BaseDialect{}.AppendString(nil, "admin\x00x"))
-	if strings.Contains(got, "adminx") {
-		t.Fatalf("NUL was silently stripped: %q", got)
-	}
-	if !strings.Contains(got, "?!(") {
-		t.Fatalf("AppendString with NUL = %q, want a formatting error marker", got)
+	// error marker outside a quoted string so the query cannot remain valid.
+	const want = "?!(bun: string contains a NUL byte (0x00))"
+	for _, in := range []string{"\x00", "admin\x00x", "admin\x00'x"} {
+		if got := string(BaseDialect{}.AppendString(nil, in)); got != want {
+			t.Errorf("AppendString(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
