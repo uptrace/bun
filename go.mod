@@ -9,7 +9,6 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.5.1
 	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.8.1
-	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
 
