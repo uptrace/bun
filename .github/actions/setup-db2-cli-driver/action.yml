@@ -1,0 +1,47 @@
+name: Setup Db2 CLI driver
+description: Installs IBM's Db2 CLI/ODBC client driver and exports the cgo variables go_ibm_db needs.
+
+inputs:
+  directory:
+    description: Directory the clidriver is installed into.
+    default: ${{ github.workspace }}/.cache
+  ref:
+    description: go_ibm_db ref that provides the installer.
+    default: master
+
+runs:
+  using: composite
+
+  steps:
+    - name: Restore Db2 CLI driver
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.directory }}/clidriver
+        key: db2-clidriver-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ref }}
+
+    - name: Install Db2 CLI driver
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -eu
+        mkdir -p "${{ inputs.directory }}"
+        git clone --depth 1 --branch "${{ inputs.ref }}" \
+          https://github.com/ibmdb/go_ibm_db.git "${{ inputs.directory }}/go_ibm_db"
+        # The installer downloads the archive relative to its own directory, so it must run from the clone.
+        cd "${{ inputs.directory }}/go_ibm_db"
+        go run installer/setup.go "${{ inputs.directory }}"
+
+    - name: Export Db2 CLI driver environment
+      shell: bash
+      run: |
+        set -eu
+        clidriver="${{ inputs.directory }}/clidriver"
+        if [ ! -f "$clidriver/include/sqlcli.h" ]; then
+          echo "Db2 CLI driver is incomplete at $clidriver" >&2
+          exit 1
+        fi
+        echo "IBM_DB_HOME=$clidriver" >> "$GITHUB_ENV"
+        echo "CGO_CFLAGS=-I$clidriver/include" >> "$GITHUB_ENV"
+        echo "CGO_LDFLAGS=-L$clidriver/lib" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=$clidriver/lib" >> "$GITHUB_ENV"

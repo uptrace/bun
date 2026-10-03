@@ -1,0 +1,29 @@
+name: Build Image for Db2
+
+on:
+  workflow_dispatch:
+    inputs:
+      source-tag:
+        description: Tag of icr.io/db2_community/db2 to mirror.
+        default: latest
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull Db2 Community Edition image
+      run: |
+        docker pull icr.io/db2_community/db2:${{ inputs.source-tag }}
+
+    - name: Push Docker image
+      run: |
+        docker tag icr.io/db2_community/db2:${{ inputs.source-tag }} ghcr.io/${{ github.repository_owner }}/db2:latest
+        docker push ghcr.io/${{ github.repository_owner }}/db2:latest
