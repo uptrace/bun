@@ -33,6 +33,10 @@ var tagTests = []struct {
 	{"foo:bar(hello, world)", "", map[string][]string{"foo": {"bar(hello, world)"}}},
 	{"foo:bar(hello(), world)", "", map[string][]string{"foo": {"bar(hello(), world)"}}},
 	{"type:geometry(POINT, 4326)", "", map[string][]string{"type": {"geometry(POINT, 4326)"}}},
+	{"id,pk,type:tinyint;pg=smallint;mssql=tinyint,notnull", "id", map[string][]string{"pk": {""}, "type": {"tinyint;pg=smallint;mssql=tinyint"}, "notnull": {""}}},
+	{"type:decimal(10,2);pg=numeric(12,4),notnull", "", map[string][]string{"type": {"decimal(10,2);pg=numeric(12,4)"}, "notnull": {""}}},
+	{"type:enum('a;b','x=y');pg=text,default:'x=y'", "", map[string][]string{"type": {"enum('a;b','x=y');pg=text"}, "default": {"'x=y'"}}},
+	{"rel:belongs-to,join:profile_id=id", "", map[string][]string{"rel": {"belongs-to"}, "join": {"profile_id=id"}}},
 	{"foo:bar,foo:baz", "", map[string][]string{"foo": []string{"bar", "baz"}}},
 }
 

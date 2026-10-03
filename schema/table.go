@@ -587,7 +587,7 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 		field.SQLDefault = s
 	}
 	if s, ok := field.Tag.Option("type"); ok {
-		field.UserSQLType = s
+		field.UserSQLType, field.DialectSQLTypes = parseSQLType(s)
 	}
 	field.DiscoveredSQLType = DiscoverSQLType(field.IndirectType)
 	field.Append = FieldAppender(t.dialect, field)
@@ -1083,6 +1083,69 @@ func isKnownFieldOption(name string) bool {
 		return true
 	}
 	return false
+}
+
+// parseSQLType separates the generic type from dialect overrides in
+// `type:tinyint;pg=smallint;mssql=tinyint`.
+func parseSQLType(s string) (string, map[string]string) {
+	if !strings.Contains(s, ";") {
+		return s, nil
+	}
+	parts := splitSQLType(s)
+	var options map[string]string
+	for _, part := range parts[1:] {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		name, sqlType, ok := strings.Cut(part, "=")
+		name, sqlType = strings.TrimSpace(name), strings.TrimSpace(sqlType)
+		if !ok || sqlType == "" {
+			panic(fmt.Errorf("bun: can't parse dialect SQL type: %q", part))
+		}
+		switch name {
+		case "pg", "mysql", "sqlite", "mssql", "oracle":
+		default:
+			panic(fmt.Errorf("bun: unknown SQL type dialect: %q", name))
+		}
+		if options == nil {
+			options = make(map[string]string)
+		}
+		options[name] = sqlType
+	}
+	return parts[0], options
+}
+
+// Semicolons inside SQL type parameters or quoted names are not separators.
+func splitSQLType(s string) []string {
+	var parts []string
+	var quote byte
+	var depth, start int
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if quote != 0 {
+			if c == '\\' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '\'', '"':
+			quote = c
+		case '(':
+			depth++
+		case ')':
+			depth--
+		case ';':
+			if depth == 0 {
+				parts = append(parts, s[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(parts, s[start:])
 }
 
 func isKnownFKRule(name string) bool {

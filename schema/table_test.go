@@ -415,3 +415,97 @@ func TestTable(t *testing.T) {
 		})
 	})
 }
+
+func TestFieldDialectSQLTypes(t *testing.T) {
+	dialect := newNopDialect()
+	tables := NewTables(dialect)
+
+	type Model struct {
+		Level   int16   `bun:"type:tinyint;pg=smallint;mssql=tinyint,notnull"`
+		Payload string  `bun:"type:text;mysql=json"`
+		Amount  float64 `bun:"type:decimal(10,2);pg=numeric(12,4);sqlite=REAL,notnull"`
+		Status  string  `bun:"type:enum('a;b','x=y');pg=text,default:'x=y'"`
+		OnlyPG  int64   `bun:"type:;pg=bigint"`
+		Plain   string
+	}
+
+	table := tables.Get(reflect.TypeFor[*Model]())
+
+	level := table.FieldMap["level"]
+	require.Equal(t, "tinyint", level.UserSQLType)
+	require.Equal(t, "smallint", level.DialectSQLTypes["pg"])
+	require.Equal(t, "tinyint", level.DialectSQLTypes["mssql"])
+	require.True(t, level.NotNull)
+
+	payload := table.FieldMap["payload"]
+	require.Equal(t, "text", payload.UserSQLType)
+	require.Equal(t, "json", payload.DialectSQLTypes["mysql"])
+	require.NotContains(t, payload.DialectSQLTypes, "pg")
+
+	amount := table.FieldMap["amount"]
+	require.Equal(t, "decimal(10,2)", amount.UserSQLType)
+	require.Equal(t, "numeric(12,4)", amount.DialectSQLTypes["pg"])
+	require.Equal(t, "REAL", amount.DialectSQLTypes["sqlite"])
+	require.True(t, amount.NotNull)
+	status := table.FieldMap["status"]
+	require.Equal(t, "enum('a;b','x=y')", status.UserSQLType)
+	require.Equal(t, "text", status.DialectSQLTypes["pg"])
+	require.Equal(t, "'x=y'", status.SQLDefault)
+	onlyPG := table.FieldMap["only_pg"]
+	require.Equal(t, onlyPG.DiscoveredSQLType, onlyPG.UserSQLType)
+	require.Equal(t, "bigint", onlyPG.DialectSQLTypes["pg"])
+
+	plain := table.FieldMap["plain"]
+	require.Empty(t, plain.DialectSQLTypes)
+
+	sqlType, ok := level.DialectSQLType("pg")
+	require.True(t, ok)
+	require.Equal(t, "smallint", sqlType)
+
+	_, ok = plain.DialectSQLType("pg")
+	require.False(t, ok)
+}
+
+func TestParseSQLType(t *testing.T) {
+	var tests = []struct {
+		tag       string
+		generic   string
+		overrides map[string]string
+	}{
+		{tag: "text", generic: "text"},
+		{tag: "decimal(10,2)", generic: "decimal(10,2)"},
+		{tag: "enum('a;b','x=y')", generic: "enum('a;b','x=y')"},
+		{
+			tag:       "tinyint;pg=smallint;mysql=tinyint;sqlite=INTEGER;mssql=tinyint;oracle=NUMBER(3)",
+			generic:   "tinyint",
+			overrides: map[string]string{"pg": "smallint", "mysql": "tinyint", "sqlite": "INTEGER", "mssql": "tinyint", "oracle": "NUMBER(3)"},
+		},
+		{
+			tag:       "text; mysql = enum('a;b','x=y');pg=text;",
+			generic:   "text",
+			overrides: map[string]string{"mysql": "enum('a;b','x=y')", "pg": "text"},
+		},
+		{
+			tag:       "text;pg=varchar(10);pg=varchar(20)",
+			generic:   "text",
+			overrides: map[string]string{"pg": "varchar(20)"},
+		},
+		{
+			tag:       `text;pg="a;b=c"`,
+			generic:   "text",
+			overrides: map[string]string{"pg": `"a;b=c"`},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.tag, func(t *testing.T) {
+			generic, overrides := parseSQLType(tt.tag)
+			require.Equal(t, tt.generic, generic)
+			require.Equal(t, tt.overrides, overrides)
+		})
+	}
+	for _, tag := range []string{"text;pg", "text;pg=", "text;=jsonb", "text;postgre=jsonb"} {
+		t.Run(tag, func(t *testing.T) {
+			require.Panics(t, func() { parseSQLType(tag) })
+		})
+	}
+}
