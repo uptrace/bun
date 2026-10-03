@@ -109,6 +109,28 @@ jobs:
 
       - name: Start Db2
         run: |
+          set -eu
+          mirror=ghcr.io/${{ github.repository_owner }}/db2:latest
+          upstream=icr.io/db2_community/db2:latest
+
+          # The mirror is pinned and co-located with the runner; IBM's registry is slow and flaky.
+          if docker pull "$mirror"; then
+            image=$mirror
+          else
+            echo "::warning::$mirror is unavailable, falling back to $upstream."
+            image=$upstream
+            for attempt in 1 2 3; do
+              if docker pull "$upstream"; then
+                break
+              fi
+              if [ "$attempt" = 3 ]; then
+                echo "Unable to pull the Db2 image from $mirror or $upstream" >&2
+                exit 1
+              fi
+              sleep $((attempt * 30))
+            done
+          fi
+
           docker run --detach --privileged --name db2 \
             --publish 50000:50000 \
             --env LICENSE=accept \
@@ -120,7 +142,7 @@ jobs:
             --env REPODB=false \
             --env IS_OSXFS=false \
             --env PERSISTENT_HOME=false \
-            ghcr.io/uptrace/db2:latest
+            "$image"
 
           for attempt in $(seq 1 60); do
             if docker exec db2 su - db2inst1 -c 'db2 connect to testdb user db2inst1 using password' >/dev/null 2>&1; then
