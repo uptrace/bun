@@ -10,9 +10,9 @@ replace github.com/uptrace/bun/extra/bundebug => ../../extra/bundebug
 
 require (
 	github.com/ibmdb/go_ibm_db v0.5.4
-	github.com/uptrace/bun v1.2.18
-	github.com/uptrace/bun/dialect/db2dialect v1.2.18
-	github.com/uptrace/bun/extra/bundebug v1.2.18
+	github.com/uptrace/bun v1.3.0
+	github.com/uptrace/bun/dialect/db2dialect v1.3.0
+	github.com/uptrace/bun/extra/bundebug v1.3.0
 )
 
 require (

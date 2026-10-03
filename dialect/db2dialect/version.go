@@ -2,5 +2,5 @@ package db2dialect
 
 // Version is the current release version.
 func Version() string {
-	return "1.2.18"
+	return "1.3.0"
 }
