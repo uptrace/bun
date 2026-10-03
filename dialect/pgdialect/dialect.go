@@ -141,16 +141,25 @@ func (d *Dialect) IdentQuote() byte {
 
 func (d *Dialect) AppendUint32(b []byte, n uint32) []byte {
 	if d.uintAsInt {
-		return strconv.AppendInt(b, int64(int32(n)), 10)
+		return appendInt(b, int64(int32(n)))
 	}
 	return strconv.AppendUint(b, uint64(n), 10)
 }
 
 func (d *Dialect) AppendUint64(b []byte, n uint64) []byte {
 	if d.uintAsInt {
-		return strconv.AppendInt(b, int64(n), 10)
+		return appendInt(b, int64(n))
 	}
 	return strconv.AppendUint(b, n, 10)
+}
+
+// appendInt inserts a space before a negative value that follows a '-', so
+// that "col-?" does not become a "--" line comment.
+func appendInt(b []byte, n int64) []byte {
+	if n < 0 && len(b) > 0 && b[len(b)-1] == '-' {
+		b = append(b, ' ')
+	}
+	return strconv.AppendInt(b, n, 10)
 }
 
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {

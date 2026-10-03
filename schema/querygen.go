@@ -68,7 +68,7 @@ func (gen QueryGen) Append(b []byte, v any) []byte {
 	case int64:
 		return strconv.AppendInt(guardLineComment(b, v < 0), v, 10)
 	case uint:
-		return strconv.AppendInt(b, int64(v), 10)
+		return gen.Dialect().AppendUint64(b, uint64(v))
 	case uint32:
 		return gen.Dialect().AppendUint32(b, v)
 	case uint64:
