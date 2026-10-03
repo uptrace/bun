@@ -72,6 +72,21 @@ SELECT * FROM passwords;--'`,
 	}
 }
 
+// TestFormatQueryUnexpectedArgs checks that the formatter keeps rejecting
+// argument types it does not know how to render, instead of silently emitting
+// their text form.
+func TestFormatQueryUnexpectedArgs(t *testing.T) {
+	for _, arg := range []any{
+		mockStringer("value"),
+		mockTextAppender("value"),
+		mockTextMarshaler("value"),
+	} {
+		_, err := formatQuery("select $1", namedValues(arg))
+		require.Error(t, err, "arg type %T must be rejected", arg)
+		require.Contains(t, err.Error(), "unexpected arg")
+	}
+}
+
 func namedValues(args ...any) []driver.NamedValue {
 	vals := make([]driver.NamedValue, len(args))
 	for i, arg := range args {
@@ -90,4 +105,20 @@ func BenchmarkFormatQuery(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+type mockStringer string
+
+func (m mockStringer) String() string { return string(m) }
+
+type mockTextAppender string
+
+func (m mockTextAppender) AppendText(b []byte) ([]byte, error) {
+	return append(b, string(m)...), nil
+}
+
+type mockTextMarshaler string
+
+func (m mockTextMarshaler) MarshalText() ([]byte, error) {
+	return []byte(m), nil
 }

@@ -122,6 +122,16 @@ func scanner(typ reflect.Type) ScannerFunc {
 		}
 	}
 
+	// The standard library uuid.UUID is detected by its exact type so that
+	// unrelated types implementing the encoding text interfaces keep using
+	// the default scanners.
+	switch typ {
+	case internal.TypeUUID:
+		return scanUUID
+	case internal.TypeUUIDPtr:
+		return addrScanner(scanUUID)
+	}
+
 	if typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 {
 		return scanBytes
 	}

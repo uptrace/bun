@@ -3,6 +3,7 @@ package pgdialect
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding"
 	"fmt"
 	"math"
 	"reflect"
@@ -146,6 +147,13 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 		return appendTimeElemValue
 	}
 
+	switch typ {
+	case internal.TypeUUID:
+		return arrayAppendUUID
+	case internal.TypeUUIDPtr:
+		return arrayAppendUUIDPtr
+	}
+
 	switch typ.Kind() {
 	case reflect.String:
 		return appendStringElemValue
@@ -157,6 +165,30 @@ func (d *Dialect) arrayElemAppender(typ reflect.Type) schema.AppenderFunc {
 		return schema.PtrAppender(d.arrayElemAppender(typ.Elem()))
 	}
 	return schema.Appender(d, typ)
+}
+
+// arrayAppendUUID appends a uuid.UUID element as a quoted UUID. The nil UUID
+// is a valid UUID value, so it is written as such: like every other element
+// type, a zero value is never turned into SQL NULL here.
+func arrayAppendUUID(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
+	return arrayAppendUUIDText(b, v)
+}
+
+// arrayAppendUUIDPtr appends a *uuid.UUID element, mapping a nil pointer to
+// SQL NULL.
+func arrayAppendUUIDPtr(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
+	if v.IsNil() {
+		return append(b, "NULL"...)
+	}
+	return arrayAppendUUID(gen, b, v.Elem())
+}
+
+func arrayAppendUUIDText(b []byte, v reflect.Value) []byte {
+	text, err := v.Interface().(encoding.TextAppender).AppendText(nil)
+	if err != nil {
+		return dialect.AppendError(b, err)
+	}
+	return appendStringElem(b, internal.String(text))
 }
 
 func appendTimeElemValue(gen schema.QueryGen, b []byte, v reflect.Value) []byte {
@@ -366,6 +398,10 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	}
 
 	scanElem := schema.Scanner(elemType)
+
+	isUUID := elemType == internal.TypeUUID
+	isUUIDPtr := elemType == internal.TypeUUIDPtr
+
 	return func(dest reflect.Value, src any) error {
 		dest = reflect.Indirect(dest)
 		if !dest.CanSet() {
@@ -399,6 +435,16 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 		}
 
 		p := newArrayParser(b)
+
+		// The parser reports an unquoted NULL as an empty element, so it never
+		// reaches the element scanner as nil. UUID elements are handled
+		// explicitly here, with a scanner that parses the textual form only:
+		// array elements are always text, so scanUUID's binary path would
+		// otherwise accept any 16-character token as raw UUID bytes.
+		if isUUID || isUUIDPtr {
+			return scanUUIDArrayValues(dest, p, elemType, isUUIDPtr)
+		}
+
 		nextValue := internal.MakeSliceNextElemFunc(dest)
 		for p.Next() {
 			elem := p.Elem()
@@ -409,6 +455,82 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 		}
 		return p.Err()
 	}
+}
+
+// scanUUIDArrayValues decodes a uuid[] value into a slice or fixed size array
+// destination.
+//
+// Elements are staged first and only written back on success, so a failure
+// part way through never leaves a partially decoded destination behind. For an
+// array, more elements than it can hold is an error rather than a silent
+// truncation. A NULL element keeps a *uuid.UUID element nil and gives a
+// uuid.UUID element the nil UUID. Every non-NULL element is parsed as text, so
+// a quoted empty string is an error rather than SQL NULL.
+func scanUUIDArrayValues(dest reflect.Value, p *arrayParser, elemType reflect.Type, isPtr bool) error {
+	valueType := elemType
+	if isPtr {
+		valueType = elemType.Elem()
+	}
+
+	isSlice := dest.Kind() == reflect.Slice
+	limit := -1
+	if !isSlice {
+		limit = dest.Len()
+	}
+
+	staged := make([]reflect.Value, 0, 8)
+
+	for p.Next() {
+		if limit >= 0 && len(staged) >= limit {
+			return fmt.Errorf("bun: Scan(more elements than the %s destination can hold)", dest.Type())
+		}
+
+		var value reflect.Value
+
+		switch {
+		case p.IsNull():
+			value = reflect.Zero(elemType)
+		default:
+			// An empty quoted string may be reported as a nil element
+			// depending on the reusable substring buffer, and it is not a
+			// valid UUID either way.
+			elem := p.Elem()
+			if elem == nil {
+				elem = []byte{}
+			}
+
+			// UnmarshalText has a pointer receiver, so decode into an
+			// addressable value and take its address for a pointer element.
+			decoded := reflect.New(valueType)
+			if err := schema.ScanUUIDText(decoded.Elem(), elem); err != nil {
+				return fmt.Errorf("scanElem failed: %w", err)
+			}
+
+			if isPtr {
+				value = decoded
+			} else {
+				value = decoded.Elem()
+			}
+		}
+
+		staged = append(staged, value)
+	}
+
+	if err := p.Err(); err != nil {
+		return err
+	}
+
+	if isSlice {
+		for _, value := range staged {
+			dest.Set(reflect.Append(dest, value))
+		}
+		return nil
+	}
+
+	for i, value := range staged {
+		dest.Index(i).Set(value)
+	}
+	return nil
 }
 
 func scanStringSliceValue(dest reflect.Value, src any) error {

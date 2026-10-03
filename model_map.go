@@ -16,10 +16,9 @@ type mapModel struct {
 	dest *map[string]any
 	m    map[string]any
 
-	rows         *sql.Rows
-	columns      []string
-	_columnTypes []*sql.ColumnType
-	scanIndex    int
+	columns     []string
+	columnTypes []*sql.ColumnType
+	scanIndex   int
 }
 
 var _ Model = (*mapModel)(nil)
@@ -49,8 +48,15 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 		return 0, err
 	}
 
-	m.rows = rows
+	// Resolve column types before rows.Scan: Scan is called back from inside
+	// rows.Scan, where calling rows.ColumnTypes can deadlock (Go 1.27+).
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return 0, err
+	}
+
 	m.columns = columns
+	m.columnTypes = columnTypes
 	dest := makeDest(m, len(columns))
 
 	if m.m == nil {
@@ -72,12 +78,7 @@ func (m *mapModel) Scan(src any) error {
 		return m.scanRaw(src)
 	}
 
-	columnTypes, err := m.columnTypes()
-	if err != nil {
-		return err
-	}
-
-	scanType := columnTypes[m.scanIndex].ScanType()
+	scanType := m.columnTypes[m.scanIndex].ScanType()
 	switch scanType.Kind() {
 	case reflect.Interface:
 		return m.scanRaw(src)
@@ -95,17 +96,6 @@ func (m *mapModel) Scan(src any) error {
 	}
 
 	return m.scanRaw(dest.Interface())
-}
-
-func (m *mapModel) columnTypes() ([]*sql.ColumnType, error) {
-	if m._columnTypes == nil {
-		columnTypes, err := m.rows.ColumnTypes()
-		if err != nil {
-			return nil, err
-		}
-		m._columnTypes = columnTypes
-	}
-	return m._columnTypes, nil
 }
 
 func (m *mapModel) scanRaw(src any) error {

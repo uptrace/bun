@@ -1,1 +1,1 @@
-INSERT INTO "models" ("array") VALUES ('["foo","bar"]')
+INSERT INTO "models" ("array") VALUES (N'["foo","bar"]')

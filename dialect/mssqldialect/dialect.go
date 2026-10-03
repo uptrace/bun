@@ -160,6 +160,15 @@ func (d *Dialect) AppendString(b []byte, s string) []byte {
 	return d.BaseDialect.AppendString(b, s)
 }
 
+func (d *Dialect) AppendJSON(b, jsonb []byte) []byte {
+	if d.unicode {
+		// JSON columns are NVARCHAR, so the literal needs the same 'N' prefix as AppendString.
+		b = append(b, 'N')
+	}
+
+	return d.BaseDialect.AppendJSON(b, jsonb)
+}
+
 func (d *Dialect) AppendSequence(b []byte, _ *schema.Table, _ *schema.Field) []byte {
 	return append(b, " IDENTITY"...)
 }

@@ -63,6 +63,13 @@ func DiscoverSQLType(typ reflect.Type) string {
 		return sqltype.JSON
 	}
 
+	// The standard library uuid.UUID is discovered as a character type, so it
+	// maps to VARCHAR (or VARCHAR[] with the array tag) instead of falling
+	// through to the byte slice rule below.
+	if indirectType(typ) == internal.TypeUUID {
+		return sqltype.VarChar
+	}
+
 	switch typ.Kind() {
 	case reflect.Slice:
 		if typ.Elem().Kind() == reflect.Uint8 {

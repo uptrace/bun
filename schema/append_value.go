@@ -29,7 +29,7 @@ var appenders = []AppenderFunc{
 	reflect.Int16:         AppendIntValue,
 	reflect.Int32:         AppendIntValue,
 	reflect.Int64:         AppendIntValue,
-	reflect.Uint:          AppendUintValue,
+	reflect.Uint:          appendUint64Value,
 	reflect.Uint8:         AppendUintValue,
 	reflect.Uint16:        AppendUintValue,
 	reflect.Uint32:        appendUint32Value,
@@ -130,6 +130,14 @@ func appender(dialect Dialect, typ reflect.Type) AppenderFunc {
 		if ptr.Implements(driverValuerType) {
 			return addrAppender(appendDriverValue)
 		}
+	}
+
+	// The standard library uuid.UUID is detected by its exact type, after the
+	// custom appender interfaces above so that they keep taking precedence.
+	// *uuid.UUID is handled by the reflect.Pointer case below, which wraps
+	// this appender with PtrAppender.
+	if typ == internal.TypeUUID {
+		return appendUUIDText
 	}
 
 	switch kind {

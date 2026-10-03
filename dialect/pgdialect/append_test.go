@@ -2,6 +2,7 @@ package pgdialect
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 
@@ -36,4 +37,22 @@ func TestHStoreAppender(t *testing.T) {
 			require.Contains(t, test.expectedIn, string(got))
 		})
 	}
+}
+
+func TestAppendUintAsInt(t *testing.T) {
+	gen := schema.NewQueryGen(New(WithAppendUintAsInt(true)))
+
+	require.Equal(t, "-1", gen.FormatQuery("?", uint64(math.MaxUint64)))
+	// uint takes the same path as uint64.
+	u := uint(math.MaxUint)
+	require.Equal(t, gen.FormatQuery("?", uint64(u)), gen.FormatQuery("?", u))
+	// so do model fields and defined types.
+	type Hash uint
+	require.Equal(t, gen.FormatQuery("?", uint64(u)), gen.FormatQuery("?", Hash(u)))
+	require.Equal(t, gen.FormatQuery("?", uint64(u)), gen.FormatQuery("?", &u))
+
+	// a negative result after '-' must not start a line comment.
+	require.Equal(t, "1000- -1", gen.FormatQuery("1000-?", uint64(math.MaxUint64)))
+	require.Equal(t, "1000- -1", gen.FormatQuery("1000-?", uint32(math.MaxUint32)))
+	require.Equal(t, "1000-1", gen.FormatQuery("1000-?", uint64(1)))
 }
