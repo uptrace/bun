@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
+	"net/netip"
 	"reflect"
 	"time"
 
@@ -14,8 +16,12 @@ import (
 var errNilModel = errors.New("bun: Model(nil)")
 
 var (
-	timeType  = reflect.TypeFor[time.Time]()
-	bytesType = reflect.TypeFor[[]byte]()
+	timeType        = reflect.TypeFor[time.Time]()
+	bytesType       = reflect.TypeFor[[]byte]()
+	scannerType     = reflect.TypeFor[sql.Scanner]()
+	ipNetType       = reflect.TypeFor[net.IPNet]()
+	netipAddrType   = reflect.TypeFor[netip.Addr]()
+	netipPrefixType = reflect.TypeFor[netip.Prefix]()
 )
 
 // Model is implemented by all Bun models.
@@ -78,6 +84,20 @@ func newSingleModel(db *DB, dest any) (Model, error) {
 	return _newModel(db, dest, false)
 }
 
+// isSingleValueStruct
+func isSingleValueStruct(typ reflect.Type) bool {
+	if typ.Kind() != reflect.Struct {
+		return false
+	}
+	if typ == timeType ||
+		typ == ipNetType ||
+		typ == netipAddrType ||
+		typ == netipPrefixType {
+		return true
+	}
+	return reflect.PointerTo(typ).Implements(scannerType)
+}
+
 func _newModel(db *DB, dest any, scan bool) (Model, error) {
 	switch dest := dest.(type) {
 	case nil:
@@ -124,10 +144,15 @@ func _newModel(db *DB, dest any, scan bool) (Model, error) {
 		return newMapModel(db, mapPtr), nil
 	case reflect.Struct:
 		return newStructTableModelValue(db, dest, v), nil
+	case reflect.Pointer:
+		elemType := v.Type().Elem()
+		if elemType.Kind() == reflect.Struct && !isSingleValueStruct(elemType) {
+			return newStructTableModelValue(db, dest, v), nil
+		}
 	case reflect.Slice:
 		switch elemType := sliceElemType(v); elemType.Kind() {
 		case reflect.Struct:
-			if elemType != timeType {
+			if !isSingleValueStruct(elemType) {
 				return newSliceTableModel(db, dest, v, elemType), nil
 			}
 		case reflect.Map:
@@ -207,4 +232,10 @@ func isSingleRowModel(m Model) bool {
 	default:
 		return false
 	}
+}
+
+// nilModel is implemented by models whose destination may be a nil pointer
+// that should not be treated as "no rows" when an empty result is scanned.
+type nilModel interface {
+	isNil() bool
 }
