@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"fmt"
 	"net"
@@ -298,21 +299,20 @@ func addrAppender(fn AppenderFunc) AppenderFunc {
 }
 
 func appendMsgpack(gen QueryGen, b []byte, v reflect.Value) []byte {
-	hexEnc := internal.NewHexEncoder(b)
+	var buf bytes.Buffer
 
 	enc := msgpack.GetEncoder()
 	defer msgpack.PutEncoder(enc)
 
-	enc.Reset(hexEnc)
+	enc.Reset(&buf)
 	if err := enc.EncodeValue(v); err != nil {
 		return dialect.AppendError(b, err)
 	}
 
-	if err := hexEnc.Close(); err != nil {
-		return dialect.AppendError(b, err)
-	}
-
-	return hexEnc.Bytes()
+	// Delegate to the dialect so the encoded payload is emitted using the
+	// correct binary literal syntax (e.g. '\x...' for PostgreSQL, X'...' for
+	// SQLite and MySQL) instead of always using the PostgreSQL format.
+	return gen.Dialect().AppendBytes(b, buf.Bytes())
 }
 
 func AppendQueryAppender(gen QueryGen, b []byte, app QueryAppender) []byte {
