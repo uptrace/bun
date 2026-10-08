@@ -114,6 +114,12 @@ func (q *UpdateQuery) ModelTableExpr(query string, args ...any) *UpdateQuery {
 	return q
 }
 
+// TableAlias overrides the alias used for the model's table in this query.
+func (q *UpdateQuery) TableAlias(alias string) *UpdateQuery {
+	q.setTableAlias(alias)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // Column restricts the SET clause to the given model columns.
@@ -321,7 +327,7 @@ func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 
 	if gen.HasFeature(feature.UpdateMultiTable) {
 		b, err = q.appendTablesWithAlias(gen, b)
-	} else if gen.HasFeature(feature.UpdateTableAlias) {
+	} else if gen.HasFeature(feature.UpdateTableAlias) || q.hasExplicitTableAlias() {
 		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
 		b, err = q.appendFirstTable(gen, b)
@@ -638,7 +644,8 @@ func (q *UpdateQuery) FQN(column string) Ident {
 }
 
 func (q *UpdateQuery) hasTableAlias(gen schema.QueryGen) bool {
-	return gen.HasFeature(feature.UpdateMultiTable | feature.UpdateTableAlias)
+	return gen.HasFeature(feature.UpdateMultiTable|feature.UpdateTableAlias) ||
+		q.hasExplicitTableAlias()
 }
 
 // String returns the generated SQL query string. The UpdateQuery instance must not be

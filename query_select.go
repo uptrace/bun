@@ -129,6 +129,12 @@ func (q *SelectQuery) ModelTableExpr(query string, args ...any) *SelectQuery {
 	return q
 }
 
+// TableAlias overrides the alias used for the model's table in this query.
+func (q *SelectQuery) TableAlias(alias string) *SelectQuery {
+	q.setTableAlias(alias)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // Column adds columns to the SELECT clause.

@@ -186,6 +186,35 @@ func (q *baseQuery) setModel(modeli any) {
 	}
 }
 
+// setTableAlias overrides the alias used for the model's table by replacing
+// the query's table with a copy that carries the new alias. The cached
+// (shared) table is not modified, so the alias only applies to this query.
+func (q *baseQuery) setTableAlias(alias string) {
+	if q.table == nil {
+		q.setErr(errors.New("bun: TableAlias requires a model"))
+		return
+	}
+	if alias == "" {
+		q.setErr(errors.New("bun: empty table alias"))
+		return
+	}
+	old := q.table
+	q.table = old.WithAlias(alias)
+	// Inside a relation apply func q.table is temporarily swapped for the
+	// join model's table (see relationJoin.applyTo); don't touch the model's
+	// table in that case.
+	if q.tableModel != nil && q.tableModel.Table() == old {
+		q.tableModel.setTable(q.table)
+	}
+}
+
+// hasExplicitTableAlias reports whether the query's table carries an alias
+// set via TableAlias. Explicit aliases are emitted unconditionally, bypassing
+// dialect feature fallbacks, because callers reference them by name.
+func (q *baseQuery) hasExplicitTableAlias() bool {
+	return q.table != nil && q.table.HasExplicitTableAlias()
+}
+
 func (q *baseQuery) setErr(err error) {
 	if q.err == nil {
 		q.err = err

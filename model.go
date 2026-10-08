@@ -35,6 +35,7 @@ type TableModel interface {
 	ScanColumn(column string, src any) error
 
 	Table() *schema.Table
+	setTable(*schema.Table)
 	Relation() *schema.Relation
 
 	join(string) *relationJoin
