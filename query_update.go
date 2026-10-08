@@ -198,6 +198,31 @@ func (q *UpdateQuery) joinOn(cond string, args []any, sep string) *UpdateQuery {
 	return q
 }
 
+// JoinModel adds a JOIN clause on the model's table, using alias as the
+// table alias or the model's table alias when alias is omitted.
+//
+// If the model's table has a soft-delete field, an `alias.field IS NULL`
+// condition is appended to the join's ON clause. Use WhereAllWithDeleted
+// to include soft-deleted rows of the joined table.
+func (q *UpdateQuery) JoinModel(model any, alias ...string) *UpdateQuery {
+	return q.joinModel("JOIN", model, alias)
+}
+
+// LeftJoinModel is like JoinModel but emits a LEFT JOIN clause.
+func (q *UpdateQuery) LeftJoinModel(model any, alias ...string) *UpdateQuery {
+	return q.joinModel("LEFT JOIN", model, alias)
+}
+
+func (q *UpdateQuery) joinModel(kind string, model any, alias []string) *UpdateQuery {
+	j, err := newModelJoinQuery(q.db, kind, model, alias)
+	if err != nil {
+		q.setErr(err)
+		return q
+	}
+	q.joins = append(q.joins, j)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // WherePK adds a WHERE condition on the model's primary key columns.
@@ -354,7 +379,7 @@ func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 	}
 
 	for _, j := range q.joins {
-		b, err = j.AppendQuery(gen, b)
+		b, err = j.AppendQuery(gen, b, q.flags)
 		if err != nil {
 			return nil, err
 		}

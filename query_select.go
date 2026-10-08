@@ -430,6 +430,67 @@ func (q *SelectQuery) joinOn(cond string, args []any, sep string) *SelectQuery {
 	return q
 }
 
+// JoinModel adds a JOIN clause on the model's table, using alias as the
+// table alias or the model's table alias when alias is omitted.
+//
+// If the model's table has a soft-delete field, an `alias.field IS NULL`
+// condition is appended to the join's ON clause. Use WhereAllWithDeleted
+// to include soft-deleted rows of the joined table.
+func (q *SelectQuery) JoinModel(model any, alias ...string) *SelectQuery {
+	return q.joinModel("JOIN", model, alias)
+}
+
+// LeftJoinModel is like JoinModel but emits a LEFT JOIN clause.
+func (q *SelectQuery) LeftJoinModel(model any, alias ...string) *SelectQuery {
+	return q.joinModel("LEFT JOIN", model, alias)
+}
+
+func (q *SelectQuery) joinModel(kind string, model any, alias []string) *SelectQuery {
+	j, err := newModelJoinQuery(q.db, kind, model, alias)
+	if err != nil {
+		q.setErr(err)
+		return q
+	}
+	q.joins = append(q.joins, j)
+	return q
+}
+
+func newModelJoinQuery(
+	db *DB, kind string, model any, alias []string,
+) (joinQuery, error) {
+	m, err := newSingleModel(db, model)
+	if err != nil {
+		return joinQuery{}, err
+	}
+	tableModel, ok := m.(TableModel)
+	if !ok {
+		return joinQuery{}, fmt.Errorf("bun: JoinModel(unsupported %T)", model)
+	}
+	table := tableModel.Table()
+
+	var joinAlias string
+	switch len(alias) {
+	case 0:
+		joinAlias = table.Alias
+	case 1:
+		joinAlias = alias[0]
+	default:
+		return joinQuery{}, errors.New("bun: JoinModel accepts at most one alias")
+	}
+	if joinAlias == "" {
+		return joinQuery{}, errors.New("bun: JoinModel: empty table alias")
+	}
+
+	return joinQuery{
+		join: schema.SafeQuery(
+			kind+" ? AS ?",
+			[]any{table.SQLNameForSelects, Ident(joinAlias)},
+		),
+		joinTable: table,
+		joinAlias: joinAlias,
+	}, nil
+}
+
 //------------------------------------------------------------------------------
 
 // Relation adds a relation to the query.
@@ -669,7 +730,7 @@ func (q *SelectQuery) appendQuery(
 	}
 
 	for _, join := range q.joins {
-		b, err = join.AppendQuery(gen, b)
+		b, err = join.AppendQuery(gen, b, q.flags)
 		if err != nil {
 			return nil, err
 		}
@@ -1290,8 +1351,10 @@ func (q *SelectQuery) Clone() *SelectQuery {
 
 	for i, j := range q.joins {
 		clone.joins[i] = joinQuery{
-			join: schema.SafeQuery(j.join.Query, append([]any(nil), j.join.Args...)),
-			on:   make([]schema.QueryWithSep, len(j.on)),
+			join:      schema.SafeQuery(j.join.Query, append([]any(nil), j.join.Args...)),
+			on:        make([]schema.QueryWithSep, len(j.on)),
+			joinTable: j.joinTable,
+			joinAlias: j.joinAlias,
 		}
 		for k, on := range j.on {
 			clone.joins[i].on[k] = schema.SafeQueryWithSep(
@@ -1378,9 +1441,16 @@ func (q *selectQueryBuilder) Unwrap() any {
 type joinQuery struct {
 	join schema.QueryWithArgs
 	on   []schema.QueryWithSep
+
+	// joinTable and joinAlias are set only by JoinModel, to enable
+	// soft-delete handling on the joined table.
+	joinTable *schema.Table
+	joinAlias string
 }
 
-func (j *joinQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+func (j *joinQuery) AppendQuery(
+	gen schema.QueryGen, b []byte, flags internal.Flag,
+) (_ []byte, err error) {
 	b = append(b, ' ')
 
 	b, err = j.join.AppendQuery(gen, b)
@@ -1388,20 +1458,55 @@ func (j *joinQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err er
 		return nil, err
 	}
 
-	if len(j.on) > 0 {
-		b = append(b, " ON "...)
-		for i, on := range j.on {
-			if i > 0 {
-				b = append(b, on.Sep...)
-			}
+	isSoftDelete := j.joinTable != nil &&
+		j.joinTable.SoftDeleteField != nil &&
+		!flags.Has(allWithDeletedFlag)
 
-			b = append(b, '(')
-			b, err = on.AppendQuery(gen, b)
-			if err != nil {
-				return nil, err
+	if len(j.on) == 0 && !isSoftDelete {
+		return b, nil
+	}
+
+	b = append(b, " ON "...)
+
+	// When a soft-delete condition follows an OR-separated ON clause, wrap the
+	// ON conditions in parens so the OR cannot bypass the soft-delete filter.
+	wrap := isSoftDelete
+	if wrap {
+		wrap = false
+		for i, on := range j.on {
+			if i > 0 && on.Sep == " OR " {
+				wrap = true
+				break
 			}
-			b = append(b, ')')
 		}
+	}
+	if wrap {
+		b = append(b, '(')
+	}
+	for i, on := range j.on {
+		if i > 0 {
+			b = append(b, on.Sep...)
+		}
+
+		b = append(b, '(')
+		b, err = on.AppendQuery(gen, b)
+		if err != nil {
+			return nil, err
+		}
+		b = append(b, ')')
+	}
+	if wrap {
+		b = append(b, ')')
+	}
+
+	if isSoftDelete {
+		if len(j.on) > 0 {
+			b = append(b, " AND "...)
+		}
+		b = append(b, '(')
+		b = gen.AppendIdent(b, j.joinAlias)
+		b = appendSoftDeleteCond(gen, b, j.joinTable.SoftDeleteField, flags)
+		b = append(b, ')')
 	}
 
 	return b, nil

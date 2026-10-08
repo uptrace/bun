@@ -2173,6 +2173,164 @@ func TestTableAlias(t *testing.T) {
 	})
 }
 
+func TestJoinModel(t *testing.T) {
+	type User struct {
+		ID   int64 `bun:",pk,autoincrement"`
+		Name string
+	}
+	type SoftUser struct {
+		ID        int64 `bun:",pk,autoincrement"`
+		Name      string
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
+	}
+	type Profile struct {
+		ID        int64 `bun:",pk,autoincrement"`
+		UserID    int64
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
+	}
+	type Tag struct {
+		ID     int64 `bun:",pk,autoincrement"`
+		UserID int64
+	}
+
+	// Normalize MySQL backtick quoting and MSSQL unicode literals for comparison.
+	normalize := func(b []byte) string {
+		s := strings.ReplaceAll(string(b), "`", `"`)
+		return strings.ReplaceAll(s, "N'", "'")
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		// The model's default table alias is used when no alias is given.
+		t.Run("default alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				JoinModel(new(Tag)).
+				JoinOn("tag.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" JOIN "tags" AS "tag" ON (tag.user_id = user.id)`,
+				normalize(got))
+		})
+
+		// A join on a model without a soft-delete field emits no extra condition.
+		t.Run("explicit alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Tag), "t").
+				JoinOn("t.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "tags" AS "t" ON (t.user_id = user.id)`,
+				normalize(got))
+		})
+
+		// A soft-deletable join model gets `alias.deleted_at IS NULL` in ON.
+		t.Run("soft delete", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "profiles" AS "p" ON (p.user_id = user.id) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// Soft-delete applies even without explicit JoinOn conditions.
+		t.Run("soft delete no joinon", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).JoinModel(new(Profile), "p")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" JOIN "profiles" AS "p" ON ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// The soft-delete condition must not be bypassed by an OR separator:
+		// user conditions are wrapped in parens when it is appended.
+		t.Run("soft delete joinon or", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = user.id").
+				JoinOnOr("p.id = ?", 2)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "profiles" AS "p" ON ((p.user_id = user.id) OR (p.id = 2)) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// Errors are reported via the query, like other bun APIs.
+		t.Run("errors", func(t *testing.T) {
+			_, err := db.NewSelect().Model(new(User)).
+				JoinModel(nil).
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+
+			_, err = db.NewSelect().Model(new(User)).
+				JoinModel(new(Profile), "p", "extra").
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+
+			_, err = db.NewSelect().Model(new(User)).
+				JoinModel(new(Profile), "").
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+		})
+
+		// WhereDeleted flips the join's soft-delete condition to IS NOT NULL,
+		// matching Relation joins.
+		t.Run("soft delete where deleted", func(t *testing.T) {
+			q := db.NewSelect().Model(new(SoftUser)).WhereDeleted().
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = soft_user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "soft_user"."id", "soft_user"."name", "soft_user"."deleted_at" FROM "soft_users" AS "soft_user" JOIN "profiles" AS "p" ON (p.user_id = soft_user.id) AND ("p"."deleted_at" IS NOT NULL) WHERE "soft_user"."deleted_at" IS NOT NULL`,
+				normalize(got))
+		})
+
+		// WhereAllWithDeleted removes the join's soft-delete condition.
+		t.Run("soft delete all with deleted", func(t *testing.T) {
+			q := db.NewSelect().Model(new(SoftUser)).WhereAllWithDeleted().
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = soft_user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "soft_user"."id", "soft_user"."name", "soft_user"."deleted_at" FROM "soft_users" AS "soft_user" JOIN "profiles" AS "p" ON (p.user_id = soft_user.id)`,
+				normalize(got))
+		})
+
+		t.Run("update join model", func(t *testing.T) {
+			q := db.NewUpdate().Model(new(User)).TableAlias("u").
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = u.id").
+				Set("name = ?", "foo").
+				Where("u.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`UPDATE "users" AS "u" SET name = 'foo' JOIN "profiles" AS "p" ON (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) WHERE (u.id = 1)`,
+				normalize(got))
+		})
+
+		// ?TableAlias inside JoinOn resolves to the main table's alias,
+		// including an explicit TableAlias.
+		t.Run("with table alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).TableAlias("u").
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = ?TableAlias.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "u"."id", "u"."name" FROM "users" AS "u" LEFT JOIN "profiles" AS "p" ON (p.user_id = "u".id) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+	})
+}
+
 func TestAlterTable(t *testing.T) {
 	type Movie struct {
 		bun.BaseModel `bun:"table:hobbies.movies"`
