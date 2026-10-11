@@ -119,3 +119,18 @@ func (c nopConnector) Driver() driver.Driver { return nopDriver{} }
 type nopDriver struct{}
 
 func (nopDriver) Open(string) (driver.Conn, error) { return nil, errNotImplemented }
+
+func TestCreateTableQuotedDialectSQLTypes(t *testing.T) {
+	type Model struct {
+		Qualified string `bun:"type:\"my_schema\".\"my_type\";pg=\"pg_schema\".\"pg_type\""`
+		Array     string `bun:"type:\"char\"[];pg=\"pg_char\"[]"`
+	}
+	db := newDialectTypeTestDB(dialect.SQLite)
+	query := db.NewCreateTable().Model(&Model{}).String()
+	require.Contains(t, query, `"qualified" "my_schema"."my_type"`)
+	require.Contains(t, query, `"array" "char"[]`)
+	db = newDialectTypeTestDB(dialect.PG)
+	query = db.NewCreateTable().Model(&Model{}).String()
+	require.Contains(t, query, `"qualified" "pg_schema"."pg_type"`)
+	require.Contains(t, query, `"array" "pg_char"[]`)
+}

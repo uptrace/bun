@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/uptrace/bun/internal/tagparser"
 )
 
 func TestTable(t *testing.T) {
@@ -498,14 +500,27 @@ func TestParseSQLType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.tag, func(t *testing.T) {
-			generic, overrides := parseSQLType(tt.tag)
+			tag := tagparser.Parse("type:" + tt.tag)
+			generic, _ := tag.Option("type")
+			overrides := tag.Overrides["type"]
+			validateSQLTypeOverrides(overrides)
 			require.Equal(t, tt.generic, generic)
 			require.Equal(t, tt.overrides, overrides)
 		})
 	}
 	for _, tag := range []string{"text;pg", "text;pg=", "text;=jsonb", "text;postgre=jsonb"} {
 		t.Run(tag, func(t *testing.T) {
-			require.Panics(t, func() { parseSQLType(tag) })
+			require.Panics(t, func() { validateSQLTypeOverrides(tagparser.Parse("type:" + tag).Overrides["type"]) })
+		})
+	}
+}
+
+func TestFieldDialectSQLTypesValidation(t *testing.T) {
+	for _, fieldTag := range []string{`bun:"type:text;pg="`, `bun:"type:text;postgre=jsonb"`, `bun:"type:text;=jsonb"`} {
+		t.Run(fieldTag, func(t *testing.T) {
+			model := reflect.StructOf([]reflect.StructField{{Name: "Value", Type: reflect.TypeFor[string](), Tag: reflect.StructTag(fieldTag)}})
+			tables := NewTables(newNopDialect())
+			require.Panics(t, func() { tables.Get(model) })
 		})
 	}
 }
