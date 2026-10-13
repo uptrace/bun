@@ -482,8 +482,9 @@ func newModelJoinQuery(
 	}
 
 	return joinQuery{
+		kind: kind,
 		join: schema.SafeQuery(
-			kind+" ? AS ?",
+			"? AS ?",
 			[]any{table.SQLNameForSelects, Ident(joinAlias)},
 		),
 		joinTable: table,
@@ -1351,6 +1352,7 @@ func (q *SelectQuery) Clone() *SelectQuery {
 
 	for i, j := range q.joins {
 		clone.joins[i] = joinQuery{
+			kind:      j.kind,
 			join:      schema.SafeQuery(j.join.Query, append([]any(nil), j.join.Args...)),
 			on:        make([]schema.QueryWithSep, len(j.on)),
 			joinTable: j.joinTable,
@@ -1439,6 +1441,10 @@ func (q *selectQueryBuilder) Unwrap() any {
 //------------------------------------------------------------------------------
 
 type joinQuery struct {
+	// kind is the join-type keyword (e.g. "JOIN", "LEFT JOIN").
+	// It is set by JoinModel/LeftJoinModel and UpdateQuery.Join;
+	// SelectQuery.Join stores the full join text (including "JOIN ... ON ...") and leaves kind empty.
+	kind string
 	join schema.QueryWithArgs
 	on   []schema.QueryWithSep
 
@@ -1452,6 +1458,10 @@ func (j *joinQuery) AppendQuery(
 	gen schema.QueryGen, b []byte, flags internal.Flag,
 ) (_ []byte, err error) {
 	b = append(b, ' ')
+	if j.kind != "" {
+		b = append(b, j.kind...)
+		b = append(b, ' ')
+	}
 
 	b, err = j.join.AppendQuery(gen, b)
 	if err != nil {

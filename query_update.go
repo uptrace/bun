@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/uptrace/bun/dialect"
 
@@ -170,10 +172,36 @@ func (q *UpdateQuery) OmitZero() *UpdateQuery {
 
 //------------------------------------------------------------------------------
 
-// Join adds a JOIN clause with the specified join expression.
+// Join adds a JOIN clause on the specified table/subquery expression.
+//
+// The join argument must be the joined table or subquery expression only:
+// an optional leading join-type keyword ("JOIN", "LEFT JOIN", etc.) is
+// detected and defaults to "JOIN". An embedded ON clause ("expr ON cond")
+// is rejected — ON conditions must be added via JoinOn/JoinOnOr, because
+// on dialects without multi-table UPDATE they are moved into the WHERE
+// clause and cannot be carried inside the join expression.
+//
+// How the join is rendered depends on the dialect:
+//   - Dialects that support multi-table UPDATE (MySQL) emit
+//     "UPDATE t <KIND> expr ON cond SET ...".
+//   - Other dialects (e.g. PostgreSQL) emit joins in the FROM clause:
+//     "UPDATE t SET ... FROM ...". Inner joins ("JOIN", "INNER JOIN",
+//     "CROSS JOIN") are emitted as bare comma-separated FROM items and
+//     their JoinOn/soft-delete conditions are moved into the WHERE
+//     clause — PostgreSQL does not allow ON conditions in UPDATE ...
+//     FROM to reference the updated table. Non-inner joins keep the
+//     "<KIND> expr ON cond" form and require a preceding FROM item
+//     (an inner Join, Table or TableExpr).
 func (q *UpdateQuery) Join(join string, args ...any) *UpdateQuery {
+	kind, expr := splitUpdateJoinKind(join)
+	if hasJoinOnClause(expr) {
+		q.setErr(errors.New("bun: UpdateQuery.Join: ON clause is not allowed in the join " +
+			"expression; use JoinOn/JoinOnOr instead"))
+		return q
+	}
 	q.joins = append(q.joins, joinQuery{
-		join: schema.SafeQuery(join, args),
+		kind: kind,
+		join: schema.SafeQuery(expr, args),
 	})
 	return q
 }
@@ -221,6 +249,181 @@ func (q *UpdateQuery) joinModel(kind string, model any, alias []string) *UpdateQ
 	}
 	q.joins = append(q.joins, j)
 	return q
+}
+
+// updateJoinKinds lists the leading join-type keywords accepted by
+// UpdateQuery.Join, matched longest-prefix first.
+var updateJoinKinds = []string{
+	"FULL OUTER JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
+	"FULL JOIN", "LEFT JOIN", "RIGHT JOIN",
+	"INNER JOIN", "CROSS JOIN", "NATURAL JOIN",
+	"JOIN",
+}
+
+// splitUpdateJoinKind splits the UpdateQuery.Join argument into a join-type
+// keyword and the joined expression; defaults to "JOIN" when no keyword is
+// present. Keywords are matched word-by-word, case-insensitively.
+func splitUpdateJoinKind(join string) (kind string, expr string) {
+	expr = strings.TrimSpace(join)
+	for _, k := range updateJoinKinds {
+		if rest, ok := matchJoinKind(expr, k); ok {
+			return k, rest
+		}
+	}
+	return "JOIN", expr
+}
+
+// matchJoinKind reports whether expr starts with the whitespace-separated,
+// case-insensitive keyword sequence given by kind, and returns the joined
+// expression after it with leading spaces trimmed. Each keyword must be
+// followed by whitespace or the end of the string, so plain words like
+// "JOINTER" are not mistaken for "JOIN".
+func matchJoinKind(expr, kind string) (rest string, ok bool) {
+	rest = expr
+	for _, word := range strings.Fields(kind) {
+		if len(rest) < len(word) || !strings.EqualFold(rest[:len(word)], word) {
+			return "", false
+		}
+		rest = rest[len(word):]
+		if rest != "" && !unicode.IsSpace(rune(rest[0])) {
+			return "", false
+		}
+		rest = strings.TrimLeftFunc(rest, unicode.IsSpace)
+	}
+	return rest, true
+}
+
+// hasJoinOnClause reports whether the join expression contains an ON clause:
+// a whitespace- or boundary-bounded "ON" keyword at parenthesis depth 0,
+// outside string literals, quoted identifiers and comments (case-insensitive).
+// UpdateQuery.Join rejects such expressions; ON conditions must be added via
+// JoinOn/JoinOnOr.
+func hasJoinOnClause(expr string) bool {
+	depth := 0
+	for i := 0; i < len(expr); i++ {
+		switch c := expr[i]; {
+		case c == '(':
+			depth++
+		case c == ')':
+			if depth > 0 {
+				depth--
+			}
+		case c == '\'' || c == '"' || c == '`':
+			i = skipQuotedString(expr, i)
+		case c == '/' && i+1 < len(expr) && expr[i+1] == '*':
+			if j := strings.Index(expr[i+2:], "*/"); j >= 0 {
+				i += 2 + j + 1 // index of the closing '/'
+			} else {
+				return false // unterminated comment swallows the rest
+			}
+		case c == '-' && i+1 < len(expr) && expr[i+1] == '-':
+			if j := strings.IndexByte(expr[i:], '\n'); j >= 0 {
+				i += j
+			} else {
+				return false // unterminated line comment
+			}
+		case depth == 0 && isOnKeyword(expr, i):
+			return true
+		}
+	}
+	return false
+}
+
+// isOnKeyword reports whether s has an "ON" keyword at offset i, i.e. the
+// bytes are ON (case-insensitive) bounded by whitespace or the edges of s.
+func isOnKeyword(s string, i int) bool {
+	return i+1 < len(s) && strings.EqualFold(s[i:i+2], "ON") &&
+		(i == 0 || unicode.IsSpace(rune(s[i-1]))) &&
+		(i+2 == len(s) || unicode.IsSpace(rune(s[i+2])))
+}
+
+// skipQuotedString returns the index of the quote closing the quoted string
+// or identifier that opens at s[i], or the last index if unterminated.
+// Doubled quotes and backslash escapes are skipped.
+func skipQuotedString(s string, i int) int {
+	q := s[i]
+	for j := i + 1; j < len(s); j++ {
+		switch s[j] {
+		case '\\':
+			j++ // escaped character
+		case q:
+			if j+1 < len(s) && s[j+1] == q {
+				j++ // doubled quote escape
+				continue
+			}
+			return j
+		}
+	}
+	return len(s) - 1
+}
+
+// isInnerJoin reports whether the join has inner-join semantics, whose ON
+// conditions can equivalently be moved into WHERE.
+func (j *joinQuery) isInnerJoin() bool {
+	switch j.kind {
+	case "", "JOIN", "INNER JOIN", "CROSS JOIN":
+		return true
+	}
+	return false
+}
+
+// updateJoinConds renders the join's ON conditions and the joined table's
+// soft-delete condition as a group of WHERE conditions, for dialects without
+// multi-table UPDATE syntax (e.g. PostgreSQL) that move inner-join filters
+// into WHERE. When the ON conditions contain OR, the whole group is
+// parenthesized so the OR cannot leak into the outer conditions.
+func (j *joinQuery) updateJoinConds(
+	gen schema.QueryGen, flags internal.Flag,
+) ([]schema.QueryWithSep, error) {
+	isSoftDelete := j.joinTable != nil &&
+		j.joinTable.SoftDeleteField != nil &&
+		!flags.Has(allWithDeletedFlag)
+	if len(j.on) == 0 && !isSoftDelete {
+		return nil, nil
+	}
+
+	hasOr := false
+	for i, on := range j.on {
+		// The first condition's Sep is never rendered (same as joinQuery.AppendQuery); only check i>0
+		if i > 0 && strings.Contains(strings.ToUpper(on.Sep), "OR") {
+			hasOr = true
+			break
+		}
+	}
+
+	extra := make([]schema.QueryWithSep, 0, len(j.on)+4)
+	if hasOr {
+		// Same trick as addWhereGroup: elements with an empty Query render only
+		// their Sep, which injects the group parentheses
+		extra = append(extra,
+			schema.SafeQueryWithSep("", nil, " AND "),
+			schema.SafeQueryWithSep("", nil, "("))
+	}
+	for i, on := range j.on {
+		if i == 0 {
+			// Inside an OR group the first condition renders no separator;
+			// in the flat case it AND-s the group to the previous item
+			if hasOr {
+				on.Sep = ""
+			} else {
+				on.Sep = " AND "
+			}
+		}
+		extra = append(extra, on)
+	}
+	if hasOr {
+		// Close the OR group before the soft-delete condition: sd must be
+		// AND-ed outside the whole group, otherwise in "(c1) OR (c2) AND (sd)"
+		// it would only constrain the last OR branch
+		extra = append(extra, schema.SafeQueryWithSep("", nil, ")"))
+	}
+	if isSoftDelete {
+		var sdb []byte
+		sdb = gen.AppendIdent(sdb, j.joinAlias)
+		sdb = appendSoftDeleteCond(gen, sdb, j.joinTable.SoftDeleteField, flags)
+		extra = append(extra, schema.SafeQueryWithSep(string(sdb), nil, " AND "))
+	}
+	return extra, nil
 }
 
 //------------------------------------------------------------------------------
@@ -350,7 +553,8 @@ func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 
 	b = append(b, "UPDATE "...)
 
-	if gen.HasFeature(feature.UpdateMultiTable) {
+	hasFeatureUpdateMultiTable := gen.HasFeature(feature.UpdateMultiTable)
+	if hasFeatureUpdateMultiTable {
 		b, err = q.appendTablesWithAlias(gen, b)
 	} else if gen.HasFeature(feature.UpdateTableAlias) || q.hasExplicitTableAlias() {
 		b, err = q.appendFirstTableWithAlias(gen, b)
@@ -366,22 +570,68 @@ func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 		return nil, err
 	}
 
+	if hasFeatureUpdateMultiTable {
+		// Multi-table UPDATE dialects (MySQL): joins follow the UPDATE table list, before SET
+		for i := range q.joins {
+			b, err = q.joins[i].AppendQuery(gen, b, q.flags)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	b, err = q.mustAppendSet(gen, b)
 	if err != nil {
 		return nil, err
 	}
 
-	if !gen.HasFeature(feature.UpdateMultiTable) {
-		b, err = q.appendOtherTables(gen, b)
-		if err != nil {
-			return nil, err
+	var joinConds []schema.QueryWithSep
+	if !hasFeatureUpdateMultiTable {
+		emittedFrom := false
+		if q.hasMultiTables() {
+			b, err = q.appendOtherTables(gen, b)
+			if err != nil {
+				return nil, err
+			}
+			emittedFrom = true
 		}
-	}
-
-	for _, j := range q.joins {
-		b, err = j.AppendQuery(gen, b, q.flags)
-		if err != nil {
-			return nil, err
+		for i := range q.joins {
+			j := &q.joins[i]
+			if j.isInnerJoin() {
+				// Inner joins render as comma-separated FROM items, with JoinOn
+				// and soft-delete conditions moved into WHERE. PostgreSQL does
+				// not allow an UPDATE...FROM ON condition to reference the
+				// updated table, so inner-join ON conditions are only legal in
+				// WHERE (the two are semantically equivalent).
+				if !emittedFrom {
+					b = append(b, " FROM "...)
+					emittedFrom = true
+				} else {
+					b = append(b, ", "...)
+				}
+				b, err = j.join.AppendQuery(gen, b)
+				if err != nil {
+					return nil, err
+				}
+				conds, cerr := j.updateJoinConds(gen, q.flags)
+				if cerr != nil {
+					return nil, cerr
+				}
+				joinConds = append(joinConds, conds...)
+			} else {
+				// Outer/natural joins keep their <KIND join ON cond> form, with
+				// conditions staying in ON; they need an existing FROM item to
+				// serve as the join base.
+				if !emittedFrom {
+					return nil, errors.New(
+						"bun: UpdateQuery join on this dialect requires a preceding FROM item " +
+							"(an inner Join, Table or TableExpr must come first)")
+				}
+				b, err = j.AppendQuery(gen, b, q.flags)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
@@ -393,7 +643,7 @@ func (q *UpdateQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 		}
 	}
 
-	b, err = q.mustAppendWhere(gen, b, q.hasTableAlias(gen))
+	b, err = q.mustAppendWhere(gen, b, q.hasTableAlias(gen), joinConds...)
 	if err != nil {
 		return nil, err
 	}
