@@ -1509,7 +1509,8 @@ func TestQuery(t *testing.T) {
 				return db.NewUpdate().
 					Model((*Story)(nil)).
 					Set("name = ?", "new-name").
-					Join("JOIN user ON user.id = story.user_id").
+					Join("user").
+					JoinOn("user.id = story.user_id").
 					Where("user.id = ?", 1)
 			},
 		},
@@ -2132,6 +2133,33 @@ func TestTableAlias(t *testing.T) {
 				normalize(got))
 		})
 
+		t.Run("insert", func(t *testing.T) {
+			q := db.NewInsert().Model(&User{ID: 1, Name: "x"}).TableAlias("u")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Contains(t, normalize(got), `INSERT INTO "users" AS "u"`)
+		})
+
+		// MERGE is only supported on dialects with feature.Merge; the alias
+		// must be emitted on the target table and resolvable via ?TableAlias.
+		t.Run("merge", func(t *testing.T) {
+			if !db.HasFeature(feature.Merge) {
+				t.Skip("merge not supported")
+			}
+			models := []*User{{Name: "A"}}
+			q := db.NewMerge().Model(new(User)).TableAlias("u").
+				With("_data", db.NewValues(&models)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+					return q.Set("name = _data.name")
+				})
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Contains(t, normalize(got),
+				`"users" AS "u" USING _data ON "u".name = _data.name`)
+		})
+
 		// The tag-configured alias still falls back to the table name when the
 		// dialect does not support DELETE ... AS alias.
 		t.Run("tag alias degrades", func(t *testing.T) {
@@ -2311,9 +2339,15 @@ func TestJoinModel(t *testing.T) {
 				Where("u.id = ?", 1)
 			got, err := q.AppendQuery(db.QueryGen(), nil)
 			require.NoError(t, err)
-			require.Equal(t,
-				`UPDATE "users" AS "u" SET name = 'foo' JOIN "profiles" AS "p" ON (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) WHERE (u.id = 1)`,
-				normalize(got))
+			if db.HasFeature(feature.UpdateMultiTable) {
+				require.Equal(t,
+					`UPDATE "users" AS "u" JOIN "profiles" AS "p" ON (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) SET name = 'foo' WHERE (u.id = 1)`,
+					normalize(got))
+			} else {
+				require.Equal(t,
+					`UPDATE "users" AS "u" SET name = 'foo' FROM "profiles" AS "p" WHERE (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) AND (u.id = 1)`,
+					normalize(got))
+			}
 		})
 
 		// ?TableAlias inside JoinOn resolves to the main table's alias,

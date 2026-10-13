@@ -858,27 +858,39 @@ func (q *whereBaseQuery) addWhereCols(cols []string) {
 }
 
 func (q *whereBaseQuery) mustAppendWhere(
-	gen schema.QueryGen, b []byte, withAlias bool,
+	gen schema.QueryGen, b []byte, withAlias bool, extra ...schema.QueryWithSep,
 ) ([]byte, error) {
-	if len(q.where) == 0 && q.whereFields == nil && !q.flags.Has(deletedFlag) {
+	if len(q.where) == 0 && len(extra) == 0 && q.whereFields == nil && !q.flags.Has(deletedFlag) {
 		err := errors.New("bun: Update and Delete queries require at least one Where")
 		return nil, err
 	}
-	return q.appendWhere(gen, b, withAlias)
+	return q.appendWhere(gen, b, withAlias, extra...)
 }
 
+// appendWhere renders the WHERE clause; extra conditions are rendered before
+// q.where and AND-ed in, for callers such as UPDATE that need to move join
+// conditions into WHERE.
 func (q *whereBaseQuery) appendWhere(
-	gen schema.QueryGen, b []byte, withAlias bool,
+	gen schema.QueryGen, b []byte, withAlias bool, extra ...schema.QueryWithSep,
 ) (_ []byte, err error) {
-	if len(q.where) == 0 && q.whereFields == nil && !q.isSoftDelete() {
+	if len(q.where) == 0 && len(extra) == 0 && q.whereFields == nil && !q.isSoftDelete() {
 		return b, nil
 	}
 
 	b = append(b, " WHERE "...)
 	startLen := len(b)
 
-	needsExtraCondition := q.isSoftDelete() || q.whereFields != nil
+	needsExtraCondition := q.isSoftDelete() || q.whereFields != nil || len(extra) > 0
+	if len(extra) > 0 {
+		b, err = appendWhere(gen, b, extra)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(q.where) > 0 {
+		if len(b) > startLen {
+			b = append(b, " AND "...)
+		}
 		wrapParens := needsExtraCondition && q.whereHasOr
 		if wrapParens {
 			b = append(b, '(')
