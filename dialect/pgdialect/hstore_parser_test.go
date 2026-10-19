@@ -23,6 +23,10 @@ func TestHStoreParser(t *testing.T) {
 		{`"1"=>NULL`, map[string]string{"1": ""}},
 		{`"1"=>"NULL"`, map[string]string{"1": "NULL"}},
 		{`"{1}"=>"{2}", "{3}"=>"{4}"`, map[string]string{"{1}": "{2}", "{3}": "{4}"}},
+
+		// hstore keys and values are text, so a leading \x is not bytea hex.
+		{`"\\x41"=>"\\x4142"`, map[string]string{`\x41`: `\x4142`}},
+		{`"1"=>"\\xzz"`, map[string]string{"1": `\xzz`}},
 	}
 
 	for i, test := range tests {
