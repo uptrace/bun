@@ -16,9 +16,10 @@ type mapModel struct {
 	dest *map[string]any
 	m    map[string]any
 
-	columns     []string
-	columnTypes []*sql.ColumnType
-	scanIndex   int
+	columnAliases map[string]string
+	columns       []string
+	columnTypes   []*sql.ColumnType
+	scanIndex     int
 }
 
 var _ Model = (*mapModel)(nil)
@@ -55,7 +56,7 @@ func (m *mapModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) {
 		return 0, err
 	}
 
-	m.columns = columns
+	m.columns = restoreColumnAliases(columns, m.columnAliases)
 	m.columnTypes = columnTypes
 	dest := makeDest(m, len(columns))
 
@@ -96,6 +97,10 @@ func (m *mapModel) Scan(src any) error {
 	}
 
 	return m.scanRaw(dest.Interface())
+}
+
+func (m *mapModel) setColumnAliases(aliases map[string]string) {
+	m.columnAliases = aliases
 }
 
 func (m *mapModel) scanRaw(src any) error {

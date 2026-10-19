@@ -27,8 +27,9 @@ type structTableModel struct {
 	structInited  bool
 	structInitErr error
 
-	columns   []string
-	scanIndex int
+	columnAliases map[string]string
+	columns       []string
+	scanIndex     int
 }
 
 var _ TableModel = (*structTableModel)(nil)
@@ -260,7 +261,7 @@ func (m *structTableModel) ScanRow(ctx context.Context, rows *sql.Rows) error {
 		return err
 	}
 
-	m.columns = columns
+	m.columns = restoreColumnAliases(columns, m.columnAliases)
 	dest := makeDest(m, len(columns))
 
 	return m.scanRow(ctx, rows, dest)
@@ -288,6 +289,10 @@ func (m *structTableModel) Scan(src any) error {
 	m.scanIndex++
 
 	return m.ScanColumn(unquote(column), src)
+}
+
+func (m *structTableModel) setColumnAliases(aliases map[string]string) {
+	m.columnAliases = aliases
 }
 
 func (m *structTableModel) ScanColumn(column string, src any) error {
@@ -350,6 +355,7 @@ func (m *structTableModel) clone() TableModel {
 		structInited:  m.structInited,
 		structInitErr: m.structInitErr,
 		columns:       append([]string{}, m.columns...),
+		columnAliases: m.columnAliases,
 		scanIndex:     m.scanIndex,
 	}
 }
