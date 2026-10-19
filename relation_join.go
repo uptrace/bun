@@ -241,34 +241,37 @@ func (j *relationJoin) hasParent() bool {
 	return false
 }
 
-func (j *relationJoin) appendAlias(gen schema.QueryGen, b []byte) []byte {
+func (j *relationJoin) appendAlias(gen schema.QueryGen, b []byte, aliases *relationAliases) []byte {
 	quote := gen.IdentQuote()
 
 	b = append(b, quote)
+	start := len(b)
 	b = appendAlias(b, j)
+	if aliases != nil {
+		b = aliases.append(b, start)
+	}
 	b = append(b, quote)
 	return b
 }
 
-func (j *relationJoin) appendAliasColumn(gen schema.QueryGen, b []byte, column string) []byte {
+func (j *relationJoin) appendAliasColumn(gen schema.QueryGen, b []byte, column string, aliases *relationAliases) []byte {
 	quote := gen.IdentQuote()
 
 	b = append(b, quote)
+	start := len(b)
 	b = appendAlias(b, j)
 	b = append(b, "__"...)
 	b = append(b, column...)
+	if aliases != nil {
+		b = aliases.append(b, start)
+	}
 	b = append(b, quote)
 	return b
 }
 
-func (j *relationJoin) appendBaseAlias(gen schema.QueryGen, b []byte) []byte {
-	quote := gen.IdentQuote()
-
+func (j *relationJoin) appendBaseAlias(gen schema.QueryGen, b []byte, aliases *relationAliases) []byte {
 	if j.hasParent() {
-		b = append(b, quote)
-		b = appendAlias(b, j.Parent)
-		b = append(b, quote)
-		return b
+		return j.Parent.appendAlias(gen, b, aliases)
 	}
 	return append(b, j.BaseModel.Table().SQLAlias...)
 }
@@ -309,14 +312,14 @@ func appendAlias(b []byte, j *relationJoin) []byte {
 }
 
 func (j *relationJoin) appendHasOneJoin(
-	gen schema.QueryGen, b []byte, q *SelectQuery,
+	gen schema.QueryGen, b []byte, q *SelectQuery, aliases *relationAliases,
 ) (_ []byte, err error) {
 	isSoftDelete := j.JoinModel.Table().SoftDeleteField != nil && !q.flags.Has(allWithDeletedFlag)
 
 	b = append(b, "LEFT JOIN "...)
 	b = gen.AppendQuery(b, string(j.JoinModel.Table().SQLNameForSelects))
 	b = append(b, " AS "...)
-	b = j.appendAlias(gen, b)
+	b = j.appendAlias(gen, b, aliases)
 
 	b = append(b, " ON "...)
 
@@ -325,11 +328,11 @@ func (j *relationJoin) appendHasOneJoin(
 		if i > 0 {
 			b = append(b, " AND "...)
 		}
-		b = j.appendAlias(gen, b)
+		b = j.appendAlias(gen, b, aliases)
 		b = append(b, '.')
 		b = append(b, j.Relation.JoinPKs[i].SQLName...)
 		b = append(b, " = "...)
-		b = j.appendBaseAlias(gen, b)
+		b = j.appendBaseAlias(gen, b, aliases)
 		b = append(b, '.')
 		b = append(b, baseField.SQLName...)
 	}
@@ -337,7 +340,7 @@ func (j *relationJoin) appendHasOneJoin(
 
 	if isSoftDelete {
 		b = append(b, " AND "...)
-		b = j.appendAlias(gen, b)
+		b = j.appendAlias(gen, b, aliases)
 		b = j.appendSoftDelete(gen, b, q.flags)
 	}
 

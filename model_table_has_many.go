@@ -48,7 +48,7 @@ func (m *hasManyModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error
 		return 0, err
 	}
 
-	m.columns = columns
+	m.columns = restoreColumnAliases(columns, m.columnAliases)
 	dest := makeDest(m, len(columns))
 
 	var n int
