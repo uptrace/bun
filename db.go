@@ -793,7 +793,7 @@ func (tx Tx) RunInTx(
 		}
 	}()
 
-	if err := fn(tx.ctx, sp); err != nil {
+	if err := fn(sp.ctx, sp); err != nil {
 		return err
 	}
 
