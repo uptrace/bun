@@ -18,7 +18,7 @@ import (
 // Silently stripping it (the previous behavior) would store a value different
 // from the one the caller supplied; PostgreSQL rejects NUL in text outright.
 // Executors return it wrapped in a *FormatError. Dialects that override
-// AppendString may handle NUL differently (mysqldialect strips it).
+// AppendString may handle NUL differently (mysqldialect escapes it).
 var ErrStringNul = errors.New("bun: string contains a NUL byte (0x00)")
 
 type Dialect interface {

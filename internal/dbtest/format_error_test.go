@@ -133,9 +133,15 @@ func testFormatError(t *testing.T, dbName string, db *bun.DB) {
 
 	t.Run("NUL byte", func(t *testing.T) {
 		if db.Dialect().Name() == dialect.MySQL {
-			// mysqldialect accepts every string and strips NUL.
-			_, err := db.NewInsert().Model(&FormatErrorModel{Name: "a\x00b"}).Exec(ctx)
+			// MySQL stores NUL: mysqldialect escapes it as \0 (#1443).
+			model := &FormatErrorModel{Name: "a\x00b\\\x000"}
+			_, err := db.NewInsert().Model(model).Exec(ctx)
 			require.NoError(t, err)
+
+			got := new(FormatErrorModel)
+			err = db.NewSelect().Model(got).Where("name = ?", model.Name).Scan(ctx)
+			require.NoError(t, err)
+			require.Equal(t, model.Name, got.Name)
 			return
 		}
 
