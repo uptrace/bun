@@ -254,7 +254,7 @@ func (q *CreateIndexQuery) Exec(ctx context.Context, dest ...any) (sql.Result, e
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	queryBytes, err := q.db.appendQuery(q, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

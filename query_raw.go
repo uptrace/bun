@@ -72,7 +72,10 @@ func (q *RawQuery) scanOrExec(
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	query := q.db.format(q.query, q.args)
+	query, err := q.db.format(q.query, q.args)
+	if err != nil {
+		return nil, err
+	}
 	var res sql.Result
 
 	if hasDest {
