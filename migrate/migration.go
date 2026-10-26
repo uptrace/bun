@@ -28,6 +28,12 @@ type Migration struct {
 
 	Up   internalMigrationFunc `bun:"-"`
 	Down internalMigrationFunc `bun:"-"`
+
+	// txUp and txDown report whether Up and Down are transactional SQL
+	// migrations, which can mark themselves inside their own transaction
+	// (WithMarkAppliedInTx).
+	txUp   bool
+	txDown bool
 }
 
 // String returns the migration name and comment.
@@ -164,6 +170,15 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 		}()
 
 		execErr = migrator.exec(ctx, idb, migration, queries)
+		if execErr == nil && isTx && migrator.markAppliedInTx {
+			// Record the migration in the transaction that applied it, so that
+			// the two are committed or rolled back together.
+			if strings.HasSuffix(name, ".up.sql") {
+				execErr = migrator.markApplied(ctx, idb, migration)
+			} else {
+				execErr = migrator.markUnapplied(ctx, idb, migration)
+			}
+		}
 		return execErr
 	}
 }
