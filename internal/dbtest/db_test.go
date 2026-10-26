@@ -863,7 +863,7 @@ func testRawQuery(t *testing.T, db *bun.DB) {
 
 	_ = db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
 		var num int
-		err := db.NewRaw("SELECT ?", 456).Scan(ctx, &num)
+		err := tx.NewRaw("SELECT ?", 456).Scan(ctx, &num)
 		require.NoError(t, err)
 		require.Equal(t, 456, num)
 		return nil
