@@ -105,6 +105,7 @@ func (d *Dialect) OnTable(table *schema.Table) {
 
 func (d *Dialect) onField(field *schema.Field) {
 	field.DiscoveredSQLType = fieldSQLType(field)
+	field.ValuesSQLType = valuesSQLType(field.DiscoveredSQLType)
 
 	if field.AutoIncrement && !field.Identity {
 		switch field.DiscoveredSQLType {
