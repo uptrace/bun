@@ -51,3 +51,38 @@ func TestQueryGen_Append_NegativeNumberDoesNotCreateLineComment(t *testing.T) {
 		})
 	}
 }
+
+func TestQueryGen_NopColumnLimit(t *testing.T) {
+	t.Run("nop default", func(t *testing.T) {
+		if got := NewNopQueryGen().NopColumnLimit(); got != defaultNopColumnLimit {
+			t.Errorf("got %d, want %d", got, defaultNopColumnLimit)
+		}
+	})
+
+	t.Run("custom", func(t *testing.T) {
+		if got := NewNopQueryGen().WithNopColumnLimit(3).NopColumnLimit(); got != 3 {
+			t.Errorf("got %d, want 3", got)
+		}
+	})
+
+	t.Run("does not modify the original", func(t *testing.T) {
+		gen := NewNopQueryGen()
+		_ = gen.WithNopColumnLimit(3)
+		if got := gen.NopColumnLimit(); got != defaultNopColumnLimit {
+			t.Errorf("got %d, want %d", got, defaultNopColumnLimit)
+		}
+	})
+}
+
+// WithArg and WithNamedArg build a new QueryGen, so they must carry the
+// column limit over instead of resetting it to zero (no limit).
+func TestQueryGen_NopColumnLimitSurvivesArgs(t *testing.T) {
+	gen := NewNopQueryGen().WithNopColumnLimit(3)
+
+	if got := gen.WithArg(&namedArg{name: "a", value: 1}).NopColumnLimit(); got != 3 {
+		t.Errorf("WithArg: got %d, want 3", got)
+	}
+	if got := gen.WithNamedArg("a", 1).NopColumnLimit(); got != 3 {
+		t.Errorf("WithNamedArg: got %d, want 3", got)
+	}
+}
