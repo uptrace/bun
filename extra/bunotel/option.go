@@ -34,6 +34,16 @@ func WithFormattedQueries(format bool) Option {
 	}
 }
 
+// WithColumnLimit configures how many model columns the statement attribute
+// lists before the SELECT column list is collapsed into "N columns".
+// The default is 10. Use 0 to always list every column.
+// It only applies to unformatted statements.
+func WithColumnLimit(n int) Option {
+	return func(h *QueryHook) {
+		h.columnLimit = &n
+	}
+}
+
 // WithSpanNameQueryGen takes a function that determines the span name
 // for a given query event.
 func WithSpanNameQueryGen(f func(*bun.QueryEvent) string) Option {

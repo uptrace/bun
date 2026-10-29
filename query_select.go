@@ -772,7 +772,7 @@ func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, er
 			}
 		}
 	case q.table != nil:
-		if len(q.table.Fields) > 10 && gen.IsNop() {
+		if limit := gen.NopColumnLimit(); gen.IsNop() && limit > 0 && len(q.table.Fields) > limit {
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
 			b = gen.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
