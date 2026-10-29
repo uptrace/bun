@@ -93,3 +93,72 @@ jobs:
           MYSQL5: user:pass@tcp(localhost:53306)/test
           MARIADB: user:pass@tcp(localhost:13306)/test
           MSSQL2019: sqlserver://sa:passWORD1@localhost:1433?database=master
+
+  db2:
+    name: db2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.26.x
+
+      - name: Start Db2
+        run: |
+          set -eu
+          mirror=ghcr.io/${{ github.repository_owner }}/db2:latest
+          upstream=icr.io/db2_community/db2:latest
+
+          # The mirror is pinned and co-located with the runner; IBM's registry is slow and flaky.
+          if docker pull "$mirror"; then
+            image=$mirror
+          else
+            echo "::warning::$mirror is unavailable, falling back to $upstream."
+            image=$upstream
+            for attempt in 1 2 3; do
+              if docker pull "$upstream"; then
+                break
+              fi
+              if [ "$attempt" = 3 ]; then
+                echo "Unable to pull the Db2 image from $mirror or $upstream" >&2
+                exit 1
+              fi
+              sleep $((attempt * 30))
+            done
+          fi
+
+          docker run --detach --privileged --name db2 \
+            --publish 50000:50000 \
+            --env LICENSE=accept \
+            --env DB2INSTANCE=db2inst1 \
+            --env DB2INST1_PASSWORD=password \
+            --env DBNAME=testdb \
+            --env BLU=false \
+            --env TO_CREATE_SAMPLEDB=false \
+            --env REPODB=false \
+            --env IS_OSXFS=false \
+            --env PERSISTENT_HOME=false \
+            "$image"
+
+          for attempt in $(seq 1 60); do
+            if docker exec db2 su - db2inst1 -c 'db2 connect to testdb user db2inst1 using password' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+          done
+          docker logs db2
+          exit 1
+
+      - name: Install Db2 CLI driver
+        uses: ./.github/actions/setup-db2-cli-driver
+
+      - name: Run Db2 integration test
+        working-directory: example/db2
+        env:
+          DB2_DSN: HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=db2inst1;PWD=password
+          BUNDEBUG: "0"
+        run: go test -v .

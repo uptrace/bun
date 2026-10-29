@@ -1,5 +1,7 @@
-ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
-EXAMPLE_GO_MOD_DIRS := $(shell find ./example/ -type f -name 'go.mod' -exec dirname {} \; | sort)
+# example/db2 requires IBM's proprietary DB2 CLI/ODBC client driver (cgo + libdb2)
+# and is tested separately by the DB2 integration job.
+ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | grep -v '^\./example/db2$$' | sort)
+EXAMPLE_GO_MOD_DIRS := $(shell find ./example/ -type f -name 'go.mod' -exec dirname {} \; | grep -v '^\./example/db2$$' | sort)
 
 test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
