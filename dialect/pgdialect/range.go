@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/uptrace/bun/internal"
@@ -205,6 +206,22 @@ func scanElem(ptr any, src []byte) ([]byte, error) {
 
 		return src, nil
 
+	case *int64:
+		n, err := strconv.ParseInt(internal.String(src), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		*ptr = n
+		return src, nil
+
+	case *float64:
+		n, err := strconv.ParseFloat(internal.String(src), 64)
+		if err != nil {
+			return nil, err
+		}
+		*ptr = n
+		return src, nil
+
 	case sql.Scanner:
 		if err := ptr.Scan(src); err != nil {
 			return nil, err
@@ -212,6 +229,6 @@ func scanElem(ptr any, src []byte) ([]byte, error) {
 		return src, nil
 
 	default:
-		panic(fmt.Errorf("unsupported range type: %T", ptr))
+		return nil, fmt.Errorf("pgdialect: unsupported range type: %T", ptr)
 	}
 }
