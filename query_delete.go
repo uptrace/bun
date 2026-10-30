@@ -91,6 +91,12 @@ func (q *DeleteQuery) ModelTableExpr(query string, args ...any) *DeleteQuery {
 	return q
 }
 
+// TableAlias overrides the alias used for the model's table in this query.
+func (q *DeleteQuery) TableAlias(alias string) *DeleteQuery {
+	q.setTableAlias(alias)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 func (q *DeleteQuery) WherePK(cols ...string) *DeleteQuery {
@@ -219,7 +225,7 @@ func (q *DeleteQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 		return upd.AppendQuery(gen, b)
 	}
 
-	withAlias := q.db.HasFeature(feature.DeleteTableAlias)
+	withAlias := q.db.HasFeature(feature.DeleteTableAlias) || q.hasExplicitTableAlias()
 
 	b, err = q.appendWith(gen, b)
 	if err != nil {
