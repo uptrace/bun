@@ -459,11 +459,20 @@ func (q *UpdateQuery) appendOtherTables(gen schema.QueryGen, b []byte) (_ []byte
 
 // Bulk rewrites the query to update multiple rows from a slice model,
 // joining the model table against the slice values exposed as a WITH clause.
-// The model must be a slice, otherwise an error is set on the query.
+// The model must be a slice of structs with primary keys, otherwise an error
+// is set on the query.
 func (q *UpdateQuery) Bulk() *UpdateQuery {
 	model, ok := q.model.(*sliceTableModel)
 	if !ok {
 		q.setErr(fmt.Errorf("bun: Bulk requires a slice, got %T", q.model))
+		return q
+	}
+
+	// Rows are matched against _data by primary key. Without one the WHERE
+	// clause is empty, which either is invalid SQL or, with soft deletes,
+	// updates every row of the table.
+	if err := model.table.CheckPKs(); err != nil {
+		q.setErr(err)
 		return q
 	}
 
