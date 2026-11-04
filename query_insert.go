@@ -86,7 +86,6 @@ func (q *InsertQuery) WithQuery(query *WithQuery) *InsertQuery {
 	return q
 }
 
-
 //------------------------------------------------------------------------------
 
 // Table specifies the table(s) to insert into.
@@ -106,6 +105,12 @@ func (q *InsertQuery) TableExpr(query string, args ...any) *InsertQuery {
 // ModelTableExpr overrides the table name derived from the model.
 func (q *InsertQuery) ModelTableExpr(query string, args ...any) *InsertQuery {
 	q.modelTableName = schema.SafeQuery(query, args)
+	return q
+}
+
+// TableAlias overrides the alias used for the model's table in this query.
+func (q *InsertQuery) TableAlias(alias string) *InsertQuery {
+	q.setTableAlias(alias)
 	return q
 }
 
@@ -223,7 +228,7 @@ func (q *InsertQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err 
 	}
 	b = append(b, "INTO "...)
 
-	if q.db.HasFeature(feature.InsertTableAlias) && !q.on.IsZero() {
+	if (q.db.HasFeature(feature.InsertTableAlias) && !q.on.IsZero()) || q.hasExplicitTableAlias() {
 		b, err = q.appendFirstTableWithAlias(gen, b)
 	} else {
 		b, err = q.appendFirstTable(gen, b)

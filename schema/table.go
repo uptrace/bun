@@ -42,8 +42,9 @@ type Table struct {
 
 	// lookupCache memoizes LookupField results for dotted/prefixed column
 	// names (e.g. "author__name"). Those names miss FieldMap and take the
-	// slow path below, which clones the Field on every call.
-	lookupCache sync.Map // map[string]*Field
+	// slow path below, which clones the Field on every call. It is a pointer
+	// so that Table values can be copied (see WithAlias).
+	lookupCache *sync.Map // map[string]*Field
 
 	Type      reflect.Type
 	ZeroValue reflect.Value // reflect.Struct
@@ -75,6 +76,10 @@ type Table struct {
 	SoftDeleteField       *Field
 	UpdateSoftDeleteField func(fv reflect.Value, tm time.Time) error
 
+	// explicitTableAlias marks an alias set via WithAlias, i.e. a per-query
+	// override, as opposed to the default or tag-configured alias.
+	explicitTableAlias bool
+
 	flags       internal.Flag
 	initStarted bool
 }
@@ -90,6 +95,7 @@ func (table *Table) init(dialect Dialect, typ reflect.Type) {
 	}
 	table.initStarted = true
 	table.dialect = dialect
+	table.lookupCache = new(sync.Map)
 	table.Type = typ
 	table.ZeroValue = reflect.New(table.Type).Elem()
 	table.ZeroIface = reflect.New(table.Type).Interface()
@@ -363,6 +369,25 @@ func (t *Table) String() string {
 	return "model=" + t.TypeName
 }
 
+// WithAlias returns a copy of the table with the given SQL alias.
+// The receiver is not modified, so tables shared via the registry
+// keep their original alias.
+func (t *Table) WithAlias(alias string) *Table {
+	clone := *t
+	clone.Alias = alias
+	clone.SQLAlias = t.quoteIdent(alias)
+	clone.explicitTableAlias = true
+	return &clone
+}
+
+// HasExplicitTableAlias reports whether the alias was set explicitly via
+// WithAlias. Explicit aliases are emitted unconditionally, bypassing dialect
+// feature fallbacks — it is up to the caller to ensure the database accepts
+// a table alias in the statement.
+func (t *Table) HasExplicitTableAlias() bool {
+	return t.explicitTableAlias
+}
+
 func (t *Table) CheckPKs() error {
 	if len(t.PKs) == 0 {
 		return fmt.Errorf("bun: %s does not have primary keys", t)
@@ -421,12 +446,16 @@ func (t *Table) LookupField(name string) *Field {
 		return field
 	}
 
-	if v, ok := t.lookupCache.Load(name); ok {
-		return v.(*Field)
+	if t.lookupCache != nil {
+		if v, ok := t.lookupCache.Load(name); ok {
+			return v.(*Field)
+		}
 	}
 
 	field := t.lookupFieldSlow(name)
-	t.lookupCache.Store(name, field)
+	if t.lookupCache != nil {
+		t.lookupCache.Store(name, field)
+	}
 	return field
 }
 

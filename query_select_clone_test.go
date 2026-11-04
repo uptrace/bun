@@ -40,6 +40,17 @@ func TestSelectQueryCloneCopiesExecutionState(t *testing.T) {
 	require.True(t, q.whereFields[0] == pk, "whereFields must not alias the original")
 }
 
+// Regression test: Clone must copy joinQuery.kind, otherwise joins added via
+// JoinModel/LeftJoinModel lose the JOIN keyword and render invalid SQL.
+func TestSelectQueryCloneCopiesJoinKind(t *testing.T) {
+	q := &SelectQuery{
+		joins: []joinQuery{
+			{kind: "LEFT JOIN", join: schema.SafeQuery("t", nil)},
+		},
+	}
+	require.Equal(t, "LEFT JOIN", q.Clone().joins[0].kind)
+}
+
 func TestSelectQueryCloneNilWhereFields(t *testing.T) {
 	q := &SelectQuery{}
 	require.Nil(t, q.Clone().whereFields)

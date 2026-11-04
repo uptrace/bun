@@ -96,6 +96,12 @@ func (q *MergeQuery) ModelTableExpr(query string, args ...any) *MergeQuery {
 	return q
 }
 
+// TableAlias overrides the alias used for the model's table in this query.
+func (q *MergeQuery) TableAlias(alias string) *MergeQuery {
+	q.setTableAlias(alias)
+	return q
+}
+
 //------------------------------------------------------------------------------
 
 // Returning adds a RETURNING clause to the query.

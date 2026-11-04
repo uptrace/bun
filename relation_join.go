@@ -276,9 +276,13 @@ func (j *relationJoin) appendBaseAlias(gen schema.QueryGen, b []byte) []byte {
 func (j *relationJoin) appendSoftDelete(
 	gen schema.QueryGen, b []byte, flags internal.Flag,
 ) []byte {
-	b = append(b, '.')
+	return appendSoftDeleteCond(gen, b, j.JoinModel.Table().SoftDeleteField, flags)
+}
 
-	field := j.JoinModel.Table().SoftDeleteField
+func appendSoftDeleteCond(
+	gen schema.QueryGen, b []byte, field *schema.Field, flags internal.Flag,
+) []byte {
+	b = append(b, '.')
 	b = append(b, field.SQLName...)
 
 	if field.IsPtr || field.NullZero {
