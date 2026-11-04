@@ -355,7 +355,10 @@ func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
 func (db *DB) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
-	formattedQuery := db.format(query, args)
+	formattedQuery, err := db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	res, err := db.DB.ExecContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, res, err)
@@ -374,7 +377,10 @@ func (db *DB) Query(query string, args ...any) (*sql.Rows, error) {
 func (db *DB) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
-	formattedQuery := db.format(query, args)
+	formattedQuery, err := db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	rows, err := db.DB.QueryContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, nil, err)
@@ -390,16 +396,44 @@ func (db *DB) QueryRow(query string, args ...any) *sql.Row {
 // QueryRowContext executes a query expected to return at most one row.
 // Arguments are formatted using the dialect's placeholder syntax.
 // Query hooks are invoked before and after execution.
+//
+// *sql.Row cannot carry a formatting error, so an argument that cannot be
+// formatted reaches the database as a marker it rejects. QueryContext returns
+// a *schema.FormatError instead.
 func (db *DB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	formattedQuery := db.format(query, args)
+	formattedQuery := db.gen.FormatQuery(query, args...)
 	ctx, event := db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := db.DB.QueryRowContext(ctx, formattedQuery)
 	db.afterQuery(ctx, event, nil, row.Err())
 	return row
 }
 
-func (db *DB) format(query string, args []any) string {
-	return db.gen.FormatQuery(query, args...)
+// format renders query with args for execution. A value that cannot be
+// formatted fails the call with a *schema.FormatError.
+func (db *DB) format(query string, args []any) (string, error) {
+	if strings.IndexByte(query, '?') == -1 {
+		return query, nil // nothing to format, so no error sink to allocate
+	}
+	gen := db.gen.WithErrorSink()
+	query = gen.FormatQuery(query, args...)
+	if err := gen.Err(); err != nil {
+		return "", err
+	}
+	return query, nil
+}
+
+// appendQuery renders q for execution. A value that cannot be formatted fails
+// the call with a *schema.FormatError before anything is sent.
+func (db *DB) appendQuery(q schema.QueryAppender, b []byte) ([]byte, error) {
+	gen := db.gen.WithErrorSink()
+	b, err := q.AppendQuery(gen, b)
+	if err != nil {
+		return nil, err
+	}
+	if err := gen.Err(); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 //------------------------------------------------------------------------------
@@ -427,7 +461,10 @@ func (db *DB) Conn(ctx context.Context) (Conn, error) {
 func (c Conn) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
-	formattedQuery := c.db.format(query, args)
+	formattedQuery, err := c.db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	res, err := c.Conn.ExecContext(ctx, formattedQuery)
 	c.db.afterQuery(ctx, event, res, err)
@@ -438,7 +475,10 @@ func (c Conn) ExecContext(
 func (c Conn) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
-	formattedQuery := c.db.format(query, args)
+	formattedQuery, err := c.db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	rows, err := c.Conn.QueryContext(ctx, formattedQuery)
 	c.db.afterQuery(ctx, event, nil, err)
@@ -446,8 +486,9 @@ func (c Conn) QueryContext(
 }
 
 // QueryRowContext executes a query expected to return at most one row on this connection.
+// A formatting error is not reported, see DB.QueryRowContext.
 func (c Conn) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	formattedQuery := c.db.format(query, args)
+	formattedQuery := c.db.gen.FormatQuery(query, args...)
 	ctx, event := c.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := c.Conn.QueryRowContext(ctx, formattedQuery)
 	c.db.afterQuery(ctx, event, nil, row.Err())
@@ -705,7 +746,10 @@ func (tx Tx) Exec(query string, args ...any) (sql.Result, error) {
 func (tx Tx) ExecContext(
 	ctx context.Context, query string, args ...any,
 ) (sql.Result, error) {
-	formattedQuery := tx.db.format(query, args)
+	formattedQuery, err := tx.db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	res, err := tx.Tx.ExecContext(ctx, formattedQuery)
 	tx.db.afterQuery(ctx, event, res, err)
@@ -721,7 +765,10 @@ func (tx Tx) Query(query string, args ...any) (*sql.Rows, error) {
 func (tx Tx) QueryContext(
 	ctx context.Context, query string, args ...any,
 ) (*sql.Rows, error) {
-	formattedQuery := tx.db.format(query, args)
+	formattedQuery, err := tx.db.format(query, args)
+	if err != nil {
+		return nil, err
+	}
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	rows, err := tx.Tx.QueryContext(ctx, formattedQuery)
 	tx.db.afterQuery(ctx, event, nil, err)
@@ -734,8 +781,9 @@ func (tx Tx) QueryRow(query string, args ...any) *sql.Row {
 }
 
 // QueryRowContext executes a query expected to return at most one row within this transaction.
+// A formatting error is not reported, see DB.QueryRowContext.
 func (tx Tx) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	formattedQuery := tx.db.format(query, args)
+	formattedQuery := tx.db.gen.FormatQuery(query, args...)
 	ctx, event := tx.db.beforeQuery(ctx, nil, query, args, formattedQuery, nil)
 	row := tx.Tx.QueryRowContext(ctx, formattedQuery)
 	tx.db.afterQuery(ctx, event, nil, row.Err())

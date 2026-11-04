@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/uptrace/bun/dialect"
 	"github.com/uptrace/bun/internal"
 )
 
@@ -81,9 +80,9 @@ func ScanUUIDText(dest reflect.Value, src any) error {
 func appendUUIDText(gen QueryGen, b []byte, v reflect.Value) []byte {
 	text, err := v.Interface().(encoding.TextAppender).AppendText(nil)
 	if err != nil {
-		return dialect.AppendError(b, err)
+		return gen.AppendError(b, err)
 	}
-	return gen.Dialect().AppendString(b, internal.String(text))
+	return gen.appendString(b, internal.String(text))
 }
 
 func isZeroUUID(v reflect.Value) bool {
