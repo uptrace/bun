@@ -5,10 +5,10 @@ test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test in $${dir}"; \
 	  (cd "$${dir}" && \
-	    go test && \
-	    go test -race && \
-	    env GOOS=linux GOARCH=386 TZ= go test && \
-	    go vet); \
+	    go test ./... && \
+	    go test -race ./... && \
+	    env GOOS=linux GOARCH=386 TZ= go test ./... && \
+	    go vet ./...); \
 	done
 
 go_mod_tidy:
