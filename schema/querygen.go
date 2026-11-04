@@ -19,6 +19,22 @@ var nopQueryGen = QueryGen{
 type QueryGen struct {
 	dialect Dialect
 	args    *namedArgList
+	errs    *formatErrors // nil: formatting errors are only rendered as markers
+}
+
+// FormatError reports a value that could not be formatted into a query.
+// Executors return it before anything is sent to the database. Unwrap gives
+// the cause, e.g. ErrStringNul or the error of a driver.Valuer.
+type FormatError struct {
+	Err error
+}
+
+func (e *FormatError) Error() string { return e.Err.Error() }
+func (e *FormatError) Unwrap() error { return e.Err }
+
+// formatErrors is shared by every copy of a QueryGen made after WithErrorSink.
+type formatErrors struct {
+	first error
 }
 
 func NewQueryGen(dialect Dialect) QueryGen {
@@ -78,7 +94,7 @@ func (gen QueryGen) Append(b []byte, v any) []byte {
 	case float64:
 		return dialect.AppendFloat64(guardLineComment(b, v < 0), v)
 	case string:
-		return gen.Dialect().AppendString(b, v)
+		return gen.appendString(b, v)
 	case time.Time:
 		return gen.Dialect().AppendTime(b, v)
 	case []byte:
@@ -115,18 +131,58 @@ func (f QueryGen) HasFeature(feature feature.Feature) bool {
 	return f.dialect.Features().Has(feature)
 }
 
+// WithArg returns a copy that also resolves named arguments from arg. The
+// copy keeps the error sink, if any.
 func (f QueryGen) WithArg(arg NamedArgAppender) QueryGen {
-	return QueryGen{
-		dialect: f.dialect,
-		args:    f.args.WithArg(arg),
-	}
+	f.args = f.args.WithArg(arg)
+	return f
 }
 
+// WithNamedArg returns a copy that resolves ?name to value. The copy keeps
+// the error sink, if any.
 func (f QueryGen) WithNamedArg(name string, value any) QueryGen {
-	return QueryGen{
-		dialect: f.dialect,
-		args:    f.args.WithArg(&namedArg{name: name, value: value}),
+	f.args = f.args.WithArg(&namedArg{name: name, value: value})
+	return f
+}
+
+// WithErrorSink returns a copy that records formatting errors; Err reports
+// the first one. Copies made from the result share the record, so a whole
+// statement can be checked once after rendering it. Without a sink, errors
+// are only rendered as markers, which keeps String() output unchanged.
+func (gen QueryGen) WithErrorSink() QueryGen {
+	gen.errs = new(formatErrors)
+	return gen
+}
+
+// Err returns the first formatting error recorded since WithErrorSink as a
+// *FormatError, or nil.
+func (gen QueryGen) Err() error {
+	if gen.errs == nil || gen.errs.first == nil {
+		return nil
 	}
+	return &FormatError{Err: gen.errs.first}
+}
+
+// AppendError renders err as a marker, like dialect.AppendError, and records
+// it on the error sink.
+func (gen QueryGen) AppendError(b []byte, err error) []byte {
+	if gen.errs != nil && gen.errs.first == nil {
+		gen.errs.first = err
+	}
+	return dialect.AppendError(b, err)
+}
+
+// appendString formats s through the dialect. With an error sink, a string
+// the dialect refuses (StringChecker) is recorded instead of formatted.
+func (gen QueryGen) appendString(b []byte, s string) []byte {
+	if gen.errs != nil {
+		if c, ok := gen.dialect.(StringChecker); ok {
+			if err := c.CheckString(s); err != nil {
+				return gen.AppendError(b, err)
+			}
+		}
+	}
+	return gen.dialect.AppendString(b, s)
 }
 
 func (f QueryGen) FormatQuery(query string, args ...any) string {
@@ -220,7 +276,7 @@ func (gen QueryGen) appendArg(b []byte, arg any) []byte {
 	case QueryAppender:
 		bb, err := arg.AppendQuery(gen, b)
 		if err != nil {
-			return dialect.AppendError(b, err)
+			return gen.AppendError(b, err)
 		}
 		return bb
 	default:

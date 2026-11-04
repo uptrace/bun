@@ -145,12 +145,22 @@ func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
+// CheckString accepts every string: MySQL stores NUL bytes, so AppendString
+// escapes them instead of refusing them like schema.BaseDialect.
+func (*Dialect) CheckString(string) error {
+	return nil
+}
+
+// AppendString writes s as a string literal. NUL and backslash use MySQL's
+// backslash escapes (\0, \\), as go-sql-driver/mysql does, so the server must
+// not run with the NO_BACKSLASH_ESCAPES SQL mode.
 func (*Dialect) AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
 loop:
 	for _, r := range s {
 		switch r {
 		case '\000':
+			b = append(b, '\\', '0')
 			continue loop
 		case '\'':
 			b = append(b, "''"...)

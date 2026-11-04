@@ -5,8 +5,6 @@ package schema
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/uptrace/bun/dialect"
 )
 
 // uuidRequiresGo127 explains that the standard library uuid.UUID type is only
@@ -27,7 +25,7 @@ func scanUUID(dest reflect.Value, src any) error {
 }
 
 func appendUUIDText(gen QueryGen, b []byte, v reflect.Value) []byte {
-	return dialect.AppendError(b, uuidRequiresGo127())
+	return gen.AppendError(b, uuidRequiresGo127())
 }
 
 func isZeroUUID(v reflect.Value) bool {
