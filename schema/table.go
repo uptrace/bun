@@ -588,6 +588,8 @@ func (t *Table) newField(sf reflect.StructField, tag tagparser.Tag) *Field {
 	}
 	if s, ok := field.Tag.Option("type"); ok {
 		field.UserSQLType = s
+		field.DialectSQLTypes = field.Tag.Overrides["type"]
+		validateSQLTypeOverrides(field.DialectSQLTypes)
 	}
 	field.DiscoveredSQLType = DiscoverSQLType(field.IndirectType)
 	field.Append = FieldAppender(t.dialect, field)
@@ -1083,6 +1085,21 @@ func isKnownFieldOption(name string) bool {
 		return true
 	}
 	return false
+}
+
+// validateSQLTypeOverrides checks SQL-specific semantics after tagparser has
+// separated the generic type from overrides in `type:tinyint;pg=smallint`.
+func validateSQLTypeOverrides(overrides map[string]string) {
+	for name, sqlType := range overrides {
+		if sqlType == "" {
+			panic(fmt.Errorf("bun: empty SQL type for dialect: %q", name))
+		}
+		switch name {
+		case "pg", "mysql", "sqlite", "mssql", "oracle":
+		default:
+			panic(fmt.Errorf("bun: unknown SQL type dialect: %q", name))
+		}
+	}
 }
 
 func isKnownFKRule(name string) bool {
