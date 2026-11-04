@@ -267,6 +267,7 @@ func TestDB(t *testing.T) {
 		{testSelectStructSlice},
 		{testSelectSingleSlice},
 		{testSelectMultiSlice},
+		{testSelectMultiSliceColumnMismatch},
 		{testSelectJSONMap},
 		{testSelectJSONStruct},
 		{testJSONSpecialChars},
@@ -563,6 +564,33 @@ func testSelectMultiSlice(t *testing.T, db *bun.DB) {
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 2, 3}, ns)
 	require.Equal(t, []string{"foo", "bar", ""}, ss)
+}
+
+func testSelectMultiSliceColumnMismatch(t *testing.T, db *bun.DB) {
+	maxOpenConns := db.Stats().MaxOpenConnections
+	t.Cleanup(func() { db.SetMaxOpenConns(maxOpenConns) })
+	db.SetMaxOpenConns(1)
+
+	for _, n := range []int{1, 3} {
+		t.Run(fmt.Sprintf("%d_destinations", n), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			slices := make([][]int, n)
+			dest := make([]any, n)
+			for i := range slices {
+				dest[i] = &slices[i]
+			}
+
+			err := db.NewSelect().ColumnExpr("1 AS first, 2 AS second").Scan(ctx, dest...)
+			require.EqualError(t, err, fmt.Sprintf("sql: expected 2 destination arguments in Scan, not %d", n))
+
+			var num int
+			err = db.NewSelect().ColumnExpr("42").Scan(ctx, &num)
+			require.NoError(t, err)
+			require.Equal(t, 42, num)
+		})
+	}
 }
 
 func testSelectJSONMap(t *testing.T, db *bun.DB) {

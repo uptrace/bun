@@ -55,7 +55,7 @@ func (m *sliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, error) 
 	if len(columns) == 0 {
 		return 0, nil
 	}
-	dest := makeDest(m, len(columns))
+	dest := makeDest(m, len(m.dest))
 
 	var n int
 
