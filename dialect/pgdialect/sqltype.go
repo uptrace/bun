@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/uptrace/bun/dialect/sqltype"
@@ -84,6 +86,39 @@ func fieldSQLType(field *schema.Field) string {
 	}
 
 	return sqlType(field.IndirectType)
+}
+
+var characterTypeRE = regexp.MustCompile(`(?i)^((?:pg_catalog\.)?(?:varchar|bpchar)|character\s+varying|char|character)(?:\s*\(\s*([0-9]+)\s*\))?((?:\s*\[\s*[0-9]*\s*\])*)$`)
+
+// valuesSQLType keeps character lengths out of explicit VALUES casts, which
+// truncate instead of reporting an overlong value. The target column still
+// enforces its length on assignment. BPCHAR without a length retains character
+// comparison semantics without CHAR's implicit length of one.
+func valuesSQLType(sqlType string) string {
+	matches := characterTypeRE.FindStringSubmatch(strings.TrimSpace(sqlType))
+	if matches == nil {
+		return ""
+	}
+	name := strings.ToUpper(strings.Join(strings.Fields(matches[1]), " "))
+	if matches[2] != "" {
+		length, err := strconv.Atoi(matches[2])
+		// Preserve PostgreSQL's error for invalid lengths, including its 10 MiB limit.
+		if err != nil || length < 1 || length > 10485760 {
+			return ""
+		}
+	} else if name != pgTypeChar && name != pgTypeCharacter {
+		return ""
+	}
+	switch name {
+	case pgTypeVarchar, pgTypeCharacterVarying:
+		return pgTypeVarchar + matches[3]
+	case "PG_CATALOG.VARCHAR":
+		return "pg_catalog.VARCHAR" + matches[3]
+	case "BPCHAR":
+		return "BPCHAR" + matches[3]
+	default:
+		return "pg_catalog.BPCHAR" + matches[3]
+	}
 }
 
 func sqlType(typ reflect.Type) string {
