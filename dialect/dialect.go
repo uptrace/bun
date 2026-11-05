@@ -16,6 +16,8 @@ func (n Name) String() string {
 		return "mssql"
 	case Oracle:
 		return "oracle"
+	case DB2:
+		return "db2"
 	default:
 		return "custom"
 	}
@@ -28,4 +30,5 @@ const (
 	MySQL
 	MSSQL
 	Oracle
+	DB2
 )

@@ -143,6 +143,21 @@ db.NewSelect().Table("users").Column("id", "name").Limit(1).Scan(ctx, &id, &name
 | SQLite        | `github.com/uptrace/bun/driver/sqliteshim` | `sqlitedialect.New()` |
 | SQL Server    | `github.com/denisenkom/go-mssqldb`         | `mssqldialect.New()`  |
 | Oracle        | `github.com/sijms/go-ora/v2`               | `oracledialect.New()` |
+| IBM DB2       | `github.com/ibmdb/go_ibm_db`               | `db2dialect.New()`    |
+
+The DB2 dialect automatically detects LUW, z/OS, or IBM i when initialized
+with a database connection. Detection uses the `Conn.GetInfo(SQL_DBMS_NAME)`
+API published in the go_ibm_db driver. If detection is unavailable or fails,
+the dialect logs a warning and defaults to LUW. To select a platform explicitly
+and skip detection, use `db2dialect.NewLUW()`, `db2dialect.NewZOS()`, or
+`db2dialect.NewIBMi()`.
+
+Update applications to the latest driver with:
+
+```shell
+go get github.com/ibmdb/go_ibm_db@latest
+go mod tidy
+```
 
 ## 🔧 Advanced Features
 
