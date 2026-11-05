@@ -27,8 +27,13 @@ func TestFormatQuery(t *testing.T) {
 		},
 		{
 			query:  "select $1, $2",
-			args:   []any{time.Unix(0, 0), math.NaN()},
+			args:   []any{time.Unix(0, 0).UTC(), math.NaN()},
 			wanted: "select '1970-01-01 00:00:00+00:00', 'NaN'",
+		},
+		{
+			query:  "select $1",
+			args:   []any{time.Date(2026, 11, 5, 0, 0, 0, 0, time.FixedZone("CST", 8*60*60))},
+			wanted: "select '2026-11-05 00:00:00+08:00'",
 		},
 		{
 			query:  "select $1,$2,$3,$4",

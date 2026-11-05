@@ -5,10 +5,35 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun/schema"
 )
+
+// A time value must keep its own zone offset in the generated SQL literal.
+// Converting to UTC breaks `timestamp` columns: PostgreSQL ignores the offset
+// in timestamp literals instead of converting, so the stored value becomes the
+// UTC wall clock rather than the caller's local time.
+func TestAppendTimeKeepsZoneOffset(t *testing.T) {
+	cst := time.FixedZone("Asia/Shanghai", 8*60*60)
+	tm := time.Date(2026, 11, 5, 0, 0, 0, 0, cst)
+
+	require.Equal(t,
+		`'2026-11-05 00:00:00+08:00'`,
+		string(pgDialect.AppendTime(nil, tm)))
+
+	gen := schema.NewQueryGen(pgDialect)
+	require.Equal(t,
+		`'2026-11-05 00:00:00+08:00'`,
+		gen.FormatQuery("?", tm))
+
+	arr, err := Array([]time.Time{tm}).AppendQuery(gen, nil)
+	require.NoError(t, err)
+	require.Equal(t,
+		`'{"2026-11-05 00:00:00+08:00"}'`,
+		string(arr))
+}
 
 func TestHStoreAppender(t *testing.T) {
 	tests := []struct {

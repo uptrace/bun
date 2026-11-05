@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
@@ -151,6 +152,17 @@ func (d *Dialect) AppendUint64(b []byte, n uint64) []byte {
 		return appendInt(b, int64(n))
 	}
 	return strconv.AppendUint(b, n, 10)
+}
+
+// AppendTime appends a time literal keeping the value's own zone offset.
+// Converting to UTC must not happen here: PostgreSQL ignores the offset in
+// `timestamp` literals instead of converting, which would silently store the
+// UTC wall clock instead of the caller's local time.
+func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
+	b = append(b, '\'')
+	b = appendTime(b, tm)
+	b = append(b, '\'')
+	return b
 }
 
 // appendInt inserts a space before a negative value that follows a '-', so
