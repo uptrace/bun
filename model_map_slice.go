@@ -53,7 +53,7 @@ func (m *mapSliceModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, erro
 		return 0, err
 	}
 
-	m.columns = columns
+	m.columns = restoreColumnAliases(columns, m.columnAliases)
 	m.columnTypes = columnTypes
 	dest := makeDest(m, len(columns))
 

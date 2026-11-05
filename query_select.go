@@ -427,6 +427,8 @@ func (q *SelectQuery) joinOn(cond string, args []any, sep string) *SelectQuery {
 //------------------------------------------------------------------------------
 
 // Relation adds a relation to the query.
+//
+// PostgreSQL relation aliases longer than 63 bytes are shortened automatically. Scan and Exec restore the original result column paths. Use short relation names in bun tags when handwritten SQL needs stable JOIN aliases.
 func (q *SelectQuery) Relation(name string, apply ...func(*SelectQuery) *SelectQuery) *SelectQuery {
 	if len(apply) > 1 {
 		panic("only one apply function is supported")
@@ -574,11 +576,11 @@ func (q *SelectQuery) Operation() string {
 func (q *SelectQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err error) {
 	b = appendComment(b, q.comment)
 
-	return q.appendQuery(gen, b, false)
+	return q.appendQuery(gen, b, false, nil)
 }
 
 func (q *SelectQuery) appendQuery(
-	gen schema.QueryGen, b []byte, count bool,
+	gen schema.QueryGen, b []byte, count bool, columnAliases *map[string]string,
 ) (_ []byte, err error) {
 	if q.err != nil {
 		return nil, q.err
@@ -610,6 +612,8 @@ func (q *SelectQuery) appendQuery(
 		return nil, err
 	}
 
+	aliases := q.newRelationAliases(gen)
+
 	b = append(b, "SELECT "...)
 
 	if len(q.distinctOn) > 0 {
@@ -636,7 +640,7 @@ func (q *SelectQuery) appendQuery(
 			b = append(b, "0 AS _temp_sort, "...)
 		}
 
-		b, err = q.appendColumns(gen, b)
+		b, err = q.appendColumns(gen, b, aliases)
 		if err != nil {
 			return nil, err
 		}
@@ -656,7 +660,7 @@ func (q *SelectQuery) appendQuery(
 
 	if err := q.forEachInlineRelJoin(func(j *relationJoin) error {
 		b = append(b, ' ')
-		b, err = j.appendHasOneJoin(gen, b, q)
+		b, err = j.appendHasOneJoin(gen, b, q, aliases)
 		return err
 	}); err != nil {
 		return nil, err
@@ -744,10 +748,16 @@ func (q *SelectQuery) appendQuery(
 		b = append(b, ") SELECT count(*) FROM _count_wrapper"...)
 	}
 
+	if aliases != nil {
+		b = aliases.avoidCollisions(b)
+		if columnAliases != nil && len(aliases.names) > 0 {
+			*columnAliases = aliases.used
+		}
+	}
 	return b, nil
 }
 
-func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, err error) {
+func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte, aliases *relationAliases) (_ []byte, err error) {
 	start := len(b)
 
 	switch {
@@ -789,7 +799,7 @@ func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, er
 			start = len(b)
 		}
 
-		b, err = q.appendInlineRelColumns(gen, b, join)
+		b, err = q.appendInlineRelColumns(gen, b, join, aliases)
 		if err != nil {
 			return err
 		}
@@ -805,7 +815,7 @@ func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, er
 }
 
 func (q *SelectQuery) appendInlineRelColumns(
-	gen schema.QueryGen, b []byte, join *relationJoin,
+	gen schema.QueryGen, b []byte, join *relationJoin, aliases *relationAliases,
 ) (_ []byte, err error) {
 	if join.columns != nil {
 		table := join.JoinModel.Table()
@@ -816,11 +826,11 @@ func (q *SelectQuery) appendInlineRelColumns(
 
 			if col.Args == nil {
 				if field, ok := table.FieldMap[col.Query]; ok {
-					b = join.appendAlias(gen, b)
+					b = join.appendAlias(gen, b, aliases)
 					b = append(b, '.')
 					b = append(b, field.SQLName...)
 					b = append(b, " AS "...)
-					b = join.appendAliasColumn(gen, b, field.Name)
+					b = join.appendAliasColumn(gen, b, field.Name, aliases)
 					continue
 				}
 			}
@@ -837,11 +847,11 @@ func (q *SelectQuery) appendInlineRelColumns(
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = join.appendAlias(gen, b)
+		b = join.appendAlias(gen, b, aliases)
 		b = append(b, '.')
 		b = append(b, field.SQLName...)
 		b = append(b, " AS "...)
-		b = join.appendAliasColumn(gen, b, field.Name)
+		b = join.appendAliasColumn(gen, b, field.Name, aliases)
 	}
 	return b, nil
 }
@@ -854,6 +864,7 @@ func (q *SelectQuery) appendTables(gen schema.QueryGen, b []byte) (_ []byte, err
 //------------------------------------------------------------------------------
 
 // Rows executes the query and returns the result rows for manual scanning.
+// PostgreSQL result columns may have shortened relation aliases. DB.ScanRows and DB.ScanRow restore their original names automatically.
 func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -866,7 +877,8 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	var aliases map[string]string
+	queryBytes, err := q.appendQuery(q.db.gen, appendComment(q.db.makeQueryBytes(), q.comment), false, &aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -876,6 +888,9 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	ctx, event := q.db.beforeQuery(ctx, q, query, nil, query, q.model)
 	rows, err := q.resolveConn(ctx, q).QueryContext(ctx, query)
 	q.db.afterQuery(ctx, event, nil, err)
+	if err == nil {
+		rememberRowsColumnAliases(rows, aliases)
+	}
 	return rows, err
 }
 
@@ -891,19 +906,23 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...any) (res sql.Result, er
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	var model Model
+	if len(dest) > 0 {
+		model, err = q.getModel(dest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var aliases map[string]string
+	queryBytes, err := q.appendQuery(q.db.gen, appendComment(q.db.makeQueryBytes(), q.comment), false, &aliases)
 	if err != nil {
 		return nil, err
 	}
 
+	setColumnAliases(model, aliases)
 	query := internal.String(queryBytes)
 
 	if len(dest) > 0 {
-		model, err := q.getModel(dest)
-		if err != nil {
-			return nil, err
-		}
-
 		res, err = q.scan(ctx, q, query, model, true)
 		if err != nil {
 			return nil, err
@@ -955,11 +974,13 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, 
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	var aliases map[string]string
+	queryBytes, err := q.appendQuery(q.db.gen, appendComment(q.db.makeQueryBytes(), q.comment), false, &aliases)
 	if err != nil {
 		return nil, err
 	}
 
+	setColumnAliases(model, aliases)
 	query := internal.String(queryBytes)
 
 	res, err := q.scan(ctx, q, query, model, true)
@@ -1411,7 +1432,7 @@ func (q countQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, err er
 	if q.err != nil {
 		return nil, q.err
 	}
-	return q.appendQuery(gen, b, true)
+	return q.appendQuery(gen, b, true, nil)
 }
 
 //------------------------------------------------------------------------------
@@ -1427,7 +1448,7 @@ func (q selectExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte,
 
 	b = append(b, "SELECT EXISTS ("...)
 
-	b, err = q.appendQuery(gen, b, false)
+	b, err = q.appendQuery(gen, b, false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1450,7 +1471,7 @@ func (q whereExistsQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte, 
 
 	b = append(b, "SELECT 1 WHERE EXISTS ("...)
 
-	b, err = q.appendQuery(gen, b, false)
+	b, err = q.appendQuery(gen, b, false, nil)
 	if err != nil {
 		return nil, err
 	}
