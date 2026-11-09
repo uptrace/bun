@@ -108,7 +108,9 @@ func newSQLMigrationFunc(fsys fs.FS, name string) internalMigrationFunc {
 				return fmt.Errorf("bun: unknown directive: %q", b)
 			}
 
-			if len(bytes.TrimSpace(b)) > 0 {
+			// Skip blank lines before a query starts, but keep them inside a query,
+			// where they may be part of a multi-line string literal.
+			if len(query) > 0 || len(bytes.TrimSpace(b)) > 0 {
 				query = append(query, b...)
 				query = append(query, '\n')
 			}
