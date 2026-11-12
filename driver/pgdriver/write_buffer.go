@@ -3,8 +3,15 @@ package pgdriver
 import (
 	"encoding/binary"
 	"io"
+	"math"
 	"sync"
 )
+
+// maxMessageSize is the largest value that fits in the protocol's 32-bit message
+// length field. It is an int64 (so the constant does not overflow int on 32-bit
+// platforms) and a var (not a const) so tests can lower it. Do not mutate it
+// outside of tests.
+var maxMessageSize int64 = math.MaxUint32
 
 var wbPool = sync.Pool{
 	New: func() any {
@@ -27,6 +34,11 @@ type writeBuffer struct {
 
 	msgStart   int
 	paramStart int
+
+	// err records the first fatal error (e.g. a message that exceeds the
+	// protocol size limit). It is checked before the buffer is sent so an
+	// oversized/overflowing message is never written to the wire.
+	err error
 }
 
 func newWriteBuffer() *writeBuffer {
@@ -37,6 +49,14 @@ func newWriteBuffer() *writeBuffer {
 
 func (b *writeBuffer) Reset() {
 	b.Bytes = b.Bytes[:0]
+	b.err = nil
+}
+
+// setErr records the first error seen while building a message.
+func (b *writeBuffer) setErr(err error) {
+	if b.err == nil {
+		b.err = err
+	}
 }
 
 func (b *writeBuffer) StartMessage(c byte) {
@@ -50,8 +70,12 @@ func (b *writeBuffer) StartMessage(c byte) {
 }
 
 func (b *writeBuffer) FinishMessage() {
-	binary.BigEndian.PutUint32(
-		b.Bytes[b.msgStart:], uint32(len(b.Bytes)-b.msgStart))
+	n := len(b.Bytes) - b.msgStart
+	if int64(n) > maxMessageSize {
+		b.setErr(errMessageTooLarge)
+		return
+	}
+	binary.BigEndian.PutUint32(b.Bytes[b.msgStart:], uint32(n))
 }
 
 func (b *writeBuffer) Query() []byte {
@@ -64,8 +88,12 @@ func (b *writeBuffer) StartParam() {
 }
 
 func (b *writeBuffer) FinishParam() {
-	binary.BigEndian.PutUint32(
-		b.Bytes[b.paramStart:], uint32(len(b.Bytes)-b.paramStart-4))
+	n := len(b.Bytes) - b.paramStart - 4
+	if int64(n) > maxMessageSize {
+		b.setErr(errMessageTooLarge)
+		return
+	}
+	binary.BigEndian.PutUint32(b.Bytes[b.paramStart:], uint32(n))
 }
 
 var nullParamLength = int32(-1)

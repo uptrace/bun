@@ -84,4 +84,15 @@ func isBadConn(err error, allowTimeout bool) bool {
 
 var (
 	errRequiresParameter = errors.New("pgdriver: requires that standard_conforming_strings=on and client_encoding=UTF8")
+
+	// errMessageTooLarge is returned instead of sending a message whose length
+	// prefix would overflow the protocol's 32-bit size field. Without this guard
+	// the length wraps and the server desyncs, which can be abused for SQL
+	// injection (cf. jackc/pgx CVE-2024-27304).
+	errMessageTooLarge = errors.New("pgdriver: message size exceeds the maximum of 4 GiB")
+
+	// errInvalidMessageLength is returned when the server sends a message whose
+	// length field is smaller than the 4-byte length prefix itself (which would
+	// otherwise lead to a negative-length slice/allocation panic).
+	errInvalidMessageLength = errors.New("pgdriver: server sent a message with an invalid length")
 )
