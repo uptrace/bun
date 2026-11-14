@@ -78,7 +78,8 @@ func (p *pgparser) readSubstring(ch byte, escaped bool) ([]byte, error) {
 		ch = next
 	}
 
-	if bytes.HasPrefix(p.buf, []byte("\\x")) && len(p.buf)%2 == 0 {
+	// Only array elements can be bytea; hstore keys and values are plain text.
+	if escaped && bytes.HasPrefix(p.buf, []byte("\\x")) && len(p.buf)%2 == 0 {
 		data := p.buf[2:]
 		buf := make([]byte, hex.DecodedLen(len(data)))
 		n, err := hex.Decode(buf, data)

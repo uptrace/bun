@@ -22,6 +22,7 @@ func TestHStoreParser(t *testing.T) {
 		{`"1"=>"2", "3"=>"4"`, map[string]string{"1": "2", "3": "4"}},
 		{`"1"=>NULL`, map[string]string{"1": ""}},
 		{`"1"=>"NULL"`, map[string]string{"1": "NULL"}},
+		{`"\\x41"=>"\\x4142"`, map[string]string{`\x41`: `\x4142`}},
 		{`"{1}"=>"{2}", "{3}"=>"{4}"`, map[string]string{"{1}": "{2}", "{3}": "{4}"}},
 	}
 
