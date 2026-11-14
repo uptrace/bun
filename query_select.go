@@ -866,7 +866,7 @@ func (q *SelectQuery) Rows(ctx context.Context) (*sql.Rows, error) {
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	queryBytes, err := q.db.appendQuery(q, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (q *SelectQuery) Exec(ctx context.Context, dest ...any) (res sql.Result, er
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	queryBytes, err := q.db.appendQuery(q, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -955,7 +955,7 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, 
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	queryBytes, err := q.db.appendQuery(q, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -1013,7 +1013,7 @@ func (q *SelectQuery) Count(ctx context.Context) (int64, error) {
 
 	qq := countQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
+	queryBytes, err := q.db.appendQuery(qq, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -1128,7 +1128,7 @@ func (q *SelectQuery) selectExists(ctx context.Context) (bool, error) {
 
 	qq := selectExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
+	queryBytes, err := q.db.appendQuery(qq, nil)
 	if err != nil {
 		return false, err
 	}
@@ -1150,7 +1150,7 @@ func (q *SelectQuery) whereExists(ctx context.Context) (bool, error) {
 
 	qq := whereExistsQuery{q}
 
-	queryBytes, err := qq.AppendQuery(q.db.gen, nil)
+	queryBytes, err := q.db.appendQuery(qq, nil)
 	if err != nil {
 		return false, err
 	}
