@@ -230,7 +230,11 @@ func (q *ValuesQuery) appendValues(
 
 		if gen.HasFeature(feature.DoubleColonCast) {
 			b = append(b, "::"...)
-			b = append(b, f.UserSQLType...)
+			sqlType := f.ValuesSQLType
+			if sqlType == "" {
+				sqlType = f.UserSQLType
+			}
+			b = append(b, sqlType...)
 		}
 	}
 	return b, nil
