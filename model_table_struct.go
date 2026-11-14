@@ -59,6 +59,10 @@ func (m *structTableModel) Table() *schema.Table {
 	return m.table
 }
 
+func (m *structTableModel) setTable(t *schema.Table) {
+	m.table = t
+}
+
 func (m *structTableModel) Relation() *schema.Relation {
 	return m.rel
 }

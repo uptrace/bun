@@ -312,6 +312,9 @@ func TestDB(t *testing.T) {
 		{testWithPointerPrimaryKeyHasManyWithDriverValuer},
 		{testRelationJoinDataRace},
 		{testCloneDBStatsDataRace},
+		{testUpdateJoinSubquery},
+		{testUpdateJoinModel},
+		{testUpdateJoinOnOrSoftDelete},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
