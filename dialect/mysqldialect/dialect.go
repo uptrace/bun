@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -30,9 +31,10 @@ func init() {
 type Dialect struct {
 	schema.BaseDialect
 
-	tables   *schema.Tables
-	features feature.Feature
-	loc      *time.Location
+	tables        *schema.Tables
+	features      feature.Feature
+	loc           *time.Location
+	timePrecision int
 }
 
 func New(opts ...DialectOption) *Dialect {
@@ -68,6 +70,20 @@ func WithTimeLocation(loc string) DialectOption {
 			panic(fmt.Errorf("mysqldialect can't load provided location %s: %s", loc, err))
 		}
 		d.loc = location
+	}
+}
+
+// WithTimePrecision declares the DATETIME columns created for time.Time fields
+// with fsp fractional digits, from 0 to 6: DATETIME(6) keeps microseconds.
+// Without it they keep whole seconds, and MySQL rounds the digits it drops.
+// A current-time default on such a column gets the same precision, which MySQL
+// requires. A field with an explicit type is left as it is.
+func WithTimePrecision(fsp int) DialectOption {
+	return func(d *Dialect) {
+		if fsp < 0 || fsp > 6 {
+			panic(fmt.Errorf("mysqldialect: time precision %d is out of range [0, 6]", fsp))
+		}
+		d.timePrecision = fsp
 	}
 }
 
@@ -126,7 +142,10 @@ func (d *Dialect) Tables() *schema.Tables {
 
 func (d *Dialect) OnTable(table *schema.Table) {
 	for _, field := range table.FieldMap {
-		field.DiscoveredSQLType = sqlType(field)
+		if d.timePrecision > 0 && field.DiscoveredSQLType == sqltype.Timestamp && field.UserSQLType == "" {
+			field.SQLDefault = currentTimeWithPrecision(field.SQLDefault, d.timePrecision)
+		}
+		field.DiscoveredSQLType = d.sqlType(field)
 	}
 }
 
@@ -223,9 +242,24 @@ func (d *Dialect) DefaultSchema() string {
 	return "mydb"
 }
 
-func sqlType(field *schema.Field) string {
+func (d *Dialect) sqlType(field *schema.Field) string {
 	if field.DiscoveredSQLType == sqltype.Timestamp {
+		if d.timePrecision > 0 {
+			return datetimeType + "(" + strconv.Itoa(d.timePrecision) + ")"
+		}
 		return datetimeType
 	}
 	return field.DiscoveredSQLType
+}
+
+// currentTimeWithPrecision gives a current-time default the column's precision:
+// current_timestamp, current_timestamp(), now(), localtime and localtimestamp
+// become, for example, current_timestamp(6). Anything else is returned as is.
+func currentTimeWithPrecision(def string, fsp int) string {
+	name := strings.TrimSuffix(strings.TrimSpace(def), "()")
+	switch strings.ToLower(name) {
+	case "current_timestamp", "now", "localtime", "localtimestamp":
+		return name + "(" + strconv.Itoa(fsp) + ")"
+	}
+	return def
 }
