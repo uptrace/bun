@@ -248,6 +248,12 @@ func (q *CreateTableQuery) AppendQuery(gen schema.QueryGen, b []byte) (_ []byte,
 }
 
 func (q *CreateTableQuery) appendSQLType(b []byte, field *schema.Field) []byte {
+	// A dialect-specific type (e.g. `bun:"type:tinyint;pg=smallint"`) always wins
+	// for its dialect; other dialects fall back to the generic type.
+	if sqlType, ok := field.DialectSQLType(q.db.dialect.Name().String()); ok {
+		return append(b, sqlType...)
+	}
+
 	// Most of the time these two will match, but for the cases where DiscoveredSQLType is dialect-specific,
 	// e.g. pgdialect would change sqltype.SmallInt to pgTypeSmallSerial for columns that have `bun:",autoincrement"`
 	if !strings.EqualFold(field.CreateTableSQLType, field.DiscoveredSQLType) {

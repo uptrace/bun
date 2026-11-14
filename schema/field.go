@@ -25,7 +25,11 @@ type Field struct {
 	DiscoveredSQLType  string
 	UserSQLType        string
 	CreateTableSQLType string
-	SQLDefault         string
+	// DialectSQLTypes contains per-dialect SQL types from tags like `type:json;pg=jsonb`,
+	// keyed by dialect.Name().String(), e.g. "pg", "mysql", "sqlite", "mssql", "oracle".
+	// They take precedence over UserSQLType when creating tables on the matching dialect.
+	DialectSQLTypes map[string]string
+	SQLDefault      string
 
 	OnDelete string
 	OnUpdate string
@@ -43,6 +47,16 @@ type Field struct {
 
 func (f *Field) String() string {
 	return f.Name
+}
+
+// DialectSQLType returns the SQL type configured for the given dialect name
+// (the value of dialect.Name().String()) via tags like `type:json;pg=jsonb`.
+func (f *Field) DialectSQLType(name string) (string, bool) {
+	if len(f.DialectSQLTypes) == 0 {
+		return "", false
+	}
+	sqlType, ok := f.DialectSQLTypes[name]
+	return sqlType, ok
 }
 
 func (f *Field) WithIndex(path []int) *Field {
