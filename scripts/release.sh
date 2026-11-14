@@ -73,7 +73,10 @@ else
     sed --in-place "s/\(\"version\": \)\"[^\"]*\"/\1\"${TAG#v}\"/" ./package.json
 fi
 
-conventional-changelog -p angular -i CHANGELOG.md -s
+npx --yes \
+  --package conventional-changelog@8.1.3 \
+  --package conventional-changelog-angular@9.4.0 \
+  conventional-changelog -p angular -i CHANGELOG.md -s
 
 git checkout -b release/${TAG} master
 git add -u
