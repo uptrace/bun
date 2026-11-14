@@ -57,7 +57,7 @@ func (m *sliceTableModel) ScanRows(ctx context.Context, rows *sql.Rows) (int, er
 		return 0, err
 	}
 
-	m.columns = columns
+	m.columns = restoreColumnAliases(columns, m.columnAliases)
 	dest := makeDest(m, len(columns))
 
 	if m.slice.IsValid() && m.slice.Len() > 0 {

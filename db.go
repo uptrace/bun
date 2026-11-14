@@ -232,6 +232,7 @@ func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...any) error {
 		return err
 	}
 
+	scanRowsColumnAliases(rows, model, true)
 	_, err = model.ScanRows(ctx, rows)
 	if err != nil {
 		return err
@@ -247,6 +248,7 @@ func (db *DB) ScanRow(ctx context.Context, rows *sql.Rows, dest ...any) error {
 		return err
 	}
 
+	scanRowsColumnAliases(rows, model, false)
 	rs, ok := model.(rowScanner)
 	if !ok {
 		return fmt.Errorf("bun: %T does not support ScanRow", model)
