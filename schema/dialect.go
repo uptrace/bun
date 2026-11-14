@@ -14,10 +14,12 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
-// errStringNul is reported when a string value contains a NUL byte (0x00).
+// ErrStringNul is reported when a string value contains a NUL byte (0x00).
 // Silently stripping it (the previous behavior) would store a value different
 // from the one the caller supplied; PostgreSQL rejects NUL in text outright.
-var errStringNul = errors.New("bun: string contains a NUL byte (0x00)")
+// Executors return it wrapped in a *FormatError. Dialects that override
+// AppendString may handle NUL differently (mysqldialect strips it).
+var ErrStringNul = errors.New("bun: string contains a NUL byte (0x00)")
 
 type Dialect interface {
 	Init(db *sql.DB)
@@ -51,6 +53,15 @@ type Dialect interface {
 	DefaultSchema() string
 }
 
+// StringChecker is implemented by dialects that refuse some strings in SQL
+// literals. QueryGen asks it before AppendString when the query is executed,
+// so a refused string fails the query with a *FormatError instead of reaching
+// the database. BaseDialect implements it; a dialect whose AppendString
+// accepts every string overrides CheckString to return nil.
+type StringChecker interface {
+	CheckString(s string) error
+}
+
 // ------------------------------------------------------------------------------
 
 type BaseDialect struct{}
@@ -70,9 +81,17 @@ func (BaseDialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
-func (BaseDialect) AppendString(b []byte, s string) []byte {
+// CheckString refuses a string that contains a NUL byte (ErrStringNul).
+func (BaseDialect) CheckString(s string) error {
 	if strings.IndexByte(s, 0) >= 0 {
-		return dialect.AppendError(b, errStringNul)
+		return ErrStringNul
+	}
+	return nil
+}
+
+func (d BaseDialect) AppendString(b []byte, s string) []byte {
+	if err := d.CheckString(s); err != nil {
+		return dialect.AppendError(b, err)
 	}
 
 	b = append(b, '\'')

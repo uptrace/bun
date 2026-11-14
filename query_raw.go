@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/schema"
 )
 
@@ -72,7 +73,12 @@ func (q *RawQuery) scanOrExec(
 	// if a comment is propagated via the context, use it
 	setCommentFromContext(ctx, q)
 
-	query := q.db.format(q.query, q.args)
+	queryBytes, err := q.db.appendQuery(q, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	query := internal.String(queryBytes)
 	var res sql.Result
 
 	if hasDest {
