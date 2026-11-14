@@ -332,7 +332,7 @@ func (q *DeleteQuery) scanOrExec(
 	setCommentFromContext(ctx, q)
 
 	// Generate the query before checking hasReturning.
-	queryBytes, err := q.AppendQuery(q.db.gen, q.db.makeQueryBytes())
+	queryBytes, err := q.db.appendQuery(q, q.db.makeQueryBytes())
 	if err != nil {
 		return nil, err
 	}

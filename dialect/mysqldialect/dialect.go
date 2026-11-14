@@ -145,6 +145,12 @@ func (d *Dialect) AppendTime(b []byte, tm time.Time) []byte {
 	return b
 }
 
+// CheckString accepts every string: AppendString strips NUL bytes instead of
+// refusing them like schema.BaseDialect.
+func (*Dialect) CheckString(string) error {
+	return nil
+}
+
 func (*Dialect) AppendString(b []byte, s string) []byte {
 	b = append(b, '\'')
 loop:
