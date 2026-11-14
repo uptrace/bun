@@ -1,6 +1,7 @@
 package dialect
 
 import (
+	"strings"
 	"math"
 	"strconv"
 
@@ -8,8 +9,17 @@ import (
 )
 
 func AppendError(b []byte, err error) []byte {
-	b = append(b, "?!("...)
-	b = append(b, err.Error()...)
+	b = append(b, "?!(("...)
+	// Sanitize error message to prevent SQL injection.
+	sanitized := strings.Map(func(r rune) rune {
+		switch r {
+		case '?', '!', '(', ')', ';', '\'', '"', '-', '/', '\n', '\r':
+			return -1
+		default:
+			return r
+		}
+	}, err.Error())
+	b = append(b, sanitized...)
 	b = append(b, ')')
 	return b
 }
