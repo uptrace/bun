@@ -1,6 +1,7 @@
 package pgdialect
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -52,6 +53,22 @@ func TestArrayParserInvalid(t *testing.T) {
 			p := newArrayParser([]byte(s))
 			require.False(t, p.Next())
 			require.Error(t, p.Err())
+		})
+	}
+}
+
+func TestArrayScanJSONStrings(t *testing.T) {
+	for _, value := range []string{
+		"plain", "}", "{", "{nested}", `"}`, `"{`, `\`, `\"}`, `\\`,
+	} {
+		t.Run(value, func(t *testing.T) {
+			want := []map[string]string{{"text": value}, {"text": "last"}}
+			data, err := json.Marshal(want)
+			require.NoError(t, err)
+
+			var got []map[string]string
+			require.NoError(t, Array(&got).Scan(data))
+			require.Equal(t, want, got)
 		})
 	}
 }
