@@ -402,6 +402,9 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	isUUID := elemType == internal.TypeUUID
 	isUUIDPtr := elemType == internal.TypeUUIDPtr
 
+	textElems := elemType.Kind() == reflect.String ||
+		(elemType.Kind() == reflect.Pointer && elemType.Elem().Kind() == reflect.String)
+
 	return func(dest reflect.Value, src any) error {
 		dest = reflect.Indirect(dest)
 		if !dest.CanSet() {
@@ -434,7 +437,12 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 			return err
 		}
 
-		p := newArrayParser(b)
+		var p *arrayParser
+		if textElems {
+			p = newTextArrayParser(b)
+		} else {
+			p = newArrayParser(b)
+		}
 
 		// The parser reports an unquoted NULL as an empty element, so it never
 		// reaches the element scanner as nil. UUID elements are handled
@@ -560,7 +568,7 @@ func decodeStringSlice(src any) ([]string, error) {
 
 	slice := make([]string, 0)
 
-	p := newArrayParser(b)
+	p := newTextArrayParser(b)
 	for p.Next() {
 		elem := p.Elem()
 		slice = append(slice, string(elem))
