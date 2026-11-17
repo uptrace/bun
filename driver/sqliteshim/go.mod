@@ -3,7 +3,7 @@ module github.com/uptrace/bun/driver/sqliteshim
 go 1.25.0
 
 require (
-	github.com/mattn/go-sqlite3 v1.14.53
+	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/stretchr/testify v1.8.1
 	modernc.org/sqlite v1.59.0
 )
