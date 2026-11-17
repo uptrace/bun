@@ -30,6 +30,7 @@ type QueryHook struct {
 	meterProvider    metric.MeterProvider
 	queryHistogram   metric.Int64Histogram
 	spanNameQueryGen func(*bun.QueryEvent) string
+	columnLimit      *int
 }
 
 var _ bun.QueryHook = (*QueryHook)(nil)
@@ -171,7 +172,7 @@ func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 	if h.formatQueries && len(event.Query) <= softQueryLimit {
 		query = event.Query
 	} else {
-		query = unformattedQuery(event)
+		query = unformattedQuery(event, h.columnLimit)
 	}
 
 	if len(query) > hardQueryLimit {
@@ -181,9 +182,13 @@ func (h *QueryHook) eventQuery(event *bun.QueryEvent) string {
 	return query
 }
 
-func unformattedQuery(event *bun.QueryEvent) string {
+func unformattedQuery(event *bun.QueryEvent, columnLimit *int) string {
 	if event.IQuery != nil {
-		if b, err := event.IQuery.AppendQuery(schema.NewNopQueryGen(), nil); err == nil {
+		gen := schema.NewNopQueryGen()
+		if columnLimit != nil {
+			gen = gen.WithNopColumnLimit(*columnLimit)
+		}
+		if b, err := event.IQuery.AppendQuery(gen, nil); err == nil {
 			return internal.String(b)
 		}
 	}

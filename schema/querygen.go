@@ -12,13 +12,19 @@ import (
 	"github.com/uptrace/bun/internal/parser"
 )
 
+// defaultNopColumnLimit is how many model columns a nop QueryGen renders
+// before collapsing the SELECT column list into "N columns".
+const defaultNopColumnLimit = 10
+
 var nopQueryGen = QueryGen{
-	dialect: newNopDialect(),
+	dialect:        newNopDialect(),
+	nopColumnLimit: defaultNopColumnLimit,
 }
 
 type QueryGen struct {
-	dialect Dialect
-	args    *namedArgList
+	dialect        Dialect
+	args           *namedArgList
+	nopColumnLimit int
 }
 
 func NewQueryGen(dialect Dialect) QueryGen {
@@ -115,17 +121,37 @@ func (f QueryGen) HasFeature(feature feature.Feature) bool {
 	return f.dialect.Features().Has(feature)
 }
 
+// NopColumnLimit returns the number of model columns a nop QueryGen
+// renders before it collapses the SELECT column list into "N columns".
+// Zero means no limit.
+func (f QueryGen) NopColumnLimit() int {
+	return f.nopColumnLimit
+}
+
+// WithNopColumnLimit returns a copy that collapses the SELECT column
+// list of a nop QueryGen when a model has more than n columns. Zero or a
+// negative n disables collapsing, so every column is rendered.
+func (f QueryGen) WithNopColumnLimit(n int) QueryGen {
+	if n < 0 {
+		n = 0
+	}
+	f.nopColumnLimit = n
+	return f
+}
+
 func (f QueryGen) WithArg(arg NamedArgAppender) QueryGen {
 	return QueryGen{
-		dialect: f.dialect,
-		args:    f.args.WithArg(arg),
+		dialect:        f.dialect,
+		args:           f.args.WithArg(arg),
+		nopColumnLimit: f.nopColumnLimit,
 	}
 }
 
 func (f QueryGen) WithNamedArg(name string, value any) QueryGen {
 	return QueryGen{
-		dialect: f.dialect,
-		args:    f.args.WithArg(&namedArg{name: name, value: value}),
+		dialect:        f.dialect,
+		args:           f.args.WithArg(&namedArg{name: name, value: value}),
+		nopColumnLimit: f.nopColumnLimit,
 	}
 }
 
