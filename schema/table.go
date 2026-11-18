@@ -277,7 +277,7 @@ func (t *Table) processFields(typ reflect.Type) {
 
 	for _, embfield := range embedded {
 		if ambiguousNames[embfield.prefix+embfield.subfield.Name] > 1 &&
-			!(!embfield.subfield.Tag.IsZero() && ambiguousTags[embfield.prefix+embfield.subfield.Name] == 1) {
+			(embfield.subfield.Tag.IsZero() || ambiguousTags[embfield.prefix+embfield.subfield.Name] != 1) {
 			continue // ambiguous embedded field
 		}
 

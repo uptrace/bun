@@ -937,6 +937,7 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, 
 		for _, j := range q.tableModel.getJoins() {
 			switch j.Relation.Type {
 			case schema.HasManyRelation, schema.ManyToManyRelation:
+				//nolint:staticcheck // Preserve the existing error text for compatibility.
 				return nil, fmt.Errorf("When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.")
 			}
 		}
@@ -1238,9 +1239,9 @@ func (q *SelectQuery) Clone() *SelectQuery {
 		},
 
 		idxHintsQuery: idxHintsQuery{
-			use:    cloneHints(q.idxHintsQuery.use),
-			ignore: cloneHints(q.idxHintsQuery.ignore),
-			force:  cloneHints(q.idxHintsQuery.force),
+			use:    cloneHints(q.use),
+			ignore: cloneHints(q.ignore),
+			force:  cloneHints(q.force),
 		},
 
 		orderLimitOffsetQuery: orderLimitOffsetQuery{

@@ -622,7 +622,7 @@ func (q *baseQuery) _scan(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	numRow, err := model.ScanRows(ctx, rows)
 	if err != nil {

@@ -24,7 +24,7 @@ import (
 // scanning into a map must not call rows.ColumnTypes from mapModel.Scan.
 func TestScanMapWithRowsColumnScanner(t *testing.T) {
 	db := bun.NewDB(sql.OpenDB(columnScannerConnector{}), newTestDialect())
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	t.Run("map", func(t *testing.T) {
 		m := make(map[string]any)
