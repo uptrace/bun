@@ -128,7 +128,11 @@ func (BaseDialect) AppendJSON(b, jsonb []byte) []byte {
 		case '\000':
 			continue
 		case '\\':
-			if p.CutPrefix([]byte("u0000")) {
+			if p.CutPrefix([]byte{'\\'}) {
+				// An escaped backslash. Keep the pair together so that its
+				// second half is not taken for the start of a \u0000 escape.
+				b = append(b, `\\`...)
+			} else if p.CutPrefix([]byte("u0000")) {
 				b = append(b, `\\u0000`...)
 			} else {
 				// Emit the backslash but do NOT consume the next byte here: let
