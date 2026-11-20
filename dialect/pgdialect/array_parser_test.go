@@ -55,3 +55,45 @@ func TestArrayParserInvalid(t *testing.T) {
 		})
 	}
 }
+
+func TestArrayScanTextElementsWithBrackets(t *testing.T) {
+	// PostgreSQL only quotes a text element that is empty, NULL, or contains a
+	// delimiter, brace, quote, backslash or white space, so these arrive unquoted.
+	tests := []struct {
+		s    string
+		want []string
+	}{
+		{`{(555)123-4567}`, []string{"(555)123-4567"}},
+		{`{[WIP]fix,done}`, []string{"[WIP]fix", "done"}},
+		{`{(a,b)}`, []string{"(a", "b)"}},
+		{`{[1,2),[3,4)}`, []string{"[1", "2)", "[3", "4)"}},
+		{`{],x}`, []string{"]", "x"}},
+		{`{x,]}`, []string{"x", "]"}},
+		{`{"(a b",c)}`, []string{"(a b", "c)"}},
+	}
+
+	type label string
+
+	for _, test := range tests {
+		t.Run(test.s, func(t *testing.T) {
+			var got []string
+			require.NoError(t, Array(&got).Scan([]byte(test.s)))
+			require.Equal(t, test.want, got)
+
+			var labels []label
+			require.NoError(t, Array(&labels).Scan([]byte(test.s)))
+			require.Len(t, labels, len(test.want))
+			for i, want := range test.want {
+				require.Equal(t, label(want), labels[i])
+			}
+
+			var ptrs []*string
+			require.NoError(t, Array(&ptrs).Scan([]byte(test.s)))
+			require.Len(t, ptrs, len(test.want))
+			for i, want := range test.want {
+				require.NotNil(t, ptrs[i])
+				require.Equal(t, want, *ptrs[i])
+			}
+		})
+	}
+}
