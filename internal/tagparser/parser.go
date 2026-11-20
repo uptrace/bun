@@ -1,16 +1,21 @@
 package tagparser
 
 import (
+	"fmt"
 	"strings"
 )
 
 type Tag struct {
 	Name    string
 	Options map[string][]string
+
+	// Overrides contains semicolon-separated key=value overrides for each option.
+	// Like Option, it describes the last occurrence of a repeated option.
+	Overrides map[string]map[string]string
 }
 
 func (t Tag) IsZero() bool {
-	return t.Name == "" && t.Options == nil
+	return t.Name == "" && t.Options == nil && t.Overrides == nil
 }
 
 func (t Tag) HasOption(name string) bool {
@@ -58,6 +63,24 @@ func (p *parser) addOption(key, value string) {
 	if key == "" {
 		return
 	}
+	value, overrides := parseOverrides(value)
+	if overrides != nil {
+		if p.tag.Overrides == nil {
+			p.tag.Overrides = make(map[string]map[string]string)
+		}
+		p.tag.Overrides[key] = overrides
+	} else {
+		delete(p.tag.Overrides, key)
+	}
+	if strings.HasPrefix(value, `"`) {
+		var quoted = parser{s: value, i: 1}
+		unquoted := quoted.parseQuotedValue()
+		// Decode a quoted tag value, but preserve quotes that are part of a
+		// larger expression, such as "schema"."type" or "type"[].
+		if quoted.i == len(value) {
+			value = unquoted
+		}
+	}
 	if p.tag.Options == nil {
 		p.tag.Options = make(map[string][]string)
 	}
@@ -104,22 +127,69 @@ func (p *parser) parseKeyValue() {
 
 func (p *parser) parseValue() string {
 	start := p.i
+	p.i += valueSeparator(p.s[p.i:], ',')
+	value := p.s[start:p.i]
+	if p.peek() == ',' {
+		p.i++
+	}
+	return value
+}
 
-	for p.valid() {
-		switch c := p.read(); c {
-		case '"':
-			return p.parseQuotedValue()
-		case ',':
-			return p.s[start : p.i-1]
+// parseOverrides separates an option's generic value from key=value overrides.
+// Values and keys are interpreted by the caller, not by the tag parser.
+func parseOverrides(s string) (string, map[string]string) {
+	i := valueSeparator(s, ';')
+	value := s[:i]
+	var overrides map[string]string
+	for i < len(s) {
+		s = s[i+1:]
+		i = valueSeparator(s, ';')
+		part := strings.TrimSpace(s[:i])
+		if part == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(part, "=")
+		if !ok {
+			panic(fmt.Errorf("bun: can't parse option override: %q", part))
+		}
+		if overrides == nil {
+			overrides = make(map[string]string)
+		}
+		overrides[strings.TrimSpace(key)] = strings.TrimSpace(value)
+	}
+	return value, overrides
+}
+
+// Separators inside parameters or quoted values are not delimiters.
+func valueSeparator(s string, separator byte) int {
+	var quote byte
+	var depth int
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if quote != 0 {
+			if c == '\\' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '\'', '"':
+			quote = c
 		case '(':
-			p.skipPairs('(', ')')
+			depth++
+		case ')':
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if c == separator && depth == 0 {
+				return i
+			}
 		}
 	}
-
-	if p.i == start {
-		return ""
-	}
-	return p.s[start:p.i]
+	return len(s)
 }
 
 func (p *parser) parseQuotedValue() string {
@@ -143,23 +213,6 @@ func (p *parser) parseQuotedValue() string {
 	}
 
 	return ""
-}
-
-func (p *parser) skipPairs(start, end byte) {
-	var lvl int
-	for p.valid() {
-		switch c := p.read(); c {
-		case '"':
-			_ = p.parseQuotedValue()
-		case start:
-			lvl++
-		case end:
-			if lvl == 0 {
-				return
-			}
-			lvl--
-		}
-	}
 }
 
 func (p *parser) valid() bool {
