@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/feature"
 	"github.com/uptrace/bun/dialect/sqltype"
 	"github.com/uptrace/bun/internal"
 	"github.com/uptrace/bun/migrate"
@@ -1507,7 +1509,8 @@ func TestQuery(t *testing.T) {
 				return db.NewUpdate().
 					Model((*Story)(nil)).
 					Set("name = ?", "new-name").
-					Join("JOIN user ON user.id = story.user_id").
+					Join("user").
+					JoinOn("user.id = story.user_id").
 					Where("user.id = ?", 1)
 			},
 		},
@@ -2062,6 +2065,303 @@ func TestSelectQueryClone(t *testing.T) {
 				require.Regexp(t, tt.pattern, string(clone))
 			})
 		}
+	})
+}
+
+func TestTableAlias(t *testing.T) {
+	type Profile struct {
+		ID     int64 `bun:",pk,autoincrement"`
+		UserID int64
+	}
+	type User struct {
+		ID      int64 `bun:",pk,autoincrement"`
+		Name    string
+		Profile *Profile `bun:"rel:has-one,join:id=user_id"`
+	}
+	type TaggedUser struct {
+		bun.BaseModel `bun:"users,alias:u"`
+
+		ID int64 `bun:",pk,autoincrement"`
+	}
+
+	// Normalize MySQL backtick quoting and MSSQL unicode literals for comparison.
+	normalize := func(b []byte) string {
+		s := strings.ReplaceAll(string(b), "`", `"`)
+		return strings.ReplaceAll(s, "N'", "'")
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		t.Run("select", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).TableAlias("u").
+				Where("?TableAlias.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "u"."id", "u"."name" FROM "users" AS "u" WHERE ("u".id = 1)`,
+				normalize(got))
+		})
+
+		t.Run("select wherepk", func(t *testing.T) {
+			q := db.NewSelect().Model(&User{ID: 1}).TableAlias("u").WherePK()
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "u"."id", "u"."name" FROM "users" AS "u" WHERE ("u"."id" = 1)`,
+				normalize(got))
+		})
+
+		// An explicit TableAlias is emitted unconditionally, even on dialects
+		// that do not support table aliases in UPDATE/DELETE statements.
+		t.Run("update", func(t *testing.T) {
+			q := db.NewUpdate().Model(new(User)).TableAlias("u").
+				Set("name = ?", "foo").
+				Where("?TableAlias.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`UPDATE "users" AS "u" SET name = 'foo' WHERE ("u".id = 1)`,
+				normalize(got))
+		})
+
+		t.Run("delete", func(t *testing.T) {
+			q := db.NewDelete().Model(new(User)).TableAlias("u").
+				Where("?TableAlias.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`DELETE FROM "users" AS "u" WHERE ("u".id = 1)`,
+				normalize(got))
+		})
+
+		t.Run("insert", func(t *testing.T) {
+			q := db.NewInsert().Model(&User{ID: 1, Name: "x"}).TableAlias("u")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Contains(t, normalize(got), `INSERT INTO "users" AS "u"`)
+		})
+
+		// MERGE is only supported on dialects with feature.Merge; the alias
+		// must be emitted on the target table and resolvable via ?TableAlias.
+		t.Run("merge", func(t *testing.T) {
+			if !db.HasFeature(feature.Merge) {
+				t.Skip("merge not supported")
+			}
+			models := []*User{{Name: "A"}}
+			q := db.NewMerge().Model(new(User)).TableAlias("u").
+				With("_data", db.NewValues(&models)).
+				Using("_data").
+				On("?TableAlias.name = _data.name").
+				WhenUpdate("MATCHED", func(q *bun.UpdateQuery) *bun.UpdateQuery {
+					return q.Set("name = _data.name")
+				})
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Contains(t, normalize(got),
+				`"users" AS "u" USING _data ON "u".name = _data.name`)
+		})
+
+		// The tag-configured alias still falls back to the table name when the
+		// dialect does not support DELETE ... AS alias.
+		t.Run("tag alias degrades", func(t *testing.T) {
+			q := db.NewDelete().Model(new(TaggedUser)).Where("id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			if db.HasFeature(feature.DeleteTableAlias) {
+				require.Equal(t,
+					`DELETE FROM "users" AS "u" WHERE (id = 1)`,
+					normalize(got))
+			} else {
+				require.Equal(t,
+					`DELETE FROM "users" WHERE (id = 1)`,
+					normalize(got))
+			}
+		})
+
+		t.Run("relation join", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).TableAlias("u").Relation("Profile")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "u"."id", "u"."name", "profile"."id" AS "profile__id", "profile"."user_id" AS "profile__user_id" FROM "users" AS "u" LEFT JOIN "profiles" AS "profile" ON ("profile"."user_id" = "u"."id")`,
+				normalize(got))
+		})
+
+		// The alias must not leak into the shared (cached) table: a query
+		// without TableAlias keeps the model's default alias.
+		t.Run("does not leak into shared table", func(t *testing.T) {
+			db.NewSelect().Model(new(User)).TableAlias("u") //nolint:errcheck
+
+			q := db.NewSelect().Model(new(User)).Where("?TableAlias.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" WHERE ("user".id = 1)`,
+				normalize(got))
+		})
+	})
+}
+
+func TestJoinModel(t *testing.T) {
+	type User struct {
+		ID   int64 `bun:",pk,autoincrement"`
+		Name string
+	}
+	type SoftUser struct {
+		ID        int64 `bun:",pk,autoincrement"`
+		Name      string
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
+	}
+	type Profile struct {
+		ID        int64 `bun:",pk,autoincrement"`
+		UserID    int64
+		DeletedAt time.Time `bun:",soft_delete,nullzero"`
+	}
+	type Tag struct {
+		ID     int64 `bun:",pk,autoincrement"`
+		UserID int64
+	}
+
+	// Normalize MySQL backtick quoting and MSSQL unicode literals for comparison.
+	normalize := func(b []byte) string {
+		s := strings.ReplaceAll(string(b), "`", `"`)
+		return strings.ReplaceAll(s, "N'", "'")
+	}
+
+	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
+		// The model's default table alias is used when no alias is given.
+		t.Run("default alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				JoinModel(new(Tag)).
+				JoinOn("tag.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" JOIN "tags" AS "tag" ON (tag.user_id = user.id)`,
+				normalize(got))
+		})
+
+		// A join on a model without a soft-delete field emits no extra condition.
+		t.Run("explicit alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Tag), "t").
+				JoinOn("t.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "tags" AS "t" ON (t.user_id = user.id)`,
+				normalize(got))
+		})
+
+		// A soft-deletable join model gets `alias.deleted_at IS NULL` in ON.
+		t.Run("soft delete", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "profiles" AS "p" ON (p.user_id = user.id) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// Soft-delete applies even without explicit JoinOn conditions.
+		t.Run("soft delete no joinon", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).JoinModel(new(Profile), "p")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" JOIN "profiles" AS "p" ON ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// The soft-delete condition must not be bypassed by an OR separator:
+		// user conditions are wrapped in parens when it is appended.
+		t.Run("soft delete joinon or", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = user.id").
+				JoinOnOr("p.id = ?", 2)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "user"."id", "user"."name" FROM "users" AS "user" LEFT JOIN "profiles" AS "p" ON ((p.user_id = user.id) OR (p.id = 2)) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
+
+		// Errors are reported via the query, like other bun APIs.
+		t.Run("errors", func(t *testing.T) {
+			_, err := db.NewSelect().Model(new(User)).
+				JoinModel(nil).
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+
+			_, err = db.NewSelect().Model(new(User)).
+				JoinModel(new(Profile), "p", "extra").
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+
+			_, err = db.NewSelect().Model(new(User)).
+				JoinModel(new(Profile), "").
+				AppendQuery(db.QueryGen(), nil)
+			require.Error(t, err)
+		})
+
+		// WhereDeleted flips the join's soft-delete condition to IS NOT NULL,
+		// matching Relation joins.
+		t.Run("soft delete where deleted", func(t *testing.T) {
+			q := db.NewSelect().Model(new(SoftUser)).WhereDeleted().
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = soft_user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "soft_user"."id", "soft_user"."name", "soft_user"."deleted_at" FROM "soft_users" AS "soft_user" JOIN "profiles" AS "p" ON (p.user_id = soft_user.id) AND ("p"."deleted_at" IS NOT NULL) WHERE "soft_user"."deleted_at" IS NOT NULL`,
+				normalize(got))
+		})
+
+		// WhereAllWithDeleted removes the join's soft-delete condition.
+		t.Run("soft delete all with deleted", func(t *testing.T) {
+			q := db.NewSelect().Model(new(SoftUser)).WhereAllWithDeleted().
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = soft_user.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "soft_user"."id", "soft_user"."name", "soft_user"."deleted_at" FROM "soft_users" AS "soft_user" JOIN "profiles" AS "p" ON (p.user_id = soft_user.id)`,
+				normalize(got))
+		})
+
+		t.Run("update join model", func(t *testing.T) {
+			q := db.NewUpdate().Model(new(User)).TableAlias("u").
+				JoinModel(new(Profile), "p").
+				JoinOn("p.user_id = u.id").
+				Set("name = ?", "foo").
+				Where("u.id = ?", 1)
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			if db.HasFeature(feature.UpdateMultiTable) {
+				require.Equal(t,
+					`UPDATE "users" AS "u" JOIN "profiles" AS "p" ON (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) SET name = 'foo' WHERE (u.id = 1)`,
+					normalize(got))
+			} else {
+				require.Equal(t,
+					`UPDATE "users" AS "u" SET name = 'foo' FROM "profiles" AS "p" WHERE (p.user_id = u.id) AND ("p"."deleted_at" IS NULL) AND (u.id = 1)`,
+					normalize(got))
+			}
+		})
+
+		// ?TableAlias inside JoinOn resolves to the main table's alias,
+		// including an explicit TableAlias.
+		t.Run("with table alias", func(t *testing.T) {
+			q := db.NewSelect().Model(new(User)).TableAlias("u").
+				LeftJoinModel(new(Profile), "p").
+				JoinOn("p.user_id = ?TableAlias.id")
+			got, err := q.AppendQuery(db.QueryGen(), nil)
+			require.NoError(t, err)
+			require.Equal(t,
+				`SELECT "u"."id", "u"."name" FROM "users" AS "u" LEFT JOIN "profiles" AS "p" ON (p.user_id = "u".id) AND ("p"."deleted_at" IS NULL)`,
+				normalize(got))
+		})
 	})
 }
 
