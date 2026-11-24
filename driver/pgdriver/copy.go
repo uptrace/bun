@@ -88,16 +88,24 @@ func writeCopyData(ctx context.Context, cn *Conn, r io.Reader) error {
 
 	for {
 		wb.StartMessage(copyDataMsg)
-		if _, err := wb.ReadFrom(r); err != nil {
-			if err == io.EOF {
-				break
-			}
+
+		n, err := wb.ReadFrom(r)
+		if err != nil && err != io.EOF {
 			return err
 		}
-		wb.FinishMessage()
 
-		if err := cn.write(ctx, wb); err != nil {
-			return err
+		if n == 0 {
+			wb.Reset()
+		} else if n > 0 {
+			wb.FinishMessage()
+
+			if err := cn.write(ctx, wb); err != nil {
+				return err
+			}
+		}
+
+		if err == io.EOF {
+			break
 		}
 	}
 
