@@ -769,6 +769,22 @@ func TestPostgresHStoreQuote(t *testing.T) {
 	require.Equal(t, wanted, m)
 }
 
+func TestPostgresHStoreHexPrefix(t *testing.T) {
+	db := pg(t)
+	t.Cleanup(func() { db.Close() })
+
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS HSTORE;`)
+	require.NoError(t, err)
+
+	wanted := map[string]string{`\x41`: `\x4142`, "key": `\xzz`}
+	m := make(map[string]string)
+	err = db.NewSelect().
+		ColumnExpr("?::hstore", pgdialect.HStore(wanted)).
+		Scan(ctx, pgdialect.HStore(&m))
+	require.NoError(t, err)
+	require.Equal(t, wanted, m)
+}
+
 func TestPostgresHStoreEmpty(t *testing.T) {
 	db := pg(t)
 	t.Cleanup(func() { db.Close() })

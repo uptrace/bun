@@ -225,7 +225,7 @@ func (db *DB) Dialect() schema.Dialect {
 // ScanRows scans all rows from the result set into the destination values.
 // It closes the rows when complete.
 func (db *DB) ScanRows(ctx context.Context, rows *sql.Rows, dest ...any) error {
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	model, err := newModel(db, dest)
 	if err != nil {
@@ -793,7 +793,7 @@ func (tx Tx) RunInTx(
 		}
 	}()
 
-	if err := fn(tx.ctx, sp); err != nil {
+	if err := fn(sp.ctx, sp); err != nil {
 		return err
 	}
 
