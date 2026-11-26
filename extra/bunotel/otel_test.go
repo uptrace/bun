@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel"
@@ -47,6 +48,59 @@ func TestQueryHookInitFallsBackToGlobalMeterProvider(t *testing.T) {
 
 	if !global.hasMeter(otelsqlInstrumName) {
 		t.Error("DB stats metrics were not reported to the global meter provider")
+	}
+}
+
+type narrowModel struct {
+	bun.BaseModel `bun:"table:narrow,alias:n"`
+
+	A, B, C int
+}
+
+type wideModel struct {
+	bun.BaseModel `bun:"table:wide,alias:w"`
+
+	A, B, C, D, E, F, G, H, I, J, K, L int
+}
+
+func TestWithColumnLimit(t *testing.T) {
+	db := newTestDB(t)
+	query := db.NewSelect().Model((*narrowModel)(nil))
+
+	const listed = `SELECT "n"."a", "n"."b", "n"."c" FROM "narrow" AS "n"`
+	const collapsed = `SELECT "n".'3 columns' FROM "narrow" AS "n"`
+
+	tests := []struct {
+		name  string
+		limit int
+		want  string
+	}{
+		{"below column count", 2, collapsed},
+		{"equal to column count", 3, listed},
+		{"above column count", 4, listed},
+		{"zero lists every column", 0, listed},
+		{"negative lists every column", -1, listed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := NewQueryHook(WithColumnLimit(tt.limit))
+			if got := h.eventQuery(&bun.QueryEvent{IQuery: query}); got != tt.want {
+				t.Errorf("got  %s\nwant %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultColumnLimit(t *testing.T) {
+	db := newTestDB(t)
+	event := &bun.QueryEvent{IQuery: db.NewSelect().Model((*wideModel)(nil))}
+
+	if got := NewQueryHook().eventQuery(event); !strings.Contains(got, `'12 columns'`) {
+		t.Errorf("default hook did not collapse 12 columns: %s", got)
+	}
+	if got := NewQueryHook(WithColumnLimit(0)).eventQuery(event); strings.Contains(got, "columns") {
+		t.Errorf("WithColumnLimit(0) collapsed the column list: %s", got)
 	}
 }
 

@@ -772,7 +772,7 @@ func (q *SelectQuery) appendColumns(gen schema.QueryGen, b []byte) (_ []byte, er
 			}
 		}
 	case q.table != nil:
-		if len(q.table.Fields) > 10 && gen.IsNop() {
+		if limit := gen.NopColumnLimit(); gen.IsNop() && limit > 0 && len(q.table.Fields) > limit {
 			b = append(b, q.table.SQLAlias...)
 			b = append(b, '.')
 			b = gen.Dialect().AppendString(b, fmt.Sprintf("%d columns", len(q.table.Fields)))
@@ -937,6 +937,7 @@ func (q *SelectQuery) scanResult(ctx context.Context, dest ...any) (sql.Result, 
 		for _, j := range q.tableModel.getJoins() {
 			switch j.Relation.Type {
 			case schema.HasManyRelation, schema.ManyToManyRelation:
+				//nolint:staticcheck // Preserve the existing error text for compatibility.
 				return nil, fmt.Errorf("When querying has-many or many-to-many relationships, you should use Model instead of the dest parameter in Scan.")
 			}
 		}
@@ -1238,9 +1239,9 @@ func (q *SelectQuery) Clone() *SelectQuery {
 		},
 
 		idxHintsQuery: idxHintsQuery{
-			use:    cloneHints(q.idxHintsQuery.use),
-			ignore: cloneHints(q.idxHintsQuery.ignore),
-			force:  cloneHints(q.idxHintsQuery.force),
+			use:    cloneHints(q.use),
+			ignore: cloneHints(q.ignore),
+			force:  cloneHints(q.force),
 		},
 
 		orderLimitOffsetQuery: orderLimitOffsetQuery{

@@ -27,6 +27,9 @@ type Field struct {
 	CreateTableSQLType string
 	SQLDefault         string
 
+	// ValuesSQLType overrides UserSQLType for casts in VALUES clauses.
+	ValuesSQLType string
+
 	OnDelete string
 	OnUpdate string
 

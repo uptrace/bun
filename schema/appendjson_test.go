@@ -17,6 +17,14 @@ func TestBaseDialectAppendJSON(t *testing.T) {
 		{`{"k":"a\"b\\c"}`, `'{"k":"a\"b\\c"}'`},
 		// A raw single quote is doubled for SQL.
 		{`{"k":"it's"}`, `'{"k":"it''s"}'`},
+		// The \u0000 escape is turned into the text \u0000 for jsonb.
+		{`{"k":"a\u0000b"}`, `'{"k":"a\\u0000b"}'`},
+		// An escaped backslash followed by the text u0000 is not an escape and
+		// is kept as is.
+		{`{"k":"a\\u0000b"}`, `'{"k":"a\\u0000b"}'`},
+		{`{"k":"a\\\u0000b"}`, `'{"k":"a\\\\u0000b"}'`},
+		// A quote after an escaped backslash is still doubled.
+		{`{"x":"a\\'b"}`, `'{"x":"a\\''b"}'`},
 	}
 
 	for _, tt := range tests {
@@ -35,6 +43,8 @@ func TestBaseDialectAppendJSON_EncodingJSONRoundTrips(t *testing.T) {
 		map[string]string{"msg": `a"b\c/d`},
 		map[string]string{"path": `C:\tmp\x`},
 		[]string{"line1\nline2", "tab\tend"},
+		map[string]string{"text": `a\u0000b`},
+		map[string]string{"raw": `{"name":"a\u0000b"}`},
 	} {
 		jsonb, err := json.Marshal(v)
 		if err != nil {

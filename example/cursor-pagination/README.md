@@ -6,4 +6,4 @@ To run this example:
 go run .
 ```
 
-See [documentation](https://bun.uptrace.dev/postgres/cursor-pagination.html) for details.
+See [documentation](https://bun.uptrace.dev/guide/cursor-pagination.html) for details.

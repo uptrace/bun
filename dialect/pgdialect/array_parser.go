@@ -20,6 +20,13 @@ type arrayParser struct {
 	quoted bool
 
 	isJson bool
+
+	// textElems reports that the elements are text, as in text[] or
+	// varchar[]. PostgreSQL leaves such an element unquoted unless it is
+	// empty, NULL, or contains a delimiter, brace, quote, backslash or white
+	// space, so an element like (555)123-4567 or ]x arrives unquoted and must
+	// be read up to the next delimiter rather than as a range.
+	textElems bool
 }
 
 func newArrayParser(b []byte) *arrayParser {
@@ -37,6 +44,15 @@ func newArrayParser(b []byte) *arrayParser {
 	p.isJson = b[0] == '['
 
 	p.p.Reset(b[1 : len(b)-1])
+	return p
+}
+
+// newTextArrayParser returns a parser for an array of text elements. Unquoted
+// elements in the PostgreSQL array format are read as plain literals, even when
+// they start with a bracket or parenthesis.
+func newTextArrayParser(b []byte) *arrayParser {
+	p := newArrayParser(b)
+	p.textElems = !p.isJson
 	return p
 }
 
@@ -74,8 +90,12 @@ func (p *arrayParser) readNext() error {
 	p.quoted = false
 
 	switch ch {
-	case '}', ']':
+	case '}':
 		return io.EOF
+	case ']':
+		if !p.textElems {
+			return io.EOF
+		}
 	case '"':
 		b, err := p.p.ReadSubstring(ch)
 		if err != nil {
@@ -90,6 +110,10 @@ func (p *arrayParser) readNext() error {
 		p.elem = b
 		return nil
 	case '[', '(':
+		if p.textElems {
+			break
+		}
+
 		rng, err := p.p.ReadRange(ch)
 		if err != nil {
 			return err
@@ -101,35 +125,37 @@ func (p *arrayParser) readNext() error {
 
 		p.elem = rng
 		return nil
-	default:
-		if ch == '{' && p.isJson {
-			json, err := p.p.ReadJSON()
-			if err != nil {
-				return err
-			}
-
-			for {
-				if p.p.Peek() == ',' || p.p.Peek() == ' ' {
-					p.p.Advance()
-				} else {
-					break
-				}
-			}
-
-			p.elem = json
-			return nil
-		} else {
-			lit := p.p.ReadLiteral(ch)
-			if bytes.Equal(lit, []byte("NULL")) {
-				lit = nil
-			}
-
-			if p.p.Peek() == ',' {
-				p.p.Advance()
-			}
-
-			p.elem = lit
-			return nil
+	case '{':
+		if !p.isJson {
+			break
 		}
+
+		json, err := p.p.ReadJSON()
+		if err != nil {
+			return err
+		}
+
+		for {
+			if p.p.Peek() == ',' || p.p.Peek() == ' ' {
+				p.p.Advance()
+			} else {
+				break
+			}
+		}
+
+		p.elem = json
+		return nil
 	}
+
+	lit := p.p.ReadLiteral(ch)
+	if bytes.Equal(lit, []byte("NULL")) {
+		lit = nil
+	}
+
+	if p.p.Peek() == ',' {
+		p.p.Advance()
+	}
+
+	p.elem = lit
+	return nil
 }

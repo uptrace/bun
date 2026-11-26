@@ -15,6 +15,8 @@ BUNDEBUG=2 TZ= go test -run=TestName
 
 ## Releasing
 
+The release script generates `CHANGELOG.md` with `npx`, which requires Node.js 22 or later.
+
 1. Run `release.sh` script which updates versions in go.mod files and pushes a new branch to GitHub:
 
 ```shell
