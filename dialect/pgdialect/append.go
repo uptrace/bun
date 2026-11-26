@@ -30,7 +30,7 @@ var (
 )
 
 func appendTime(buf []byte, tm time.Time) []byte {
-	return tm.UTC().AppendFormat(buf, "2006-01-02 15:04:05.999999-07:00")
+	return tm.AppendFormat(buf, "2006-01-02 15:04:05.999999-07:00")
 }
 
 var mapStringStringType = reflect.TypeOf(map[string]string(nil))
