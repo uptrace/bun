@@ -186,6 +186,35 @@ func (q *baseQuery) setModel(modeli any) {
 	}
 }
 
+// setTableAlias overrides the alias used for the model's table by replacing
+// the query's table with a copy that carries the new alias. The cached
+// (shared) table is not modified, so the alias only applies to this query.
+func (q *baseQuery) setTableAlias(alias string) {
+	if q.table == nil {
+		q.setErr(errors.New("bun: TableAlias requires a model"))
+		return
+	}
+	if alias == "" {
+		q.setErr(errors.New("bun: empty table alias"))
+		return
+	}
+	old := q.table
+	q.table = old.WithAlias(alias)
+	// Inside a relation apply func q.table is temporarily swapped for the
+	// join model's table (see relationJoin.applyTo); don't touch the model's
+	// table in that case.
+	if q.tableModel != nil && q.tableModel.Table() == old {
+		q.tableModel.setTable(q.table)
+	}
+}
+
+// hasExplicitTableAlias reports whether the query's table carries an alias
+// set via TableAlias. Explicit aliases are emitted unconditionally, bypassing
+// dialect feature fallbacks, because callers reference them by name.
+func (q *baseQuery) hasExplicitTableAlias() bool {
+	return q.table != nil && q.table.HasExplicitTableAlias()
+}
+
 func (q *baseQuery) setErr(err error) {
 	if q.err == nil {
 		q.err = err
@@ -829,27 +858,39 @@ func (q *whereBaseQuery) addWhereCols(cols []string) {
 }
 
 func (q *whereBaseQuery) mustAppendWhere(
-	gen schema.QueryGen, b []byte, withAlias bool,
+	gen schema.QueryGen, b []byte, withAlias bool, extra ...schema.QueryWithSep,
 ) ([]byte, error) {
-	if len(q.where) == 0 && q.whereFields == nil && !q.flags.Has(deletedFlag) {
+	if len(q.where) == 0 && len(extra) == 0 && q.whereFields == nil && !q.flags.Has(deletedFlag) {
 		err := errors.New("bun: Update and Delete queries require at least one Where")
 		return nil, err
 	}
-	return q.appendWhere(gen, b, withAlias)
+	return q.appendWhere(gen, b, withAlias, extra...)
 }
 
+// appendWhere renders the WHERE clause; extra conditions are rendered before
+// q.where and AND-ed in, for callers such as UPDATE that need to move join
+// conditions into WHERE.
 func (q *whereBaseQuery) appendWhere(
-	gen schema.QueryGen, b []byte, withAlias bool,
+	gen schema.QueryGen, b []byte, withAlias bool, extra ...schema.QueryWithSep,
 ) (_ []byte, err error) {
-	if len(q.where) == 0 && q.whereFields == nil && !q.isSoftDelete() {
+	if len(q.where) == 0 && len(extra) == 0 && q.whereFields == nil && !q.isSoftDelete() {
 		return b, nil
 	}
 
 	b = append(b, " WHERE "...)
 	startLen := len(b)
 
-	needsExtraCondition := q.isSoftDelete() || q.whereFields != nil
+	needsExtraCondition := q.isSoftDelete() || q.whereFields != nil || len(extra) > 0
+	if len(extra) > 0 {
+		b, err = appendWhere(gen, b, extra)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(q.where) > 0 {
+		if len(b) > startLen {
+			b = append(b, " AND "...)
+		}
 		wrapParens := needsExtraCondition && q.whereHasOr
 		if wrapParens {
 			b = append(b, '(')
