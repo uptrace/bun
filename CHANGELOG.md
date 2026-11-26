@@ -1,3 +1,40 @@
+# [1.4.0](https://github.com/uptrace/bun/compare/v1.3.0...v1.4.0) (2026-11-27)
+
+### Breaking Changes
+
+Upgrade `github.com/uptrace/bun` and every Bun dialect your application imports to `v1.4.0` together. Each dialect checks the Bun version during package initialization and panics on a mismatch.
+
+* **Bulk updates require a primary key.** `UpdateQuery.Bulk().Exec(ctx)` now fails before sending SQL if the model has no primary key. Previously, a bulk update on a soft-delete model without a key could update every live row. Mark the field or fields that identify each target row with `bun:",pk"`. [#1466](https://github.com/uptrace/bun/pull/1466)
+* **PostgreSQL bulk writes can reject values they used to truncate.** `NewValues` preserves the full input for `varchar(n)`, `char(n)` and their array forms. For a `varchar(3)` column, a bulk update with `abcd` previously wrote `abc`. PostgreSQL now rejects the entire update. Validate input lengths, or truncate explicitly if your application requires it. [#1453](https://github.com/uptrace/bun/pull/1453)
+* **Large `uint` arguments can match or write different values.** On 64-bit platforms, a placeholder argument of the built-in `uint` type above `math.MaxInt64` previously wrapped to a negative SQL literal. The default formatter now emits the positive value, which can exceed a signed `BIGINT` column's range. If your PostgreSQL data uses negative values to store these bit patterns, use `pgdialect.WithAppendUintAsInt(true)` consistently. The option now also applies to `uint` model fields, pointers and named types. [#1436](https://github.com/uptrace/bun/pull/1436)
+* **Scanning columns into separate slices requires an exact count.** When a row is read, `Scan(ctx, &ids, &names)` requires two result columns. Extra destinations were previously ignored and too few could cause a panic. Both mismatches now return a `database/sql` error. Select one column per destination slice. [#1452](https://github.com/uptrace/bun/pull/1452)
+* **Positional `schema.Field` literals no longer compile.** The struct gained `ValuesSQLType`. Change literals that list field values by position to named fields, such as `schema.Field{Name: "email"}`. [#1453](https://github.com/uptrace/bun/pull/1453)
+
+#### Other behavior changes to check when upgrading
+
+* **Nested transactions.** A `tx.RunInTx` callback now receives the context passed to that call. Work using the callback context observes the inner deadline, cancellation and values. If that context is canceled, Bun uses the root transaction's lifetime to roll back the savepoint. The outer transaction can continue after handling the error. Pass the outer context explicitly when the nested work should share its lifetime. [#1459](https://github.com/uptrace/bun/pull/1459) · [ee53d50](https://github.com/uptrace/bun/commit/ee53d50d8f034e7268e616e910957a1c2277a940)
+* **PostgreSQL text decoding.** An hstore key or value stored as the literal `\x41` previously scanned as `A` and now scans as `\x41`. Decode hex explicitly if your application uses that convention. When scanning a text array into a string slice, Bun now reads unquoted elements such as `[WIP]fix` as one complete string. Check any application code that reassembled those elements. [#1456](https://github.com/uptrace/bun/pull/1456) · [3cb2eb9](https://github.com/uptrace/bun/commit/3cb2eb9920806640ce4b22c8a1ac81743fd0e870)
+* **SQL migration replay.** Blank lines inside multiline SQL strings now reach the database. Replaying a migration that inserted seed text can therefore produce different data from an earlier installation. Check multiline literals in migrations that will run on fresh databases. [40af9ad](https://github.com/uptrace/bun/commit/40af9ad5c8a1d0ae6462c1940ba55780a25013fa)
+* **Custom query hooks.** Hooks that build a formatter with `schema.NewQueryGen(d)` where `d.Name() == dialect.Invalid` now list all model columns by default. Use `WithNopColumnLimit(10)` to keep the previous threshold. [#1465](https://github.com/uptrace/bun/pull/1465)
+
+### Features
+
+* `bunotel.WithColumnLimit(n)` controls when unformatted OpenTelemetry SELECT statements abbreviate the root model's default column list. The default threshold is 10. Use 0 to disable abbreviation. Custom query hooks can use `schema.QueryGen.WithNopColumnLimit` and `NopColumnLimit` for the same behavior. [#1465](https://github.com/uptrace/bun/pull/1465)
+
+### Bug fixes
+
+* JSON formatting preserves escaped backslash pairs, including a literal backslash followed by `u0000`. [#1474](https://github.com/uptrace/bun/pull/1474)
+* PostgreSQL scans `int64` and `float64` range bounds. Scanning an unsupported range element type now returns an error. [#1467](https://github.com/uptrace/bun/pull/1467)
+* PostgreSQL multirange model fields scanned into `[]string` preserve each range as one element. For example, `{[1,2),[3,4)}` yields `[1,2)` and `[3,4)`. [#1487](https://github.com/uptrace/bun/pull/1487)
+* `pgdriver.CopyFrom` handles empty reads and final data returned with `io.EOF`. It checks for cancellation after each read, so a canceled final read cannot complete the COPY. [3f03f5c](https://github.com/uptrace/bun/commit/3f03f5c155cc8ed664d34826d15ef4f0b2bbf690) · [64f6385](https://github.com/uptrace/bun/commit/64f63850a18167750164cd83b695d01694f4271b)
+* `pgdriver.CopyFrom` discards connections left mid-COPY or with an unread result after a timeout. A connection failure inside a transaction now returns to the caller without waiting for the transaction to end. [64f6385](https://github.com/uptrace/bun/commit/64f63850a18167750164cd83b695d01694f4271b)
+* When creating SQL migrations, `MigrationFile.Content` now contains the SQL template written to disk. [d342bde](https://github.com/uptrace/bun/commit/d342bdeb6328a2c83e12852f83881b944cb78eed)
+
+### Performance and dependencies
+
+* `pgdriver` parses common UTC timestamps through a faster path. [#1475](https://github.com/uptrace/bun/pull/1475)
+* `sqliteshim` updates its pure-Go SQLite driver, `modernc.org/sqlite`, from v1.46.1 to v1.59.0. [#1470](https://github.com/uptrace/bun/pull/1470)
+
 # [1.3.0](https://github.com/uptrace/bun/compare/v1.2.18...v1.3.0) (2026-09-30)
 
 
