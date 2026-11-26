@@ -486,7 +486,7 @@ func (m *Migrator) createSQL(_ context.Context, fname string, transactional bool
 	mf := &MigrationFile{
 		Name:    fname,
 		Path:    fpath,
-		Content: goTemplate,
+		Content: template,
 	}
 	return mf, nil
 }

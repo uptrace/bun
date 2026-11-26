@@ -6,9 +6,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"io"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +22,19 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/schema"
 )
+
+type zeroReadReader struct {
+	r    io.Reader
+	zero bool
+}
+
+func (z *zeroReadReader) Read(p []byte) (int, error) {
+	z.zero = !z.zero
+	if z.zero {
+		return 0, nil
+	}
+	return z.r.Read(p)
+}
 
 func TestPostgresArray(t *testing.T) {
 	type Model struct {
@@ -679,6 +695,28 @@ func TestPostgresCopyFromCopyTo(t *testing.T) {
 
 		err = tx.Commit()
 		require.NoError(t, err)
+	})
+
+	t.Run("io.Reader edge-cases", func(t *testing.T) {
+		_, err := conn.ExecContext(ctx, "CREATE TEMP TABLE test_copy_from_edge_cases (n int)")
+		require.NoError(t, err)
+
+		// non regression test for CopyFrom with a reader that returns data on the
+		// last call to Read(), along with the io.EOF error
+		r := iotest.DataErrReader(strings.NewReader("1\n2\n3\n"))
+		_, err = pgdriver.CopyFrom(ctx, conn, r, "COPY test_copy_from_edge_cases FROM STDIN")
+		require.NoError(t, err)
+
+		// non regression test for CopyFrom with a reader that returns (0, nil)
+		// every other read
+		r = &zeroReadReader{r: strings.NewReader("1\n2\n3\n4\n5\n")}
+		_, err = pgdriver.CopyFrom(ctx, conn, r, "COPY test_copy_from_edge_cases FROM STDIN")
+		require.NoError(t, err)
+
+		var count int
+		err = conn.QueryRowContext(ctx, "SELECT count(*) FROM test_copy_from_edge_cases").Scan(&count)
+		require.NoError(t, err)
+		require.Equal(t, 8, count)
 	})
 }
 
