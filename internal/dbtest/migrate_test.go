@@ -3,7 +3,9 @@ package dbtest_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,7 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
@@ -63,6 +67,7 @@ func TestMigrate(t *testing.T) {
 		{run: testRunMigrationUpErrorPreservesAppliedState},
 		{run: testMigrateMarkAppliedInTx},
 		{run: testMigrateMarkAppliedInTxLeavesOtherMigrationsAlone},
+		{run: testRunMigrationMarkAppliedInTxWithUpsert},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1539,5 +1544,149 @@ func testMigrateMarkAppliedInTxLeavesOtherMigrationsAlone(t *testing.T, db *bun.
 		require.NoError(t, err)
 		require.Len(t, group.Migrations, 3)
 		require.Empty(t, appliedNames(t, ctx, m))
+	}
+}
+
+// testRunMigrationMarkAppliedInTxWithUpsert checks that RunMigration, which
+// needs WithUpsert, records a re-run transactional SQL migration inside its own
+// transaction, and that a failed upsert of the record rolls back the
+// migration's changes.
+func testRunMigrationMarkAppliedInTxWithUpsert(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL {
+		t.Skip("MySQL commits implicitly on DDL, so a migration cannot be rolled back with its record")
+	}
+
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	const table = "mark_in_tx_rerun"
+	dropTable := func() {
+		_, err := db.NewDropTable().TableExpr("?", bun.Ident(table)).IfExists().Exec(ctx)
+		require.NoError(t, err)
+	}
+	dropTable()
+	t.Cleanup(dropTable)
+	_, err := db.ExecContext(ctx, "CREATE TABLE "+table+" (id INT)")
+	require.NoError(t, err)
+
+	rows := func() int64 {
+		n, err := db.NewSelect().TableExpr("?", bun.Ident(table)).Count(ctx)
+		require.NoError(t, err)
+		return n
+	}
+	newMigrator := func(up string) *migrate.Migrator {
+		migrations := migrate.NewMigrations()
+		require.NoError(t, migrations.Discover(fstest.MapFS{
+			"20060102150405_rerun.tx.up.sql": &fstest.MapFile{Data: []byte(up)},
+		}))
+		return migrate.NewMigrator(db, migrations,
+			migrate.WithTableName(migrationsTable),
+			migrate.WithLocksTableName(migrationLocksTable),
+			migrate.WithMarkAppliedInTx(true),
+			migrate.WithUpsert(true),
+		)
+	}
+	groupOf := func(m *migrate.Migrator) int64 {
+		applied, err := m.AppliedMigrations(ctx)
+		require.NoError(t, err)
+		require.Len(t, applied, 1)
+		return applied[0].GroupID
+	}
+
+	insert := "INSERT INTO " + table + " (id) VALUES (1)"
+
+	m := newMigrator(insert)
+	require.NoError(t, m.Reset(ctx))
+
+	_, err = m.Migrate(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), rows())
+	require.Equal(t, int64(1), groupOf(m))
+
+	// The re-run upserts the existing record in its own transaction.
+	require.NoError(t, m.RunMigration(ctx, "20060102150405"))
+	require.Equal(t, int64(2), rows())
+	require.Equal(t, []string{"20060102150405"}, appliedNames(t, ctx, m))
+	require.Equal(t, int64(2), groupOf(m))
+
+	// The migration drops the migrations table, so that upserting its record
+	// fails after its statements succeeded. Rolling back the transaction must
+	// undo the insert and the drop, and keep the existing record.
+	m = newMigrator(insert + "\n--bun:split\nDROP TABLE " + migrationsTable)
+	require.Error(t, m.RunMigration(ctx, "20060102150405"))
+	require.Equal(t, int64(2), rows())
+	require.True(t, tableExists(ctx, db, migrationsTable))
+	require.Equal(t, int64(2), groupOf(m))
+}
+
+// routeAllResolver routes every query to one database.
+type routeAllResolver struct {
+	db *sql.DB
+}
+
+func (r routeAllResolver) ResolveConn(context.Context, bun.Query) bun.IConn { return r.db }
+func (routeAllResolver) Close() error                                       { return nil }
+
+// TestMigrateMarkRespectsConnResolver checks that, without WithMarkAppliedInTx,
+// the migrator records and unrecords migrations in the database that
+// WithConnResolver routes its queries to, which is where Init creates the
+// migrations table.
+func TestMigrateMarkRespectsConnResolver(t *testing.T) {
+	ctx := context.Background()
+
+	open := func(name string) *sql.DB {
+		sqldb, err := sql.Open(sqliteshim.DriverName(), filepath.Join(t.TempDir(), name))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, sqldb.Close()) })
+		return sqldb
+	}
+	primary := open("primary.db")
+	routed := open("routed.db")
+
+	db := bun.NewDB(primary, sqlitedialect.New(), bun.WithConnResolver(routeAllResolver{db: routed}))
+	primaryDB := bun.NewDB(primary, sqlitedialect.New())
+	routedDB := bun.NewDB(routed, sqlitedialect.New())
+
+	migrations := migrate.NewMigrations()
+	migrations.Add(migrate.Migration{
+		Name: "20060102150405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+	})
+
+	records := func() int64 {
+		n, err := routedDB.NewSelect().TableExpr("?", bun.Ident(migrationsTable)).Count(ctx)
+		require.NoError(t, err)
+		return n
+	}
+
+	for _, onSuccess := range []bool{false, true} {
+		t.Run(fmt.Sprintf("WithMarkAppliedOnSuccess(%t)", onSuccess), func(t *testing.T) {
+			m := migrate.NewMigrator(db, migrations,
+				migrate.WithTableName(migrationsTable),
+				migrate.WithLocksTableName(migrationLocksTable),
+				migrate.WithMarkAppliedOnSuccess(onSuccess),
+				migrate.WithUpsert(true),
+			)
+			require.NoError(t, m.Reset(ctx))
+
+			_, err := m.Migrate(ctx)
+			require.NoError(t, err)
+			require.Equal(t, int64(1), records())
+
+			require.NoError(t, m.RunMigration(ctx, "20060102150405"))
+			require.Equal(t, int64(1), records())
+
+			_, err = m.Rollback(ctx)
+			require.NoError(t, err)
+			require.Equal(t, int64(0), records())
+
+			require.False(t, tableExists(ctx, primaryDB, migrationsTable),
+				"the migrations table must exist only in the routed database")
+		})
 	}
 }

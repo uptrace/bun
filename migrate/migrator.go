@@ -58,6 +58,11 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 // The guarantee is only as strong as the database's transactional DDL: MySQL
 // and MariaDB commit implicitly on most DDL statements, so there a migration
 // can still be applied without being recorded.
+//
+// The record is written on the migration's transaction, which DB.BeginTx opens
+// on the DB's own connection pool and not through WithConnResolver. Do not
+// combine this option with a resolver that routes the migrations table to
+// another database.
 func WithMarkAppliedInTx(enabled bool) MigratorOption {
 	return func(m *Migrator) {
 		m.markAppliedInTx = enabled
@@ -504,14 +509,18 @@ func genMigrationName(name string) (string, error) {
 
 // MarkApplied marks the migration as applied (completed).
 func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error {
-	return m.markApplied(ctx, m.db, migration)
+	return m.markApplied(ctx, nil, migration)
 }
 
-// markApplied is MarkApplied on the given connection, which is the migration's
-// own transaction when it marks itself (WithMarkAppliedInTx).
-func (m *Migrator) markApplied(ctx context.Context, conn bun.IConn, migration *Migration) error {
-	q := m.db.NewInsert().Conn(conn).Model(migration).
+// markApplied is MarkApplied on tx, the migration's own transaction, when the
+// migration marks itself (WithMarkAppliedInTx). A nil tx leaves the choice of
+// connection to the DB, so that WithConnResolver routes the query.
+func (m *Migrator) markApplied(ctx context.Context, tx bun.IConn, migration *Migration) error {
+	q := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table)
+	if tx != nil {
+		q = q.Conn(tx)
+	}
 
 	if m.useUpsert {
 		switch {
@@ -525,8 +534,11 @@ func (m *Migrator) markApplied(ctx context.Context, conn bun.IConn, migration *M
 				Set("migrated_at = VALUES(migrated_at)")
 		case m.db.HasFeature(feature.Merge):
 			source := MigrationSlice{*migration}
-			_, err := m.db.NewMerge().
-				Conn(conn).
+			mq := m.db.NewMerge()
+			if tx != nil {
+				mq = mq.Conn(tx)
+			}
+			_, err := mq.
 				Model(migration).
 				ModelTableExpr("? AS migration", bun.Name(m.table)).
 				With("_data", m.db.NewValues(&source)).
@@ -556,17 +568,19 @@ func (m *Migrator) markApplied(ctx context.Context, conn bun.IConn, migration *M
 
 // MarkUnapplied marks the migration as unapplied (new).
 func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) error {
-	return m.markUnapplied(ctx, m.db, migration)
+	return m.markUnapplied(ctx, nil, migration)
 }
 
-// markUnapplied is MarkUnapplied on the given connection.
-func (m *Migrator) markUnapplied(ctx context.Context, conn bun.IConn, migration *Migration) error {
-	_, err := m.db.NewDelete().
-		Conn(conn).
+// markUnapplied is MarkUnapplied on tx, like markApplied.
+func (m *Migrator) markUnapplied(ctx context.Context, tx bun.IConn, migration *Migration) error {
+	q := m.db.NewDelete().
 		Model(migration).
 		ModelTableExpr(m.table).
-		Where("id = ?", migration.ID).
-		Exec(ctx)
+		Where("id = ?", migration.ID)
+	if tx != nil {
+		q = q.Conn(tx)
+	}
+	_, err := q.Exec(ctx)
 	return err
 }
 
