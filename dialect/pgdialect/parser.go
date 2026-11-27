@@ -130,12 +130,27 @@ func (p *pgparser) ReadJSON() ([]byte, error) {
 	p.buf = p.buf[:0]
 
 	depth := 0
+	quoted := false
+	escaped := false
 	for {
-		switch c {
-		case '{':
-			depth++
-		case '}':
-			depth--
+		if quoted {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				quoted = false
+			}
+		} else {
+			switch c {
+			case '"':
+				quoted = true
+			case '{':
+				depth++
+			case '}':
+				depth--
+			}
 		}
 
 		p.buf = append(p.buf, c)
