@@ -6,9 +6,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"io"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +22,19 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/uptrace/bun/schema"
 )
+
+type zeroReadReader struct {
+	r    io.Reader
+	zero bool
+}
+
+func (z *zeroReadReader) Read(p []byte) (int, error) {
+	z.zero = !z.zero
+	if z.zero {
+		return 0, nil
+	}
+	return z.r.Read(p)
+}
 
 func TestPostgresArray(t *testing.T) {
 	type Model struct {
@@ -678,6 +694,119 @@ func TestPostgresCopyFromCopyTo(t *testing.T) {
 		require.Equal(t, int64(1000), n)
 
 		err = tx.Commit()
+		require.NoError(t, err)
+	})
+
+	t.Run("io.Reader edge-cases", func(t *testing.T) {
+		_, err := conn.ExecContext(ctx, "CREATE TEMP TABLE test_copy_from_edge_cases (n int)")
+		require.NoError(t, err)
+
+		// non regression test for CopyFrom with a reader that returns data on the
+		// last call to Read(), along with the io.EOF error
+		r := iotest.DataErrReader(strings.NewReader("1\n2\n3\n"))
+		_, err = pgdriver.CopyFrom(ctx, conn, r, "COPY test_copy_from_edge_cases FROM STDIN")
+		require.NoError(t, err)
+
+		// non regression test for CopyFrom with a reader that returns (0, nil)
+		// every other read
+		r = &zeroReadReader{r: strings.NewReader("1\n2\n3\n4\n5\n")}
+		_, err = pgdriver.CopyFrom(ctx, conn, r, "COPY test_copy_from_edge_cases FROM STDIN")
+		require.NoError(t, err)
+
+		var count int
+		err = conn.QueryRowContext(ctx, "SELECT count(*) FROM test_copy_from_edge_cases").Scan(&count)
+		require.NoError(t, err)
+		require.Equal(t, 8, count)
+	})
+}
+
+type copyReadFunc func([]byte) (int, error)
+
+func (f copyReadFunc) Read(p []byte) (int, error) { return f(p) }
+
+func TestPostgresCopyFromErrors(t *testing.T) {
+	copyConn := func(t *testing.T, columns string) (*bun.DB, bun.Conn) {
+		t.Helper()
+		db := pg(t)
+		conn, err := db.Conn(t.Context())
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = conn.Close() })
+		_, err = conn.ExecContext(t.Context(), "CREATE TEMP TABLE copy_dest ("+columns+")")
+		require.NoError(t, err)
+		return db, conn
+	}
+	const query = "COPY copy_dest(n) FROM STDIN"
+	const slowInsert = "n int, delayed bool DEFAULT (pg_sleep(1) IS NULL)"
+
+	for _, tt := range []struct {
+		name string
+		data string
+		err  error
+	}{
+		{"cancel on empty read", "", nil},
+		{"cancel with final data", "23\n", io.EOF},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, conn := copyConn(t, "n int")
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			r := copyReadFunc(func(p []byte) (int, error) {
+				if ctx.Err() != nil {
+					return 0, io.ErrNoProgress
+				}
+				cancel()
+				return copy(p, tt.data), tt.err
+			})
+			_, err := pgdriver.CopyFrom(ctx, conn, r, query)
+			require.ErrorIs(t, err, context.Canceled)
+		})
+	}
+
+	t.Run("bad connection in a transaction", func(t *testing.T) {
+		_, conn := copyConn(t, "n int")
+		// The timeout releases the transaction if Raw waits for it to finish.
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+		tx, err := conn.BeginTx(ctx, nil)
+		require.NoError(t, err)
+		defer func() { _ = tx.Rollback() }()
+		_, err = pgdriver.CopyFrom(t.Context(), conn, iotest.ErrReader(driver.ErrBadConn), query)
+		require.ErrorIs(t, err, driver.ErrBadConn)
+		require.NoError(t, ctx.Err())
+	})
+
+	t.Run("timeout waiting for result", func(t *testing.T) {
+		db, conn := copyConn(t, slowInsert)
+		db.SetMaxOpenConns(1)
+		ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
+		defer cancel()
+		_, err := pgdriver.CopyFrom(ctx, conn, strings.NewReader("23\n"), query)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.NoError(t, conn.Close())
+
+		var n int
+		require.NoError(t, db.QueryRowContext(t.Context(), "SELECT 42").Scan(&n))
+		require.Equal(t, 42, n)
+	})
+
+	t.Run("rollback to savepoint after statement timeout", func(t *testing.T) {
+		_, conn := copyConn(t, slowInsert)
+		tx, err := conn.BeginTx(t.Context(), nil)
+		require.NoError(t, err)
+		defer func() { _ = tx.Rollback() }()
+		_, err = tx.ExecContext(t.Context(), "SAVEPOINT before_copy")
+		require.NoError(t, err)
+		_, err = tx.ExecContext(t.Context(), "SET LOCAL statement_timeout = '100ms'")
+		require.NoError(t, err)
+
+		// The second COPY is rejected before it starts because the first failed.
+		var pgErr pgdriver.Error
+		for _, code := range []string{"57014", "25P02"} {
+			_, err = pgdriver.CopyFrom(t.Context(), conn, strings.NewReader("23\n"), query)
+			require.ErrorAs(t, err, &pgErr)
+			require.Equal(t, code, pgErr.Field('C'))
+		}
+		_, err = tx.ExecContext(t.Context(), "ROLLBACK TO SAVEPOINT before_copy")
 		require.NoError(t, err)
 	})
 }

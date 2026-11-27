@@ -4,8 +4,12 @@ import (
 	"bufio"
 	"context"
 	"database/sql"
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"io"
+	"os"
+	"time"
 
 	"github.com/uptrace/bun"
 )
@@ -19,29 +23,55 @@ func CopyFrom(
 		return nil, err
 	}
 
-	if err := conn.Raw(func(driverConn any) error {
-		cn := driverConn.(*Conn)
+	if rawErr := conn.Raw(func(driverConn any) error {
+		res, err = driverConn.(*Conn).copyFrom(ctx, r, query)
+		// copyFrom invalidates the driver connection itself. Returning ErrBadConn
+		// through Raw would make sql.Conn wait for an enclosing transaction to end.
+		return nil
+	}); rawErr != nil {
+		return nil, rawErr
+	}
+	// The socket deadline can fire before the context's timer runs.
+	if errors.Is(err, os.ErrDeadlineExceeded) || err == driver.ErrBadConn {
+		if deadline, ok := ctx.Deadline(); ok && !time.Now().Before(deadline) {
+			return nil, context.DeadlineExceeded
+		}
+	}
+	return res, err
+}
 
-		if err := writeQuery(ctx, cn, query); err != nil {
-			return err
-		}
-		if err := readCopyIn(ctx, cn); err != nil {
-			return err
-		}
-		if err := writeCopyData(ctx, cn, r); err != nil {
-			return err
-		}
-		if err := writeCopyDone(ctx, cn); err != nil {
-			return err
-		}
-
-		res, err = readQuery(ctx, cn)
-		return err
-	}); err != nil {
+func (cn *Conn) copyFrom(ctx context.Context, r io.Reader, query string) (sql.Result, error) {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-
+	if err := writeQuery(ctx, cn, query); err != nil {
+		return nil, cn.checkBadConn(err)
+	}
+	if err := readCopyIn(ctx, cn); err != nil {
+		return nil, cn.copyResponseError(err)
+	}
+	if err := writeCopyData(ctx, cn, r); err != nil {
+		// Even a reader error leaves the server in COPY IN mode.
+		_ = cn.Close()
+		return nil, err
+	}
+	if err := writeCopyDone(ctx, cn); err != nil {
+		return nil, cn.checkBadConn(err)
+	}
+	res, err := readQuery(ctx, cn)
+	if err != nil {
+		return nil, cn.copyResponseError(err)
+	}
 	return res, nil
+}
+
+func (cn *Conn) copyResponseError(err error) error {
+	// An ERROR response is drained through ReadyForQuery, including an error
+	// that leaves the caller's transaction in need of a rollback.
+	if pgErr, ok := err.(Error); ok && pgErr.Field('V') == "ERROR" {
+		return err
+	}
+	return cn.checkBadConn(err)
 }
 
 func readCopyIn(ctx context.Context, cn *Conn) error {
@@ -86,22 +116,33 @@ func writeCopyData(ctx context.Context, cn *Conn, r io.Reader) error {
 	wb := getWriteBuffer()
 	defer putWriteBuffer(wb)
 
-	for {
+	for ctx.Err() == nil {
 		wb.StartMessage(copyDataMsg)
-		if _, err := wb.ReadFrom(r); err != nil {
-			if err == io.EOF {
-				break
-			}
+
+		n, err := wb.ReadFrom(r)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		if err != nil && err != io.EOF {
 			return err
 		}
-		wb.FinishMessage()
 
-		if err := cn.write(ctx, wb); err != nil {
-			return err
+		if n == 0 {
+			wb.Reset()
+		} else {
+			wb.FinishMessage()
+
+			if err := cn.write(ctx, wb); err != nil {
+				return err
+			}
+		}
+
+		if err == io.EOF {
+			break
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 func writeCopyDone(ctx context.Context, cn *Conn) error {

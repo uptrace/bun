@@ -97,11 +97,22 @@ func (p *pgparser) ReadRange(ch byte) ([]byte, error) {
 	p.buf = p.buf[:0]
 	p.buf = append(p.buf, ch)
 
+	var quoted bool
 	for p.Valid() {
 		ch = p.Read()
 		p.buf = append(p.buf, ch)
-		if ch == ']' || ch == ')' {
-			break
+		switch ch {
+		case '\\':
+			if p.Valid() {
+				p.buf = append(p.buf, p.Read())
+			}
+		case '"':
+			// A doubled quote inside a bound toggles twice, preserving the quoted state.
+			quoted = !quoted
+		case ']', ')':
+			if !quoted {
+				return p.buf, nil
+			}
 		}
 	}
 

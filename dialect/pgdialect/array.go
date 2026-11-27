@@ -368,12 +368,26 @@ func appendTimeSlice(gen schema.QueryGen, b []byte, ts []time.Time) []byte {
 
 //------------------------------------------------------------------------------
 
+type collectionSyntax uint8
+
+const (
+	arraySyntax collectionSyntax = iota
+	multirangeSyntax
+)
+
 func arrayScanner(typ reflect.Type) schema.ScannerFunc {
+	return newCollectionScanner(typ, arraySyntax)
+}
+
+// newCollectionScanner selects the wire parser independently of how elements
+// are assigned to the Go destination. Multirange bounds contain commas even
+// when the destination element is a string.
+func newCollectionScanner(typ reflect.Type, syntax collectionSyntax) schema.ScannerFunc {
 	kind := typ.Kind()
 
 	switch kind {
 	case reflect.Pointer:
-		if fn := arrayScanner(typ.Elem()); fn != nil {
+		if fn := newCollectionScanner(typ.Elem(), syntax); fn != nil {
 			return schema.PtrScanner(fn)
 		}
 	case reflect.Slice, reflect.Array:
@@ -383,11 +397,18 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 	}
 
 	elemType := typ.Elem()
+	parse := newArrayParser
+	if syntax == arraySyntax && (elemType.Kind() == reflect.String ||
+		(elemType.Kind() == reflect.Pointer && elemType.Elem().Kind() == reflect.String)) {
+		parse = newTextArrayParser
+	}
 
 	if kind == reflect.Slice {
 		switch elemType {
 		case stringType:
-			return scanStringSliceValue
+			return func(dest reflect.Value, src any) error {
+				return scanStringSliceValue(dest, src, parse)
+			}
 		case intType:
 			return scanIntSliceValue
 		case int64Type:
@@ -434,7 +455,7 @@ func arrayScanner(typ reflect.Type) schema.ScannerFunc {
 			return err
 		}
 
-		p := newArrayParser(b)
+		p := parse(b)
 
 		// The parser reports an unquoted NULL as an empty element, so it never
 		// reaches the element scanner as nil. UUID elements are handled
@@ -533,13 +554,13 @@ func scanUUIDArrayValues(dest reflect.Value, p *arrayParser, elemType reflect.Ty
 	return nil
 }
 
-func scanStringSliceValue(dest reflect.Value, src any) error {
+func scanStringSliceValue(dest reflect.Value, src any, parse func([]byte) *arrayParser) error {
 	dest = reflect.Indirect(dest)
 	if !dest.CanSet() {
 		return fmt.Errorf("bun: Scan(non-settable %s)", dest.Type())
 	}
 
-	slice, err := decodeStringSlice(src)
+	slice, err := decodeStringSlice(src, parse)
 	if err != nil {
 		return err
 	}
@@ -548,7 +569,7 @@ func scanStringSliceValue(dest reflect.Value, src any) error {
 	return nil
 }
 
-func decodeStringSlice(src any) ([]string, error) {
+func decodeStringSlice(src any, parse func([]byte) *arrayParser) ([]string, error) {
 	if src == nil {
 		return nil, nil
 	}
@@ -560,7 +581,7 @@ func decodeStringSlice(src any) ([]string, error) {
 
 	slice := make([]string, 0)
 
-	p := newArrayParser(b)
+	p := parse(b)
 	for p.Next() {
 		elem := p.Elem()
 		slice = append(slice, string(elem))
