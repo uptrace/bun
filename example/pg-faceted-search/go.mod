@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/pg-faceted-search
 
-go 1.24.0
+go 1.25.0
 
 replace github.com/uptrace/bun => ../..
 

@@ -1,8 +1,6 @@
 module github.com/uptrace/bun
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.25.0
 
 require (
 	github.com/jinzhu/inflection v1.0.0
