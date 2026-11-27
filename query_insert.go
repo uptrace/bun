@@ -425,6 +425,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 	}
 
 	var strct reflect.Value
+	var slice reflect.Value
 
 	switch model := q.tableModel.(type) {
 	case *structTableModel:
@@ -434,6 +435,7 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 			return nil, fmt.Errorf("bun: Insert(empty %T)", model.slice.Type())
 		}
 		strct = indirect(model.slice.Index(0))
+		slice = model.slice
 	default:
 		return nil, errNilModel
 	}
@@ -447,7 +449,18 @@ func (q *InsertQuery) getFields() ([]*schema.Field, error) {
 		}
 		if f.NotNull && q.marshalsToDefault(f, strct) {
 			q.addReturningField(f)
-			continue
+			allDefault := true
+			if slice.IsValid() {
+				for i := 1; i < slice.Len(); i++ {
+					if !q.marshalsToDefault(f, indirect(slice.Index(i))) {
+						allDefault = false
+						break
+					}
+				}
+			}
+			if allDefault {
+				continue
+			}
 		}
 		fields = append(fields, f)
 	}
