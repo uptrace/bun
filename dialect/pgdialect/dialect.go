@@ -125,7 +125,7 @@ func (d *Dialect) onField(field *schema.Field) {
 	}
 
 	if field.Tag.HasOption("multirange") || strings.HasSuffix(field.UserSQLType, "multirange") {
-		field.Scan = arrayScanner(field.StructField.Type)
+		field.Scan = newCollectionScanner(field.StructField.Type, multirangeSyntax)
 		return
 	}
 
