@@ -5,6 +5,7 @@ import (
 	cryptorand "crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -564,9 +565,10 @@ func (c Conn) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 		return Tx{}, err
 	}
 	return Tx{
-		ctx: ctx,
-		db:  c.db,
-		Tx:  tx,
+		ctx:     ctx,
+		rootCtx: ctx,
+		db:      c.db,
+		Tx:      tx,
 	}, nil
 }
 
@@ -595,8 +597,9 @@ func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
 
 // Tx wraps *sql.Tx and preserves Bun-specific context such as hooks and dialect.
 type Tx struct {
-	ctx context.Context
-	db  *DB
+	ctx     context.Context
+	rootCtx context.Context // Bounds savepoint rollback even when its own context is canceled.
+	db      *DB
 	// name is the name of a savepoint
 	name string
 	*sql.Tx
@@ -642,9 +645,10 @@ func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
 		return Tx{}, err
 	}
 	return Tx{
-		ctx: ctx,
-		db:  db,
-		Tx:  tx,
+		ctx:     ctx,
+		rootCtx: ctx,
+		db:      db,
+		Tx:      tx,
 	}, nil
 }
 
@@ -665,7 +669,7 @@ func (tx Tx) commitTX() error {
 
 func (tx Tx) commitSP() error {
 	if tx.db.HasFeature(feature.MSSavepoint) {
-		return nil
+		return tx.ctx.Err()
 	}
 	query := "RELEASE SAVEPOINT " + tx.name
 	_, err := tx.ExecContext(tx.ctx, query)
@@ -687,12 +691,24 @@ func (tx Tx) rollbackTX() error {
 	return err
 }
 
+// savepointRollbackContext takes its deadline and cancellation from the root
+// transaction and its query hook values from the savepoint.
+type savepointRollbackContext struct {
+	context.Context
+	values context.Context
+}
+
+func (ctx savepointRollbackContext) Value(key any) any {
+	return ctx.values.Value(key)
+}
+
 func (tx Tx) rollbackSP() error {
 	query := "ROLLBACK TO SAVEPOINT " + tx.name
 	if tx.db.HasFeature(feature.MSSavepoint) {
 		query = "ROLLBACK TRANSACTION " + tx.name
 	}
-	_, err := tx.ExecContext(tx.ctx, query)
+	ctx := savepointRollbackContext{Context: tx.rootCtx, values: context.WithoutCancel(tx.ctx)}
+	_, err := tx.ExecContext(ctx, query)
 	return err
 }
 
@@ -768,10 +784,11 @@ func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
 		return Tx{}, err
 	}
 	return Tx{
-		ctx:  ctx,
-		db:   tx.db,
-		Tx:   tx.Tx,
-		name: qName,
+		ctx:     ctx,
+		rootCtx: tx.rootCtx,
+		db:      tx.db,
+		Tx:      tx.Tx,
+		name:    qName,
 	}, nil
 }
 
@@ -779,17 +796,19 @@ func (tx Tx) BeginTx(ctx context.Context, _ *sql.TxOptions) (Tx, error) {
 // If the function returns an error, the savepoint is rolled back.
 func (tx Tx) RunInTx(
 	ctx context.Context, _ *sql.TxOptions, fn func(ctx context.Context, tx Tx) error,
-) error {
+) (err error) {
 	sp, err := tx.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	var done bool
-
+	var committed bool
 	defer func() {
-		if !done {
-			_ = sp.Rollback()
+		if committed {
+			return
+		}
+		if rollbackErr := sp.Rollback(); rollbackErr != nil {
+			err = errors.Join(err, rollbackErr)
 		}
 	}()
 
@@ -797,8 +816,9 @@ func (tx Tx) RunInTx(
 		return err
 	}
 
-	done = true
-	return sp.Commit()
+	err = sp.Commit()
+	committed = err == nil
+	return err
 }
 
 // Dialect returns the database dialect for this transaction.
