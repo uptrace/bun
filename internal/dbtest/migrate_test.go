@@ -3,16 +3,23 @@ package dbtest_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect"
+	"github.com/uptrace/bun/dialect/sqlitedialect"
 	"github.com/uptrace/bun/dialect/sqltype"
+	"github.com/uptrace/bun/driver/sqliteshim"
 	"github.com/uptrace/bun/migrate"
 	"github.com/uptrace/bun/migrate/sqlschema"
 )
@@ -58,6 +65,9 @@ func TestMigrate(t *testing.T) {
 		{run: testRunMigration},
 		{run: testRunMigrationAssignsNewGroup},
 		{run: testRunMigrationUpErrorPreservesAppliedState},
+		{run: testMigrateMarkAppliedInTx},
+		{run: testMigrateMarkAppliedInTxLeavesOtherMigrationsAlone},
+		{run: testRunMigrationMarkAppliedInTxWithUpsert},
 	}
 
 	testEachDB(t, func(t *testing.T, dbName string, db *bun.DB) {
@@ -1318,4 +1328,365 @@ func checkHasTable(t *testing.T, tables []sqlschema.Table, name string) {
 		}
 	}
 	require.FailNowf(t, "incomplete schema", "table %q not in schema", name)
+}
+
+// tableExists reports whether a table can be selected from.
+func tableExists(ctx context.Context, db *bun.DB, table string) bool {
+	_, err := db.NewSelect().TableExpr("?", bun.Ident(table)).ColumnExpr("1").Exec(ctx)
+	return err == nil
+}
+
+// appliedNames returns the sorted names of the migrations that are recorded as
+// applied.
+func appliedNames(t *testing.T, ctx context.Context, m *migrate.Migrator) []string {
+	t.Helper()
+
+	applied, err := m.AppliedMigrations(ctx)
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(applied))
+	for i := range applied {
+		names = append(names, applied[i].Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// testMigrateMarkAppliedInTx checks that, with WithMarkAppliedInTx, a
+// transactional SQL migration and its row in the migrations table are committed
+// or rolled back together.
+func testMigrateMarkAppliedInTx(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL {
+		t.Skip("MySQL commits implicitly on DDL, so a migration cannot be rolled back with its record")
+	}
+
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	tables := []string{"mark_in_tx_one", "mark_in_tx_two", "mark_in_tx_three"}
+	dropTables := func() {
+		for _, table := range tables {
+			_, err := db.NewDropTable().TableExpr("?", bun.Ident(table)).IfExists().Exec(ctx)
+			require.NoError(t, err)
+		}
+	}
+	dropTables()
+	t.Cleanup(dropTables)
+
+	newMigrator := func(fsys fstest.MapFS) *migrate.Migrator {
+		migrations := migrate.NewMigrations()
+		require.NoError(t, migrations.Discover(fsys))
+		return migrate.NewMigrator(db, migrations,
+			migrate.WithTableName(migrationsTable),
+			migrate.WithLocksTableName(migrationLocksTable),
+			migrate.WithMarkAppliedInTx(true),
+		)
+	}
+	file := func(sql string) *fstest.MapFile {
+		return &fstest.MapFile{Data: []byte(sql)}
+	}
+
+	one := fstest.MapFS{
+		"20060102150405_one.tx.up.sql":   file("CREATE TABLE mark_in_tx_one (id INT)"),
+		"20060102150405_one.tx.down.sql": file("DROP TABLE mark_in_tx_one"),
+	}
+
+	t.Run("a migration that fails is neither applied nor recorded", func(t *testing.T) {
+		fsys := fstest.MapFS{
+			"20060102160405_two.tx.up.sql": file(
+				"CREATE TABLE mark_in_tx_two (id INT)\n--bun:split\nSELECT * FROM mark_in_tx_missing"),
+			"20060102160405_two.tx.down.sql": file("DROP TABLE mark_in_tx_two"),
+		}
+		for name, f := range one {
+			fsys[name] = f
+		}
+
+		m := newMigrator(fsys)
+		require.NoError(t, m.Reset(ctx))
+
+		group, err := m.Migrate(ctx)
+		require.Error(t, err)
+		require.Len(t, group.Migrations, 2)
+
+		require.Equal(t, []string{"20060102150405"}, appliedNames(t, ctx, m))
+		require.True(t, tableExists(ctx, db, "mark_in_tx_one"))
+		require.False(t, tableExists(ctx, db, "mark_in_tx_two"))
+
+		// The failed migration is still unapplied, so the next run tries it again.
+		group, err = m.Migrate(ctx)
+		require.Error(t, err)
+		require.Len(t, group.Migrations, 1)
+		require.Equal(t, "20060102160405", group.Migrations[0].Name)
+
+		dropTables()
+	})
+
+	t.Run("a migration whose record fails is not applied", func(t *testing.T) {
+		// The migration drops the migrations table, so that recording it fails
+		// after its statements succeeded. Rolling back the transaction must
+		// then undo the statements too, the dropped table included.
+		fsys := fstest.MapFS{
+			"20060102170405_three.tx.up.sql": file(
+				"CREATE TABLE mark_in_tx_three (id INT)\n--bun:split\nDROP TABLE " + migrationsTable),
+			"20060102170405_three.tx.down.sql": file("DROP TABLE mark_in_tx_three"),
+		}
+
+		m := newMigrator(fsys)
+		require.NoError(t, m.Reset(ctx))
+
+		_, err := m.Migrate(ctx)
+		require.Error(t, err)
+
+		require.False(t, tableExists(ctx, db, "mark_in_tx_three"))
+		require.True(t, tableExists(ctx, db, migrationsTable))
+		require.Empty(t, appliedNames(t, ctx, m))
+	})
+
+	t.Run("up and down are recorded with the change", func(t *testing.T) {
+		m := newMigrator(one)
+		require.NoError(t, m.Reset(ctx))
+
+		group, err := m.Migrate(ctx)
+		require.NoError(t, err)
+		require.Equal(t, int64(1), group.ID)
+		require.Len(t, group.Migrations, 1)
+		require.Equal(t, []string{"20060102150405"}, appliedNames(t, ctx, m))
+		require.True(t, tableExists(ctx, db, "mark_in_tx_one"))
+
+		// Nothing is recorded twice and nothing is left to apply.
+		group, err = m.Migrate(ctx)
+		require.NoError(t, err)
+		require.True(t, group.IsZero())
+
+		group, err = m.Rollback(ctx)
+		require.NoError(t, err)
+		require.Len(t, group.Migrations, 1)
+		require.Empty(t, appliedNames(t, ctx, m))
+		require.False(t, tableExists(ctx, db, "mark_in_tx_one"))
+	})
+
+	t.Run("a down migration that fails stays recorded", func(t *testing.T) {
+		fsys := fstest.MapFS{
+			"20060102150405_one.tx.up.sql": one["20060102150405_one.tx.up.sql"],
+			"20060102150405_one.tx.down.sql": file(
+				"DROP TABLE mark_in_tx_one\n--bun:split\nSELECT * FROM mark_in_tx_missing"),
+		}
+
+		m := newMigrator(fsys)
+		require.NoError(t, m.Reset(ctx))
+
+		_, err := m.Migrate(ctx)
+		require.NoError(t, err)
+
+		_, err = m.Rollback(ctx)
+		require.Error(t, err)
+		require.Equal(t, []string{"20060102150405"}, appliedNames(t, ctx, m))
+		require.True(t, tableExists(ctx, db, "mark_in_tx_one"))
+
+		dropTables()
+	})
+}
+
+// testMigrateMarkAppliedInTxLeavesOtherMigrationsAlone checks that Go migrations
+// and non-transactional SQL migrations, which do not run in a transaction owned
+// by the migrator, are still marked by the migrator when WithMarkAppliedInTx is
+// set, and that a no-op run marks transactional migrations too.
+func testMigrateMarkAppliedInTxLeavesOtherMigrationsAlone(t *testing.T, db *bun.DB) {
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	migrations := migrate.NewMigrations()
+	require.NoError(t, migrations.Discover(fstest.MapFS{
+		"20060102150405_plain.up.sql":   &fstest.MapFile{Data: []byte("SELECT 1")},
+		"20060102150405_plain.down.sql": &fstest.MapFile{Data: []byte("SELECT 1")},
+		"20060102170405_tx.tx.up.sql":   &fstest.MapFile{Data: []byte("SELECT 1")},
+		"20060102170405_tx.tx.down.sql": &fstest.MapFile{Data: []byte("SELECT 1")},
+	}))
+	migrations.Add(migrate.Migration{
+		Name: "20060102160405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+	})
+
+	all := []string{"20060102150405", "20060102160405", "20060102170405"}
+
+	for _, onSuccess := range []bool{false, true} {
+		m := migrate.NewMigrator(db, migrations,
+			migrate.WithTableName(migrationsTable),
+			migrate.WithLocksTableName(migrationLocksTable),
+			migrate.WithMarkAppliedOnSuccess(onSuccess),
+			migrate.WithMarkAppliedInTx(true),
+		)
+		require.NoError(t, m.Reset(ctx))
+
+		group, err := m.Migrate(ctx)
+		require.NoError(t, err)
+		require.Len(t, group.Migrations, 3)
+		require.Equal(t, all, appliedNames(t, ctx, m))
+
+		group, err = m.Rollback(ctx)
+		require.NoError(t, err)
+		require.Len(t, group.Migrations, 3)
+		require.Empty(t, appliedNames(t, ctx, m))
+
+		// A no-op run does not execute the migrations, so none of them can mark
+		// itself: the migrator marks all of them.
+		group, err = m.Migrate(ctx, migrate.WithNopMigration())
+		require.NoError(t, err)
+		require.Len(t, group.Migrations, 3)
+		require.Equal(t, all, appliedNames(t, ctx, m))
+
+		group, err = m.Rollback(ctx, migrate.WithNopMigration())
+		require.NoError(t, err)
+		require.Len(t, group.Migrations, 3)
+		require.Empty(t, appliedNames(t, ctx, m))
+	}
+}
+
+// testRunMigrationMarkAppliedInTxWithUpsert checks that RunMigration, which
+// needs WithUpsert, records a re-run transactional SQL migration inside its own
+// transaction, and that a failed upsert of the record rolls back the
+// migration's changes.
+func testRunMigrationMarkAppliedInTxWithUpsert(t *testing.T, db *bun.DB) {
+	if db.Dialect().Name() == dialect.MySQL {
+		t.Skip("MySQL commits implicitly on DDL, so a migration cannot be rolled back with its record")
+	}
+
+	ctx := context.Background()
+	cleanupMigrations(t, ctx, db)
+
+	const table = "mark_in_tx_rerun"
+	dropTable := func() {
+		_, err := db.NewDropTable().TableExpr("?", bun.Ident(table)).IfExists().Exec(ctx)
+		require.NoError(t, err)
+	}
+	dropTable()
+	t.Cleanup(dropTable)
+	_, err := db.ExecContext(ctx, "CREATE TABLE "+table+" (id INT)")
+	require.NoError(t, err)
+
+	rows := func() int64 {
+		n, err := db.NewSelect().TableExpr("?", bun.Ident(table)).Count(ctx)
+		require.NoError(t, err)
+		return n
+	}
+	newMigrator := func(up string) *migrate.Migrator {
+		migrations := migrate.NewMigrations()
+		require.NoError(t, migrations.Discover(fstest.MapFS{
+			"20060102150405_rerun.tx.up.sql": &fstest.MapFile{Data: []byte(up)},
+		}))
+		return migrate.NewMigrator(db, migrations,
+			migrate.WithTableName(migrationsTable),
+			migrate.WithLocksTableName(migrationLocksTable),
+			migrate.WithMarkAppliedInTx(true),
+			migrate.WithUpsert(true),
+		)
+	}
+	groupOf := func(m *migrate.Migrator) int64 {
+		applied, err := m.AppliedMigrations(ctx)
+		require.NoError(t, err)
+		require.Len(t, applied, 1)
+		return applied[0].GroupID
+	}
+
+	insert := "INSERT INTO " + table + " (id) VALUES (1)"
+
+	m := newMigrator(insert)
+	require.NoError(t, m.Reset(ctx))
+
+	_, err = m.Migrate(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), rows())
+	require.Equal(t, int64(1), groupOf(m))
+
+	// The re-run upserts the existing record in its own transaction.
+	require.NoError(t, m.RunMigration(ctx, "20060102150405"))
+	require.Equal(t, int64(2), rows())
+	require.Equal(t, []string{"20060102150405"}, appliedNames(t, ctx, m))
+	require.Equal(t, int64(2), groupOf(m))
+
+	// The migration drops the migrations table, so that upserting its record
+	// fails after its statements succeeded. Rolling back the transaction must
+	// undo the insert and the drop, and keep the existing record.
+	m = newMigrator(insert + "\n--bun:split\nDROP TABLE " + migrationsTable)
+	require.Error(t, m.RunMigration(ctx, "20060102150405"))
+	require.Equal(t, int64(2), rows())
+	require.True(t, tableExists(ctx, db, migrationsTable))
+	require.Equal(t, int64(2), groupOf(m))
+}
+
+// routeAllResolver routes every query to one database.
+type routeAllResolver struct {
+	db *sql.DB
+}
+
+func (r routeAllResolver) ResolveConn(context.Context, bun.Query) bun.IConn { return r.db }
+func (routeAllResolver) Close() error                                       { return nil }
+
+// TestMigrateMarkRespectsConnResolver checks that, without WithMarkAppliedInTx,
+// the migrator records and unrecords migrations in the database that
+// WithConnResolver routes its queries to, which is where Init creates the
+// migrations table.
+func TestMigrateMarkRespectsConnResolver(t *testing.T) {
+	ctx := context.Background()
+
+	open := func(name string) *sql.DB {
+		sqldb, err := sql.Open(sqliteshim.DriverName(), filepath.Join(t.TempDir(), name))
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, sqldb.Close()) })
+		return sqldb
+	}
+	primary := open("primary.db")
+	routed := open("routed.db")
+
+	db := bun.NewDB(primary, sqlitedialect.New(), bun.WithConnResolver(routeAllResolver{db: routed}))
+	primaryDB := bun.NewDB(primary, sqlitedialect.New())
+	routedDB := bun.NewDB(routed, sqlitedialect.New())
+
+	migrations := migrate.NewMigrations()
+	migrations.Add(migrate.Migration{
+		Name: "20060102150405",
+		Up: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+		Down: func(ctx context.Context, migrator *migrate.Migrator, migration *migrate.Migration) error {
+			return nil
+		},
+	})
+
+	records := func() int64 {
+		n, err := routedDB.NewSelect().TableExpr("?", bun.Ident(migrationsTable)).Count(ctx)
+		require.NoError(t, err)
+		return n
+	}
+
+	for _, onSuccess := range []bool{false, true} {
+		t.Run(fmt.Sprintf("WithMarkAppliedOnSuccess(%t)", onSuccess), func(t *testing.T) {
+			m := migrate.NewMigrator(db, migrations,
+				migrate.WithTableName(migrationsTable),
+				migrate.WithLocksTableName(migrationLocksTable),
+				migrate.WithMarkAppliedOnSuccess(onSuccess),
+				migrate.WithUpsert(true),
+			)
+			require.NoError(t, m.Reset(ctx))
+
+			_, err := m.Migrate(ctx)
+			require.NoError(t, err)
+			require.Equal(t, int64(1), records())
+
+			require.NoError(t, m.RunMigration(ctx, "20060102150405"))
+			require.Equal(t, int64(1), records())
+
+			_, err = m.Rollback(ctx)
+			require.NoError(t, err)
+			require.Equal(t, int64(0), records())
+
+			require.False(t, tableExists(ctx, primaryDB, migrationsTable),
+				"the migrations table must exist only in the routed database")
+		})
+	}
 }

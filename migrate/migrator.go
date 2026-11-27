@@ -44,6 +44,31 @@ func WithMarkAppliedOnSuccess(enabled bool) MigratorOption {
 	}
 }
 
+// WithMarkAppliedInTx makes transactional SQL migrations (.tx.up.sql and
+// .tx.down.sql) record themselves inside their own transaction: the up migration
+// inserts its row into the migrations table, and the down migration deletes it,
+// right before the transaction is committed. The schema change and its record
+// then succeed or fail together, so a failed or interrupted migration can be
+// neither recorded without being applied nor applied without being recorded.
+//
+// It takes precedence over WithMarkAppliedOnSuccess for those migrations. Go
+// migrations and non-transactional SQL migrations do not run in a transaction
+// owned by the migrator and are marked as before.
+//
+// The guarantee is only as strong as the database's transactional DDL: MySQL
+// and MariaDB commit implicitly on most DDL statements, so there a migration
+// can still be applied without being recorded.
+//
+// The record is written on the migration's transaction, which DB.BeginTx opens
+// on the DB's own connection pool and not through WithConnResolver. Do not
+// combine this option with a resolver that routes the migrations table to
+// another database.
+func WithMarkAppliedInTx(enabled bool) MigratorOption {
+	return func(m *Migrator) {
+		m.markAppliedInTx = enabled
+	}
+}
+
 // WithUpsert enables upsert (ON CONFLICT / ON DUPLICATE KEY / MERGE) in MarkApplied.
 // This is required when re-running already-applied migrations via RunMigration.
 // Init automatically creates a unique index on the name column.
@@ -85,6 +110,7 @@ type Migrator struct {
 	table                string
 	locksTable           string
 	markAppliedOnSuccess bool
+	markAppliedInTx      bool
 	useUpsert            bool
 	templateData         any
 
@@ -212,7 +238,11 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 		migration := &migrations[i]
 		migration.GroupID = group.ID
 
-		if !m.markAppliedOnSuccess {
+		run := !cfg.nop && migration.Up != nil
+		// The migration marks itself as applied inside its own transaction.
+		inTx := run && m.markAppliedInTx && migration.txUp
+
+		if !inTx && !m.markAppliedOnSuccess {
 			if err := m.MarkApplied(ctx, migration); err != nil {
 				return group, err
 			}
@@ -220,13 +250,13 @@ func (m *Migrator) Migrate(ctx context.Context, opts ...MigrationOption) (*Migra
 
 		group.Migrations = migrations[:i+1]
 
-		if !cfg.nop && migration.Up != nil {
+		if run {
 			if err := migration.Up(ctx, m, migration); err != nil {
 				return group, fmt.Errorf("%s: up: %w", migration.Name, err)
 			}
 		}
 
-		if m.markAppliedOnSuccess {
+		if !inTx && m.markAppliedOnSuccess {
 			if err := m.MarkApplied(ctx, migration); err != nil {
 				return group, err
 			}
@@ -278,7 +308,10 @@ func (m *Migrator) RunMigration(
 
 	migration.GroupID = lastGroupID + 1
 
-	if !m.markAppliedOnSuccess {
+	// The migration marks itself as applied inside its own transaction.
+	inTx := m.markAppliedInTx && migration.txUp
+
+	if !inTx && !m.markAppliedOnSuccess {
 		if err := m.MarkApplied(ctx, migration); err != nil {
 			return err
 		}
@@ -288,7 +321,7 @@ func (m *Migrator) RunMigration(
 		return fmt.Errorf("%s: up: %w", migration.Name, err)
 	}
 
-	if m.markAppliedOnSuccess {
+	if !inTx && m.markAppliedOnSuccess {
 		if err := m.MarkApplied(ctx, migration); err != nil {
 			return err
 		}
@@ -317,19 +350,23 @@ func (m *Migrator) Rollback(ctx context.Context, opts ...MigrationOption) (*Migr
 	for i := len(lastGroup.Migrations) - 1; i >= 0; i-- {
 		migration := &lastGroup.Migrations[i]
 
-		if !m.markAppliedOnSuccess {
+		run := !cfg.nop && migration.Down != nil
+		// The migration marks itself as unapplied inside its own transaction.
+		inTx := run && m.markAppliedInTx && migration.txDown
+
+		if !inTx && !m.markAppliedOnSuccess {
 			if err := m.MarkUnapplied(ctx, migration); err != nil {
 				return lastGroup, err
 			}
 		}
 
-		if !cfg.nop && migration.Down != nil {
+		if run {
 			if err := migration.Down(ctx, m, migration); err != nil {
 				return lastGroup, fmt.Errorf("%s: down: %w", migration.Name, err)
 			}
 		}
 
-		if m.markAppliedOnSuccess {
+		if !inTx && m.markAppliedOnSuccess {
 			if err := m.MarkUnapplied(ctx, migration); err != nil {
 				return lastGroup, err
 			}
@@ -472,8 +509,18 @@ func genMigrationName(name string) (string, error) {
 
 // MarkApplied marks the migration as applied (completed).
 func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error {
+	return m.markApplied(ctx, nil, migration)
+}
+
+// markApplied is MarkApplied on tx, the migration's own transaction, when the
+// migration marks itself (WithMarkAppliedInTx). A nil tx leaves the choice of
+// connection to the DB, so that WithConnResolver routes the query.
+func (m *Migrator) markApplied(ctx context.Context, tx bun.IConn, migration *Migration) error {
 	q := m.db.NewInsert().Model(migration).
 		ModelTableExpr(m.table)
+	if tx != nil {
+		q = q.Conn(tx)
+	}
 
 	if m.useUpsert {
 		switch {
@@ -487,7 +534,11 @@ func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error 
 				Set("migrated_at = VALUES(migrated_at)")
 		case m.db.HasFeature(feature.Merge):
 			source := MigrationSlice{*migration}
-			_, err := m.db.NewMerge().
+			mq := m.db.NewMerge()
+			if tx != nil {
+				mq = mq.Conn(tx)
+			}
+			_, err := mq.
 				Model(migration).
 				ModelTableExpr("? AS migration", bun.Name(m.table)).
 				With("_data", m.db.NewValues(&source)).
@@ -517,11 +568,19 @@ func (m *Migrator) MarkApplied(ctx context.Context, migration *Migration) error 
 
 // MarkUnapplied marks the migration as unapplied (new).
 func (m *Migrator) MarkUnapplied(ctx context.Context, migration *Migration) error {
-	_, err := m.db.NewDelete().
+	return m.markUnapplied(ctx, nil, migration)
+}
+
+// markUnapplied is MarkUnapplied on tx, like markApplied.
+func (m *Migrator) markUnapplied(ctx context.Context, tx bun.IConn, migration *Migration) error {
+	q := m.db.NewDelete().
 		Model(migration).
 		ModelTableExpr(m.table).
-		Where("id = ?", migration.ID).
-		Exec(ctx)
+		Where("id = ?", migration.ID)
+	if tx != nil {
+		q = q.Conn(tx)
+	}
+	_, err := q.Exec(ctx)
 	return err
 }
 

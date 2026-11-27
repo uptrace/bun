@@ -119,10 +119,12 @@ func (m *Migrations) Discover(fsys fs.FS) error {
 
 		if strings.HasSuffix(path, ".up.sql") {
 			migration.Up = migrationFunc
+			migration.txUp = strings.HasSuffix(path, ".tx.up.sql")
 			return nil
 		}
 		if strings.HasSuffix(path, ".down.sql") {
 			migration.Down = migrationFunc
+			migration.txDown = strings.HasSuffix(path, ".tx.down.sql")
 			return nil
 		}
 
