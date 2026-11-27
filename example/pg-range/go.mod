@@ -1,6 +1,6 @@
 module github.com/uptrace/bun/example/pg-range
 
-go 1.24.1
+go 1.25.0
 
 replace github.com/uptrace/bun => ../..
 
